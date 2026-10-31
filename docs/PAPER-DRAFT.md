@@ -17,10 +17,12 @@ Java heap. We evaluate the implementation on a frozen held-out corpus that was
 stopped after 179 of 280 planned results (6 of 10 datasets complete) and on a
 121.8 MB real multi-strain *E. coli* pangenome. On the completed sequence-only
 cells the default archive is smallest by a median margin of 1.36%; on the
-121.8 MB complete-FASTA pangenome, xz -9 is 8.9% smaller, while HyperGraSS
-answers exact record queries and finishes faster. The contribution is a working
-system plus a reproducible measurement harness with byte-exact verification and
-explicit deviations; the results do not establish universal superiority over
+121.8 MB complete-FASTA pangenome, the default profile is 9.8% larger than
+xz -9, while an opt-in 16 MiB bank / 8 MiB block profile is 41.8% smaller and
+answers exact record queries. A measured ablation attributes that result to the
+default's 4 MiB anchor-bank cap. The contribution is a working system plus a
+reproducible measurement harness with byte-exact verification and explicit
+deviations; the results do not establish universal superiority over
 specialized compressors.
 
 ## 1. Introduction
@@ -137,7 +139,10 @@ A 121.8 MB multi-FASTA pangenome is built from 24 complete RefSeq *E. coli*
 records (120.1 Mbp). The manifest records accessions, lengths, and SHA-256. The
 test compresses the complete FASTA (headers included), decompresses it, checks
 SHA-256, and queries the first, middle, and last records. `--lean` runs with
-`-Xmx8m` and a 256 MB container limit.
+`-Xmx8m` and a 256 MB container limit. A separate run measures the opt-in
+`--pangenome` profile (16 MiB anchor bank, 8 MiB blocks). The anchor-bank and
+block-size ablation that selected those values is reported in
+[`ABLATION.md`](ABLATION.md).
 
 ### 3.3 Metrics
 
@@ -169,22 +174,38 @@ HyperGraSS 1,087,650 bytes at 1.875 bits/base versus GeCo3 level 6 at
 exceed the 180 s cap on that input. The default profile's median compression
 time is 0.94 s versus 0.21 s for gzip and 0.12 s for xz.
 
-**121.8 MB pangenome.** xz -9 produced 8,394,900 bytes (0.551 bits per input
-byte) against 9,215,764 bytes for HyperGraSS (0.605 bits per byte): xz is 8.9%
-smaller. HyperGraSS was faster (45.9 s versus 186.3 s) and used more peak RSS
-(1,083 MiB versus 738 MiB). `--lean` completed the round trip and all three
-record queries with 52 MiB peak RSS, but its archive is 28,910,764 bytes, 3.14x
-the default. The three HyperGraSS queries were exact. The xz archive has no
-query interface, so it cannot return a record slice without full decompression.
+**121.8 MB pangenome.** The default profile produced 9,215,764 bytes (0.605
+bits per input byte) against 8,394,900 bytes for xz -9 (0.551 bits per byte):
+the default is 9.8% larger. It was faster to compress (45.9 s versus 186.3 s)
+and used more peak RSS (1,083 MiB versus 738 MiB). The opt-in `--pangenome`
+profile produced 4,885,851 bytes (0.321 bits per byte), 41.8% smaller than xz,
+with 30.6 s compression and 16.4 s decompression at 419 MiB peak RSS; its round
+trip and all three record queries were exact. xz decompressed faster (7.1 s at
+189 MiB) and has no query interface, so it cannot return a record slice without
+full decompression. `--lean` completed the round trip and all three queries
+with 52 MiB peak RSS, but its archive is 28,910,764 bytes, 3.14x the default.
 
 **Interpretation.** HyperGraSS is competitive at small and medium sequence-only
-scales and narrowly first on the completed corpus cells. It is not the smallest
-at 100 MB+ pangenome scale. A likely cause is that the anchor bank is capped at
-4.19 Mbp while each record is about 5 Mbp, whereas xz -9 can reference repeats
-across a 64 MiB window of the 121.8 MB stream; this is a hypothesis, not a
-measured ablation. The demonstrated advantages are pure-Java implementation,
-byte-exact round trips, an indexed query interface, and a bounded-memory mode,
-not universal compression superiority.
+scales and narrowly first on the completed corpus cells. With the default
+profile it is not the smallest at 100 MB+ pangenome scale; the measured
+ablation shows the 4 MiB anchor-bank cap was the ceiling. Raising the bank to
+8 MiB at the same block size cut the archive by 43.9%, and 16 MiB with 8 MiB
+blocks reached 4,885,851 bytes. The winning archive holds 144 anchor pages,
+about 9.4 Mbp, so the 16 MiB cap is not fully consumed. This is a tuning win on
+one pangenome, not a new compression law; the opt-in profile has not been
+tested on other species or read data. The demonstrated advantages are pure-Java
+implementation, byte-exact round trips, an indexed query interface, and a
+bounded-memory mode, not universal compression superiority.
+
+**Query workload.** A separate workload served 13 deterministic 2,000-base
+slices from the same pangenome, each in a fresh process. The tuned profile
+answered in a median of 1.35 s against 1.36 s for xz and 1.18 s for gzip, so
+the index did not beat sequential extraction on this input. It did tie xz while
+storing 42% fewer bytes, but xz restored in 7.1 s versus 16.4 s, and roughly
+859 queries per restore would be needed to offset that difference. `--lean`
+was the fastest query profile (0.73 s median) at a 3.4x size cost versus xz.
+The default profile was much slower (8.0 s median). Indexed access is a
+capability with workload-dependent value, not an automatic speedup.
 
 ## 5. Limitations
 
@@ -195,12 +216,17 @@ not universal compression superiority.
   the two sets are not directly comparable.
 - GeCo3 level 9 is not a practical baseline under the 180 s cap, and the
   reported timeouts describe the cap rather than the tool's best size.
-- HyperGraSS does not beat xz on the 121.8 MB pangenome; the anchor bank is
-  capped below one record's length, so cross-record redundancy is only partly
-  captured.
-- The scale test is one pangenome from one species and one repetition per
-  profile. Two runs produced identical archives but wall times differing by up
-  to 2.5x, so its timing data is indicative.
+- HyperGraSS with the default profile does not beat xz on the 121.8 MB
+  pangenome; the anchor bank is capped below one record's length, so
+  cross-record redundancy is only partly captured. The opt-in `--pangenome`
+  profile does beat xz on that input, but it has been measured on one pangenome
+  from one species.
+- The scale test is one pangenome from one species. Most profiles have one
+  measured run; the two best ablation configurations were repeated with
+  byte-identical archives, while wall times varied by up to 2.5x across runs.
+- The query workload is one run of 13 slices on one host. It does not measure
+  repeated queries, concurrency, or a long-lived server; JVM/Python startup is
+  included in every query.
 - Timing is from one Windows host with a Linux container; cross-platform
   behavior is not characterized.
 - Earlier development claims (a 250-genome Ebola cohort and a synthetic

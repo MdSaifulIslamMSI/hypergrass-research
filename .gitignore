@@ -24,6 +24,8 @@ benchmarks/pangenome/runs/
 benchmarks/pangenome/fetch.log
 benchmarks/pangenome/scale-run*.log
 benchmarks/preview.md
+benchmarks/ablation/runs/
+benchmarks/endtoend/runs/
 benchmarks/panman/data/
 benchmarks/panman/logs/
 benchmarks/panman/panman/

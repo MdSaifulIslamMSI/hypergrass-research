@@ -5,7 +5,13 @@ document. No numbers are typed by hand; every cell comes from the JSON.
 
 Usage:
     python -B benchmarks/summarize.py --corpus benchmarks/corpus/runs/corpus-full-1/report.json
-    python -B benchmarks/summarize.py --corpus ... --scale benchmarks/pangenome/runs/.../report.json
+
+Repeat `--scale` to merge profiles measured in separate runs against the same
+manifest:
+
+    python -B benchmarks/summarize.py --corpus ... \
+        --scale benchmarks/pangenome/runs/pangenome-scale-2/report.json \
+        --scale benchmarks/pangenome/runs/pangenome-scale-3/report.json
 """
 
 from __future__ import annotations
@@ -221,6 +227,43 @@ def corpus_tables(report: dict) -> list[str]:
     return lines
 
 
+SCALE_PROFILE_ORDER = {
+    "hypergrass": 0,
+    "hypergrass-pangenome": 1,
+    "hypergrass-lean": 2,
+    "gzip-9": 3,
+    "xz-9": 4,
+}
+
+
+def merge_scale_reports(reports: list[dict]) -> dict:
+    """Merge scale reports that share one manifest into a single table."""
+    if not reports:
+        raise SystemExit("no scale reports")
+    merged = dict(reports[0])
+    merged["run_ids"] = [report.get("run_id") for report in reports]
+    merged["results"] = []
+    seen = set()
+    for report in reports:
+        if report.get("status") not in ("success", "partial"):
+            raise SystemExit(f"scale report is not finished: {report.get('status')}")
+        if report["manifest"] != merged["manifest"]:
+            raise SystemExit("scale reports do not describe the same input manifest")
+        for entry in report["results"]:
+            profile = entry["profile"]
+            if profile in seen:
+                raise SystemExit(f"duplicate scale profile: {profile}")
+            seen.add(profile)
+            merged["results"].append(entry)
+    merged["results"].sort(
+        key=lambda entry: (
+            SCALE_PROFILE_ORDER.get(entry["profile"], len(SCALE_PROFILE_ORDER)),
+            entry["profile"],
+        )
+    )
+    return merged
+
+
 def scale_tables(report: dict) -> list[str]:
     lines = []
     manifest = report["manifest"]
@@ -264,7 +307,7 @@ def scale_tables(report: dict) -> list[str]:
 def main(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("--corpus", required=True)
-    parser.add_argument("--scale")
+    parser.add_argument("--scale", action="append")
     parser.add_argument("--out")
     args = parser.parse_args(argv)
     if hasattr(sys.stdout, "reconfigure"):
@@ -276,9 +319,12 @@ def main(argv=None):
         raise SystemExit(f"corpus report is not finished: {corpus.get('status')}")
     lines.extend(corpus_tables(corpus))
     if args.scale:
-        scale = json.loads(Path(args.scale).read_text(encoding="utf-8"))
-        if scale.get("status") not in ("success", "partial"):
-            raise SystemExit(f"scale report is not finished: {scale.get('status')}")
+        scale = merge_scale_reports(
+            [
+                json.loads(Path(path).read_text(encoding="utf-8"))
+                for path in args.scale
+            ]
+        )
         lines.extend(scale_tables(scale))
     text = "\n".join(lines)
     if args.out:

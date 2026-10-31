@@ -1134,6 +1134,32 @@ public final class HyperGraSS {
                         opts.parallel = false;
                     } else if ("--optimize".equals(args[idx])) {
                         opts.optimize = true;
+                    } else if ("--pangenome".equals(args[idx])) {
+                        // Scale-tuned profile: 16 MiB anchor bank, 8 MiB blocks.
+                        opts.maxAnchorBases = 16 * 1024 * 1024;
+                        opts.blockSizeBytes = 8 * 1024 * 1024;
+                    } else if ("--anchor-mib".equals(args[idx])) {
+                        if (idx + 1 >= args.length) {
+                            printUsage();
+                            return;
+                        }
+                        int mib = Integer.parseInt(args[++idx]);
+                        if (mib <= 0) {
+                            System.err.println("--anchor-mib must be positive");
+                            return;
+                        }
+                        opts.maxAnchorBases = mib * 1024 * 1024;
+                    } else if ("--block-mib".equals(args[idx])) {
+                        if (idx + 1 >= args.length) {
+                            printUsage();
+                            return;
+                        }
+                        int mib = Integer.parseInt(args[++idx]);
+                        if (mib <= 0) {
+                            System.err.println("--block-mib must be positive");
+                            return;
+                        }
+                        opts.blockSizeBytes = mib * 1024 * 1024;
                     }
                     idx++;
                 }
@@ -1201,6 +1227,8 @@ public final class HyperGraSS {
         System.out.println("HyperGraSS CLI (Java 21):");
         System.out.println("  compress [--lean] [--single-thread] [--optimize] <input.fa> <output.hgs>");
         System.out.println("    --optimize: bounded extra size search for small archives; costs more CPU");
+        System.out.println("    --pangenome: scale-tuned 16 MiB anchor bank and 8 MiB blocks");
+        System.out.println("    --anchor-mib N / --block-mib N: explicit tuning for large inputs");
         System.out.println("  decompress <input.hgs> <output.fa>");
         System.out.println("  query <input.hgs> <recordIdx> [startBase endBase]");
         System.out.println("  inspect <input.hgs>");

@@ -1,0 +1,208 @@
+{
+  "schema_version": 1,
+  "kind": "scale-test",
+  "run_id": "pangenome-scale-3",
+  "started_utc": "2026-10-31T20:35:13.195775+00:00",
+  "image_id": "sha256:d6ca62a74e3724172a5c49720e28ab2066eb31b3c965dadfb6220e112dbc3bb3",
+  "manifest": {
+    "schema_version": 1,
+    "source": "NCBI Nucleotide (RefSeq complete E. coli genomes)",
+    "query": "\"Escherichia coli\"[Organism] AND \"complete genome\"[Title] AND refseq[Filter]",
+    "selection": "NCBI relevance order; distinct accessions; 3-7.5 Mbp; stop at target bases",
+    "target_bases": 120000000,
+    "total_bases": 120108223,
+    "fasta": {
+      "path": "data/pangenome.fasta",
+      "size_bytes": 121825884,
+      "sha256": "f03f0dd10c541b99ddf63d18053e3a9c6009910a81700ba18f15e24dcb7d2285"
+    },
+    "records": [
+      {
+        "accession": "NZ_CP142789.1",
+        "length": 4856080,
+        "title": "Escherichia coli strain SX23 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_AP026116.1",
+        "length": 5385437,
+        "title": "Escherichia coli strain CEC13002 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP142783.1",
+        "length": 4860582,
+        "title": "Escherichia coli strain SX12 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP176678.1",
+        "length": 5421422,
+        "title": "Escherichia coli O121 strain GTVSS-020 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP176687.1",
+        "length": 5365294,
+        "title": "Escherichia coli O157:H7 strain GTVSS-023 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP172867.1",
+        "length": 4803482,
+        "title": "Escherichia coli strain 35 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP149810.1",
+        "length": 4561780,
+        "title": "Escherichia coli strain EP91B chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP127004.1",
+        "length": 4798114,
+        "title": "Escherichia coli strain YZ3-11 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP135722.1",
+        "length": 5012486,
+        "title": "Escherichia coli strain TUM1223 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP119441.1",
+        "length": 5053585,
+        "title": "Escherichia coli O121 strain 201805972 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP127265.1",
+        "length": 4943650,
+        "title": "Escherichia coli TW14425 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP134805.1",
+        "length": 5205165,
+        "title": "Escherichia coli strain E7-1N7 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP134659.1",
+        "length": 5053882,
+        "title": "Escherichia coli strain 64A:C chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP134718.1",
+        "length": 5185030,
+        "title": "Escherichia coli strain RIVM_C029670 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP134717.1",
+        "length": 5182390,
+        "title": "Escherichia coli strain RIVM_C036204 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP134716.1",
+        "length": 5256457,
+        "title": "Escherichia coli strain RIVM_C040348 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP133923.1",
+        "length": 5014829,
+        "title": "Escherichia coli strain M21816 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP133916.1",
+        "length": 4735631,
+        "title": "Escherichia coli strain M23314 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP104846.1",
+        "length": 4944989,
+        "title": "Escherichia coli strain DFS.1 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP104788.1",
+        "length": 4837142,
+        "title": "Escherichia coli strain SHP24 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP104516.1",
+        "length": 4922292,
+        "title": "Escherichia coli strain E4 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP104472.1",
+        "length": 5047333,
+        "title": "Escherichia coli strain UC4224 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP104521.1",
+        "length": 4960534,
+        "title": "Escherichia coli strain E5 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP104536.1",
+        "length": 4700637,
+        "title": "Escherichia coli strain E3 chromosome, complete genome"
+      }
+    ]
+  },
+  "fasta": "benchmarks\\pangenome\\data\\pangenome.fasta",
+  "profiles": [
+    "hypergrass-pangenome"
+  ],
+  "results": [
+    {
+      "profile": "hypergrass-pangenome",
+      "profile_kind": "hgs",
+      "started_utc": "2026-10-31T20:35:13.227722+00:00",
+      "input_bytes": 121825884,
+      "input_sha256": "f03f0dd10c541b99ddf63d18053e3a9c6009910a81700ba18f15e24dcb7d2285",
+      "status": "success",
+      "compress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 30.57318209600089,
+        "cpu_seconds": 47.130048,
+        "peak_rss_bytes": 1056911360,
+        "error": null
+      },
+      "artifact_bytes": 4885851,
+      "artifact_sha256": "4a7882f247ec29cb4d71291686ce4f656ffade82fe6e77916ec84c291f281f71",
+      "ratio": 24.934424729693966,
+      "bits_per_byte": 0.32084157090951215,
+      "wall_seconds": 30.57318209600089,
+      "cpu_seconds": 47.130048,
+      "peak_rss_bytes": 1056911360,
+      "decompress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 16.448887562999516,
+        "cpu_seconds": 12.772053,
+        "peak_rss_bytes": 439234560,
+        "error": null
+      },
+      "restored_bytes": 121825884,
+      "restored_sha256": "f03f0dd10c541b99ddf63d18053e3a9c6009910a81700ba18f15e24dcb7d2285",
+      "roundtrip_ok": true,
+      "queries": [
+        {
+          "record": 0,
+          "offset": 1000,
+          "length": 512,
+          "status": "success",
+          "exact": true
+        },
+        {
+          "record": 12,
+          "offset": 1000,
+          "length": 512,
+          "status": "success",
+          "exact": true
+        },
+        {
+          "record": 23,
+          "offset": 1000,
+          "length": 512,
+          "status": "success",
+          "exact": true
+        }
+      ]
+    }
+  ],
+  "status": "success",
+  "failures": 0,
+  "finished_utc": "2026-10-31T20:36:17.151929+00:00"
+}

@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "kind": "anchor-bank-ablation",
+  "run_id": "anchor-ablation-2",
+  "started_utc": "2026-10-31T20:32:32.898316+00:00",
+  "image_id": "sha256:d6ca62a74e3724172a5c49720e28ab2066eb31b3c965dadfb6220e112dbc3bb3",
+  "input": {
+    "path": "benchmarks\\pangenome\\data\\pangenome.fasta",
+    "size_bytes": 121825884,
+    "sha256": "f03f0dd10c541b99ddf63d18053e3a9c6009910a81700ba18f15e24dcb7d2285",
+    "records": 24,
+    "bases": 120108223
+  },
+  "baseline": {
+    "profile": "xz-9",
+    "archive_bytes": 8394900,
+    "source": "benchmarks\\pangenome\\runs\\pangenome-scale-2\\report.json"
+  },
+  "configs": {
+    "banks_mb": [
+      8,
+      16
+    ],
+    "blocks_mb": [
+      8
+    ]
+  },
+  "results": [
+    {
+      "bank_mb": 8,
+      "block_mb": 8,
+      "status": "success",
+      "wall_seconds": 72.01796251499945,
+      "cpu_seconds": 82.614596,
+      "peak_rss_bytes": 1245634560,
+      "error": null,
+      "archive_bytes": 4974040,
+      "compress_seconds": 37.77,
+      "decompress_seconds": 18.461,
+      "exact": true,
+      "records": 24,
+      "blocks": 12,
+      "anchor_bases": 8388608,
+      "anchor_pages": 128,
+      "delta_vs_xz_bytes": -3420860,
+      "delta_vs_xz_percent": -40.749264434358956,
+      "beats_xz": true
+    },
+    {
+      "bank_mb": 16,
+      "block_mb": 8,
+      "status": "success",
+      "wall_seconds": 64.11943270399934,
+      "cpu_seconds": 56.068462000000004,
+      "peak_rss_bytes": 1254928384,
+      "error": null,
+      "archive_bytes": 4885851,
+      "compress_seconds": 31.198,
+      "decompress_seconds": 11.032,
+      "exact": true,
+      "records": 24,
+      "blocks": 12,
+      "anchor_bases": 9434480,
+      "anchor_pages": 144,
+      "delta_vs_xz_bytes": -3509049,
+      "delta_vs_xz_percent": -41.799771289711614,
+      "beats_xz": true
+    }
+  ],
+  "status": "success",
+  "finished_utc": "2026-10-31T20:34:53.615884+00:00"
+}

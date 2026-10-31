@@ -36,9 +36,13 @@ hypergrass/
 ├── benchmarks/panman/                # Optional pinned comparison runner, reports, inputs, and command logs
 ├── benchmarks/corpus/                # Frozen held-out corpus, locked container, orchestrator, audit gate
 ├── benchmarks/pangenome/             # Reproducible >100 MB real E. coli scale test
+├── benchmarks/ablation/              # Anchor-bank and block-size ablation harness
+├── benchmarks/endtoend/              # Query-heavy end-to-end workload
 ├── benchmarks/cost-aware/            # Byte profiles, size/CPU results, and compatibility logs
 ├── docs/HGS-FORMAT.md                # Byte-level `.hgs` version-1 container specification
 ├── docs/BENCHMARKS.md                # Measured corpus and scale results (generated from JSON)
+├── docs/ABLATION.md                  # Anchor-bank/block-size ablation results
+├── docs/END-TO-END.md                # Query-heavy end-to-end workload results
 └── README.md
 ```
 
@@ -84,6 +88,9 @@ java -cp bin hypergrass.HyperGraSS compress input.fna archive.hgs
 
 # Optional bounded extra size search for small archives (more CPU; never retains a larger archive)
 java -cp bin hypergrass.HyperGraSS compress --optimize input.fna archive_optimized.hgs
+
+# Scale-tuned pangenome profile: 16 MiB anchor bank and 8 MiB blocks
+java -cp bin hypergrass.HyperGraSS compress --pangenome input.fna archive_pangenome.hgs
 
 # Bounded-memory streaming mode; the measured scale result is in docs/BENCHMARKS.md
 java -Xmx8m -cp bin hypergrass.HyperGraSS compress --lean input.fna archive_lean.hgs
@@ -203,7 +210,9 @@ Use `:` instead of `;` in the classpath on Linux/macOS. Omit `--bench` to run ar
 ## Reproduced Benchmarks
 
 The frozen corpus and the 100 MB+ pangenome scale test are documented in
-[`docs/BENCHMARKS.md`](docs/BENCHMARKS.md). Every table in that document is
+[`docs/BENCHMARKS.md`](docs/BENCHMARKS.md); the anchor-bank ablation is in
+[`docs/ABLATION.md`](docs/ABLATION.md) and the query workload in
+[`docs/END-TO-END.md`](docs/END-TO-END.md). Every table in those documents is
 rendered from a machine-readable `report.json`; the corpus report is also
 re-hashed and recomputed by `benchmarks/corpus/audit.py` before publication.
 The corpus is a locally conducted held-out benchmark against pinned tool
@@ -217,15 +226,27 @@ Measured headlines, stated without rounding up:
 | Corpus coverage | 179 of 280 planned results; 6 of 10 datasets complete |
 | Smallest archive on completed corpus cells | 7 of 7 datasets |
 | Median margin over the best completed baseline | +1.36% (range +0.56% to +17.52%) |
-| 121.8 MB pangenome, HyperGraSS | 9,215,764 B, 13.22x, 45.9 s, 1,083 MiB peak RSS |
-| 121.8 MB pangenome, xz -9 | **8,394,900 B, 14.51x**, 186.3 s, 738 MiB peak RSS |
+| 121.8 MB pangenome, default HyperGraSS | 9,215,764 B, 13.22x, 45.9 s, 1,083 MiB peak RSS |
+| 121.8 MB pangenome, `--pangenome` (tuned) | **4,885,851 B, 24.93x**, 30.6 s, 1,008 MiB peak RSS |
+| 121.8 MB pangenome, xz -9 | 8,394,900 B, 14.51x, 186.3 s, 738 MiB peak RSS |
 | 121.8 MB pangenome, `--lean` (`-Xmx8m`) | 28,910,764 B, 4.21x, 52 MiB peak RSS |
 | Verification | every round trip byte-exact; 3/3 record queries exact per HyperGraSS profile |
 
-So the default archive is narrowly smallest on the completed small/medium
-sequence-only cells, but **xz -9 is 8.9% smaller on the 100 MB+ pangenome**.
-HyperGraSS is faster there and supports indexed record queries; xz is not
-queryable. The bounded-memory mode fits a small heap at a large size cost.
+So the **default** archive is narrowly smallest on the completed small/medium
+sequence-only cells, but **xz -9 is 9.8% smaller than the default on the
+100 MB+ pangenome**. The opt-in `--pangenome` profile reverses that result:
+4,885,851 B is **41.8% smaller than xz -9** and compresses faster, with exact
+record queries; xz decompresses faster. The profile remains opt-in because one
+pangenome, one host, and two runs are not enough evidence to change the default
+for every input. The bounded-memory mode fits a small heap at a large size
+cost.
+
+On the query workload (13 exact 2,000-base slices), the tuned profile tied xz's
+query latency (1.35 s versus 1.36 s median) while storing 42% fewer bytes, but
+xz restored faster; about 859 queries per restore would be needed to offset
+that difference. The default profile was much slower at queries (8.0 s median).
+See [`docs/ABLATION.md`](docs/ABLATION.md) and
+[`docs/END-TO-END.md`](docs/END-TO-END.md).
 
 The published report is committed at
 `benchmarks/corpus/runs/corpus-full-1/report.json`; inputs and artifacts are
@@ -247,10 +268,19 @@ To rebuild and run the scale test:
 ```sh
 python -B benchmarks/pangenome/fetch.py
 python -B benchmarks/pangenome/run.py --run-id pangenome-scale-repro
+python -B benchmarks/pangenome/run.py --run-id pangenome-tuned-repro --profiles hypergrass-pangenome
+python -B benchmarks/render_benchmarks.py \
+  --corpus benchmarks/corpus/runs/corpus-full-1/report.json \
+  --scale benchmarks/pangenome/runs/pangenome-scale-repro/report.json \
+  --scale benchmarks/pangenome/runs/pangenome-tuned-repro/report.json
+python -B benchmarks/endtoend/run.py --run-id endtoend-repro
 ```
 
-The published scale report is committed at
-`benchmarks/pangenome/runs/pangenome-scale-2/report.json`.
+The published scale reports are committed at
+`benchmarks/pangenome/runs/pangenome-scale-2/report.json` (default, lean, gzip,
+xz) and `benchmarks/pangenome/runs/pangenome-scale-3/report.json` (tuned
+profile). The anchor-bank ablation is documented in
+[`docs/ABLATION.md`](docs/ABLATION.md).
 
 `prepare.py` and `fetch.py` download public data; the repository commits the
 locks, not the sequences. The Docker image is pinned by digest in

@@ -3,10 +3,14 @@
 The interpretation section is intentionally left as a marker: prose claims are
 reviewed by a human, not generated from the same script that computes them.
 
+Repeat `--scale` to merge profiles measured in separate runs against the same
+manifest.
+
 Usage:
     python -B benchmarks/render_benchmarks.py \
         --corpus benchmarks/corpus/runs/corpus-full-1/report.json \
-        --scale benchmarks/pangenome/runs/pangenome-scale-2/report.json
+        --scale benchmarks/pangenome/runs/pangenome-scale-2/report.json \
+        --scale benchmarks/pangenome/runs/pangenome-scale-3/report.json
 """
 
 from __future__ import annotations
@@ -17,13 +21,32 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from summarize import CORPUS_ACCEPTED, corpus_coverage, corpus_tables, scale_tables  # noqa: E402
+from summarize import (  # noqa: E402
+    CORPUS_ACCEPTED,
+    corpus_coverage,
+    corpus_tables,
+    merge_scale_reports,
+    scale_tables,
+)
+
+
+def replace_generated(text: str, name: str, content: str) -> str:
+    """Replace a `NAME:START`/`NAME:END` block, or a one-shot `NAME` marker."""
+    start = f"<!-- {name}:START -->"
+    end = f"<!-- {name}:END -->"
+    if start in text and end in text:
+        head_end = text.index(start) + len(start)
+        return text[:head_end] + "\n" + content + "\n" + text[text.index(end):]
+    placeholder = f"<!-- {name} -->"
+    if placeholder in text:
+        return text.replace(placeholder, content)
+    return text
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("--corpus", required=True)
-    parser.add_argument("--scale")
+    parser.add_argument("--scale", action="append")
     parser.add_argument("--doc", default="docs/BENCHMARKS.md")
     args = parser.parse_args(argv)
 
@@ -58,10 +81,13 @@ def main(argv=None):
     text = text.replace("<!-- RUN-STATUS -->", status)
     text = text.replace("<!-- CORPUS-TABLES -->", "\n".join(corpus_tables(corpus)))
     if args.scale:
-        scale = json.loads(Path(args.scale).read_text(encoding="utf-8"))
-        if scale.get("status") not in ("success", "partial"):
-            raise SystemExit(f"scale report is not finished: {scale.get('status')}")
-        text = text.replace("<!-- SCALE-TABLES -->", "\n".join(scale_tables(scale)))
+        scale = merge_scale_reports(
+            [
+                json.loads(Path(path).read_text(encoding="utf-8"))
+                for path in args.scale
+            ]
+        )
+        text = replace_generated(text, "SCALE-TABLES", "\n".join(scale_tables(scale)))
     doc.write_text(text, encoding="utf-8")
     print(f"rendered {doc}")
     return 0

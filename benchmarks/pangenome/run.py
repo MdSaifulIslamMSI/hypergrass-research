@@ -33,6 +33,7 @@ READ_CHUNK = 1024 * 1024
 
 PROFILES = (
     {"id": "hypergrass", "kind": "hgs", "heap": "1g", "options": []},
+    {"id": "hypergrass-pangenome", "kind": "hgs", "heap": "1g", "options": ["--pangenome"]},
     {"id": "hypergrass-lean", "kind": "hgs", "heap": "8m", "options": ["--lean"]},
     {"id": "gzip-9", "kind": "gzip"},
     {"id": "xz-9", "kind": "xz"},

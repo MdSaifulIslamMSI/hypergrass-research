@@ -4,7 +4,8 @@ Status: local, reproducible measurements. Not an independent third-party audit.
 All numbers in the tables are rendered from machine-readable JSON by
 `benchmarks/summarize.py`; none are hand-copied.
 
-Two measurement sets are reported:
+Two size-focused measurement sets are reported here; the end-to-end query
+workload is reported separately in [`END-TO-END.md`](END-TO-END.md).
 
 1. **Frozen held-out corpus** — 10 public datasets, 10 compressor profiles,
    sequence-only input contract, pinned Linux container, three repetitions
@@ -95,6 +96,14 @@ ten inputs are not ten statistically independent genomes.
   second for the same two HyperGraSS profiles. The host or cache state changed
   between runs. Scale timings are therefore indicative, not precise; sizes and
   round-trip results were stable.
+- **The default profile was not changed.** The published default remains the
+  4 MiB bank / 2 MiB block configuration, which is 9.8% larger than xz on this
+  pangenome. The `--pangenome` profile is opt-in: 16 MiB bank / 8 MiB blocks,
+  41.8% smaller than xz. One pangenome, one host, and two runs are not enough
+  evidence to replace the default for every input.
+- The anchor-bank ablation measures compression and decompression in one
+  process, so its peak-RSS values are not comparable with the per-operation
+  scale numbers. See [`ABLATION.md`](ABLATION.md).
 - The corpus compares **sequence bytes only**. FASTA headers, wrapping, case,
   and line endings are excluded from corpus sizes. The scale test uses complete
   multi-FASTA bytes, so those two size ratios are not directly comparable.
@@ -198,9 +207,14 @@ is not committed. The selected records are 24 distinct accessions totaling
 hash before measuring, compresses the complete multi-FASTA, decompresses it,
 compares SHA-256, and queries slices from the first, middle, and last records.
 The `pangenome-scale-2` report JSON is committed at
-`benchmarks/pangenome/runs/pangenome-scale-2/report.json`; the FASTA and
-archives are not.
+`benchmarks/pangenome/runs/pangenome-scale-2/report.json` and the tuned
+`pangenome-scale-3` report at
+`benchmarks/pangenome/runs/pangenome-scale-3/report.json`; the FASTA and
+archives are not. The opt-in `--pangenome` profile (16 MiB anchor bank, 8 MiB
+blocks) was measured in `pangenome-scale-3`; the table below merges both
+reports after checking that their input manifests are identical.
 
+<!-- SCALE-TABLES:START -->
 ### Scale results
 
 Input: `data/pangenome.fasta`, 121,825,884 bytes, 24 records, 120,108,223 bases. SHA-256 `f03f0dd10c541b99ddf63d18053e3a9c6009910a81700ba18f15e24dcb7d2285`.
@@ -208,15 +222,22 @@ Input: `data/pangenome.fasta`, 121,825,884 bytes, 24 records, 120,108,223 bases.
 | Profile | Archive bytes | Ratio | Bits/byte | Compress wall (s) | Compress CPU (s) | Peak RSS (MiB) | Round trip | Queries |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |
 | hypergrass | 9,215,764 | 13.22x | 0.605 | 45.9 | 80.0 | 1083.0 | yes | 3/3 exact |
+| hypergrass-pangenome | 4,885,851 | 24.93x | 0.321 | 30.6 | 47.1 | 1007.9 | yes | 3/3 exact |
 | hypergrass-lean | 28,910,764 | 4.21x | 1.898 | 47.5 | 44.4 | 52.0 | yes | 3/3 exact |
 | gzip-9 | 35,859,298 | 3.40x | 2.355 | 93.8 | 89.8 | 9.5 | yes | — |
 | xz-9 | 8,394,900 | 14.51x | 0.551 | 186.3 | 186.6 | 737.9 | yes | — |
 
+<!-- SCALE-TABLES:END -->
+
 A second run with byte-identical archives measured 116.9 s and 155.6 s for the
-two HyperGraSS profiles instead of 45.9 s and 47.5 s. Host or cache state
-changed between runs, so compression times here are indicative, not precise.
-The xz archive is a single stream with no index: it cannot answer record
-queries without decompression, so its query cell is `—`, not a failed check.
+two default HyperGraSS profiles instead of 45.9 s and 47.5 s. Host or cache
+state changed between runs, so compression times here are indicative, not
+precise; archive sizes and round trips were stable. The tuned profile was also
+measured twice: 30.7 s in the ablation and 30.6 s in the scale harness, with a
+byte-identical 4,885,851-byte archive both times. Its decompression measured
+16.4 s at 419 MiB peak RSS, against 7.1 s at 189 MiB for xz. The xz archive is
+a single stream with no index: it cannot answer record queries without
+decompression, so its query cell is `—`, not a failed check.
 
 ## Interpretation
 
@@ -231,11 +252,34 @@ mitochondria +0.56%, chloroplast +1.36%, yeast chromosome I +0.89%, *E. coli*
 decisive gap. Only the 16.6 kB mitochondrial case (+17.52% versus xz) and the
 1.66 MB archaeal genome (+9.84% versus xz) exceed 4%.
 
-**On the 121.8 MB pangenome, xz -9 is smaller.** xz produced 8,394,900 bytes
-against 9,215,764 bytes for HyperGraSS, an 8.9% advantage for xz. HyperGraSS
-was faster (45.9 s versus 186.3 s) and used more memory (1,083 MiB versus
-738 MiB), but it did not win the size comparison at this scale. Any claim that
-HyperGraSS supersedes general-purpose compressors is false on this input.
+**On the 121.8 MB pangenome, the default profile loses to xz -9.** xz produced
+8,394,900 bytes against 9,215,764 bytes for default HyperGraSS, a 9.8% larger
+archive for HyperGraSS. The default was faster to compress (45.9 s versus
+186.3 s) but used more memory (1,083 MiB versus 738 MiB). Any claim that the
+default configuration supersedes general-purpose compressors is false on this
+input.
+
+**The opt-in `--pangenome` profile wins on size.** With a 16 MiB anchor bank and
+8 MiB blocks, HyperGraSS produced 4,885,851 bytes: 41.8% smaller than xz -9 and
+47.0% smaller than the default, at 24.93x ratio and 0.321 bits per input byte.
+It compressed in 30.6 s versus 186.3 s for xz and answered all three record
+queries exactly. It did not win every axis: xz decompressed in 7.1 s versus
+16.4 s for HyperGraSS, and used 189 MiB versus 419 MiB for that operation. The
+archive was byte-identical across two runs, so the size result is stable even
+though timings are not.
+
+This is a measured tuning win on one pangenome, not a new compression law. The
+ablation shows the improvement comes from removing the 4 MiB anchor-bank cap,
+not from a universal block-size rule; see [`ABLATION.md`](ABLATION.md).
+
+**The query advantage is workload-dependent.** On 13 exact 2,000-base slices,
+the tuned profile answered in a median of 1.35 s against 1.36 s for xz: a tie,
+not a speedup. xz restored the archive in 7.1 s versus 16.4 s for the tuned
+profile, so a small query batch finishes sooner with xz. The tuned profile
+needs about 859 queries per restore to offset that difference. The default
+profile was much slower at queries (8.0 s median) and is dominated by the tuned
+profile on all four measured axes. Details are in
+[`END-TO-END.md`](END-TO-END.md).
 
 **`--lean` is a memory result, not a size result.** It round-tripped the
 121.8 MB FASTA and answered all three queries with a 52 MiB peak RSS, but its
@@ -250,14 +294,19 @@ larger inputs; `jarvis3-l26` and `geco3-l9` both exceed the 180 s cap on the
 4.6 MB *E. coli* genome. HyperGraSS finishes those cases, but that is a
 practicality result, not a size win against configurations that completed.
 
-**Likely cause of the scale loss.** The anchor bank is capped at 4,194,304
-bases (64 pages), while each pangenome record is about 4.7-5.4 Mbp. The bank
-cannot represent even one full record, let alone variation across 24 strains,
-and the encoder uses 2 MB blocks at this input size. xz -9 has a 64 MiB
-dictionary and sees a contiguous 121.8 MB stream, so it can reference
-cross-strain repeats that the current anchor bank cannot. This is a hypothesis
-consistent with the measured numbers, not a measured decomposition; testing it
-requires an ablation with a larger bank and larger blocks.
+**Measured cause of the default's scale loss.** The default anchor bank is
+capped at 4,194,304 bases (64 pages), while each pangenome record is about
+4.7-5.4 Mbp. The bank cannot represent even one full record, let alone
+variation across 24 strains, and the default encoder uses 2 MB blocks at this
+input size. xz -9 has a 64 MiB dictionary and sees a contiguous 121.8 MB
+stream, so it can reference cross-strain repeats that the default anchor bank
+cannot. The ablation tested that explanation directly: at the same 2 MiB block
+size, raising the bank to 8 MiB reduced the archive from 9,215,764 to
+5,173,803 bytes (43.9% smaller); 16 MiB with 8 MiB blocks reached 4,885,851
+bytes. Block size alone was not the lever: at a 4 MiB bank, 4 MiB blocks made
+the archive larger. The 16 MiB cap is not fully consumed either; the winning
+archive holds 144 anchor pages, about 9.4 Mbp. The cap was a real ceiling, but
+a larger cap does not automatically add anchors.
 
 **What the system does provide.** A pure-Java, zero-dependency implementation
 with a documented archive format, byte-exact reconstruction, record and range
@@ -265,9 +314,11 @@ queries on the archive, and a bounded-memory mode. Those properties are not
 measured by archive size alone, and xz has no equivalent query interface.
 
 The honest summary is: competitive at small and medium sequence-only scales,
-narrowly first on the completed corpus cells, **not** the smallest at 100 MB+
-pangenome scale, and differentiated mainly by implementation and access
-properties rather than by compression ratio.
+narrowly first on the completed corpus cells; **not** the smallest at 100 MB+
+pangenome scale with the default profile, but **41.8% smaller than xz** on that
+input with the opt-in `--pangenome` profile. It is differentiated mainly by
+native record and range queries, a documented archive format, and a pure-Java,
+zero-dependency implementation, not by universal compression superiority.
 
 ## Reproduce
 
@@ -288,7 +339,8 @@ python -B benchmarks/summarize.py \
 ```
 
 The corpus runner refuses an existing run directory. Use a new `--run-id` or
-delete the old run directory deliberately. Downloaded data and run artifacts
-are gitignored; the two published `report.json` evidence files are committed.
-If a run is stopped deliberately, add `--allow-incomplete` to the audit command
-to verify the completed cells without certifying coverage.
+delete the old run directory deliberately. Downloaded data and work artifacts
+are gitignored; the published `report.json` evidence files are committed, and
+individual reports are force-added when they live under a gitignored `runs/`
+directory. If a run is stopped deliberately, add `--allow-incomplete` to the
+audit command to verify the completed cells without certifying coverage.
