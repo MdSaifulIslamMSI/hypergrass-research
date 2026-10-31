@@ -290,7 +290,7 @@ def main(argv: list[str] | None = None) -> int:
     project = Path(__file__).resolve().parent.parent.parent
     pangenome = Path(__file__).resolve().parent
     manifest = json.loads((pangenome / "manifest.json").read_text(encoding="utf-8"))
-    fasta = project / manifest["fasta"]["path"]
+    fasta = pangenome / manifest["fasta"]["path"]
     if not fasta.exists():
         raise SystemExit(f"missing pangenome FASTA: {fasta}")
     if fasta.stat().st_size != manifest["fasta"]["size_bytes"]:

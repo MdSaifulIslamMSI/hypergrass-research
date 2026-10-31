@@ -15,5 +15,7 @@ jobs:
           java-version: "21"
       - name: Build
         run: ./build.sh
+      - name: Version
+        run: java -cp bin hypergrass.HyperGraSS --version
       - name: Lossless verification
         run: ./test.sh

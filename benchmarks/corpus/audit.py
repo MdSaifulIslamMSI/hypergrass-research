@@ -79,8 +79,20 @@ def main(argv=None) -> int:
     datasets = {item["id"]: item for item in data_lock["datasets"]}
     audit = Audit()
 
-    audit.check(report.get("status") == "success", f"report status is {report.get('status')}")
-    audit.check(report.get("failures") == 0, f"report failures is {report.get('failures')}")
+    audit.check(report.get("status") in ("success", "partial"), f"report status is {report.get('status')}")
+    expected_infeasible = sum(
+        1 for entry in report["results"]
+        if entry["profile"] == "geco3-l9" and entry["status"] != "success"
+        and entry["status"] != "not_applicable"
+    )
+    audit.check(
+        report.get("failures") == expected_infeasible,
+        f"report failures {report.get('failures')} != expected geco3-l9 infeasible {expected_infeasible}",
+    )
+    audit.check(
+        report.get("status") == ("success" if expected_infeasible == 0 else "partial"),
+        "report status does not match the expected infeasible count",
+    )
     audit.check(len(report.get("deviations", [])) >= 3, "deviations were not recorded")
     audit.check(
         any("geco3-l9" in text and "once" in text for text in report.get("deviations", [])),
@@ -104,10 +116,21 @@ def main(argv=None) -> int:
             audit.check(not dataset["sequence"]["raw_acgt"], f"{key} flagged n/a on ACGT input")
             continue
         if entry["status"] != "success":
-            audit.check(
-                entry["profile"] == "geco3-l9" and entry["status"] == "timeout",
-                f"{key} unexpected failure: {entry.get('error')}",
+            compress = entry.get("compress", {})
+            decompress = entry.get("decompress", {})
+            allowed = entry["profile"] == "geco3-l9" and (
+                compress.get("status") == "timeout"
+                or (
+                    compress.get("status") == "nonzero"
+                    and compress.get("returncode") in (137, -9)
+                )
+                or decompress.get("status") == "timeout"
+                or (
+                    decompress.get("status") == "nonzero"
+                    and decompress.get("returncode") in (137, -9)
+                )
             )
+            audit.check(allowed, f"{key} unexpected failure: {entry.get('error')}")
             continue
         if entry["profile"] in ACGT_ONLY:
             audit.check(bool(dataset["sequence"]["raw_acgt"]), f"{key} DNA tool ran on non-ACGT input")
@@ -142,6 +165,12 @@ def main(argv=None) -> int:
     for row in report["summary"]:
         key = (row["dataset"], row["profile"])
         group = results.get(key, [])
+        if group and all(entry["status"] == "not_applicable" for entry in group):
+            audit.check(row["attempts"] == len(group), f"{key} n/a attempts")
+            audit.check(row["successful"] == 0, f"{key} n/a successful")
+            audit.check(row["artifact_bytes"] is None, f"{key} n/a artifact bytes")
+            audit.check(row["status"] == "not_applicable", f"{key} n/a status")
+            continue
         applicable = [entry for entry in group if entry["status"] != "not_applicable"]
         successful = [entry for entry in applicable if entry["status"] == "success"]
         sizes = sorted({entry["artifact_bytes"] for entry in successful if entry.get("artifact_bytes")})
@@ -151,16 +180,27 @@ def main(argv=None) -> int:
             row["artifact_bytes"] == (sizes[0] if len(sizes) == 1 else None),
             f"{key} summary artifact bytes",
         )
+        audit.check(not row["nondeterministic_size"], f"{key} artifact size changed between repetitions")
         audit.check(
             row["roundtrip_all_ok"] == (bool(successful) and all(entry["roundtrip_ok"] for entry in successful)),
             f"{key} summary roundtrip flag",
         )
-        if row["status"] == "not_applicable":
-            audit.check(all(entry["status"] == "not_applicable" for entry in group), f"{key} mixed n/a group")
-        elif row["status"] == "success":
+        if row["status"] == "success":
             audit.check(len(successful) == len(applicable), f"{key} success status with failures")
         elif row["status"] == "timeout":
-            audit.check(any(entry["status"] == "timeout" for entry in applicable), f"{key} timeout status")
+            audit.check(
+                any(
+                    entry.get("compress", {}).get("status") == "timeout"
+                    or entry.get("decompress", {}).get("status") == "timeout"
+                    for entry in applicable
+                ),
+                f"{key} timeout status",
+            )
+        elif row["status"] == "failed":
+            audit.check(
+                row["profile"] == "geco3-l9" and any(entry["status"] != "success" for entry in applicable),
+                f"{key} failed status",
+            )
 
     audit.check(
         report["environment"]["image_id"].startswith("sha256:"),

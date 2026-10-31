@@ -38,11 +38,12 @@ anything else.
   | --- | --- |
   | `0` | Empty. No further bytes. |
   | `1` | Raw. Followed by `uvarint` length and that many bytes. |
-  | `2` | Deflate. Followed by `uvarint` uncompressed length and a raw DEFLATE stream (`nowrap=true`, level 9). |
+  | `2` | Deflate. Followed by `uvarint` uncompressed length, `uvarint` compressed length, and that many bytes of a raw DEFLATE stream (`nowrap=true`, level 9). |
 
-  The encoder chooses raw when the payload is at most 12 bytes, otherwise it
-  picks whichever of raw or Deflate is strictly smaller. A decoder must accept
-  raw even when Deflate would also have been valid.
+  The encoder emits `0` for an empty payload and `1` for payloads of at most 12
+  bytes. Otherwise it uses Deflate only when `compressedLength + varintSize(compressedLength)`
+  is strictly smaller than the raw length; a decoder must accept raw even when
+  Deflate would also have been valid.
 
 ## 3. Common header
 
@@ -102,7 +103,7 @@ are the directory. Block offsets in the directory are absolute.
 Present only when `HAS_ANCHOR` is set:
 
 ```
-fast2Bit      byte        0 = context-mixer-coded pages, 1 = 2-bit packed pages
+fast2Bit      byte        0 = 2-bit packed pages, 1 = context-mixer-coded pages
 anchorLen     uvarint     total anchor bases
 numPages      uvarint     number of pages
 primarySeedLen uvarint
@@ -115,13 +116,13 @@ pageEncLen[]  uvarint     one per page, in page order
 pagePayload[] bytes       one per page, in page order
 ```
 
-`ANCHOR_PAGE_SIZE` is 65,536 bases. The final page may be shorter. When
-`fast2Bit == 1`, each page payload is an `aux` stream containing 2-bit packed
-bases (A=0, C=1, G=2, T/U=3), most-significant base first within each byte.
-When `fast2Bit == 0`, each page payload is a `QuantumContextRepeatMixer` stream
-as described in section 6.3. Global donor entries encode a position and a
-2-bit difference; they are an internal reuse catalog, not part of the public
-API.
+`ANCHOR_PAGE_SIZE` is 65,536 bases. The final page may be shorter. When the
+flag is `0`, each page payload is an `aux` stream containing 2-bit packed bases
+(A=0, C=1, G=2, T/U=3), least-significant base first within each byte
+(`pack2Bit` in `VarIntCodec`). When the flag is `1`, each page payload is a
+`QuantumContextRepeatMixer` stream as described in section 6.3. Global donor
+entries encode a position and a 2-bit difference; they are an internal reuse
+catalog, not part of the public API.
 
 ### 5.2 Footer body
 
@@ -147,9 +148,10 @@ entry's `blockOffset + compressedLen`. `firstRecordDelta` is relative to the
 previous entry's `firstRecordIdx`; entry 0 is relative to 0. This keeps the
 directory small and makes block order explicit.
 
-`firstRecordBaseOffset` is the byte offset of the block's first record within
-the decompressed sequence stream. It is what makes direct record and range
-queries possible without decompressing earlier blocks.
+`firstRecordBaseOffset` is the sequence-character offset of the block's first
+record within the concatenated sequence stream (headers and line endings
+excluded). It is what makes direct record and range queries possible without
+decompressing earlier blocks.
 
 `blockSeqChars` is the number of sequence characters contributed by the block;
 it is used to map a record-relative query range to the block's DNA stream.
@@ -185,7 +187,7 @@ headerBlock    aux
 `headerBlock` contains, for each header: `uvarint seqLineDelta`; then, for each
 header in order, `uvarint sharedPrefixLen`, `uvarint suffixLen`, and the suffix
 bytes. Headers are front-coded against the previous header. Header bytes
-include the leading `>` and exclude the line ending.
+exclude the leading `>` (the decoder re-inserts it) and exclude the line ending.
 
 Channel 2 — line layout (always present):
 
@@ -194,8 +196,9 @@ lineLengths    aux    RLE of sequence line widths
 lineEols       aux    RLE of per-line EOL codes
 ```
 
-EOL codes: `0` = none, `1` = LF, `2` = CRLF. The RLE streams contain
-`(value, runLength)` pairs of `uvarint`s; see `writeRleInts` / `writeRleBytes`
+EOL codes: `0` = none, `1` = LF, `2` = CRLF. The EOL stream covers header
+lines and sequence lines in file order. Both RLE streams contain
+`(runLength, value)` pairs of `uvarint`s; see `writeRleInts` / `writeRleBytes`
 in `FastaStreamFactorizer`.
 
 Channel 3 — lowercase intervals, present iff `0x04`:
@@ -238,7 +241,7 @@ The first byte selects the DNA encoding:
 | Mode | Layout |
 | --- | --- |
 | `0` | Empty DNA stream. No further bytes. |
-| `1` | `uvarint rcLen`, then a `QuantumContextRepeatMixer` stream of `rcLen` bytes. |
+| `1` | `uvarint compressedLen`, then that many bytes of a `QuantumContextRepeatMixer` stream that decodes to `dnaLen` bases. |
 | `2` | Syncmer matches with per-match literals and SNP residuals. |
 | `3` | Anchor-coordinate haplotype matrix with donor reuse. |
 
@@ -250,19 +253,25 @@ implementation rather than reimplement these modes from this summary.
 ### 6.3 `QuantumContextRepeatMixer` stream
 
 Mode 1 and non-2-bit anchor pages contain a self-delimiting context-mixer
-stream. The stream is stored as `uvarint length` followed by that many bytes
-in mode 1; anchor pages store the bytes inside an `aux` wrapper. The mixer is
-a byte-oriented adaptive model; its internal state is reset per stream. The
-decoder must consume exactly the declared number of output bytes and reject
-truncated or overlong input.
+stream. In mode 1 the compressed stream is stored as `uvarint compressedLen`
+followed by that many bytes and decodes to the block's `dnaLen` bases. A
+non-2-bit anchor page stores the compressed stream bytes directly and takes its
+compressed length from `pageEncLen` in section 5.1; it decodes to the page's
+`pageBaseLen` bases. There is no additional `aux` wrapper. A 2-bit anchor page
+is different: its packed bases are wrapped in `aux` before being stored as the
+page payload. The mixer is a byte-oriented adaptive model; its internal state is
+reset per stream. The decoder must consume exactly the declared number of output
+bytes and reject truncated or overlong input.
 
 ## 7. Compression and verification rules
 
 - The encoder computes CRC-32 over the exact decompressed bytes and stores it
   in the header (compact layout) or footer (multi-block layout).
-- The decoder must verify the CRC before returning data.
-- The decoder must reject unknown mode bits, impossible lengths, truncated
-  varints, and directory entries that point outside the file.
+- The decoder verifies the CRC before returning data.
+- The 1.0.0 decoder rejects malformed magic, footer magic, impossible lengths,
+  truncated varints, and directory entries that point outside the file. It
+  currently ignores reserved header flag bits; a future or independent reader
+  should reject any bit outside `0x07` rather than guess at its meaning.
 - A round trip is successful only when the restored byte sequence is identical
   to the input, not merely when it decodes without error.
 
@@ -271,10 +280,12 @@ truncated or overlong input.
 `HyperGraSS query <archive.hgs> <recordIndex> <start> <end>` returns a slice of
 one record. `start` and `end` are zero-based, half-open, and relative to the
 record's sequence characters; `end = -1` means the record end. The query reads
-the footer, locates the block containing the record via
-`firstRecordBaseOffset`, decodes only that block (plus any anchor pages it
-needs), and writes the requested bases to stdout followed by a newline. Query
-output is therefore not a FASTA record; it is the raw base slice.
+the footer, finds the directory entries whose record range contains the
+requested record index, and decodes only those blocks plus the anchor pages they
+reference. For a record spanning several blocks, `firstRecordBaseOffset` and
+`blockSeqChars` map the requested range to the overlapping blocks. The requested
+bases are written to stdout followed by a newline. Query output is therefore not
+a FASTA record; it is the raw base slice.
 
 ## 9. Determinism and compatibility
 

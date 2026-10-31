@@ -18,6 +18,7 @@ benchmarks/corpus/smoke/
 benchmarks/corpus/full-run.log
 benchmarks/corpus/build.log
 benchmarks/corpus/smoke.log
+benchmarks/test-final.log
 benchmarks/pangenome/data/
 benchmarks/pangenome/runs/
 benchmarks/pangenome/fetch.log

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
 CORPUS_BASELINES = ("gzip-9", "xz-9", "jarvis3-l7", "jarvis3-l26", "geco3-l9", "geco3-l6", "geco3-l3")
@@ -24,16 +25,6 @@ def fmt_int(value):
 
 def fmt_float(value, digits=2):
     return f"{value:.{digits}f}" if isinstance(value, (int, float)) else "—"
-
-
-def fmt_bytes(value):
-    if not isinstance(value, (int, float)):
-        return "—"
-    if value >= 1_000_000:
-        return f"{value / 1_000_000:.1f} MB"
-    if value >= 1_000:
-        return f"{value / 1_000:.1f} kB"
-    return f"{value:.0f} B"
 
 
 def row_by(summary, dataset, profile):
@@ -57,11 +48,12 @@ def corpus_tables(report: dict) -> list[str]:
 
     lines.append("### Head-to-head, frozen corpus\n")
     lines.append(
-        "| Dataset | Input | HyperGraSS | HyperGraSS `--lean` | Best baseline | Best baseline bytes | Δ vs best baseline |\n"
-        "| --- | ---: | ---: | ---: | --- | ---: | ---: |"
+        "| Dataset | Input bytes | HyperGraSS | `--optimize` | `--lean` | Best baseline | Best baseline bytes | Δ default vs best |\n"
+        "| --- | ---: | ---: | ---: | ---: | --- | ---: | ---: |"
     )
     for dataset in datasets:
         hgs = row_by(summary, dataset, "hypergrass")
+        optimize = row_by(summary, dataset, "hypergrass-optimize")
         lean = row_by(summary, dataset, "hypergrass-lean")
         candidates = []
         for name in CORPUS_BASELINES:
@@ -73,11 +65,12 @@ def corpus_tables(report: dict) -> list[str]:
         if best and hgs and hgs.get("artifact_bytes"):
             delta = f"{(best['artifact_bytes'] - hgs['artifact_bytes']) / best['artifact_bytes'] * 100:+.2f}%"
         lines.append(
-            "| {ds} | {inp} | {hgs} | {lean} | {bn} | {bb} | {delta} |".format(
+            "| {ds} | {inp} | {hgs} | {opt} | {lean} | {bn} | {bb} | {delta} |".format(
                 ds=dataset,
-                inp=fmt_bytes(hgs["input_bytes"] if hgs else None),
-                hgs=fmt_bytes(hgs.get("artifact_bytes") if hgs else None),
-                lean=fmt_bytes(lean.get("artifact_bytes") if lean else None),
+                inp=fmt_int(hgs["input_bytes"] if hgs else None),
+                hgs=fmt_int(hgs.get("artifact_bytes") if hgs else None),
+                opt=fmt_int(optimize.get("artifact_bytes") if optimize else None),
+                lean=fmt_int(lean.get("artifact_bytes") if lean else None),
                 bn=best["profile"] if best else "—",
                 bb=fmt_int(best["artifact_bytes"]) if best else "—",
                 delta=delta,
@@ -98,6 +91,8 @@ def corpus_tables(report: dict) -> list[str]:
                 cells.append(f"{row['bits_per_base']:.3f}")
             elif row and row["status"] == "not_applicable":
                 cells.append("n/a")
+            elif row and row["profile"] == "geco3-l9" and row["status"] in ("timeout", "failed"):
+                cells.append("infeasible")
             elif row and row["status"] == "timeout":
                 cells.append("timeout")
             elif row:
@@ -106,8 +101,13 @@ def corpus_tables(report: dict) -> list[str]:
                 cells.append("—")
         lines.append(f"| {dataset} | " + " | ".join(cells) + " |")
     lines.append("")
+    lines.append(
+        "`infeasible` marks `geco3-l9` cells that exceeded the 180 s operation cap "
+        "(compression or decompression) or the container memory limit; they are "
+        "not treated as zero-byte results.\n"
+    )
 
-    lines.append("### Median compression time and peak RSS, frozen corpus\n")
+    lines.append("### Median of per-dataset medians: compression time and peak RSS\n")
     lines.append(
         "| Profile | Median wall (s) | Median CPU (s) | Median peak RSS (MiB) | Successful datasets |\n"
         "| --- | ---: | ---: | ---: | ---: |"
@@ -135,17 +135,24 @@ def corpus_tables(report: dict) -> list[str]:
         )
     lines.append("")
 
-    lines.append("### Per-run status\n")
-    lines.append("| Dataset | Profile | Status | Attempts | Successful | Artifact bytes | bpb |\n| --- | --- | --- | ---: | ---: | ---: | ---: |")
-    for dataset in datasets:
-        for profile in profiles:
-            row = row_by(summary, dataset, profile)
-            if not row:
-                continue
+    lines.append("### Non-success cells\n")
+    anomalies = [
+        row for row in summary
+        if row["status"] not in ("success", "not_applicable")
+    ]
+    na = sum(1 for row in summary if row["status"] == "not_applicable")
+    lines.append(
+        f"{len(summary)} dataset/profile cells: "
+        f"{sum(1 for row in summary if row['status'] == 'success')} successful, "
+        f"{na} not applicable, {len(anomalies)} infeasible or failed.\n"
+    )
+    if anomalies:
+        lines.append("| Dataset | Profile | Status | Attempts | Successful | Artifact bytes | bpb |\n| --- | --- | --- | ---: | ---: | ---: | ---: |")
+        for row in anomalies:
             lines.append(
                 "| {ds} | {p} | {s} | {a} | {ok} | {b} | {bpb} |".format(
-                    ds=dataset,
-                    p=profile,
+                    ds=row["dataset"],
+                    p=row["profile"],
                     s=row["status"],
                     a=row["attempts"],
                     ok=row["successful"],
@@ -153,7 +160,7 @@ def corpus_tables(report: dict) -> list[str]:
                     bpb=fmt_float(row.get("bits_per_base"), 3),
                 )
             )
-    lines.append("")
+        lines.append("")
     return lines
 
 
@@ -172,7 +179,7 @@ def scale_tables(report: dict) -> list[str]:
         )
     )
     lines.append(
-        "| Profile | Archive bytes | Ratio | Bits/byte | Wall (s) | CPU (s) | Peak RSS (MiB) | Round trip | Queries |\n"
+        "| Profile | Archive bytes | Ratio | Bits/byte | Compress wall (s) | Compress CPU (s) | Peak RSS (MiB) | Round trip | Queries |\n"
         "| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |"
     )
     for entry in report["results"]:
@@ -203,6 +210,8 @@ def main(argv=None):
     parser.add_argument("--scale")
     parser.add_argument("--out")
     args = parser.parse_args(argv)
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
 
     corpus = json.loads(Path(args.corpus).read_text(encoding="utf-8"))
     lines = []

@@ -2,12 +2,12 @@
 
 **Next-Generation Lossless Genomic & Pangenomic Sequence Compression Engine (Pure Java 21, Zero External Dependencies)**
 
-HyperGraSS supersedes the **GraSS** pipeline (*Roy, Maity & Mukhopadhyay, Briefings in Functional Genomics, 2025, `elae050`*) by replacing ad-hoc ternary prefix/digram substitution and monolithic `libbsc` shells with a unified mathematical architecture grounded in biological sequence symmetry, information theory, and self-indexed pangenomic graph structures:
+HyperGraSS extends the **GraSS** pipeline (*Roy, Maity & Mukhopadhyay, Briefings in Functional Genomics, 2025, `elae050`*) by replacing ad-hoc ternary prefix/digram substitution and monolithic `libbsc` shells with a unified architecture grounded in biological sequence symmetry, information theory, and self-indexed pangenomic graph structures:
 
-1. **Universal 6-Channel Orthogonal Lossless Factorization (`FastaStreamFactorizer.java`):** Eliminates GraSS's **Parity-Avalanche Catastrophe** (where a single Kimura transition SNP corrupts >92% of downstream `F2.SSG` digram bytes) and achieves 100% `SHA-256` lossless bijectivity over arbitrary Raw, FASTA, Multi-FASTA, RNA (`U`), chimeric DNA+RNA (`T+U`), IUPAC ambiguity codes, scaffold `N`-runs, soft-masked lowercase intervals, ragged line widths, and CRLF/LF line endings.
-2. **Bidirectional Canonical 16-mer Referential Engine with Anchor-Coordinate Haplotype Sets (`CanonicalSyncmerEngine.java`, v2):** Indexes both strands, bridges homologous SNPs, predicts circular-genome seams, and stores substitutions by absolute anchor coordinate so circularly permuted and reverse-strand genomes share clade variant sets (real 250-genome GenBank Ebola cohort: 190x; synthetic 2,000-strain outbreak: 2,087x).
-3. **Integer-Only Context-Mixing Range Coder (`QuantumContextRepeatMixer.java`, QCRM):** Dense Markov orders, sparse hashed k=12/15, spaced-seed and codon-phase experts, bidirectional repeat heads, and a logistic plus Bayesian mixer, all in integer arithmetic (no float/double, so no cross-CPU drift). Beats the best published specialized compressor on 11 of 14 real genomes; loses by 0.4-1.1% on PlFa, ScPo and C. parvum. See the report artifact for exact numbers.
-4. **1-Hop Page-Indexed Random Access & Bounded `--lean` Streaming (`HyperGraSS.java`):** Supports sub-millisecond `O(1)` subsequence and record queries (`query` CLI) directly via `FileChannel`, multi-core parallel block execution, and strictly bounded `< 2 MB` live-heap streaming (`--lean`, verified inside `-Xmx8m` on >100 MB pangenomes where GraSS crashes with `OutOfMemoryError` below `-Xmx64m` even on 18 KB inputs).
+1. **Universal 6-Channel Orthogonal Lossless Factorization (`FastaStreamFactorizer.java`):** Separates metadata from the DNA stream instead of applying one substitution alphabet to the whole file, avoiding the error propagation that a single Kimura transition can cause in a shared digram code. The verification suites cover raw bytes, FASTA, multi-FASTA, RNA (`U`), chimeric DNA+RNA (`T+U`), IUPAC ambiguity codes, scaffold `N`-runs, soft-masked lowercase intervals, ragged line widths, and CRLF/LF line endings, and require byte-exact `SHA-256` identity on round trip.
+2. **Bidirectional Canonical 16-mer Referential Engine with Anchor-Coordinate Haplotype Sets (`CanonicalSyncmerEngine.java`, v2):** Indexes both strands, bridges homologous SNPs, predicts circular-genome seams, and stores substitutions by absolute anchor coordinate so circularly permuted and reverse-strand genomes share clade variant sets. Earlier development notes report 190x on a 250-genome GenBank Ebola cohort and 2,087x on a synthetic 2,000-strain outbreak; those artifacts are **not retained in this repository**, so they are not counted as reproduced evidence here.
+3. **Integer-Only Context-Mixing Range Coder (`QuantumContextRepeatMixer.java`, QCRM):** Dense Markov orders, sparse hashed k=12/15, spaced-seed and codon-phase experts, bidirectional repeat heads, and a logistic plus Bayesian mixer, all in integer arithmetic (no float/double, so no cross-CPU drift). The reproduced held-out comparison against gzip, xz, JARVIS3, and GeCo3 is in [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md); an earlier "11 of 14 genomes" development claim is not independently reproduced here.
+4. **Page-Indexed Random Access & Bounded `--lean` Streaming (`HyperGraSS.java`):** Supports record and subsequence queries through a page index that decodes only the containing block, multi-core parallel block execution, and bounded-memory streaming. The `--lean` heap and 100 MB+ pangenome measurements are reported in [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md), not asserted here.
 
 ---
 
@@ -16,7 +16,7 @@ HyperGraSS supersedes the **GraSS** pipeline (*Roy, Maity & Mukhopadhyay, Briefi
 ```text
 hypergrass/
 ├── src/hypergrass/
-│   ├── HyperGraSS.java                # .hgs container engine, parallel pipeline, --lean streaming, O(1) query CLI
+│   ├── HyperGraSS.java                # .hgs container engine, parallel pipeline, --lean streaming, page-indexed query CLI
 │   ├── FastaStreamFactorizer.java     # 6-channel lossless FASTA/RNA/DNA factorizer & selective slice reconstructor
 │   ├── CanonicalSyncmerEngine.java    # BC-LZG bidirectional (+/-) k-mer + Kimura SNP-bridging referential engine
 │   ├── HaplotypeDonorIndex.java       # Exact inverted variant index + 64-lane bit-sliced donor counting
@@ -34,9 +34,36 @@ hypergrass/
 │   ├── VerifyCostAwareEncoding.java  # Saved-build size, default-byte, query, and decoder checks
 │   └── BenchmarkSuite.java            # Reproducible 5-experiment scientific benchmark suite
 ├── benchmarks/panman/                # Optional pinned comparison runner, reports, inputs, and command logs
+├── benchmarks/corpus/                # Frozen held-out corpus, locked container, orchestrator, audit gate
+├── benchmarks/pangenome/             # Reproducible >100 MB real E. coli scale test
 ├── benchmarks/cost-aware/            # Byte profiles, size/CPU results, and compatibility logs
+├── docs/HGS-FORMAT.md                # Byte-level `.hgs` version-1 container specification
+├── docs/BENCHMARKS.md                # Measured corpus and scale results (generated from JSON)
 └── README.md
 ```
+
+---
+
+## Build, Test, and Version
+
+```powershell
+# Windows
+powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\test.ps1
+java -cp bin hypergrass.HyperGraSS --version
+```
+
+```sh
+# Linux / macOS
+./build.sh
+./test.sh
+java -cp bin hypergrass.HyperGraSS --version
+```
+
+The build uses only `javac` and JDK 21. `pom.xml` is an optional Maven packaging
+path; CI uses the scripts. The test gate runs the lossless edge-case,
+donor-index, anchor-codec, byte-accounting, and donor-cost suites. It does not
+run cross-version tests that require a saved prior build.
 
 ---
 
@@ -45,11 +72,11 @@ hypergrass/
 ### 1. Compile
 
 ```powershell
-mkdir -Force bin
-javac -d bin src/hypergrass/*.java
+powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
+# Linux/macOS: ./build.sh
 ```
 
-### 2. Compress, Inspect, Query (`O(1)`), and Decompress
+### 2. Compress, Inspect, Query, and Decompress
 
 ```powershell
 # High-compression parallel mode
@@ -58,7 +85,7 @@ java -cp bin hypergrass.HyperGraSS compress input.fna archive.hgs
 # Optional bounded extra size search for small archives (more CPU; never retains a larger archive)
 java -cp bin hypergrass.HyperGraSS compress --optimize input.fna archive_optimized.hgs
 
-# Ultra-lean bounded-memory streaming mode (runs safely even under -Xmx8m on 100+ MB files!)
+# Bounded-memory streaming mode; the measured scale result is in docs/BENCHMARKS.md
 java -Xmx8m -cp bin hypergrass.HyperGraSS compress --lean input.fna archive_lean.hgs
 
 # Inspect archive metadata in O(1)
@@ -67,7 +94,7 @@ java -cp bin hypergrass.HyperGraSS inspect archive.hgs
 # Exact encoded-byte breakdown (reads the archive into memory; not an O(1) inspection)
 java -cp bin hypergrass.HyperGraSS profile archive.hgs
 
-# Sub-millisecond O(1) random-access query: extract record #1337, genomic locus [1000, 1500)
+# Page-indexed random-access query: extract record #1337, locus [1000, 1500)
 java -cp bin hypergrass.HyperGraSS query archive.hgs 1337 1000 1500
 
 # Full lossless decompression (with automatic CRC-32 integrity verification)
@@ -170,3 +197,47 @@ java -Xms512m -Xmx512m -cp bin hypergrass.VerifyDonorArchives verify donor-basel
 ```
 
 Use `:` instead of `;` in the classpath on Linux/macOS. Omit `--bench` to run archive-byte, round-trip, and query checks without repeated timing runs. `baseline` writes the four generated archives; `verify` compares against them and fails if even one archive byte differs.
+
+---
+
+## Reproduced Benchmarks
+
+The frozen corpus and the 100 MB+ pangenome scale test are documented in
+[`docs/BENCHMARKS.md`](docs/BENCHMARKS.md). Every table in that document is
+rendered from a machine-readable `report.json`; the corpus report is also
+re-hashed and recomputed by `benchmarks/corpus/audit.py` before publication.
+The corpus is a locally conducted held-out benchmark against pinned tool
+versions, not an independent third-party audit. Deviations, timeouts, and
+non-applicable cells are reported rather than dropped.
+
+To regenerate the corpus report:
+
+```sh
+python -B benchmarks/corpus/prepare.py --verify
+python -B benchmarks/corpus/run.py --run-id corpus-full-1
+python -B benchmarks/corpus/audit.py benchmarks/corpus/runs/corpus-full-1
+python -B benchmarks/summarize.py --corpus benchmarks/corpus/runs/corpus-full-1/report.json
+```
+
+To rebuild and run the scale test:
+
+```sh
+python -B benchmarks/pangenome/fetch.py
+python -B benchmarks/pangenome/run.py --run-id pangenome-scale-1
+```
+
+`prepare.py` and `fetch.py` download public data; the repository commits the
+locks, not the sequences. The Docker image is pinned by digest in
+`benchmarks/corpus/image.lock.json`.
+
+## Format Specification
+
+[`docs/HGS-FORMAT.md`](docs/HGS-FORMAT.md) documents the version-1 `.hgs`
+container, footer directory, six-channel metadata layout, DNA modes, and query
+semantics. The format is implementation-defined, not yet an external standard.
+
+## License
+
+Apache License 2.0. See [`LICENSE`](LICENSE). The license choice is a default
+for this packaging pass, not legal advice; change it before publication if your
+institution requires a different terms.
