@@ -69,6 +69,9 @@ public final class VerifyAllEdgeCases {
         // 5. Giant multi-block single-chromosome slice query test
         passed += verifyMultiBlockChromosomeQuery(bueb18940, tmpDir);
 
+        // 6. Multi-record input whose blocks start inside long records
+        passed += verifyMultiRecordMidBlockQueries(bueb18940, tmpDir);
+
         System.out.println("\nALL " + passed + " VERIFICATION SUITES PASSED WITH 100% SHA-256 IDENTITY!");
     }
 
@@ -215,6 +218,66 @@ public final class VerifyAllEdgeCases {
         }
         System.out.printf("  [PASS] %-48s | Raw: %,8d B -> HGS: %,7d B | Cross-Block Query OK%n",
                 "1.5 MB Multi-Block Single Chromosome", raw.length, Files.size(hgsPath));
+        return 1;
+    }
+
+    private static int verifyMultiRecordMidBlockQueries(byte[] seedSeq, Path tmpDir) throws Exception {
+        // Six near-identical records with a 16 KB block target. Each record is
+        // longer than twice the target, so blocks start inside records and the
+        // last record's header lands inside a mid-record block. The footer used
+        // to count only blocks that start at a record boundary, which reported
+        // 4 records for these 6 and rejected queries for the last two.
+        int numRecords = 6;
+        int recordLen = 40_000;
+        int blockBytes = 16_384;
+        String unit = new String(seedSeq, StandardCharsets.US_ASCII);
+        Random rng = new Random(7L);
+        String[] seqs = new String[numRecords];
+        StringBuilder fasta = new StringBuilder(numRecords * recordLen + 16_000);
+        for (int r = 0; r < numRecords; r++) {
+            StringBuilder seq = new StringBuilder(recordLen + unit.length());
+            while (seq.length() < recordLen) {
+                seq.append(unit);
+            }
+            char[] arr = seq.substring(0, recordLen).toCharArray();
+            for (int m = 0; m < 200; m++) {
+                int p = rng.nextInt(arr.length);
+                arr[p] = mutateBase(arr[p], rng.nextDouble() < 0.75, rng);
+            }
+            String record = new String(arr);
+            seqs[r] = record;
+            fasta.append(">synthetic_record_").append(r).append('\n');
+            for (int i = 0; i < record.length(); i += 70) {
+                fasta.append(record, i, Math.min(record.length(), i + 70)).append('\n');
+            }
+        }
+        byte[] raw = fasta.toString().getBytes(StandardCharsets.US_ASCII);
+        Path inPath = tmpDir.resolve("multi-record-mid-block.fna");
+        Path hgsPath = tmpDir.resolve("multi-record-mid-block.hgs");
+        Files.write(inPath, raw);
+
+        HyperGraSS.CompressOptions opts = HyperGraSS.CompressOptions.defaults();
+        opts.blockSizeBytes = blockBytes;
+        HyperGraSS.compressFile(inPath, hgsPath, opts);
+        if (!Arrays.equals(raw, HyperGraSS.decompressBytes(Files.readAllBytes(hgsPath)))) {
+            throw new AssertionError("Multi-record mid-block round-trip mismatch!");
+        }
+        int counted = HyperGraSS.inspect(hgsPath).totalRecords;
+        if (counted != numRecords) {
+            throw new AssertionError("Footer reports " + counted + " records, expected " + numRecords);
+        }
+
+        for (int r = 0; r < numRecords; r++) {
+            int start = (r == numRecords - 1) ? seqs[r].length() - 700 : 20_000;
+            int end = start + 512;
+            String expected = seqs[r].substring(start, end);
+            String got = new String(HyperGraSS.query(hgsPath, r, start, end), StandardCharsets.US_ASCII);
+            if (!expected.equals(got)) {
+                throw new AssertionError("Mid-block record query mismatch on record " + r);
+            }
+        }
+        System.out.printf("  [PASS] %-48s | Raw: %,8d B -> HGS: %,7d B | %d Records Queried%n",
+                "Records with Mid-Record Block Starts", raw.length, Files.size(hgsPath), numRecords);
         return 1;
     }
 

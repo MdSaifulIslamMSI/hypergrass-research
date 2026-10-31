@@ -148,9 +148,11 @@ entry's `blockOffset + compressedLen`. `firstRecordDelta` is relative to the
 previous entry's `firstRecordIdx`; entry 0 is relative to 0. This keeps the
 directory small and makes block order explicit.
 
-`firstRecordBaseOffset` is the sequence-character offset of the block's first
-record within the concatenated sequence stream (headers and line endings
-excluded). It is what makes direct record and range queries possible without
+`firstRecordBaseOffset` is the sequence-character offset of the block start
+within the record identified by `firstRecordIdx` (headers and line endings
+excluded). It is `0` when the block starts at that record's header or first
+base, and greater than `0` when a long record was split at a line boundary.
+It is what maps a record-relative query range to the block's DNA stream without
 decompressing earlier blocks.
 
 `blockSeqChars` is the number of sequence characters contributed by the block;

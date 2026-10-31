@@ -46,6 +46,10 @@ RESTORED = {
 EXPECTED_REPS = {profile: 3 for profile in ARTIFACTS}
 EXPECTED_REPS["geco3-l9"] = 1
 ACGT_ONLY = {"jarvis3-l7", "jarvis3-l26", "geco3-l9", "geco3-l6", "geco3-l3"}
+# Profiles whose configured effort can exceed the 180 s cap or the 2 GB
+# container limit on MB-scale inputs. Their incomplete cells are retained as
+# infeasible; no size is inferred from a partial run.
+HIGH_EFFORT = {"geco3-l9", "jarvis3-l26"}
 
 
 def sha256_file(path: Path) -> str:
@@ -70,6 +74,12 @@ class Audit:
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("run_dir")
+    parser.add_argument(
+        "--allow-incomplete",
+        action="store_true",
+        help="audit the results that exist in a run that was stopped early; "
+             "never treats the partial matrix as complete",
+    )
     args = parser.parse_args(argv)
     run_dir = Path(args.run_dir).resolve()
     corpus = run_dir.parent.parent
@@ -79,20 +89,25 @@ def main(argv=None) -> int:
     datasets = {item["id"]: item for item in data_lock["datasets"]}
     audit = Audit()
 
-    audit.check(report.get("status") in ("success", "partial"), f"report status is {report.get('status')}")
+    audit.check(
+        report.get("status") in ("success", "partial")
+        or (args.allow_incomplete and report.get("status") in ("running", "stopped")),
+        f"report status is {report.get('status')}",
+    )
     expected_infeasible = sum(
         1 for entry in report["results"]
-        if entry["profile"] == "geco3-l9" and entry["status"] != "success"
+        if entry["profile"] in HIGH_EFFORT and entry["status"] != "success"
         and entry["status"] != "not_applicable"
     )
-    audit.check(
-        report.get("failures") == expected_infeasible,
-        f"report failures {report.get('failures')} != expected geco3-l9 infeasible {expected_infeasible}",
-    )
-    audit.check(
-        report.get("status") == ("success" if expected_infeasible == 0 else "partial"),
-        "report status does not match the expected infeasible count",
-    )
+    if not args.allow_incomplete:
+        audit.check(
+            report.get("failures") == expected_infeasible,
+            f"report failures {report.get('failures')} != expected high-effort infeasible {expected_infeasible}",
+        )
+        audit.check(
+            report.get("status") == ("success" if expected_infeasible == 0 else "partial"),
+            "report status does not match the expected infeasible count",
+        )
     audit.check(len(report.get("deviations", [])) >= 3, "deviations were not recorded")
     audit.check(
         any("geco3-l9" in text and "once" in text for text in report.get("deviations", [])),
@@ -109,16 +124,16 @@ def main(argv=None) -> int:
         key = (entry["dataset"], entry["profile"])
         results.setdefault(key, []).append(entry)
         dataset = datasets[entry["dataset"]]
-        audit.check(entry["input_bytes"] == dataset["sequence"]["size_bytes"], f"{key} input size mismatch")
-        audit.check(entry["input_sha256"] == dataset["sequence"]["sha256"], f"{key} input hash mismatch")
         if entry["status"] == "not_applicable":
             audit.check(entry["profile"] in ACGT_ONLY, f"{key} unexpectedly not applicable")
             audit.check(not dataset["sequence"]["raw_acgt"], f"{key} flagged n/a on ACGT input")
             continue
+        audit.check(entry["input_bytes"] == dataset["sequence"]["size_bytes"], f"{key} input size mismatch")
+        audit.check(entry["input_sha256"] == dataset["sequence"]["sha256"], f"{key} input hash mismatch")
         if entry["status"] != "success":
             compress = entry.get("compress", {})
             decompress = entry.get("decompress", {})
-            allowed = entry["profile"] == "geco3-l9" and (
+            allowed = entry["profile"] in HIGH_EFFORT and (
                 compress.get("status") == "timeout"
                 or (
                     compress.get("status") == "nonzero"
@@ -159,7 +174,13 @@ def main(argv=None) -> int:
             audit.check(query["exact_after_trailing_newline"], f"{key} query mismatch")
 
     for key, reps in results.items():
-        audit.check(len(reps) == expected.get(key), f"{key} result count {len(reps)} != {expected.get(key)}")
+        if args.allow_incomplete:
+            audit.check(
+                len(reps) <= expected.get(key),
+                f"{key} has {len(reps)} results, more than the {expected.get(key)} planned",
+            )
+        else:
+            audit.check(len(reps) == expected.get(key), f"{key} result count {len(reps)} != {expected.get(key)}")
 
     # Recompute summary rows from raw results.
     for row in report["summary"]:
@@ -198,7 +219,7 @@ def main(argv=None) -> int:
             )
         elif row["status"] == "failed":
             audit.check(
-                row["profile"] == "geco3-l9" and any(entry["status"] != "success" for entry in applicable),
+                row["profile"] in HIGH_EFFORT and any(entry["status"] != "success" for entry in applicable),
                 f"{key} failed status",
             )
 
@@ -212,14 +233,25 @@ def main(argv=None) -> int:
     )
     audit.check(report["protocol"] == protocol, "embedded protocol differs from protocol.json")
 
+    planned = sum(expected.values())
+    present = len(report["results"])
+    complete_datasets = sum(
+        1 for dataset in datasets.values()
+        if all(len(results.get((dataset["id"], profile), [])) == reps
+               for profile, reps in EXPECTED_REPS.items())
+    )
+    coverage = (
+        f"coverage {present}/{planned} results, "
+        f"{complete_datasets}/{len(datasets)} datasets complete"
+    )
     if audit.errors:
-        print(f"AUDIT FAILED: {len(audit.errors)} of {audit.checks} checks")
+        print(f"AUDIT FAILED: {len(audit.errors)} of {audit.checks} checks; {coverage}")
         for error in audit.errors[:40]:
             print(f"  - {error}")
         if len(audit.errors) > 40:
             print(f"  ... {len(audit.errors) - 40} more")
         return 1
-    print(f"AUDIT PASSED: {audit.checks} checks, {len(results)} dataset/profile cells")
+    print(f"AUDIT PASSED: {audit.checks} checks, {len(results)} dataset/profile cells; {coverage}")
     return 0
 
 

@@ -25,7 +25,7 @@ hypergrass/
 │   ├── QuantumContextRepeatMixer.java # Integer-only context-mixing range coder
 │   ├── BayesianMarkovRangeCoder.java  # Multi-order Markov (0..9) + codon-phase + Chargaff RC 64-bit range coder
 │   ├── VarIntCodec.java               # LEB128/ZigZag varints, 2-bit DNA packing, adaptive raw/Deflate aux streams
-│   ├── VerifyAllEdgeCases.java        # 13-suite SHA-256 byte-exact lossless verification harness
+│   ├── VerifyAllEdgeCases.java        # 14-suite SHA-256 byte-exact lossless verification harness
 │   ├── VerifyDonorIndex.java          # Differential donor-count tests + optional synthetic microbenchmark
 │   ├── VerifyDonorArchives.java       # Cross-version archive-byte checks + optional synthetic pipeline timings
 │   ├── VerifyAnchorCodecs.java        # Bounded codec selection, size non-regression, previous-decoder checks
@@ -182,7 +182,7 @@ A separate original-versus-updated encoder comparison used four deterministic 1,
 | 90 shared variants plus subclades/private variants | 112.2 ms | 77.8 ms |
 | 90 shared variants plus few private variants | 49.7 ms | 37.6 ms |
 
-All four archives were **byte-for-byte identical**, and lossless reconstruction and 60 slice queries passed. The private-variant case was slower: end-to-end performance is workload-dependent, and these small synthetic timings are not a substitute for a real-corpus benchmark. All 13 existing lossless verification suites also passed.
+All four archives were **byte-for-byte identical**, and lossless reconstruction and 60 slice queries passed. The private-variant case was slower: end-to-end performance is workload-dependent, and these small synthetic timings are not a substitute for a real-corpus benchmark. All 14 lossless verification suites also passed.
 
 ### Reproduce the Checks
 
@@ -210,21 +210,47 @@ The corpus is a locally conducted held-out benchmark against pinned tool
 versions, not an independent third-party audit. Deviations, timeouts, and
 non-applicable cells are reported rather than dropped.
 
-To regenerate the corpus report:
+Measured headlines, stated without rounding up:
+
+| Result | Measurement |
+| --- | --- |
+| Corpus coverage | 179 of 280 planned results; 6 of 10 datasets complete |
+| Smallest archive on completed corpus cells | 7 of 7 datasets |
+| Median margin over the best completed baseline | +1.36% (range +0.56% to +17.52%) |
+| 121.8 MB pangenome, HyperGraSS | 9,215,764 B, 13.22x, 45.9 s, 1,083 MiB peak RSS |
+| 121.8 MB pangenome, xz -9 | **8,394,900 B, 14.51x**, 186.3 s, 738 MiB peak RSS |
+| 121.8 MB pangenome, `--lean` (`-Xmx8m`) | 28,910,764 B, 4.21x, 52 MiB peak RSS |
+| Verification | every round trip byte-exact; 3/3 record queries exact per HyperGraSS profile |
+
+So the default archive is narrowly smallest on the completed small/medium
+sequence-only cells, but **xz -9 is 8.9% smaller on the 100 MB+ pangenome**.
+HyperGraSS is faster there and supports indexed record queries; xz is not
+queryable. The bounded-memory mode fits a small heap at a large size cost.
+
+The published report is committed at
+`benchmarks/corpus/runs/corpus-full-1/report.json`; inputs and artifacts are
+not. It was stopped early, so it still says `running`.
+`python -B benchmarks/corpus/audit.py <run-dir> --allow-incomplete` re-verifies
+every completed result without claiming the missing cells.
+
+To regenerate the corpus report from scratch (requires Docker and downloads):
 
 ```sh
 python -B benchmarks/corpus/prepare.py --verify
-python -B benchmarks/corpus/run.py --run-id corpus-full-1
-python -B benchmarks/corpus/audit.py benchmarks/corpus/runs/corpus-full-1
-python -B benchmarks/summarize.py --corpus benchmarks/corpus/runs/corpus-full-1/report.json
+python -B benchmarks/corpus/run.py --run-id corpus-repro-1
+python -B benchmarks/corpus/audit.py benchmarks/corpus/runs/corpus-repro-1
+python -B benchmarks/summarize.py --corpus benchmarks/corpus/runs/corpus-repro-1/report.json
 ```
 
 To rebuild and run the scale test:
 
 ```sh
 python -B benchmarks/pangenome/fetch.py
-python -B benchmarks/pangenome/run.py --run-id pangenome-scale-1
+python -B benchmarks/pangenome/run.py --run-id pangenome-scale-repro
 ```
+
+The published scale report is committed at
+`benchmarks/pangenome/runs/pangenome-scale-2/report.json`.
 
 `prepare.py` and `fetch.py` download public data; the repository commits the
 locks, not the sequences. The Docker image is pinned by digest in

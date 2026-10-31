@@ -1,0 +1,336 @@
+{
+  "schema_version": 1,
+  "kind": "scale-test",
+  "run_id": "pangenome-scale-2",
+  "started_utc": "2026-10-31T18:17:18.314215+00:00",
+  "image_id": "sha256:d6ca62a74e3724172a5c49720e28ab2066eb31b3c965dadfb6220e112dbc3bb3",
+  "manifest": {
+    "schema_version": 1,
+    "source": "NCBI Nucleotide (RefSeq complete E. coli genomes)",
+    "query": "\"Escherichia coli\"[Organism] AND \"complete genome\"[Title] AND refseq[Filter]",
+    "selection": "NCBI relevance order; distinct accessions; 3-7.5 Mbp; stop at target bases",
+    "target_bases": 120000000,
+    "total_bases": 120108223,
+    "fasta": {
+      "path": "data/pangenome.fasta",
+      "size_bytes": 121825884,
+      "sha256": "f03f0dd10c541b99ddf63d18053e3a9c6009910a81700ba18f15e24dcb7d2285"
+    },
+    "records": [
+      {
+        "accession": "NZ_CP142789.1",
+        "length": 4856080,
+        "title": "Escherichia coli strain SX23 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_AP026116.1",
+        "length": 5385437,
+        "title": "Escherichia coli strain CEC13002 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP142783.1",
+        "length": 4860582,
+        "title": "Escherichia coli strain SX12 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP176678.1",
+        "length": 5421422,
+        "title": "Escherichia coli O121 strain GTVSS-020 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP176687.1",
+        "length": 5365294,
+        "title": "Escherichia coli O157:H7 strain GTVSS-023 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP172867.1",
+        "length": 4803482,
+        "title": "Escherichia coli strain 35 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP149810.1",
+        "length": 4561780,
+        "title": "Escherichia coli strain EP91B chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP127004.1",
+        "length": 4798114,
+        "title": "Escherichia coli strain YZ3-11 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP135722.1",
+        "length": 5012486,
+        "title": "Escherichia coli strain TUM1223 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP119441.1",
+        "length": 5053585,
+        "title": "Escherichia coli O121 strain 201805972 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP127265.1",
+        "length": 4943650,
+        "title": "Escherichia coli TW14425 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP134805.1",
+        "length": 5205165,
+        "title": "Escherichia coli strain E7-1N7 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP134659.1",
+        "length": 5053882,
+        "title": "Escherichia coli strain 64A:C chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP134718.1",
+        "length": 5185030,
+        "title": "Escherichia coli strain RIVM_C029670 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP134717.1",
+        "length": 5182390,
+        "title": "Escherichia coli strain RIVM_C036204 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP134716.1",
+        "length": 5256457,
+        "title": "Escherichia coli strain RIVM_C040348 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP133923.1",
+        "length": 5014829,
+        "title": "Escherichia coli strain M21816 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP133916.1",
+        "length": 4735631,
+        "title": "Escherichia coli strain M23314 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP104846.1",
+        "length": 4944989,
+        "title": "Escherichia coli strain DFS.1 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP104788.1",
+        "length": 4837142,
+        "title": "Escherichia coli strain SHP24 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP104516.1",
+        "length": 4922292,
+        "title": "Escherichia coli strain E4 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP104472.1",
+        "length": 5047333,
+        "title": "Escherichia coli strain UC4224 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP104521.1",
+        "length": 4960534,
+        "title": "Escherichia coli strain E5 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP104536.1",
+        "length": 4700637,
+        "title": "Escherichia coli strain E3 chromosome, complete genome"
+      }
+    ]
+  },
+  "fasta": "benchmarks\\pangenome\\data\\pangenome.fasta",
+  "profiles": [
+    "hypergrass",
+    "hypergrass-lean",
+    "gzip-9",
+    "xz-9"
+  ],
+  "results": [
+    {
+      "profile": "hypergrass",
+      "profile_kind": "hgs",
+      "started_utc": "2026-10-31T18:17:18.318921+00:00",
+      "input_bytes": 121825884,
+      "input_sha256": "f03f0dd10c541b99ddf63d18053e3a9c6009910a81700ba18f15e24dcb7d2285",
+      "status": "success",
+      "compress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 45.937376837999636,
+        "cpu_seconds": 80.021812,
+        "peak_rss_bytes": 1135583232,
+        "error": null
+      },
+      "artifact_bytes": 9215764,
+      "artifact_sha256": "65f86c14ab4d4ac4d75d750182a15ff2eecfb4cd8676d29995f8443dd43bf197",
+      "ratio": 13.219292941963358,
+      "bits_per_byte": 0.6051760888515285,
+      "wall_seconds": 45.937376837999636,
+      "cpu_seconds": 80.021812,
+      "peak_rss_bytes": 1135583232,
+      "decompress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 42.956153816000096,
+        "cpu_seconds": 69.075609,
+        "peak_rss_bytes": 514789376,
+        "error": null
+      },
+      "restored_bytes": 121825884,
+      "restored_sha256": "f03f0dd10c541b99ddf63d18053e3a9c6009910a81700ba18f15e24dcb7d2285",
+      "roundtrip_ok": true,
+      "queries": [
+        {
+          "record": 0,
+          "offset": 1000,
+          "length": 512,
+          "status": "success",
+          "exact": true
+        },
+        {
+          "record": 12,
+          "offset": 1000,
+          "length": 512,
+          "status": "success",
+          "exact": true
+        },
+        {
+          "record": 23,
+          "offset": 1000,
+          "length": 512,
+          "status": "success",
+          "exact": true
+        }
+      ]
+    },
+    {
+      "profile": "hypergrass-lean",
+      "profile_kind": "hgs",
+      "started_utc": "2026-10-31T18:18:57.351075+00:00",
+      "input_bytes": 121825884,
+      "input_sha256": "f03f0dd10c541b99ddf63d18053e3a9c6009910a81700ba18f15e24dcb7d2285",
+      "status": "success",
+      "compress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 47.45534810599929,
+        "cpu_seconds": 44.403041,
+        "peak_rss_bytes": 54521856,
+        "error": null
+      },
+      "artifact_bytes": 28910764,
+      "artifact_sha256": "70793756088120543a2c57f5aa3627532efb291028f7444290ae1868e92d5fdc",
+      "ratio": 4.2138590318816895,
+      "bits_per_byte": 1.898497301279587,
+      "wall_seconds": 47.45534810599929,
+      "cpu_seconds": 44.403041,
+      "peak_rss_bytes": 54521856,
+      "decompress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 43.438077273999625,
+        "cpu_seconds": 40.073961000000004,
+        "peak_rss_bytes": 50524160,
+        "error": null
+      },
+      "restored_bytes": 121825884,
+      "restored_sha256": "f03f0dd10c541b99ddf63d18053e3a9c6009910a81700ba18f15e24dcb7d2285",
+      "roundtrip_ok": true,
+      "queries": [
+        {
+          "record": 0,
+          "offset": 1000,
+          "length": 512,
+          "status": "success",
+          "exact": true
+        },
+        {
+          "record": 12,
+          "offset": 1000,
+          "length": 512,
+          "status": "success",
+          "exact": true
+        },
+        {
+          "record": 23,
+          "offset": 1000,
+          "length": 512,
+          "status": "success",
+          "exact": true
+        }
+      ]
+    },
+    {
+      "profile": "gzip-9",
+      "profile_kind": "gzip",
+      "started_utc": "2026-10-31T18:20:34.496728+00:00",
+      "input_bytes": 121825884,
+      "input_sha256": "f03f0dd10c541b99ddf63d18053e3a9c6009910a81700ba18f15e24dcb7d2285",
+      "status": "success",
+      "compress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 93.79822738199982,
+        "cpu_seconds": 89.754144,
+        "peak_rss_bytes": 9986048,
+        "error": null
+      },
+      "artifact_bytes": 35859298,
+      "artifact_sha256": "0f698a9ea76e628cf0fdaaf45b78df127d51c881cddc015ba582bd4bb2c05020",
+      "ratio": 3.3973304218058034,
+      "bits_per_byte": 2.354790087137804,
+      "wall_seconds": 93.79822738199982,
+      "cpu_seconds": 89.754144,
+      "peak_rss_bytes": 9986048,
+      "decompress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 2.8026656820002245,
+        "cpu_seconds": 0.48146599999999995,
+        "peak_rss_bytes": 10313728,
+        "error": null
+      },
+      "restored_bytes": 121825884,
+      "restored_sha256": "f03f0dd10c541b99ddf63d18053e3a9c6009910a81700ba18f15e24dcb7d2285",
+      "roundtrip_ok": true
+    },
+    {
+      "profile": "xz-9",
+      "profile_kind": "xz",
+      "started_utc": "2026-10-31T18:22:12.751747+00:00",
+      "input_bytes": 121825884,
+      "input_sha256": "f03f0dd10c541b99ddf63d18053e3a9c6009910a81700ba18f15e24dcb7d2285",
+      "status": "success",
+      "compress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 186.33581340100045,
+        "cpu_seconds": 186.556739,
+        "peak_rss_bytes": 773718016,
+        "error": null
+      },
+      "artifact_bytes": 8394900,
+      "artifact_sha256": "46e79172eeb20c857648ee40d1a19dc7750ffd7cf8d7e97b6f7547cf4868adf9",
+      "ratio": 14.511892220276597,
+      "bits_per_byte": 0.5512720104702873,
+      "wall_seconds": 186.33581340100045,
+      "cpu_seconds": 186.556739,
+      "peak_rss_bytes": 773718016,
+      "decompress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 7.114680095999574,
+        "cpu_seconds": 0.881275,
+        "peak_rss_bytes": 198049792,
+        "error": null
+      },
+      "restored_bytes": 121825884,
+      "restored_sha256": "f03f0dd10c541b99ddf63d18053e3a9c6009910a81700ba18f15e24dcb7d2285",
+      "roundtrip_ok": true
+    }
+  ],
+  "status": "success",
+  "failures": 0,
+  "finished_utc": "2026-10-31T18:25:27.765596+00:00"
+}

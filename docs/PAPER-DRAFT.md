@@ -13,11 +13,15 @@ encodes the DNA stream with a canonical syncmer referential model and an
 integer-only context-mixing range coder, and stores a page-indexed footer that
 supports record and subsequence queries without decompressing the whole
 archive. A bounded-memory streaming mode is intended for inputs larger than the
-Java heap. We evaluate the implementation on a frozen 10-dataset held-out
-corpus against gzip, xz, JARVIS3, and GeCo3, and on a 121.8 MB real multi-strain
-*E. coli* pangenome. The contribution is a working system plus a reproducible
-measurement harness with byte-exact verification and explicit deviations; the
-results do not establish universal superiority over specialized compressors.
+Java heap. We evaluate the implementation on a frozen held-out corpus that was
+stopped after 179 of 280 planned results (6 of 10 datasets complete) and on a
+121.8 MB real multi-strain *E. coli* pangenome. On the completed sequence-only
+cells the default archive is smallest by a median margin of 1.36%; on the
+121.8 MB complete-FASTA pangenome, xz -9 is 8.9% smaller, while HyperGraSS
+answers exact record queries and finishes faster. The contribution is a working
+system plus a reproducible measurement harness with byte-exact verification and
+explicit deviations; the results do not establish universal superiority over
+specialized compressors.
 
 ## 1. Introduction
 
@@ -120,6 +124,13 @@ The output must match the input SHA-256 and length exactly. Three slice queries
 per HyperGraSS archive must match the corresponding sequence bytes. The report
 is then re-hashed and recomputed by an independent audit script.
 
+The reported run was stopped deliberately after 179 of 280 planned results:
+six datasets are complete, `ecoli-k12` is partial, and three datasets were not
+measured. The report preserves its live `running` status, the audit is run with
+`--allow-incomplete` to verify every completed result without certifying the
+missing cells, and every table states its coverage. The corpus numbers are
+therefore evidence about the completed cells, not a full 10-dataset benchmark.
+
 ### 3.2 Scale test
 
 A 121.8 MB multi-FASTA pangenome is built from 24 complete RefSeq *E. coli*
@@ -142,7 +153,38 @@ the tables. No failed cell is replaced by a synthetic value.
 
 ## 4. Results
 
-<!-- RESULTS -->
+All numbers below are rendered from the reports; the full tables, coverage
+notes, and interpretation are in [`BENCHMARKS.md`](BENCHMARKS.md). The corpus
+run was stopped at 179 of 280 planned results, so it supports statements about
+six complete datasets plus a partial *E. coli* dataset, not about all ten.
+
+**Sequence-only corpus.** On the seven datasets with a completed default
+archive, the HyperGraSS archive was the smallest of every successful profile.
+The margin over the best completed baseline has a median of +1.36% and a range
+of +0.56% to +17.52%. Four margins are below 1.4%; the two largest are the
+16.6 kB mitochondrial case (+17.52% versus xz) and the 1.66 MB archaeal genome
+(+9.84% versus xz). The *E. coli* genome is a single-repetition cell:
+HyperGraSS 1,087,650 bytes at 1.875 bits/base versus GeCo3 level 6 at
+1,094,264 bytes and 1.886 bits/base. JARVIS3 level 26 and GeCo3 level 9 both
+exceed the 180 s cap on that input. The default profile's median compression
+time is 0.94 s versus 0.21 s for gzip and 0.12 s for xz.
+
+**121.8 MB pangenome.** xz -9 produced 8,394,900 bytes (0.551 bits per input
+byte) against 9,215,764 bytes for HyperGraSS (0.605 bits per byte): xz is 8.9%
+smaller. HyperGraSS was faster (45.9 s versus 186.3 s) and used more peak RSS
+(1,083 MiB versus 738 MiB). `--lean` completed the round trip and all three
+record queries with 52 MiB peak RSS, but its archive is 28,910,764 bytes, 3.14x
+the default. The three HyperGraSS queries were exact. The xz archive has no
+query interface, so it cannot return a record slice without full decompression.
+
+**Interpretation.** HyperGraSS is competitive at small and medium sequence-only
+scales and narrowly first on the completed corpus cells. It is not the smallest
+at 100 MB+ pangenome scale. A likely cause is that the anchor bank is capped at
+4.19 Mbp while each record is about 5 Mbp, whereas xz -9 can reference repeats
+across a 64 MiB window of the 121.8 MB stream; this is a hypothesis, not a
+measured ablation. The demonstrated advantages are pure-Java implementation,
+byte-exact round trips, an indexed query interface, and a bounded-memory mode,
+not universal compression superiority.
 
 ## 5. Limitations
 
@@ -153,7 +195,12 @@ the tables. No failed cell is replaced by a synthetic value.
   the two sets are not directly comparable.
 - GeCo3 level 9 is not a practical baseline under the 180 s cap, and the
   reported timeouts describe the cap rather than the tool's best size.
-- The scale test is one pangenome from one species.
+- HyperGraSS does not beat xz on the 121.8 MB pangenome; the anchor bank is
+  capped below one record's length, so cross-record redundancy is only partly
+  captured.
+- The scale test is one pangenome from one species and one repetition per
+  profile. Two runs produced identical archives but wall times differing by up
+  to 2.5x, so its timing data is indicative.
 - Timing is from one Windows host with a Linux container; cross-platform
   behavior is not characterized.
 - Earlier development claims (a 250-genome Ebola cohort and a synthetic

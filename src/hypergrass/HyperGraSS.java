@@ -370,9 +370,12 @@ public final class HyperGraSS {
         for (int i = 0; i < numBlocks; i++) {
             totalDna += chunks[i].dnaLen;
             BlockSlice s = slices.get(i);
-            if (i == 0 || s.firstRecordBaseOffset == 0L) {
-                totalRecords = Math.max(totalRecords, s.firstRecordIndex + s.recordCount);
-            }
+            // A block can start inside a record when a long record is split at a
+            // line boundary. Its recordCount still includes that in-progress
+            // record, so the maximum over every block is the true record count.
+            // Counting only blocks that start at a record boundary undercounts
+            // records that begin inside a mid-record block.
+            totalRecords = Math.max(totalRecords, s.firstRecordIndex + s.recordCount);
         }
         if (raw.length == 0) {
             totalRecords = 0;
