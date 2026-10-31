@@ -31,5 +31,7 @@ benchmarks/panman/original-bin/
 .idea/
 .vscode/
 *.iml
+__pycache__/
+*.pyc
 .DS_Store
 Thumbs.db
