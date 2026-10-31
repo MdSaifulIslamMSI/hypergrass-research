@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "id": "jarvis3",
+      "commit": "4dcb37b05b1a1482c2bf864d4968244817b0ad0a",
+      "url": "https://codeload.github.com/cobilab/jarvis3/tar.gz/4dcb37b05b1a1482c2bf864d4968244817b0ad0a",
+      "path": "vendor/jarvis3.tar.gz",
+      "size_bytes": 354615,
+      "sha256": "03cf90a31333ffb7b0c49cd160aeae974780dd44b07508ed0d322f4d31e70325"
+    },
+    {
+      "id": "geco3",
+      "commit": "69642a0a913e543599f35aee372e300601e4cbbe",
+      "url": "https://codeload.github.com/cobilab/geco3/tar.gz/69642a0a913e543599f35aee372e300601e4cbbe",
+      "path": "vendor/geco3.tar.gz",
+      "size_bytes": 63117,
+      "sha256": "b870ca010a6faede7e4ddb32881629638d895295f6e1ce9e1be23bffa321f90a"
+    }
+  ]
+}

@@ -1,0 +1,86 @@
+PASS independent exact empty counts
+PASS Mode 2 raw literals, variants=false
+PASS Mode 2 raw literals, variants=true
+PASS Mode 3 raw literals, variants=false
+PASS Mode 3 raw literals, variants=true
+PASS Mode 2 literal count=0
+PASS Mode 2 literal count=64
+PASS Mode 2 literal count=2048
+PASS Mode 3 literal count=0
+PASS Mode 3 literal count=64
+PASS Mode 3 literal count=2048
+PASS Mode 3 donor inheritance=2
+PASS Mode 3 donor inheritance=3
+PASS real edge 0 compact
+PASS real edge 0 lean
+PASS real edge 1 compact
+PASS real edge 1 lean
+PASS real edge 2 compact
+PASS real edge 2 lean
+PASS real edge 3 compact
+PASS real edge 3 lean
+PASS real edge 4 compact
+PASS real edge 4 lean
+PASS real edge 5 compact
+PASS real edge 5 lean
+PASS real edge 6 compact
+PASS real edge 6 lean
+PASS real anchor kind=0 pages=1 codec=0
+PASS real anchor kind=1 pages=1 codec=1
+PASS real anchor kind=2 pages=2 codec=1
+PASS real streaming lean raw=0
+PASS real streaming lean raw=134044
+PASS malformed magic, flags, modes, varints, lengths, pages and footer boundaries
+PASS opaque compressed metadata, footer, primary and anchor payloads
+ALL 34 ACCOUNTING SUITES PASSED (3326 checks, 1721 malformed archives rejected)
+PASS independent raw columns and known byte totals
+PASS scratch, empty, disjoint, full, partial and allele mismatches
+PASS high coordinates and independently reset gap-varint boundaries
+PASS scratch and added-count varint boundaries
+PASS 7/8/9 donor lengths and 7/8/9-byte mask rounding
+PASS donor-ID varints, scratch ties and deterministic first-donor ties
+PASS negative, zero, exact, exhausted and shared cumulative budgets
+PASS all 256 boundary-coordinate subsets and allele-altered queries
+PASS seeded randomized differential selection and cumulative budgets
+ALL 9 DONOR COST SUITES PASSED (17660527 checks, 19804 selections, 12768 budget checks, 398060 serialized candidates, 2880 randomized cases; seed=0xd0c020267139)
+=== HyperGraSS Exhaustive SHA-256 Lossless Verification Suite ===
+  [PASS] EmptyFile (0 B)                                  | Raw:        0 B -> HGS:      20 B (CR:   0.00x) | Lean:      38 B | SHA256=e3b0c44298fc
+  [PASS] SingleLF (1 B)                                   | Raw:        1 B -> HGS:      26 B (CR:   0.04x) | Lean:      45 B | SHA256=01ba4719c80b
+  [PASS] SingleCRLF (2 B)                                 | Raw:        2 B -> HGS:      26 B (CR:   0.08x) | Lean:      45 B | SHA256=7eb70257593d
+  [PASS] Raw4BasesNoEOL                                   | Raw:        4 B -> HGS:      32 B (CR:   0.13x) | Lean:      51 B | SHA256=1dff3e84fe78
+  [PASS] Raw5BasesLF                                      | Raw:        6 B -> HGS:      32 B (CR:   0.19x) | Lean:      51 B | SHA256=58300e981ab9
+  [PASS] Raw5BasesCRLF                                    | Raw:        7 B -> HGS:      32 B (CR:   0.22x) | Lean:      51 B | SHA256=16b1c610f5ab
+  [PASS] GraSS In.fa (RNA + zy)                           | Raw:       52 B -> HGS:      72 B (CR:   0.72x) | Lean:      91 B | SHA256=c84433615e06
+  [PASS] Table 2 BuEb (18,940 B exact)                    | Raw:   18,940 B -> HGS:   4,665 B (CR:   4.06x) | Lean:   4,681 B | SHA256=09cda7dee360
+  [PASS] Table 1 GCF_001884535.1 (CRLF disk)              | Raw:   51,278 B -> HGS:  11,847 B (CR:   4.33x) | Lean:  11,804 B | SHA256=fdb649eac5b2
+  [PASS] Table 1 GCF_001884535.1 (Linux LF 50,654 B)      | Raw:   50,653 B -> HGS:  11,847 B (CR:   4.28x) | Lean:  11,804 B | SHA256=7c94a276ad44
+  [PASS] Adversarial Chimeric/Ragged/IUPAC/100k-N/EmptyRecs | Raw:  100,255 B -> HGS:     249 B (CR: 402.63x) | Lean:     335 B | SHA256=fa12cb0e25a4
+  [PASS] 60-Strain (+/-) Permuted SNP Pangenome           | Raw: 3,045,000 B -> HGS:  17,316 B (CR: 175.85x) | 50 O(1) Queries OK
+  [PASS] 1.5 MB Multi-Block Single Chromosome             | Raw: 1,534,167 B -> HGS:  10,023 B | Cross-Block Query OK
+
+ALL 13 VERIFICATION SUITES PASSED WITH 100% SHA-256 IDENTITY!
+PASS test uniform-high-reuse raw=134199 old=2798 archive=2798 anchor=packed/Deflate
+PASS test biased-high-reuse raw=134183 old=6850 archive=6850 anchor=QCRM
+PASS test uniform-low-reuse raw=50314 old=2364 archive=2364 anchor=packed/Deflate
+PASS test biased-low-reuse raw=50308 old=3421 archive=3421 anchor=QCRM
+PASS test short-unpadded raw=8629 old=790 archive=790 anchor=QCRM
+PASS test page-boundary raw=1070750 old=17453 archive=17453 anchor=packed/Deflate
+PASS test multipage-high-reuse raw=1070878 old=17542 archive=17542 anchor=packed/Deflate
+PASS test multipage-low-reuse raw=401560 old=16895 archive=16895 anchor=QCRM
+PASS test lean-no-anchor raw=50296 old=6495 archive=6495 anchor=none
+ALL 9 ANCHOR CODEC SUITES PASSED
+PASS: 8 deterministic suites; 10,039 queries, 1,928,153 donor counts and 10,039 selections checked (seed=0x5eedd0a02026, 0.926 s).
+Synthetic regression corpus; not an independent real-data benchmark.
+PASS previous decoder private
+PASS previous decoder shared
+PASS previous decoder subgroups
+PASS previous decoder dense
+PASS previous decoder small-collection
+PASS previous decoder rotations
+PASS previous decoder formatting
+PASS previous decoder no-variants
+PASS previous decoder unrelated
+PASS previous decoder lean
+PASS previous decoder large-collection
+PASS previous decoder many-blocks
+ALL 12 COST-AWARE ARCHIVE SUITES PASSED; improved=0 saved=0 bytes

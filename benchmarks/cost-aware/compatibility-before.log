@@ -1,0 +1,14 @@
+Synthetic regression corpus; not an independent real-data benchmark.
+PASS baseline private raw=779637 old=5926 archive=5926 dictionary=21 cold=276.732 ms
+PASS baseline shared raw=779573 old=4594 archive=4594 dictionary=22 cold=127.474 ms
+PASS baseline subgroups raw=974709 old=4540 archive=4540 dictionary=163 cold=181.162 ms
+PASS baseline dense raw=584629 old=3809 archive=3809 dictionary=22 cold=147.619 ms
+PASS baseline small-collection raw=97519 old=3346 archive=3346 dictionary=22 cold=842.067 ms
+PASS baseline rotations raw=1169653 old=6757 archive=6757 dictionary=436 cold=181.327 ms
+PASS baseline formatting raw=490651 old=5872 archive=5872 dictionary=0 cold=3564.886 ms
+PASS baseline no-variants raw=292453 old=3172 archive=3172 dictionary=0 cold=1602.977 ms
+PASS baseline unrelated raw=66575 old=16499 archive=16499 dictionary=0 cold=290.955 ms
+PASS baseline lean raw=133959 old=4900 archive=4900 dictionary=0 cold=379.176 ms
+PASS baseline large-collection raw=2340753 old=7472 archive=7472 dictionary=22 cold=290.731 ms
+PASS baseline many-blocks raw=665989 old=7550 archive=7550 dictionary=92 cold=106.533 ms
+ALL 12 COST-AWARE ARCHIVE SUITES PASSED; improved=0 saved=0 bytes

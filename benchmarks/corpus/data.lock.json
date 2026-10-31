@@ -1,0 +1,274 @@
+{
+  "schema_version": 1,
+  "protocol_sha256": "7a5e40edddd5dbe24b93ab31be67cf7cb77a7d8cd426a81877ed956e916431d4",
+  "datasets": [
+    {
+      "id": "human-mito",
+      "label": "Human mitochondrial reference",
+      "accessions": [
+        "NC_012920.1"
+      ],
+      "fasta": {
+        "path": "data/human-mito.fasta",
+        "size_bytes": 16864,
+        "sha256": "fc392cde8e63b4d2e3a870bb97cc0626dea33d46dfb8abdebffada040f42ec92"
+      },
+      "sequence": {
+        "path": "data/human-mito.seq",
+        "size_bytes": 16569,
+        "sha256": "f156ff3f65bbcc80c7ebb9936dceb96b1477b4f8f535c4e1dbe7baea225cbc66",
+        "raw_acgt": false
+      },
+      "records": [
+        {
+          "id": "NC_012920.1",
+          "header": "NC_012920.1 Homo sapiens mitochondrion, complete genome",
+          "sequence_bytes": 16569
+        }
+      ]
+    },
+    {
+      "id": "fly-mito",
+      "label": "Fruit fly mitochondrial reference",
+      "accessions": [
+        "NC_001709.1"
+      ],
+      "fasta": {
+        "path": "data/fly-mito.fasta",
+        "size_bytes": 19865,
+        "sha256": "0563be66864d26d8bf44a167f8a97dd80701b08274fe4c7e709fa1a599fc663b"
+      },
+      "sequence": {
+        "path": "data/fly-mito.seq",
+        "size_bytes": 19517,
+        "sha256": "db9a9ad5da4d2009907b51003f5c0b3595b18a08b910dd31856d8b4a78cd9567",
+        "raw_acgt": true
+      },
+      "records": [
+        {
+          "id": "NC_001709.1",
+          "header": "NC_001709.1 Drosophila melanogaster mitochondrion, complete genome",
+          "sequence_bytes": 19517
+        }
+      ]
+    },
+    {
+      "id": "yeast-mito",
+      "label": "Budding yeast mitochondrial reference",
+      "accessions": [
+        "NC_001224.1"
+      ],
+      "fasta": {
+        "path": "data/yeast-mito.fasta",
+        "size_bytes": 87081,
+        "sha256": "d8aff8012ac7b6872d3a9dfe3ecc36944d6af9de9ac8fff7a24d01d571586bab"
+      },
+      "sequence": {
+        "path": "data/yeast-mito.seq",
+        "size_bytes": 85779,
+        "sha256": "91d5192f1bd21aa9a00259b21a43c450de1926e87fb1847ab1533f437e1b488e",
+        "raw_acgt": true
+      },
+      "records": [
+        {
+          "id": "NC_001224.1",
+          "header": "NC_001224.1 Saccharomyces cerevisiae S288c mitochondrion, complete genome",
+          "sequence_bytes": 85779
+        }
+      ]
+    },
+    {
+      "id": "plant-plastid",
+      "label": "Arabidopsis chloroplast reference",
+      "accessions": [
+        "NC_000932.1"
+      ],
+      "fasta": {
+        "path": "data/plant-plastid.fasta",
+        "size_bytes": 156749,
+        "sha256": "9439e8fd98eb7a98892e6bf3d13ceedc15d2b233b57176f01ca4274f6b692dc5"
+      },
+      "sequence": {
+        "path": "data/plant-plastid.seq",
+        "size_bytes": 154478,
+        "sha256": "56e0a1bea23c5caf180a4df1488142de09c6146031a82d3c2555bdc52ac31640",
+        "raw_acgt": true
+      },
+      "records": [
+        {
+          "id": "NC_000932.1",
+          "header": "NC_000932.1 Arabidopsis thaliana chloroplast, complete genome",
+          "sequence_bytes": 154478
+        }
+      ]
+    },
+    {
+      "id": "yeast-chr1",
+      "label": "Budding yeast chromosome I",
+      "accessions": [
+        "NC_001133.9"
+      ],
+      "fasta": {
+        "path": "data/yeast-chr1.fasta",
+        "size_bytes": 233584,
+        "sha256": "da6c79984b9dc7110e49cbb57065eca8284d28c08473333fa3242ab2d35aafea"
+      },
+      "sequence": {
+        "path": "data/yeast-chr1.seq",
+        "size_bytes": 230218,
+        "sha256": "3c5c06b2ccb802798265a543cc6511d954a0a64a522c3f6af05be0553d6f0a62",
+        "raw_acgt": true
+      },
+      "records": [
+        {
+          "id": "NC_001133.9",
+          "header": "NC_001133.9 Saccharomyces cerevisiae S288C chromosome I, complete sequence",
+          "sequence_bytes": 230218
+        }
+      ]
+    },
+    {
+      "id": "archaeal-reference",
+      "label": "Methanocaldococcus jannaschii reference",
+      "accessions": [
+        "NC_000909.1"
+      ],
+      "fasta": {
+        "path": "data/archaeal-reference.fasta",
+        "size_bytes": 1688828,
+        "sha256": "eb4f0ad97e8fe0b40b03d74d76bc6c5cae241582d83653d58a09bc6a51e0a8d6"
+      },
+      "sequence": {
+        "path": "data/archaeal-reference.seq",
+        "size_bytes": 1664970,
+        "sha256": "5835a292dfd47875f81fb65dbca52f3f9bc336f1d72409389ff6b764c8ca91dc",
+        "raw_acgt": false
+      },
+      "records": [
+        {
+          "id": "NC_000909.1",
+          "header": "NC_000909.1 Methanocaldococcus jannaschii DSM 2661, complete sequence",
+          "sequence_bytes": 1664970
+        }
+      ]
+    },
+    {
+      "id": "ecoli-k12",
+      "label": "E. coli K-12 MG1655 laboratory reference",
+      "accessions": [
+        "NC_000913.3"
+      ],
+      "fasta": {
+        "path": "data/ecoli-k12.fasta",
+        "size_bytes": 4708035,
+        "sha256": "6b195feda4c66140f6762742eb8b30c2652f02b45878b174f5b00ef85ecc95d7"
+      },
+      "sequence": {
+        "path": "data/ecoli-k12.seq",
+        "size_bytes": 4641652,
+        "sha256": "e999dceccb76562d40e49a10d9e6d4cf1c05d184f4f80b92bb32d4a2420c11d0",
+        "raw_acgt": true
+      },
+      "records": [
+        {
+          "id": "NC_000913.3",
+          "header": "NC_000913.3 Escherichia coli str. K-12 substr. MG1655, complete genome",
+          "sequence_bytes": 4641652
+        }
+      ]
+    },
+    {
+      "id": "bsubtilis-168",
+      "label": "Bacillus subtilis 168 laboratory reference",
+      "accessions": [
+        "NC_000964.3"
+      ],
+      "fasta": {
+        "path": "data/bsubtilis-168.fasta",
+        "size_bytes": 4275902,
+        "sha256": "a334e891ffc0e307f23f48842775d3383177a9d9cb5d5075b552a2cccddfe139"
+      },
+      "sequence": {
+        "path": "data/bsubtilis-168.seq",
+        "size_bytes": 4215606,
+        "sha256": "71572ae0b98f44a6382b29e194e56c1f7d87477be8f53915fb06816f886b17b7",
+        "raw_acgt": true
+      },
+      "records": [
+        {
+          "id": "NC_000964.3",
+          "header": "NC_000964.3 Bacillus subtilis subsp. subtilis str. 168 complete genome",
+          "sequence_bytes": 4215606
+        }
+      ]
+    },
+    {
+      "id": "yeast-three-chr",
+      "label": "Budding yeast chromosomes I, II and III; naturally distinct records",
+      "accessions": [
+        "NC_001133.9",
+        "NC_001134.8",
+        "NC_001135.5"
+      ],
+      "fasta": {
+        "path": "data/yeast-three-chr.fasta",
+        "size_bytes": 1379686,
+        "sha256": "5302d33400e1f33a678668a9fef16a060acccfc62444f48e25f3c7796df6277b"
+      },
+      "sequence": {
+        "path": "data/yeast-three-chr.seq",
+        "size_bytes": 1360022,
+        "sha256": "1978042766f62719f68b059976401f60d9c35090bf7fb296e8cb9919664211e9",
+        "raw_acgt": true
+      },
+      "records": [
+        {
+          "id": "NC_001133.9",
+          "header": "NC_001133.9 Saccharomyces cerevisiae S288C chromosome I, complete sequence",
+          "sequence_bytes": 230218
+        },
+        {
+          "id": "NC_001134.8",
+          "header": "NC_001134.8 Saccharomyces cerevisiae S288C chromosome II, complete sequence",
+          "sequence_bytes": 813184
+        },
+        {
+          "id": "NC_001135.5",
+          "header": "NC_001135.5 Saccharomyces cerevisiae S288C chromosome III, complete sequence",
+          "sequence_bytes": 316620
+        }
+      ]
+    },
+    {
+      "id": "ecoli-k12-pair",
+      "label": "Two E. coli K-12 laboratory references; MG1655 and W3110",
+      "accessions": [
+        "NC_000913.3",
+        "NC_007779.1"
+      ],
+      "fasta": {
+        "path": "data/ecoli-k12-pair.fasta",
+        "size_bytes": 9420818,
+        "sha256": "421b656fb8e0ca0082eeeb261a66758fea6bb551a337ef4558caa70ab3f7847a"
+      },
+      "sequence": {
+        "path": "data/ecoli-k12-pair.seq",
+        "size_bytes": 9287984,
+        "sha256": "e20d6b595e7a28f892f7c507fd2d6a57d8bf2b0b17f777d86d702e1e81e04575",
+        "raw_acgt": true
+      },
+      "records": [
+        {
+          "id": "NC_000913.3",
+          "header": "NC_000913.3 Escherichia coli str. K-12 substr. MG1655, complete genome",
+          "sequence_bytes": 4641652
+        },
+        {
+          "id": "NC_007779.1",
+          "header": "NC_007779.1 Escherichia coli str. K-12 substr. W3110, complete sequence",
+          "sequence_bytes": 4646332
+        }
+      ]
+    }
+  ]
+}

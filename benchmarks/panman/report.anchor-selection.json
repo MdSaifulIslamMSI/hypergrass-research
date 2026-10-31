@@ -1,0 +1,2272 @@
+{
+  "schema_version": 1,
+  "status": "success",
+  "run_id": "20261031T151511Z-9f68f378",
+  "started_utc": "2026-10-31T15:15:11.856902+00:00",
+  "source_commit": "1c3c6204134af94c10a447fe7c6182636c19e31a",
+  "versions": {
+    "python": "3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]",
+    "host": "Windows-11-10.0.28120-SP0",
+    "hypergrass": {
+      "version": null,
+      "note": "CLI has no version option; actual compiled inputs are hashed",
+      "classpath": ".validation/baseline-bin",
+      "relative_entries_base": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "build_inputs": [
+        {
+          "path": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\.validation\\baseline-bin",
+          "class_files": [
+            {
+              "path": "hypergrass/BayesianMarkovRangeCoder$AdaptiveGenomicModel.class",
+              "size_bytes": 4383,
+              "sha256": "08ff739931d48e064fd85e5e07854bd13409dddb12f335d0ee6f0bb6208288a0"
+            },
+            {
+              "path": "hypergrass/BayesianMarkovRangeCoder$RangeDecoder.class",
+              "size_bytes": 1218,
+              "sha256": "a330489bb305fb4d4b24707c1aabaa4000888d6d08697d71c1c61d9a9b04f186"
+            },
+            {
+              "path": "hypergrass/BayesianMarkovRangeCoder$RangeEncoder.class",
+              "size_bytes": 1285,
+              "sha256": "746567a08557a63c643aede11f544c6cc371061cf9b22c13ea89e33622f6694b"
+            },
+            {
+              "path": "hypergrass/BayesianMarkovRangeCoder.class",
+              "size_bytes": 2237,
+              "sha256": "55b54f9bd5a25089e0b8933255c4ad04e2edceedf75eef6ded1b632d4a74fdf4"
+            },
+            {
+              "path": "hypergrass/BenchmarkSuite.class",
+              "size_bytes": 17939,
+              "sha256": "707599899b69322b2d2960cab682234f0b76e183b0efb8ef0d7b51eae8ed84d1"
+            },
+            {
+              "path": "hypergrass/CanonicalSyncmerEngine$AnchorBank.class",
+              "size_bytes": 1151,
+              "sha256": "fcec2651ec87a345efcfa1c7f5ebc235831bbf93820d47d9205d0b3796c69933"
+            },
+            {
+              "path": "hypergrass/CanonicalSyncmerEngine$DecodedAnchorCatalog.class",
+              "size_bytes": 472,
+              "sha256": "7055fc220543d42c4e994bb656b7d8de89a6afa73104f8f163ad8db902c0056e"
+            },
+            {
+              "path": "hypergrass/CanonicalSyncmerEngine$MatchResult.class",
+              "size_bytes": 519,
+              "sha256": "61d9bc7005412b046da468a3bc80d50fff428cd9d9c3334bce06ab987a3a0bc7"
+            },
+            {
+              "path": "hypergrass/CanonicalSyncmerEngine$ParsedAlignment.class",
+              "size_bytes": 630,
+              "sha256": "919c4c80e0e56d47e7a7915c7ce1fb846a7d912f30d472540da33a85fae3c59c"
+            },
+            {
+              "path": "hypergrass/CanonicalSyncmerEngine$SeedHashTable.class",
+              "size_bytes": 1499,
+              "sha256": "9e4271566e36280f423185e4f7fe7ab1b7dc642eb0368bbeecc20811cf2c09d8"
+            },
+            {
+              "path": "hypergrass/CanonicalSyncmerEngine.class",
+              "size_bytes": 29356,
+              "sha256": "9f7c99be3b49b61842230fed8869c1bf146f0714994daab17452b24ab5b52a99"
+            },
+            {
+              "path": "hypergrass/FastaStreamFactorizer$BlockSlice.class",
+              "size_bytes": 578,
+              "sha256": "fb7f261a9c421b01af147303d542c1f02603d3a3e8141045cf4778ff55e196b4"
+            },
+            {
+              "path": "hypergrass/FastaStreamFactorizer$FactorizedChunk.class",
+              "size_bytes": 1638,
+              "sha256": "ba93789f5304923677633e4d18cfe462a65f5461c9be98d2ba4fdf5f2eb1258f"
+            },
+            {
+              "path": "hypergrass/FastaStreamFactorizer$RecordSpan.class",
+              "size_bytes": 571,
+              "sha256": "9c588c1103e1f31b896a11b304cc4b46085181f3074dc4afc7c2c8ef413f3843"
+            },
+            {
+              "path": "hypergrass/FastaStreamFactorizer.class",
+              "size_bytes": 15233,
+              "sha256": "d04d8bb7aca9bb549de4c13eb4ab376b0756404cb3e0ee5ecf0cb6fce6b76c5e"
+            },
+            {
+              "path": "hypergrass/HaplotypeDonorIndex.class",
+              "size_bytes": 3229,
+              "sha256": "42f198d4cf427df111c3e41ceb18a2e81c4280f1784dc3a99de1b7ed1b098169"
+            },
+            {
+              "path": "hypergrass/HyperGraSS$ArchiveMetadata.class",
+              "size_bytes": 731,
+              "sha256": "ddc98153dbcd8725751dd3739166b6442bca74307ad65ea5bfdd6a26ab9020e7"
+            },
+            {
+              "path": "hypergrass/HyperGraSS$BlockDirEntry.class",
+              "size_bytes": 468,
+              "sha256": "2873a79a73710b6c1db794194a9976bc7f0ed1e0600b1cfb434aa2d8f68b0335"
+            },
+            {
+              "path": "hypergrass/HyperGraSS$CompressOptions.class",
+              "size_bytes": 746,
+              "sha256": "eb415fda78aaedd47e27d0b0dda8f9646fa74534cf587a3cb38dcea79465f480"
+            },
+            {
+              "path": "hypergrass/HyperGraSS$ParsedFooter.class",
+              "size_bytes": 740,
+              "sha256": "29f6b274b2ee0f424bbb7ceb80277df01a9b616e5be9fa3e4eeb40f788e5be34"
+            },
+            {
+              "path": "hypergrass/HyperGraSS.class",
+              "size_bytes": 28512,
+              "sha256": "19a1e34f3eab20f107a7368ffc5853fde1eb10230f0c13fbc2642b945de9bc48"
+            },
+            {
+              "path": "hypergrass/QuantumContextRepeatMixer$QcrmModel.class",
+              "size_bytes": 13127,
+              "sha256": "3841c0f3dfb613f35048daa5f2d76cab59ee24c0b6893b5a527b1e1b2e7c2b81"
+            },
+            {
+              "path": "hypergrass/QuantumContextRepeatMixer$RangeDecoder.class",
+              "size_bytes": 1221,
+              "sha256": "eb851e77df48d75cc3dcd1d757e9c3a1d70cff9c8fc40eb39c9f8283a72f08fd"
+            },
+            {
+              "path": "hypergrass/QuantumContextRepeatMixer$RangeEncoder.class",
+              "size_bytes": 1288,
+              "sha256": "79248c848ddff6663cbb624bb943b41f7cda4da9ffd6dad0efbd0fbb6689411d"
+            },
+            {
+              "path": "hypergrass/QuantumContextRepeatMixer$RepeatHead.class",
+              "size_bytes": 1920,
+              "sha256": "fd722686f96759fbc69cba4478c2e0020e1b9553102212bd129420e65c1c99c2"
+            },
+            {
+              "path": "hypergrass/QuantumContextRepeatMixer$RepeatSeedIndex.class",
+              "size_bytes": 1623,
+              "sha256": "040f42c435b27a1ae078621c2b80181db0c6291c78fdf226fb39fc4f42b04974"
+            },
+            {
+              "path": "hypergrass/QuantumContextRepeatMixer$SparseContextTable.class",
+              "size_bytes": 2201,
+              "sha256": "eef2eb239b9ac274b586c1f22bd00553756db4562058a49959dd10254036a3b1"
+            },
+            {
+              "path": "hypergrass/QuantumContextRepeatMixer.class",
+              "size_bytes": 3256,
+              "sha256": "fd318f6a72dfc9faa0e63aee6d6f9874744d85e04d68f5c60f6f6adbada32c88"
+            },
+            {
+              "path": "hypergrass/RealCorpusBench.class",
+              "size_bytes": 5089,
+              "sha256": "0b12f1ccf73cc79437000b51c3a97fb03cf8478c17e0360f8bc3e82f65745204"
+            },
+            {
+              "path": "hypergrass/VarIntCodec$ByteIn.class",
+              "size_bytes": 3069,
+              "sha256": "994a39b038d3009262474309a5ea02c430e7f1c26bdd8210980d3a2b560512e3"
+            },
+            {
+              "path": "hypergrass/VarIntCodec$ByteOut.class",
+              "size_bytes": 2143,
+              "sha256": "6efe6db16f3ebd2258b3585641e1e684fef233f8e1b3d5caf2d32b95a43fcf63"
+            },
+            {
+              "path": "hypergrass/VarIntCodec.class",
+              "size_bytes": 3407,
+              "sha256": "a0e8fe2e0918fcfe6bf12c3be1e0d6e14410d9665998866277152f85de531d68"
+            },
+            {
+              "path": "hypergrass/VerifyAllEdgeCases.class",
+              "size_bytes": 10115,
+              "sha256": "7eb1abd9d07f038de3a6bc7e95d891e489dbfb7a08d326f75e2dd31b3f4eaf07"
+            },
+            {
+              "path": "hypergrass/VerifyAnchorCodecs$TestCase.class",
+              "size_bytes": 1718,
+              "sha256": "93868571cf36e490f0c60dce72f9ca17b4be183f077574fb4c6093fba53ac9e8"
+            },
+            {
+              "path": "hypergrass/VerifyAnchorCodecs.class",
+              "size_bytes": 10019,
+              "sha256": "a4732c979b4c51a56daf555d0b8d1d56be83386eb5d17e34f29cd28de1ec6a71"
+            },
+            {
+              "path": "hypergrass/VerifyDonorArchives$TestCase.class",
+              "size_bytes": 1458,
+              "sha256": "b56db61084e49bae37281274279b75501274c5be5a2d118b6df05ed302a5dcf6"
+            },
+            {
+              "path": "hypergrass/VerifyDonorArchives.class",
+              "size_bytes": 6332,
+              "sha256": "5802e0ca10346c8ba65eb5f9cae491aee771817e2c53fcd9205f6bd57b6ba53a"
+            },
+            {
+              "path": "hypergrass/VerifyDonorIndex$PoolKind.class",
+              "size_bytes": 1403,
+              "sha256": "96ee66a29985d0139d1ffaebb22967a8c740de99da62a4022e78a966b5637f39"
+            },
+            {
+              "path": "hypergrass/VerifyDonorIndex$Selection.class",
+              "size_bytes": 1471,
+              "sha256": "30aa5b9a73fa75377d030d4da144363882a9e342c731afa0b94e07bc4d9562c4"
+            },
+            {
+              "path": "hypergrass/VerifyDonorIndex$TestPool.class",
+              "size_bytes": 1862,
+              "sha256": "cbb803be3a4c394c3a392b3d443e8f3b066dd666e04c555e0f8cd8f5a66b9035"
+            },
+            {
+              "path": "hypergrass/VerifyDonorIndex$TimedBatch.class",
+              "size_bytes": 1385,
+              "sha256": "72b3621b45d918f461a128840f67153892b1bf7d25d37397d454a2e0139889bf"
+            },
+            {
+              "path": "hypergrass/VerifyDonorIndex$Workload.class",
+              "size_bytes": 1518,
+              "sha256": "29dc9589e0dee873355e33ad00dfba540647456c8b3c14d0e58b239bb05b52d0"
+            },
+            {
+              "path": "hypergrass/VerifyDonorIndex.class",
+              "size_bytes": 17466,
+              "sha256": "359c6fc1159d42e14ff88c9badae2c77e7aac5aa0596dd5619a46fed0304cff2"
+            }
+          ]
+        }
+      ],
+      "compression_options": []
+    },
+    "java": "java version \"21.0.6\" 2025-01-21 LTS\r\nJava(TM) SE Runtime Environment (build 21.0.6+8-LTS-188)\r\nJava HotSpot(TM) 64-Bit Server VM (build 21.0.6+8-LTS-188, mixed mode, sharing)",
+    "docker": "Client:\n Version:           29.6.2\n API version:       1.55\n Go version:        go1.26.5\n Git commit:        dfc4efb\n Built:             Thu Jul 16 16:14:59 2026\n OS/Arch:           windows/amd64\n Context:           desktop-linux\n\nServer: Docker Desktop 4.83.0 (234302)\n Engine:\n  Version:          29.6.2\n  API version:      1.55 (minimum version 1.40)\n  Go version:       go1.26.5\n  Git commit:       3d80467\n  Built:            Thu Jul 16 16:12:20 2026\n  OS/Arch:          linux/amd64\n  Experimental:     false\n containerd:\n  Version:          v2.2.5\n  GitCommit:        e53c7c1516c3b2bff98eb76f1f4117477e6f4e66\n runc:\n  Version:          1.3.6\n  GitCommit:        v1.3.6-0-g491b69ba\n docker-init:\n  Version:          0.19.0\n  GitCommit:        de40ad0",
+    "panman_image": {
+      "reference": "quay.io/biocontainers/panman@sha256:ae2e1ab9f4ef57d3bef248e5580f95a615a5aff9bb53be05cac03a0c56ea0a27",
+      "id": "sha256:ae2e1ab9f4ef57d3bef248e5580f95a615a5aff9bb53be05cac03a0c56ea0a27",
+      "repo_digests": [
+        "quay.io/biocontainers/panman@sha256:ae2e1ab9f4ef57d3bef248e5580f95a615a5aff9bb53be05cac03a0c56ea0a27"
+      ],
+      "os": "linux",
+      "architecture": "amd64"
+    },
+    "panman": "panmanUtils Version 0.1.4"
+  },
+  "sequence_contract": {
+    "panman": "Exact full-header and case-sensitive sequence-byte map for all 20 records; record order and line wrapping may differ",
+    "hypergrass": "Exact original FASTA bytes, including headers, order, wrapping, and line endings",
+    "transformations": "None: no ambiguity normalization, case folding, gap removal, trimming, reverse complement, or circular rotation"
+  },
+  "limits": {
+    "panman_cpus": 2,
+    "panman_memory": "2g",
+    "panman_threads": 2,
+    "network": "none in Docker; HTTPS only for missing pinned fixtures",
+    "peak_memory_measured": false
+  },
+  "limitations": [
+    "Sequence-storage archive sizes only, not biological analysis or feature parity.",
+    "PanMAN retains tree/alignment/evolutionary structure that HGS does not.",
+    "PanMAN uses the supplied graph JSON and tree; generating these inputs is excluded.",
+    "FASTA bytes are the size-ratio denominator for both archives, despite different stored information.",
+    "Host Java versus Linux Docker wall times cannot support speed claims; Docker startup is included.",
+    "Single-run wall times also include process/JVM startup; there are no warmup or throughput claims.",
+    "Docker CPU/memory limits are not peak-memory measurements; peak memory is not measured.",
+    "Slice verification exercises only the HyperGraSS CLI, not PanMAN random access.",
+    "Results apply only to this pinned 20-record demo, not larger collections or other inputs."
+  ],
+  "fixtures": {
+    "sars_20.fa": {
+      "path": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.fa",
+      "size_bytes": 609255,
+      "sha256": "7a5cf9dffcd22d03ab6f50e02e2750ae9f58bacb328440cedf4b068c013cbefe",
+      "source_url": "https://raw.githubusercontent.com/TurakhiaLab/panman/1c3c6204134af94c10a447fe7c6182636c19e31a/test/sars_20.fa",
+      "downloaded": false
+    },
+    "sars_20.json": {
+      "path": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.json",
+      "size_bytes": 114274,
+      "sha256": "6d1390e22d73b81d007d0368acd8a812bcf7c05c35470595385c93be0c605e5d",
+      "source_url": "https://raw.githubusercontent.com/TurakhiaLab/panman/1c3c6204134af94c10a447fe7c6182636c19e31a/test/sars_20.json",
+      "downloaded": false
+    },
+    "sars_20.nwk": {
+      "path": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.nwk",
+      "size_bytes": 1075,
+      "sha256": "f6fcf515751f0018988fc25673f12c86ac96b9c02b620eca055184974126d660",
+      "source_url": "https://raw.githubusercontent.com/TurakhiaLab/panman/1c3c6204134af94c10a447fe7c6182636c19e31a/test/sars_20.nwk",
+      "downloaded": false
+    }
+  },
+  "artifacts": {
+    "panman": {
+      "path": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\panman\\sars_20.panman",
+      "size_bytes": 13816,
+      "sha256": "0bf55b4ea34587c6a300933298abdf1ad741271637df3f74adbc9cbc94bbe35d"
+    },
+    "panman_extracted": {
+      "path": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\info\\sars_20_0.fasta",
+      "size_bytes": 605850,
+      "sha256": "73cbf24a24292726ff72ec0c13b0f2f1eb9cf92de58137ff778f43f7f65f4708"
+    },
+    "hgs": {
+      "path": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+      "size_bytes": 10419,
+      "sha256": "82b11b26de452206edb1cbb43b42847d6b2df386d8aeda0b7703688581bab72c"
+    },
+    "hgs_restored": {
+      "path": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.restored.fa",
+      "size_bytes": 609255,
+      "sha256": "7a5cf9dffcd22d03ab6f50e02e2750ae9f58bacb328440cedf4b068c013cbefe"
+    }
+  },
+  "verification": {
+    "panman_full_header_sequence_map": {
+      "passed": true,
+      "records": 20
+    },
+    "hgs_byte_exact_round_trip": {
+      "passed": true,
+      "sha256": "7a5cf9dffcd22d03ab6f50e02e2750ae9f58bacb328440cedf4b068c013cbefe"
+    },
+    "hgs_slices": {
+      "passed": true,
+      "checks": [
+        {
+          "record_index": 0,
+          "id": "Switzerland/SO-ETHZ-500145/2020|OU000199.2|2020-11-12",
+          "start_inclusive": 0,
+          "end_exclusive": 128,
+          "sha256": "cb6669a863634360ae9d0773145bc27d638b5d46b2dab87efe4707d8ef2ee192"
+        },
+        {
+          "record_index": 0,
+          "id": "Switzerland/SO-ETHZ-500145/2020|OU000199.2|2020-11-12",
+          "start_inclusive": 14951,
+          "end_exclusive": 15079,
+          "sha256": "ca6035969aa547f71494fe714f247aa0fb4c6c33a4d215c0633beaed7debad33"
+        },
+        {
+          "record_index": 0,
+          "id": "Switzerland/SO-ETHZ-500145/2020|OU000199.2|2020-11-12",
+          "start_inclusive": 29775,
+          "end_exclusive": 29903,
+          "sha256": "81bdd4584f7fea4e6930807503b482d61b8d42e154132f716e8b35583b56e4b6"
+        },
+        {
+          "record_index": 1,
+          "id": "Germany/IMS-10023-CVDP-00098/2021|OU080963.1|2021-01-28",
+          "start_inclusive": 0,
+          "end_exclusive": 128,
+          "sha256": "4c6459893cabeddb961ffe12461ecf6bf2fd32c04676aeded48f64cecaacd4f8"
+        },
+        {
+          "record_index": 1,
+          "id": "Germany/IMS-10023-CVDP-00098/2021|OU080963.1|2021-01-28",
+          "start_inclusive": 14866,
+          "end_exclusive": 14994,
+          "sha256": "dd2e437b401d8d62a4f3259ed6c0cee53f238f9eef226a47d18cce4465f27d29"
+        },
+        {
+          "record_index": 1,
+          "id": "Germany/IMS-10023-CVDP-00098/2021|OU080963.1|2021-01-28",
+          "start_inclusive": 29604,
+          "end_exclusive": 29732,
+          "sha256": "97db843bdd54fd45fbb35dcbc6f5e98cb927de6cfd8e5c70ab5aa887de9cbac3"
+        },
+        {
+          "record_index": 2,
+          "id": "England/NORW-30F5277/2021|OV313316.1|2021-11-17",
+          "start_inclusive": 0,
+          "end_exclusive": 128,
+          "sha256": "cb6669a863634360ae9d0773145bc27d638b5d46b2dab87efe4707d8ef2ee192"
+        },
+        {
+          "record_index": 2,
+          "id": "England/NORW-30F5277/2021|OV313316.1|2021-11-17",
+          "start_inclusive": 14945,
+          "end_exclusive": 15073,
+          "sha256": "68206b4aa462a0f315f08e9925f4c3b3b8a20bfd3d98dd1b3b50df638d7de1f0"
+        },
+        {
+          "record_index": 2,
+          "id": "England/NORW-30F5277/2021|OV313316.1|2021-11-17",
+          "start_inclusive": 29762,
+          "end_exclusive": 29890,
+          "sha256": "81bdd4584f7fea4e6930807503b482d61b8d42e154132f716e8b35583b56e4b6"
+        },
+        {
+          "record_index": 3,
+          "id": "Germany/Molecular_surveillance_of_SARS-CoV-2_in_Germany/2021|OV412394.1|2021-09-29",
+          "start_inclusive": 0,
+          "end_exclusive": 128,
+          "sha256": "6f5e55984713a49981f837a02feff45fd28455efcc2350293429cd1e6cf33ffe"
+        },
+        {
+          "record_index": 3,
+          "id": "Germany/Molecular_surveillance_of_SARS-CoV-2_in_Germany/2021|OV412394.1|2021-09-29",
+          "start_inclusive": 14900,
+          "end_exclusive": 15028,
+          "sha256": "988c1abd30f1778ea46f1e110320963d72d4ad4fb441d8f4564045eb59246e72"
+        },
+        {
+          "record_index": 3,
+          "id": "Germany/Molecular_surveillance_of_SARS-CoV-2_in_Germany/2021|OV412394.1|2021-09-29",
+          "start_inclusive": 29672,
+          "end_exclusive": 29800,
+          "sha256": "accbb69737ab4a39ea1ab9e1caf2a9ece9d704be411301d75a66d45d7693edc6"
+        },
+        {
+          "record_index": 4,
+          "id": "England/MILK-2D4CB8C/2021|OV443913.1|2021-12-05",
+          "start_inclusive": 0,
+          "end_exclusive": 128,
+          "sha256": "48b23f1df6e3bbfcf0738e93dbf655eea4ce2cf074c57467921e4ccbc298f775"
+        },
+        {
+          "record_index": 4,
+          "id": "England/MILK-2D4CB8C/2021|OV443913.1|2021-12-05",
+          "start_inclusive": 14942,
+          "end_exclusive": 15070,
+          "sha256": "ca6035969aa547f71494fe714f247aa0fb4c6c33a4d215c0633beaed7debad33"
+        },
+        {
+          "record_index": 4,
+          "id": "England/MILK-2D4CB8C/2021|OV443913.1|2021-12-05",
+          "start_inclusive": 29756,
+          "end_exclusive": 29884,
+          "sha256": "c4639200aecf05e4ff84343808fa908cb063f25bd3213bdc819a9fae1bd093fb"
+        },
+        {
+          "record_index": 5,
+          "id": "England/MILK-338D3D9/2022|OV784995.1|2022-01-21",
+          "start_inclusive": 0,
+          "end_exclusive": 128,
+          "sha256": "48b23f1df6e3bbfcf0738e93dbf655eea4ce2cf074c57467921e4ccbc298f775"
+        },
+        {
+          "record_index": 5,
+          "id": "England/MILK-338D3D9/2022|OV784995.1|2022-01-21",
+          "start_inclusive": 14936,
+          "end_exclusive": 15064,
+          "sha256": "a14026e2bc9ee5d2a0b9b26bbc3bb50cfe9a2c719da456a0a49cc39fa3e5b494"
+        },
+        {
+          "record_index": 5,
+          "id": "England/MILK-338D3D9/2022|OV784995.1|2022-01-21",
+          "start_inclusive": 29745,
+          "end_exclusive": 29873,
+          "sha256": "c4639200aecf05e4ff84343808fa908cb063f25bd3213bdc819a9fae1bd093fb"
+        },
+        {
+          "record_index": 6,
+          "id": "USA/NY-CDC-LC0906971/2022|OP671333.1|2022-10-03",
+          "start_inclusive": 0,
+          "end_exclusive": 128,
+          "sha256": "d9c5974dda00b770667031bcb742f3d99a95587d1474a7bfb30ed50bf3ec543c"
+        },
+        {
+          "record_index": 6,
+          "id": "USA/NY-CDC-LC0906971/2022|OP671333.1|2022-10-03",
+          "start_inclusive": 14828,
+          "end_exclusive": 14956,
+          "sha256": "d986afe36fd6225393d63dcd297f14743754bc10c1e575097a72b7d4f80e3526"
+        },
+        {
+          "record_index": 6,
+          "id": "USA/NY-CDC-LC0906971/2022|OP671333.1|2022-10-03",
+          "start_inclusive": 29529,
+          "end_exclusive": 29657,
+          "sha256": "a5906fc8473c8f7fcce1cd01a5607b2b0e7c0bf23500d6ee8d158b9928620900"
+        },
+        {
+          "record_index": 7,
+          "id": "USA/FL-CDC-STM-H5KCN9XBD/2022|OP732003.1|2022-09-30",
+          "start_inclusive": 0,
+          "end_exclusive": 128,
+          "sha256": "8a3f7cd290fbcbf4fd7df240dc7f87752df137e884a34ca9459fdb47cee0cbf3"
+        },
+        {
+          "record_index": 7,
+          "id": "USA/FL-CDC-STM-H5KCN9XBD/2022|OP732003.1|2022-09-30",
+          "start_inclusive": 14922,
+          "end_exclusive": 15050,
+          "sha256": "612c0d02009510206dc14c53e33864a01df03fa4edce398c64d2db28d2337e2c"
+        },
+        {
+          "record_index": 7,
+          "id": "USA/FL-CDC-STM-H5KCN9XBD/2022|OP732003.1|2022-09-30",
+          "start_inclusive": 29716,
+          "end_exclusive": 29844,
+          "sha256": "130f3cf908319c001c73c3b8e03c67d34dcaf2c2cda24e84c30562bf81fd5fa3"
+        },
+        {
+          "record_index": 8,
+          "id": "USA/MA-CDCBI-CRSP_DVHKMC6PPRXWPTXC/2022|OP606163.1|2022-09-24",
+          "start_inclusive": 0,
+          "end_exclusive": 128,
+          "sha256": "2595cbcc4e4aa91c71d18c9367909b8435ba839872af90b663523471d9243804"
+        },
+        {
+          "record_index": 8,
+          "id": "USA/MA-CDCBI-CRSP_DVHKMC6PPRXWPTXC/2022|OP606163.1|2022-09-24",
+          "start_inclusive": 14899,
+          "end_exclusive": 15027,
+          "sha256": "6ba53bb7a4714804eec67f0b6aeae1420208260b5c1df47e1ef8970b1a1934b5"
+        },
+        {
+          "record_index": 8,
+          "id": "USA/MA-CDCBI-CRSP_DVHKMC6PPRXWPTXC/2022|OP606163.1|2022-09-24",
+          "start_inclusive": 29670,
+          "end_exclusive": 29798,
+          "sha256": "130f3cf908319c001c73c3b8e03c67d34dcaf2c2cda24e84c30562bf81fd5fa3"
+        },
+        {
+          "record_index": 9,
+          "id": "USA/CA-CDC-FG-019030/2021|OK212520.1|2021-03-31",
+          "start_inclusive": 0,
+          "end_exclusive": 128,
+          "sha256": "cf524cc9bf95283a4ccb8bbee2cc715259ac20dd7c1627ceb34398d323afb7a2"
+        },
+        {
+          "record_index": 9,
+          "id": "USA/CA-CDC-FG-019030/2021|OK212520.1|2021-03-31",
+          "start_inclusive": 14899,
+          "end_exclusive": 15027,
+          "sha256": "3aae5521a7eefece9ff33a4fdd3f06d14725fe431cc574b9fc700b3c26b2b08e"
+        },
+        {
+          "record_index": 9,
+          "id": "USA/CA-CDC-FG-019030/2021|OK212520.1|2021-03-31",
+          "start_inclusive": 29671,
+          "end_exclusive": 29799,
+          "sha256": "e05ef8d9f2b790ce3f631550789bb363f8d268dd4f5bc0fe7c155be9a5982f64"
+        },
+        {
+          "record_index": 10,
+          "id": "USA/ME-CDC-QDX25704339/2021|OK252479.1|2021-06-07",
+          "start_inclusive": 0,
+          "end_exclusive": 128,
+          "sha256": "d830e41eb6fb11147cbc6ae4960017c0e49615c1f8d54d0a28f74db8ca2a3d72"
+        },
+        {
+          "record_index": 10,
+          "id": "USA/ME-CDC-QDX25704339/2021|OK252479.1|2021-06-07",
+          "start_inclusive": 14888,
+          "end_exclusive": 15016,
+          "sha256": "d9b8cafde83d212f87025295d8c7ce844a35a89f48cf665168ad1ec00d5183ca"
+        },
+        {
+          "record_index": 10,
+          "id": "USA/ME-CDC-QDX25704339/2021|OK252479.1|2021-06-07",
+          "start_inclusive": 29648,
+          "end_exclusive": 29776,
+          "sha256": "d74fa6f21f8dc5011acbdae483f7b034e8482c9de73dac6944f44b1209e109aa"
+        },
+        {
+          "record_index": 11,
+          "id": "USA/CA-CDC-VSX-A078011/2023|OQ582387.1|2023-02-17",
+          "start_inclusive": 0,
+          "end_exclusive": 128,
+          "sha256": "6df9114f545540bcca9b48d71a2678ac6fcc50c66d4442e5afd47710f6020eac"
+        },
+        {
+          "record_index": 11,
+          "id": "USA/CA-CDC-VSX-A078011/2023|OQ582387.1|2023-02-17",
+          "start_inclusive": 14920,
+          "end_exclusive": 15048,
+          "sha256": "612c0d02009510206dc14c53e33864a01df03fa4edce398c64d2db28d2337e2c"
+        },
+        {
+          "record_index": 11,
+          "id": "USA/CA-CDC-VSX-A078011/2023|OQ582387.1|2023-02-17",
+          "start_inclusive": 29712,
+          "end_exclusive": 29840,
+          "sha256": "9f6c4632697865e8be86b7a9f93680f8a0ef346d889fa18bf2f8c7ebd7d19297"
+        },
+        {
+          "record_index": 12,
+          "id": "England/QEUH-326F56B2/2023|OX452944.1|2023-03-01",
+          "start_inclusive": 0,
+          "end_exclusive": 128,
+          "sha256": "48b23f1df6e3bbfcf0738e93dbf655eea4ce2cf074c57467921e4ccbc298f775"
+        },
+        {
+          "record_index": 12,
+          "id": "England/QEUH-326F56B2/2023|OX452944.1|2023-03-01",
+          "start_inclusive": 14923,
+          "end_exclusive": 15051,
+          "sha256": "30f3afe688301d5fec4719f45d25a89ebbe33ff0cc209d390abb7444a760a212"
+        },
+        {
+          "record_index": 12,
+          "id": "England/QEUH-326F56B2/2023|OX452944.1|2023-03-01",
+          "start_inclusive": 29719,
+          "end_exclusive": 29847,
+          "sha256": "c4639200aecf05e4ff84343808fa908cb063f25bd3213bdc819a9fae1bd093fb"
+        },
+        {
+          "record_index": 13,
+          "id": "USA/UT-UPHL-230926445744/2023|OR622733.1|2023-09-03",
+          "start_inclusive": 0,
+          "end_exclusive": 128,
+          "sha256": "3ba9c95ca34210d1b7b5945e78adebceb8cd1cc30379ff7441c5d83675399d0b"
+        },
+        {
+          "record_index": 13,
+          "id": "USA/UT-UPHL-230926445744/2023|OR622733.1|2023-09-03",
+          "start_inclusive": 14879,
+          "end_exclusive": 15007,
+          "sha256": "fcb6bebe32e569ce74de03dd7e3e2368b1c4227df632dfae71adfd5bd9c5c576"
+        },
+        {
+          "record_index": 13,
+          "id": "USA/UT-UPHL-230926445744/2023|OR622733.1|2023-09-03",
+          "start_inclusive": 29631,
+          "end_exclusive": 29759,
+          "sha256": "eeecbd26af3d875610810a6626eda1c6ab3fbf572754c5ffa7219719cafe9967"
+        },
+        {
+          "record_index": 14,
+          "id": "USA/LA-EVTL19995/2023|OR649055.1|2023-09-03",
+          "start_inclusive": 0,
+          "end_exclusive": 128,
+          "sha256": "b180bb7abc02c2a265b3b1c673830d069223f903db65f68414af9ccb4581cc9f"
+        },
+        {
+          "record_index": 14,
+          "id": "USA/LA-EVTL19995/2023|OR649055.1|2023-09-03",
+          "start_inclusive": 14892,
+          "end_exclusive": 15020,
+          "sha256": "eaf0d740c0e9bc7c6700bb0d27748c44063af107f2058db0d82df3069a0ff04a"
+        },
+        {
+          "record_index": 14,
+          "id": "USA/LA-EVTL19995/2023|OR649055.1|2023-09-03",
+          "start_inclusive": 29656,
+          "end_exclusive": 29784,
+          "sha256": "9e62e017191728a525e2ea5b2308a40f8269f857082423fc633e6e083deb48ba"
+        },
+        {
+          "record_index": 15,
+          "id": "USA/CA-CDC-QDX86168728/2023|OR708425.1|2023-10-09",
+          "start_inclusive": 0,
+          "end_exclusive": 128,
+          "sha256": "65f7fc1778edb7aca56e23e687457f7dba014f9bf6f16ee54b6f8dded3406bb3"
+        },
+        {
+          "record_index": 15,
+          "id": "USA/CA-CDC-QDX86168728/2023|OR708425.1|2023-10-09",
+          "start_inclusive": 14860,
+          "end_exclusive": 14988,
+          "sha256": "bd0ab60c8332180c3a1d9e61ea1b4ff45c8ebff3c611993ddc70776f1a0e49f1"
+        },
+        {
+          "record_index": 15,
+          "id": "USA/CA-CDC-QDX86168728/2023|OR708425.1|2023-10-09",
+          "start_inclusive": 29593,
+          "end_exclusive": 29721,
+          "sha256": "504d2c467d69a72b9f8a40d728f3611e2489bda72d2d0364a4b9860a787c82fb"
+        },
+        {
+          "record_index": 16,
+          "id": "USA/CA-LACPHL-AY03056/2023|OR736613.1|2023-09-27",
+          "start_inclusive": 0,
+          "end_exclusive": 128,
+          "sha256": "5fe63a5fad56d3a5b093860fad9102f186a78f313344bf05d6921331d5985d46"
+        },
+        {
+          "record_index": 16,
+          "id": "USA/CA-LACPHL-AY03056/2023|OR736613.1|2023-09-27",
+          "start_inclusive": 14858,
+          "end_exclusive": 14986,
+          "sha256": "68206b4aa462a0f315f08e9925f4c3b3b8a20bfd3d98dd1b3b50df638d7de1f0"
+        },
+        {
+          "record_index": 16,
+          "id": "USA/CA-LACPHL-AY03056/2023|OR736613.1|2023-09-27",
+          "start_inclusive": 29589,
+          "end_exclusive": 29717,
+          "sha256": "0ca730ab0990979ff5d62e5a7bdf327d8d573631e6d5fa8604b1419dc75e5407"
+        },
+        {
+          "record_index": 17,
+          "id": "England/CLIMB-CM7YMICA/2023|OY753779.1|2023-10-09",
+          "start_inclusive": 0,
+          "end_exclusive": 128,
+          "sha256": "b3d97f9c44e834dcb200300e08f0dd89d5a50c24fd2e07be70f385640d18f0c2"
+        },
+        {
+          "record_index": 17,
+          "id": "England/CLIMB-CM7YMICA/2023|OY753779.1|2023-10-09",
+          "start_inclusive": 14941,
+          "end_exclusive": 15069,
+          "sha256": "a1236198a149f4529d08241c5ae78f351a348aed8c69d65ad0c3af7a5bf0b5c8"
+        },
+        {
+          "record_index": 17,
+          "id": "England/CLIMB-CM7YMICA/2023|OY753779.1|2023-10-09",
+          "start_inclusive": 29754,
+          "end_exclusive": 29882,
+          "sha256": "49a67d37eca9778c45cf85a06ad9646976081116a1db55a37f5192157654e0af"
+        },
+        {
+          "record_index": 18,
+          "id": "Denmark/DCGC-129060/2021|OV917631.1|2021-07-11",
+          "start_inclusive": 0,
+          "end_exclusive": 128,
+          "sha256": "2df1c0be90414a09c4a60eeda72b47214661b08f3500d38f21fdf88a43eff373"
+        },
+        {
+          "record_index": 18,
+          "id": "Denmark/DCGC-129060/2021|OV917631.1|2021-07-11",
+          "start_inclusive": 14945,
+          "end_exclusive": 15073,
+          "sha256": "68206b4aa462a0f315f08e9925f4c3b3b8a20bfd3d98dd1b3b50df638d7de1f0"
+        },
+        {
+          "record_index": 18,
+          "id": "Denmark/DCGC-129060/2021|OV917631.1|2021-07-11",
+          "start_inclusive": 29762,
+          "end_exclusive": 29890,
+          "sha256": "2c2d9dbb73dad84590b7b5a84db7aa66a03ec75c43451482f177691db0679de1"
+        },
+        {
+          "record_index": 19,
+          "id": "England/ALDP-337E0B6/2022|OV828376.1|2022-01-20",
+          "start_inclusive": 0,
+          "end_exclusive": 128,
+          "sha256": "48b23f1df6e3bbfcf0738e93dbf655eea4ce2cf074c57467921e4ccbc298f775"
+        },
+        {
+          "record_index": 19,
+          "id": "England/ALDP-337E0B6/2022|OV828376.1|2022-01-20",
+          "start_inclusive": 14935,
+          "end_exclusive": 15063,
+          "sha256": "a1236198a149f4529d08241c5ae78f351a348aed8c69d65ad0c3af7a5bf0b5c8"
+        },
+        {
+          "record_index": 19,
+          "id": "England/ALDP-337E0B6/2022|OV828376.1|2022-01-20",
+          "start_inclusive": 29742,
+          "end_exclusive": 29870,
+          "sha256": "c4639200aecf05e4ff84343808fa908cb063f25bd3213bdc819a9fae1bd093fb"
+        }
+      ],
+      "records": 20,
+      "count": 60
+    }
+  },
+  "commands": [
+    {
+      "name": "java-version",
+      "argv": [
+        "java",
+        "-version"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\001-java-version.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\001-java-version.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.2179665999719873
+    },
+    {
+      "name": "docker-version",
+      "argv": [
+        "docker",
+        "version"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\002-docker-version.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\002-docker-version.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.19757329998537898
+    },
+    {
+      "name": "image-inspect",
+      "argv": [
+        "docker",
+        "image",
+        "inspect",
+        "quay.io/biocontainers/panman@sha256:ae2e1ab9f4ef57d3bef248e5580f95a615a5aff9bb53be05cac03a0c56ea0a27"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\003-image-inspect.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\003-image-inspect.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.2004981999634765
+    },
+    {
+      "name": "panman-version",
+      "argv": [
+        "docker",
+        "run",
+        "--rm",
+        "--pull=never",
+        "--network",
+        "none",
+        "--cpus",
+        "2",
+        "--memory",
+        "2g",
+        "--name",
+        "hypergrass-panman-20261031t151511z-9f68f378-panman-version",
+        "--mount",
+        "type=bind,source=C:/Users/mdsai/.gemini/antigravity/scratch/hypergrass/benchmarks/panman,target=/work",
+        "--workdir",
+        "/work",
+        "quay.io/biocontainers/panman@sha256:ae2e1ab9f4ef57d3bef248e5580f95a615a5aff9bb53be05cac03a0c56ea0a27",
+        "panmanUtils",
+        "--version"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\004-panman-version.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\004-panman-version.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 1.3047609000350349
+    },
+    {
+      "name": "panman-create",
+      "argv": [
+        "docker",
+        "run",
+        "--rm",
+        "--pull=never",
+        "--network",
+        "none",
+        "--cpus",
+        "2",
+        "--memory",
+        "2g",
+        "--name",
+        "hypergrass-panman-20261031t151511z-9f68f378-panman-create",
+        "--mount",
+        "type=bind,source=C:/Users/mdsai/.gemini/antigravity/scratch/hypergrass/benchmarks/panman,target=/work",
+        "--workdir",
+        "/work",
+        "quay.io/biocontainers/panman@sha256:ae2e1ab9f4ef57d3bef248e5580f95a615a5aff9bb53be05cac03a0c56ea0a27",
+        "panmanUtils",
+        "-P",
+        "/work/data/sars_20.json",
+        "-N",
+        "/work/data/sars_20.nwk",
+        "-o",
+        "sars_20",
+        "--threads",
+        "2"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\005-panman-create.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\005-panman-create.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 1.4579482999979518
+    },
+    {
+      "name": "panman-extract",
+      "argv": [
+        "docker",
+        "run",
+        "--rm",
+        "--pull=never",
+        "--network",
+        "none",
+        "--cpus",
+        "2",
+        "--memory",
+        "2g",
+        "--name",
+        "hypergrass-panman-20261031t151511z-9f68f378-panman-extract",
+        "--mount",
+        "type=bind,source=C:/Users/mdsai/.gemini/antigravity/scratch/hypergrass/benchmarks/panman,target=/work",
+        "--workdir",
+        "/work",
+        "quay.io/biocontainers/panman@sha256:ae2e1ab9f4ef57d3bef248e5580f95a615a5aff9bb53be05cac03a0c56ea0a27",
+        "panmanUtils",
+        "-I",
+        "/work/panman/sars_20.panman",
+        "--fasta",
+        "-o",
+        "sars_20",
+        "--threads",
+        "2"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\006-panman-extract.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\006-panman-extract.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 1.150730699999258
+    },
+    {
+      "name": "hgs-compress",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "compress",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.fa",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\007-hgs-compress.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\007-hgs-compress.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.9259008000371978
+    },
+    {
+      "name": "hgs-decompress",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "decompress",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.restored.fa"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\008-hgs-decompress.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\008-hgs-decompress.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.7391680000000633
+    },
+    {
+      "name": "hgs-query-0-0",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "0",
+        "0",
+        "128"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\009-hgs-query-0-0.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\009-hgs-query-0-0.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.6257063000230119
+    },
+    {
+      "name": "hgs-query-0-14951",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "0",
+        "14951",
+        "15079"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\010-hgs-query-0-14951.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\010-hgs-query-0-14951.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.5762047999887727
+    },
+    {
+      "name": "hgs-query-0-29775",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "0",
+        "29775",
+        "29903"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\011-hgs-query-0-29775.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\011-hgs-query-0-29775.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.6085293000214733
+    },
+    {
+      "name": "hgs-query-1-0",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "1",
+        "0",
+        "128"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\012-hgs-query-1-0.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\012-hgs-query-1-0.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.4760087999748066
+    },
+    {
+      "name": "hgs-query-1-14866",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "1",
+        "14866",
+        "14994"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\013-hgs-query-1-14866.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\013-hgs-query-1-14866.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.5532883999985643
+    },
+    {
+      "name": "hgs-query-1-29604",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "1",
+        "29604",
+        "29732"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\014-hgs-query-1-29604.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\014-hgs-query-1-29604.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.5740150999627076
+    },
+    {
+      "name": "hgs-query-2-0",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "2",
+        "0",
+        "128"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\015-hgs-query-2-0.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\015-hgs-query-2-0.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.5185811999836005
+    },
+    {
+      "name": "hgs-query-2-14945",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "2",
+        "14945",
+        "15073"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\016-hgs-query-2-14945.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\016-hgs-query-2-14945.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.44648709998000413
+    },
+    {
+      "name": "hgs-query-2-29762",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "2",
+        "29762",
+        "29890"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\017-hgs-query-2-29762.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\017-hgs-query-2-29762.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.45766509999521077
+    },
+    {
+      "name": "hgs-query-3-0",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "3",
+        "0",
+        "128"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\018-hgs-query-3-0.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\018-hgs-query-3-0.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.5314515000209212
+    },
+    {
+      "name": "hgs-query-3-14900",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "3",
+        "14900",
+        "15028"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\019-hgs-query-3-14900.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\019-hgs-query-3-14900.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.6930891999509186
+    },
+    {
+      "name": "hgs-query-3-29672",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "3",
+        "29672",
+        "29800"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\020-hgs-query-3-29672.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\020-hgs-query-3-29672.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.6454309999826364
+    },
+    {
+      "name": "hgs-query-4-0",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "4",
+        "0",
+        "128"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\021-hgs-query-4-0.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\021-hgs-query-4-0.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.5786751999985427
+    },
+    {
+      "name": "hgs-query-4-14942",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "4",
+        "14942",
+        "15070"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\022-hgs-query-4-14942.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\022-hgs-query-4-14942.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.48245789995417
+    },
+    {
+      "name": "hgs-query-4-29756",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "4",
+        "29756",
+        "29884"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\023-hgs-query-4-29756.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\023-hgs-query-4-29756.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.4880266999825835
+    },
+    {
+      "name": "hgs-query-5-0",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "5",
+        "0",
+        "128"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\024-hgs-query-5-0.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\024-hgs-query-5-0.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.5309189000399783
+    },
+    {
+      "name": "hgs-query-5-14936",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "5",
+        "14936",
+        "15064"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\025-hgs-query-5-14936.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\025-hgs-query-5-14936.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.4189435000298545
+    },
+    {
+      "name": "hgs-query-5-29745",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "5",
+        "29745",
+        "29873"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\026-hgs-query-5-29745.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\026-hgs-query-5-29745.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.534006500034593
+    },
+    {
+      "name": "hgs-query-6-0",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "6",
+        "0",
+        "128"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\027-hgs-query-6-0.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\027-hgs-query-6-0.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.571195499971509
+    },
+    {
+      "name": "hgs-query-6-14828",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "6",
+        "14828",
+        "14956"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\028-hgs-query-6-14828.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\028-hgs-query-6-14828.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.5420061000040732
+    },
+    {
+      "name": "hgs-query-6-29529",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "6",
+        "29529",
+        "29657"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\029-hgs-query-6-29529.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\029-hgs-query-6-29529.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.5339547999901697
+    },
+    {
+      "name": "hgs-query-7-0",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "7",
+        "0",
+        "128"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\030-hgs-query-7-0.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\030-hgs-query-7-0.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.7050271999905817
+    },
+    {
+      "name": "hgs-query-7-14922",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "7",
+        "14922",
+        "15050"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\031-hgs-query-7-14922.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\031-hgs-query-7-14922.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.6498851999640465
+    },
+    {
+      "name": "hgs-query-7-29716",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "7",
+        "29716",
+        "29844"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\032-hgs-query-7-29716.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\032-hgs-query-7-29716.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.6565878000110388
+    },
+    {
+      "name": "hgs-query-8-0",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "8",
+        "0",
+        "128"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\033-hgs-query-8-0.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\033-hgs-query-8-0.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.5750379000091925
+    },
+    {
+      "name": "hgs-query-8-14899",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "8",
+        "14899",
+        "15027"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\034-hgs-query-8-14899.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\034-hgs-query-8-14899.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.6290360999992117
+    },
+    {
+      "name": "hgs-query-8-29670",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "8",
+        "29670",
+        "29798"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\035-hgs-query-8-29670.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\035-hgs-query-8-29670.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.6156347999931313
+    },
+    {
+      "name": "hgs-query-9-0",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "9",
+        "0",
+        "128"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\036-hgs-query-9-0.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\036-hgs-query-9-0.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.5649373999913223
+    },
+    {
+      "name": "hgs-query-9-14899",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "9",
+        "14899",
+        "15027"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\037-hgs-query-9-14899.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\037-hgs-query-9-14899.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.5027031999779865
+    },
+    {
+      "name": "hgs-query-9-29671",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "9",
+        "29671",
+        "29799"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\038-hgs-query-9-29671.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\038-hgs-query-9-29671.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.6242302000173368
+    },
+    {
+      "name": "hgs-query-10-0",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "10",
+        "0",
+        "128"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\039-hgs-query-10-0.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\039-hgs-query-10-0.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.4331596000120044
+    },
+    {
+      "name": "hgs-query-10-14888",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "10",
+        "14888",
+        "15016"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\040-hgs-query-10-14888.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\040-hgs-query-10-14888.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.5972133000032045
+    },
+    {
+      "name": "hgs-query-10-29648",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "10",
+        "29648",
+        "29776"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\041-hgs-query-10-29648.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\041-hgs-query-10-29648.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.5481098999734968
+    },
+    {
+      "name": "hgs-query-11-0",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "11",
+        "0",
+        "128"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\042-hgs-query-11-0.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\042-hgs-query-11-0.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.47234219999518245
+    },
+    {
+      "name": "hgs-query-11-14920",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "11",
+        "14920",
+        "15048"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\043-hgs-query-11-14920.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\043-hgs-query-11-14920.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.6030555000179447
+    },
+    {
+      "name": "hgs-query-11-29712",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "11",
+        "29712",
+        "29840"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\044-hgs-query-11-29712.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\044-hgs-query-11-29712.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.5856122999684885
+    },
+    {
+      "name": "hgs-query-12-0",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "12",
+        "0",
+        "128"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\045-hgs-query-12-0.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\045-hgs-query-12-0.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.5840982999652624
+    },
+    {
+      "name": "hgs-query-12-14923",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "12",
+        "14923",
+        "15051"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\046-hgs-query-12-14923.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\046-hgs-query-12-14923.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.5112080000108108
+    },
+    {
+      "name": "hgs-query-12-29719",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "12",
+        "29719",
+        "29847"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\047-hgs-query-12-29719.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\047-hgs-query-12-29719.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.5172810999793
+    },
+    {
+      "name": "hgs-query-13-0",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "13",
+        "0",
+        "128"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\048-hgs-query-13-0.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\048-hgs-query-13-0.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.5576603999943472
+    },
+    {
+      "name": "hgs-query-13-14879",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "13",
+        "14879",
+        "15007"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\049-hgs-query-13-14879.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\049-hgs-query-13-14879.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.6158043000032194
+    },
+    {
+      "name": "hgs-query-13-29631",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "13",
+        "29631",
+        "29759"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\050-hgs-query-13-29631.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\050-hgs-query-13-29631.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.5198578999843448
+    },
+    {
+      "name": "hgs-query-14-0",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "14",
+        "0",
+        "128"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\051-hgs-query-14-0.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\051-hgs-query-14-0.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.5285606000106782
+    },
+    {
+      "name": "hgs-query-14-14892",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "14",
+        "14892",
+        "15020"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\052-hgs-query-14-14892.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\052-hgs-query-14-14892.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.5304637000081129
+    },
+    {
+      "name": "hgs-query-14-29656",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "14",
+        "29656",
+        "29784"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\053-hgs-query-14-29656.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\053-hgs-query-14-29656.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.5428021000116132
+    },
+    {
+      "name": "hgs-query-15-0",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "15",
+        "0",
+        "128"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\054-hgs-query-15-0.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\054-hgs-query-15-0.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.6441821999615058
+    },
+    {
+      "name": "hgs-query-15-14860",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "15",
+        "14860",
+        "14988"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\055-hgs-query-15-14860.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\055-hgs-query-15-14860.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.5413242999929935
+    },
+    {
+      "name": "hgs-query-15-29593",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "15",
+        "29593",
+        "29721"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\056-hgs-query-15-29593.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\056-hgs-query-15-29593.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.4730773000046611
+    },
+    {
+      "name": "hgs-query-16-0",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "16",
+        "0",
+        "128"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\057-hgs-query-16-0.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\057-hgs-query-16-0.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.5383527000085451
+    },
+    {
+      "name": "hgs-query-16-14858",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "16",
+        "14858",
+        "14986"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\058-hgs-query-16-14858.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\058-hgs-query-16-14858.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.5320822999929078
+    },
+    {
+      "name": "hgs-query-16-29589",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "16",
+        "29589",
+        "29717"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\059-hgs-query-16-29589.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\059-hgs-query-16-29589.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.49628850002773106
+    },
+    {
+      "name": "hgs-query-17-0",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "17",
+        "0",
+        "128"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\060-hgs-query-17-0.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\060-hgs-query-17-0.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.5880423000198789
+    },
+    {
+      "name": "hgs-query-17-14941",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "17",
+        "14941",
+        "15069"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\061-hgs-query-17-14941.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\061-hgs-query-17-14941.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.5256828999845311
+    },
+    {
+      "name": "hgs-query-17-29754",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "17",
+        "29754",
+        "29882"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\062-hgs-query-17-29754.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\062-hgs-query-17-29754.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.525007399963215
+    },
+    {
+      "name": "hgs-query-18-0",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "18",
+        "0",
+        "128"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\063-hgs-query-18-0.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\063-hgs-query-18-0.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.5692207999527454
+    },
+    {
+      "name": "hgs-query-18-14945",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "18",
+        "14945",
+        "15073"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\064-hgs-query-18-14945.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\064-hgs-query-18-14945.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.6893540999735706
+    },
+    {
+      "name": "hgs-query-18-29762",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "18",
+        "29762",
+        "29890"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\065-hgs-query-18-29762.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\065-hgs-query-18-29762.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.4742818999802694
+    },
+    {
+      "name": "hgs-query-19-0",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "19",
+        "0",
+        "128"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\066-hgs-query-19-0.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\066-hgs-query-19-0.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.5952839000383392
+    },
+    {
+      "name": "hgs-query-19-14935",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "19",
+        "14935",
+        "15063"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\067-hgs-query-19-14935.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\067-hgs-query-19-14935.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.5630446000141092
+    },
+    {
+      "name": "hgs-query-19-29742",
+      "argv": [
+        "java",
+        "-cp",
+        ".validation/baseline-bin",
+        "hypergrass.HyperGraSS",
+        "query",
+        "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+        "19",
+        "29742",
+        "29870"
+      ],
+      "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+      "timeout_seconds": 60.0,
+      "stdout_log": "logs\\20261031T151511Z-9f68f378\\068-hgs-query-19-29742.stdout.log",
+      "stderr_log": "logs\\20261031T151511Z-9f68f378\\068-hgs-query-19-29742.stderr.log",
+      "returncode": 0,
+      "wall_seconds": 0.5121031000162475
+    }
+  ],
+  "records": [
+    {
+      "id": "Switzerland/SO-ETHZ-500145/2020|OU000199.2|2020-11-12",
+      "header": "Switzerland/SO-ETHZ-500145/2020|OU000199.2|2020-11-12",
+      "sequence_bytes": 29903,
+      "sequence_sha256": "05d261676ffb095773013d8be37eaca77c522bbd4243737e5cb2511f2948c329"
+    },
+    {
+      "id": "Germany/IMS-10023-CVDP-00098/2021|OU080963.1|2021-01-28",
+      "header": "Germany/IMS-10023-CVDP-00098/2021|OU080963.1|2021-01-28",
+      "sequence_bytes": 29732,
+      "sequence_sha256": "f6a165372f1de4b4f2ac61d19438c272a7009068c3910800a4adac5ec5dd5fc7"
+    },
+    {
+      "id": "England/NORW-30F5277/2021|OV313316.1|2021-11-17",
+      "header": "England/NORW-30F5277/2021|OV313316.1|2021-11-17",
+      "sequence_bytes": 29890,
+      "sequence_sha256": "336f3298c65662fd1b6690eeee2afef2d78c3b326ffcbed159ccb2b58be408a9"
+    },
+    {
+      "id": "Germany/Molecular_surveillance_of_SARS-CoV-2_in_Germany/2021|OV412394.1|2021-09-29",
+      "header": "Germany/Molecular_surveillance_of_SARS-CoV-2_in_Germany/2021|OV412394.1|2021-09-29",
+      "sequence_bytes": 29800,
+      "sequence_sha256": "14472692e027065dd8207c5c940ce3561c151632484ebaa56100c2b49795e621"
+    },
+    {
+      "id": "England/MILK-2D4CB8C/2021|OV443913.1|2021-12-05",
+      "header": "England/MILK-2D4CB8C/2021|OV443913.1|2021-12-05",
+      "sequence_bytes": 29884,
+      "sequence_sha256": "d59e9208141a5c9da918420afba35a0e0abfa5308b800cc2046e874787967a93"
+    },
+    {
+      "id": "England/MILK-338D3D9/2022|OV784995.1|2022-01-21",
+      "header": "England/MILK-338D3D9/2022|OV784995.1|2022-01-21",
+      "sequence_bytes": 29873,
+      "sequence_sha256": "e9564f9243dcaeeaaa7f1266462f6d311c659e8a11af98592f9bb42add939248"
+    },
+    {
+      "id": "USA/NY-CDC-LC0906971/2022|OP671333.1|2022-10-03",
+      "header": "USA/NY-CDC-LC0906971/2022|OP671333.1|2022-10-03",
+      "sequence_bytes": 29657,
+      "sequence_sha256": "15e5a9d5a38b360ece06ea264533975342387978b02b0ed799726297ec9d537c"
+    },
+    {
+      "id": "USA/FL-CDC-STM-H5KCN9XBD/2022|OP732003.1|2022-09-30",
+      "header": "USA/FL-CDC-STM-H5KCN9XBD/2022|OP732003.1|2022-09-30",
+      "sequence_bytes": 29844,
+      "sequence_sha256": "60c0603ffddb484497823f6c62ddbc0e957409798b46e9972ca638d8d6d50c49"
+    },
+    {
+      "id": "USA/MA-CDCBI-CRSP_DVHKMC6PPRXWPTXC/2022|OP606163.1|2022-09-24",
+      "header": "USA/MA-CDCBI-CRSP_DVHKMC6PPRXWPTXC/2022|OP606163.1|2022-09-24",
+      "sequence_bytes": 29798,
+      "sequence_sha256": "a5bacf0ed45759a433603e6e9bc5f745f86696ad97a38612b8fa1a881fe11728"
+    },
+    {
+      "id": "USA/CA-CDC-FG-019030/2021|OK212520.1|2021-03-31",
+      "header": "USA/CA-CDC-FG-019030/2021|OK212520.1|2021-03-31",
+      "sequence_bytes": 29799,
+      "sequence_sha256": "56f7193ae27d37fd43b9ca091b433aee36397e99bc48f062a3a25ed186275213"
+    },
+    {
+      "id": "USA/ME-CDC-QDX25704339/2021|OK252479.1|2021-06-07",
+      "header": "USA/ME-CDC-QDX25704339/2021|OK252479.1|2021-06-07",
+      "sequence_bytes": 29776,
+      "sequence_sha256": "64c21635a19053bf4bd7496c33f540aaadb44c820c9f17fcf9a45b2fab96e0de"
+    },
+    {
+      "id": "USA/CA-CDC-VSX-A078011/2023|OQ582387.1|2023-02-17",
+      "header": "USA/CA-CDC-VSX-A078011/2023|OQ582387.1|2023-02-17",
+      "sequence_bytes": 29840,
+      "sequence_sha256": "0f0e49093c0d04896c94309fc0b6d831b3caa4ca1bbbb5468b6db164d73484b9"
+    },
+    {
+      "id": "England/QEUH-326F56B2/2023|OX452944.1|2023-03-01",
+      "header": "England/QEUH-326F56B2/2023|OX452944.1|2023-03-01",
+      "sequence_bytes": 29847,
+      "sequence_sha256": "3bab7419e1686cfa006e7c5ac6dbea3f75a9ed82841d877f58af7b248d06ae78"
+    },
+    {
+      "id": "USA/UT-UPHL-230926445744/2023|OR622733.1|2023-09-03",
+      "header": "USA/UT-UPHL-230926445744/2023|OR622733.1|2023-09-03",
+      "sequence_bytes": 29759,
+      "sequence_sha256": "50369db286e72960a1dace48526de8b26957cf791267e2b0d882cebfd3001b3b"
+    },
+    {
+      "id": "USA/LA-EVTL19995/2023|OR649055.1|2023-09-03",
+      "header": "USA/LA-EVTL19995/2023|OR649055.1|2023-09-03",
+      "sequence_bytes": 29784,
+      "sequence_sha256": "6410aa3ae0bbe33f4fbffab167ac4935927b2d28338977e2a0f35a84aa119bfd"
+    },
+    {
+      "id": "USA/CA-CDC-QDX86168728/2023|OR708425.1|2023-10-09",
+      "header": "USA/CA-CDC-QDX86168728/2023|OR708425.1|2023-10-09",
+      "sequence_bytes": 29721,
+      "sequence_sha256": "f33c9bfea6c2a1608027a73266a276384f4be22936e596fbd605a560937b6059"
+    },
+    {
+      "id": "USA/CA-LACPHL-AY03056/2023|OR736613.1|2023-09-27",
+      "header": "USA/CA-LACPHL-AY03056/2023|OR736613.1|2023-09-27",
+      "sequence_bytes": 29717,
+      "sequence_sha256": "2ca59062785092e8a9296d21eec62b25f0df1740569e08b4cc74f2fef732ef3f"
+    },
+    {
+      "id": "England/CLIMB-CM7YMICA/2023|OY753779.1|2023-10-09",
+      "header": "England/CLIMB-CM7YMICA/2023|OY753779.1|2023-10-09",
+      "sequence_bytes": 29882,
+      "sequence_sha256": "ba2109cba2bc9b234099a858c35007f0266c67b9fc2bffbb0747a67dda2665e9"
+    },
+    {
+      "id": "Denmark/DCGC-129060/2021|OV917631.1|2021-07-11",
+      "header": "Denmark/DCGC-129060/2021|OV917631.1|2021-07-11",
+      "sequence_bytes": 29890,
+      "sequence_sha256": "772cecdb354134a9c12c214646de7c7049ec4588b0e4b5798a0354ef59d1d4e8"
+    },
+    {
+      "id": "England/ALDP-337E0B6/2022|OV828376.1|2022-01-20",
+      "header": "England/ALDP-337E0B6/2022|OV828376.1|2022-01-20",
+      "sequence_bytes": 29870,
+      "sequence_sha256": "c803fd34658f0da7ffc145753f252a388103a2b6710cc9211e2befd4f15aca5d"
+    }
+  ],
+  "archive_size_comparison": {
+    "fasta_bytes": 609255,
+    "hgs_bytes": 10419,
+    "panman_bytes": 13816,
+    "fasta_over_hgs": 58.47538151454074,
+    "fasta_over_panman": 44.097785176606834,
+    "panman_over_hgs": 1.3260389672713313,
+    "hgs_bytes_saved_vs_panman": 3397,
+    "hgs_percent_smaller_than_panman": 24.587434858135495
+  },
+  "finished_utc": "2026-10-31T15:15:52.503533+00:00"
+}

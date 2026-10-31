@@ -1,0 +1,9 @@
+**
+!Dockerfile
+!.dockerignore
+!build_image.py
+!sources.lock.json
+!vendor/
+vendor/**
+!vendor/jarvis3.tar.gz
+!vendor/geco3.tar.gz

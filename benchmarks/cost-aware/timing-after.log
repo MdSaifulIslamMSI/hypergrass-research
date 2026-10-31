@@ -1,0 +1,6 @@
+Synthetic archive compatibility check (not a real-genome benchmark).
+Serial compression: 4 warmups, median of 7 measured runs.
+PASS baseline case0 raw=1559186 archive=8958 median=168.073 ms SHA256=eb2feb7f83e3fc5373a1e93a91b398cbbc765181d75453b9baa47a022fd855e9
+PASS baseline case1 raw=1559186 archive=9126 median=245.392 ms SHA256=4c6aa88279b1c99a125659a6be8e1c90c99ed823558de4607b72823ca7a5f360
+PASS baseline case2 raw=1559186 archive=9756 median=152.158 ms SHA256=5acfa0cb89006aa4b84b88e9d3c2f561e5b34f9b77b126bea231f78553714afe
+PASS baseline case3 raw=1559186 archive=4635 median=112.848 ms SHA256=1f08e99aac70f42a43f226c169b93662fda1abf54754ec05d0d4425d2de38f83

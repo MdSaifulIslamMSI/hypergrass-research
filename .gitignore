@@ -1,0 +1,35 @@
+# Build and runtime artifacts
+bin/
+target/
+original-bin/
+*.class
+*.hgs
+*.co
+*.jc
+*.de
+hs_err_pid*
+replay_pid*
+
+# Benchmark inputs and outputs (reproducible from locked manifests)
+benchmarks/corpus/data/
+benchmarks/corpus/vendor/
+benchmarks/corpus/runs/
+benchmarks/corpus/smoke/
+benchmarks/corpus/full-run.log
+benchmarks/corpus/build.log
+benchmarks/corpus/smoke.log
+benchmarks/pangenome/data/
+benchmarks/pangenome/runs/
+benchmarks/pangenome/fetch.log
+benchmarks/panman/data/
+benchmarks/panman/logs/
+benchmarks/panman/panman/
+benchmarks/panman/info/
+benchmarks/panman/original-bin/
+
+# Editor and OS noise
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db

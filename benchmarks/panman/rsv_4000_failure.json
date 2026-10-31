@@ -1,0 +1,21 @@
+{
+  "status": "failed_before_sequence_comparison",
+  "dataset": "published rsv_4000.panman",
+  "source_url": "https://zenodo.org/api/records/17781629/files/rsv_4000.panman/content",
+  "source_record": "https://doi.org/10.5281/zenodo.17781629",
+  "license": "CC-BY-4.0",
+  "size_bytes": 725748,
+  "md5": "e9e6ef589c2ae9b96814823d0a20ed55",
+  "sha256": "9f1399992a89862697cdf88c47124eed6845ec441a823801ebe5e63c33f7c11b",
+  "panman_version": "0.1.4",
+  "image": "quay.io/biocontainers/panman@sha256:ae2e1ab9f4ef57d3bef248e5580f95a615a5aff9bb53be05cac03a0c56ea0a27",
+  "docker_limits": {"cpus": 2, "memory": "2g", "network": "none"},
+  "arguments": ["panmanUtils", "-I", "/work/data/rsv_4000.panman", "--fasta", "-o", "rsv_4000", "--threads", "2"],
+  "exit_code": 139,
+  "error": "capnp/arena.c++:153: failed: Exceeded message traversal limit. See capnp::ReaderOptions.",
+  "log": "logs/rsv-extract.log",
+  "fasta_produced": false,
+  "matched_records_verified": false,
+  "hypergrass_size": null,
+  "conclusion": "No valid archive-size comparison was completed for this dataset. This is a failure of this pinned extraction attempt, not evidence of a compression win or a general PanMAN limitation."
+}

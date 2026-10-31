@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "selection": "Frozen before running any new compressor measurements. Public accession-version records not used for development in this workspace; selected for varied sizes and single/multiple records, not observed compressibility. This is a locally conducted held-out benchmark, not an independent third-party audit.",
+  "contracts": {
+    "fasta": "Exact downloaded FASTA bytes, including all headers, order, wrapping and line endings.",
+    "sequence": "Exact deterministic concatenation of sequence lines in downloaded record order, with only FASTA headers and line endings removed. No case folding, ambiguity removal, gap removal or record dropping. Raw-only tools are applicable only when every resulting byte is A/C/G/T. This contract does not preserve FASTA metadata."
+  },
+  "resources": {"docker_cpus": 2, "docker_memory": "2g", "java_max_heap": "1g", "java_active_processors": 1, "timeout_seconds_per_operation": 180},
+  "measurement": {"repetitions": 3, "warmup_processes": 0, "order": "Rotate tool order by dataset and repetition; new process per operation; no engine tuning after results.", "wall": "Process startup through exit, inside the same Linux container. Docker startup, downloads, builds, staging and SHA verification excluded.", "memory": "Per-child Linux wait4 ru_maxrss converted from KiB to bytes; not heap size or Docker memory limit.", "cpu": "Per-child wait4 user+system seconds.", "failures": "Retain errors, timeouts, missing tools and verification failures. No wins from incomplete or nonmatching comparisons."},
+  "tool_profiles": ["hypergrass", "hypergrass-optimize", "hypergrass-lean", "gzip-9", "xz-9", "jarvis3-l7", "jarvis3-l26", "geco3-l9"],
+  "datasets": [
+    {"id":"human-mito", "accessions":["NC_012920.1"], "label":"Human mitochondrial reference"},
+    {"id":"fly-mito", "accessions":["NC_001709.1"], "label":"Fruit fly mitochondrial reference"},
+    {"id":"yeast-mito", "accessions":["NC_001224.1"], "label":"Budding yeast mitochondrial reference"},
+    {"id":"plant-plastid", "accessions":["NC_000932.1"], "label":"Arabidopsis chloroplast reference"},
+    {"id":"yeast-chr1", "accessions":["NC_001133.9"], "label":"Budding yeast chromosome I"},
+    {"id":"archaeal-reference", "accessions":["NC_000909.1"], "label":"Methanocaldococcus jannaschii reference"},
+    {"id":"ecoli-k12", "accessions":["NC_000913.3"], "label":"E. coli K-12 MG1655 laboratory reference"},
+    {"id":"bsubtilis-168", "accessions":["NC_000964.3"], "label":"Bacillus subtilis 168 laboratory reference"},
+    {"id":"yeast-three-chr", "accessions":["NC_001133.9","NC_001134.8","NC_001135.5"], "label":"Budding yeast chromosomes I, II and III; naturally distinct records"},
+    {"id":"ecoli-k12-pair", "accessions":["NC_000913.3","NC_007779.1"], "label":"Two E. coli K-12 laboratory references; MG1655 and W3110"}
+  ],
+  "limitations": [
+    "Local measurement, not a third-party independent replication.",
+    "Ten inputs, including overlapping component records in the multi-record cases; not ten statistically independent genomes.",
+    "Small-to-medium references and two multi-record cases, not a population-scale pangenome corpus.",
+    "No raw FASTQ reads, large mammalian chromosomes, or gigabase collections.",
+    "Fixed representative tool profiles, not a parameter sweep or a claim about each tool's best possible configuration.",
+    "Sequence-only scores cannot be compared directly with complete FASTA scores.",
+    "Shared host, filesystem caches and JVM startup affect runtime; three samples do not establish statistical significance."
+  ]
+}
