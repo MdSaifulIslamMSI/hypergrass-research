@@ -212,9 +212,11 @@ Use `:` instead of `;` in the classpath on Linux/macOS. Omit `--bench` to run ar
 The frozen corpus and the 100 MB+ pangenome scale test are documented in
 [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md); the anchor-bank ablation is in
 [`docs/ABLATION.md`](docs/ABLATION.md) and the query workload in
-[`docs/END-TO-END.md`](docs/END-TO-END.md). Every table in those documents is
-rendered from a machine-readable `report.json`; the corpus report is also
-re-hashed and recomputed by `benchmarks/corpus/audit.py` before publication.
+[`docs/END-TO-END.md`](docs/END-TO-END.md). Every table in `BENCHMARKS.md`
+and `END-TO-END.md` is rendered from a machine-readable `report.json`; the
+ablation tables are transcribed from the committed ablation reports. The
+corpus report is also re-hashed and recomputed by `benchmarks/corpus/audit.py`
+before publication.
 The corpus is a locally conducted held-out benchmark against pinned tool
 versions, not an independent third-party audit. Deviations, timeouts, and
 non-applicable cells are reported rather than dropped.
