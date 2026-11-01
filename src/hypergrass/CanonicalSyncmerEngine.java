@@ -303,6 +303,14 @@ public final class CanonicalSyncmerEngine {
         }
         byte[] trimmed = (bankLen == bank.length) ? bank : Arrays.copyOf(bank, bankLen);
 
+        // Polish anchor bank to consensus majority allele across all chunks if multi-record cohort
+        if (bankLen >= MIN_MATCH_LEN && totalRecords >= 2 && chunks.length > 1) {
+            AnchorBank rawBank = new AnchorBank(trimmed, bankLen, primarySeedLen, EMPTY_DONORS, index);
+            AnchorBank polished = consensusAnchor(rawBank, chunks);
+            trimmed = polished.bases;
+            index = polished.index;
+        }
+
         // Harvest 1-hop Global Virtual Clade Ancestor haplotypes when multi-record cohorts exist
         int[][] globalDonors = EMPTY_DONORS;
         if (bankLen >= MIN_MATCH_LEN && totalRecords >= 6) {
@@ -310,6 +318,86 @@ public final class CanonicalSyncmerEngine {
         }
 
         return new AnchorBank(trimmed, bankLen, primarySeedLen, globalDonors, index);
+    }
+
+    /**
+     * Returns a copy of {@code bank} whose bases are the per-position majority base of every chunk
+     * aligned to it. This is an encoder-side transform only: the polished bases are what the archive
+     * serializes, so decoders need no changes. Positions covered fewer than twice keep the original.
+     */
+    public static AnchorBank consensusAnchor(AnchorBank bank, FactorizedChunk[] chunks) {
+        byte[] counts = new byte[bank.length << 2];
+        for (FactorizedChunk c : chunks) {
+            accumulateAnchorVotes(bank, c.dnaBases, c.dnaLen, counts);
+        }
+        return polishAnchor(bank, counts);
+    }
+
+    /**
+     * Accumulates per-position base votes for one already-factorized chunk.
+     */
+    public static void accumulateAnchorVotes(
+            AnchorBank bank, byte[] dna, int dnaLen, byte[] counts) {
+        if (dnaLen < MIN_MATCH_LEN) return;
+        ParsedAlignment aln = alignTargetToAnchor(
+                dna, dnaLen, bank.bases, bank.length, bank.primarySeedLen, bank.index, false);
+        if (aln == null || aln.numMatches == 0) return;
+        int tPos = 0;
+        for (int m = 0; m < aln.numMatches; m++) {
+            tPos += aln.litLens[m];
+            int aStart = aln.refOffsets[m];
+            int mLen = aln.matchLens[m];
+            if (aln.strands[m] == 0) {
+                for (int d = 0; d < mLen; d++) {
+                    bumpVote(counts, aStart + d, dna[tPos + d] & 3);
+                }
+            } else {
+                for (int d = 0; d < mLen; d++) {
+                    bumpVote(counts, aStart + mLen - 1 - d, (dna[tPos + d] ^ 3) & 3);
+                }
+            }
+            tPos += mLen;
+        }
+    }
+
+    private static void bumpVote(byte[] counts, int pos, int base) {
+        if (pos < 0) return;
+        int at = (pos << 2) | (base & 3);
+        if (at >= counts.length) return;
+        int cur = counts[at] & 0xFF;
+        if (cur < 255) counts[at] = (byte) (cur + 1);
+    }
+
+    /** Applies accumulated votes and rebuilds the seed index. */
+    public static AnchorBank polishAnchor(AnchorBank bank, byte[] counts) {
+        int len = bank.length;
+        byte[] bases = bank.bases.clone();
+        int changed = 0;
+        for (int p = 0; p < len; p++) {
+            int at = p << 2;
+            int cA = counts[at] & 0xFF;
+            int cC = counts[at + 1] & 0xFF;
+            int cG = counts[at + 2] & 0xFF;
+            int cT = counts[at + 3] & 0xFF;
+            int total = cA + cC + cG + cT;
+            if (total < 2) continue;
+            int best = 0, bestCount = cA;
+            if (cC > bestCount) { best = 1; bestCount = cC; }
+            if (cG > bestCount) { best = 2; bestCount = cG; }
+            if (cT > bestCount) { best = 3; bestCount = cT; }
+            int current = bases[p] & 3;
+            if (bestCount > counts[at + current] && best != current) {
+                bases[p] = (byte) best;
+                changed++;
+            }
+        }
+        if (changed == 0) {
+            return bank;
+        }
+        int seedSlots = (int) Math.min(Integer.MAX_VALUE, (long) (len / SEED_STEP) * 3 + 1024);
+        SeedHashTable index = new SeedHashTable(Math.max(1024, seedSlots));
+        indexRange(bases, 0, len, index);
+        return new AnchorBank(bases, len, bank.primarySeedLen, bank.globalDonors, index);
     }
 
     /**
