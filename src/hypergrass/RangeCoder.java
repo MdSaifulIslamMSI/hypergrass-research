@@ -20,8 +20,18 @@ final class RangeCoder {
 
     private RangeCoder() {}
 
+    /** Default model selected by the {@code hypergrass.rangeModel} property, for callers without a
+     *  recorded model. Archives always record the model that produced them (modes 3 and 6). */
+    static boolean countModelDefault() {
+        return COUNT_MODEL;
+    }
+
     static byte[] encode(byte[] raw, int len) {
-        Encoder enc = new Encoder(len);
+        return encode(raw, len, COUNT_MODEL);
+    }
+
+    static byte[] encode(byte[] raw, int len, boolean countModel) {
+        Encoder enc = new Encoder(len, countModel);
         int prev = 0;
         for (int i = 0; i < len; i++) {
             int sym = raw[i] & 0xFF;
@@ -38,7 +48,11 @@ final class RangeCoder {
     }
 
     static byte[] decode(byte[] comp, int rawLen) {
-        Decoder dec = new Decoder(comp, rawLen);
+        return decode(comp, rawLen, COUNT_MODEL);
+    }
+
+    static byte[] decode(byte[] comp, int rawLen, boolean countModel) {
+        Decoder dec = new Decoder(comp, rawLen, countModel);
         byte[] out = new byte[rawLen];
         int prev = 0;
         for (int i = 0; i < rawLen; i++) {
@@ -59,13 +73,15 @@ final class RangeCoder {
         final short[] probs = new short[1 << 16];
         final short[] c0 = new short[1 << 16];
         final short[] c1 = new short[1 << 16];
+        private final boolean count;
 
-        Model() {
+        Model(boolean countModel) {
+            this.count = countModel;
             Arrays.fill(probs, (short) PROB_INIT);
         }
 
         int prob(int idx) {
-            if (!COUNT_MODEL) return probs[idx] & 0xFFFF;
+            if (!count) return probs[idx] & 0xFFFF;
             int zero = c0[idx] & 0xFFFF;
             int one = c1[idx] & 0xFFFF;
             int p = (int) (((long) (zero + 1) << 11) / (zero + one + 2));
@@ -73,7 +89,7 @@ final class RangeCoder {
         }
 
         void update(int idx, int bit) {
-            if (!COUNT_MODEL) {
+            if (!count) {
                 int prob = probs[idx] & 0xFFFF;
                 prob += bit == 0 ? (2048 - prob) >>> MOVE_BITS : -(prob >>> MOVE_BITS);
                 probs[idx] = (short) prob;
@@ -92,14 +108,15 @@ final class RangeCoder {
     }
 
     private static final class Encoder {
-        private final Model model = new Model();
+        private final Model model;
         private final VarIntCodec.ByteOut out;
         private final long[] low = {0L};
         private final int[] range = {-1};
         private int cache;
         private long cacheSize = 1L;
 
-        Encoder(int rawLen) {
+        Encoder(int rawLen, boolean countModel) {
+            model = new Model(countModel);
             out = new VarIntCodec.ByteOut(rawLen / 2 + 16);
         }
 
@@ -145,13 +162,14 @@ final class RangeCoder {
     }
 
     private static final class Decoder {
-        private final Model model = new Model();
+        private final Model model;
         private final byte[] src;
         private int pos;
         private int range = -1;
         private int code;
 
-        Decoder(byte[] src, int rawLen) {
+        Decoder(byte[] src, int rawLen, boolean countModel) {
+            model = new Model(countModel);
             this.src = src;
             for (int i = 0; i < 5; i++) {
                 code = (code << 8) | nextByte();

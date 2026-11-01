@@ -242,8 +242,10 @@ public final class VarIntCodec {
      * Mode 0: empty (1 byte total).
      * Mode 1: raw uncompressed.
      * Mode 2: raw Deflate (level 9, nowrap=true).
-     * Mode 3: order-1 adaptive range coder.
+     * Mode 3: order-1 adaptive range coder (exponential-decay estimator).
      * Mode 4: LEB128 digit planes (self-delimiting continuation bits) coded separately.
+     * Mode 5: LZ77 + range coder (256 KB window).
+     * Mode 6: order-1 adaptive range coder (frequency-count estimator).
      */
     public static void writeCompressedAux(ByteOut out, byte[] raw, int rawLen) {
         writeCompressedAux(out, raw, rawLen, true);
@@ -255,6 +257,11 @@ public final class VarIntCodec {
             !"false".equals(System.getProperty("hypergrass.lzAux"));
     private static final boolean AUX_DIAG =
             "true".equals(System.getProperty("hypergrass.auxDiag"));
+    private static int diagDepth;
+
+    private static String indent() {
+        return "  ".repeat(diagDepth);
+    }
 
     private static void writeCompressedAux(ByteOut out, byte[] raw, int rawLen, boolean allowPlanes) {
         if (rawLen == 0) {
@@ -298,6 +305,10 @@ public final class VarIntCodec {
             }
         }
         out.writeBytes(bestBuf, 0, bestBuf.length);
+        if (AUX_DIAG) {
+            System.err.println(indent() + "AUXW raw=" + rawLen + " mode=" + (bestBuf[0] & 0xFF)
+                    + " bytes=" + bestBuf.length);
+        }
     }
 
     /**
@@ -376,7 +387,12 @@ public final class VarIntCodec {
         body.writeByte(maxDigits);
         for (int k = 0; k < maxDigits; k++) {
             body.writeVarInt(planeLen[k]);
-            writeCompressedAux(body, planes[k], planeLen[k], false);
+            diagDepth++;
+            try {
+                writeCompressedAux(body, planes[k], planeLen[k], false);
+            } finally {
+                diagDepth--;
+            }
         }
         return body;
     }
@@ -408,13 +424,16 @@ public final class VarIntCodec {
         }
         byte[] ranged = null;
         int rangedLen = 0;
+        boolean countModel = RangeCoder.countModelDefault();
         if (rawLen >= 256 && !"false".equals(System.getProperty("hypergrass.rangeAux"))) {
-            ranged = RangeCoder.encode(raw, rawLen);
+            ranged = RangeCoder.encode(raw, rawLen, countModel);
             rangedLen = ranged.length;
         }
         if (ranged != null && rangedLen + varIntSize(rangedLen) + varIntSize(rawLen) + 1 < compLen
                 && rangedLen < rawLen) {
-            out.writeByte(3);
+            // Modes 3 and 6 differ only in the probability estimator, and the choice is recorded
+            // here so an archive never depends on a JVM flag to decode.
+            out.writeByte(countModel ? 6 : 3);
             out.writeVarInt(rawLen);
             out.writeVarInt(rangedLen);
             out.writeBytes(ranged, 0, rangedLen);
@@ -440,12 +459,28 @@ public final class VarIntCodec {
             return new byte[0];
         }
         int rawLen = in.readVarInt();
+        if (AUX_DIAG) {
+            System.err.println(indent() + "AUXR mode=" + mode + " raw=" + rawLen);
+        }
+        diagDepth++;
+        try {
+            return readCompressedAuxBody(in, mode, rawLen);
+        } finally {
+            diagDepth--;
+        }
+    }
+
+    private static byte[] readCompressedAuxBody(ByteIn in, int mode, int rawLen) {
         if (mode == 1) {
             return in.readBytes(rawLen);
         }
         if (mode == 3) {
             int compLen = in.readVarInt();
-            return RangeCoder.decode(in.readBytes(compLen), rawLen);
+            return RangeCoder.decode(in.readBytes(compLen), rawLen, false);
+        }
+        if (mode == 6) {
+            int compLen = in.readVarInt();
+            return RangeCoder.decode(in.readBytes(compLen), rawLen, true);
         }
         if (mode == 5) {
             int compLen = in.readVarInt();
@@ -462,12 +497,28 @@ public final class VarIntCodec {
                     throw new IllegalStateException("Plane " + k + " length mismatch");
                 }
             }
+            if (AUX_DIAG) {
+                StringBuilder sb = new StringBuilder();
+                for (byte[] d : digits) {
+                    sb.append(d.length).append(' ');
+                }
+                System.err.println(indent() + "AUXR4 values=" + values + " planes=" + planes
+                        + " lens=" + sb);
+            }
             ByteOut out = new ByteOut(rawLen);
             int[] cursor = new int[planes];
             for (int i = 0; i < values; i++) {
                 long v = 0L;
                 int shift = 0;
                 for (int k = 0; k < planes; k++) {
+                    if (cursor[k] >= digits[k].length) {
+                        StringBuilder sb = new StringBuilder();
+                        for (int z = 0; z < planes; z++) {
+                            sb.append(digits[z].length).append('/').append(cursor[z]).append(' ');
+                        }
+                        throw new IllegalStateException("Plane " + k + " exhausted at value " + i
+                                + "/" + values + " (len/cursor: " + sb + ")");
+                    }
                     int sym = digits[k][cursor[k]++] & 0xFF;
                     v |= (long) (sym & 0x7F) << shift;
                     shift += 7;
