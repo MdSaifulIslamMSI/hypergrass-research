@@ -503,6 +503,10 @@ public final class QuantumContextRepeatMixer {
         private long metaScoreBayes = 0L;
         private long metaScoreNeural = -2048L; // slight initial advantage to Bayesian on first ~30 bases
 
+        // Secondary Symbol Estimation (SSE): 48 contexts x 4 bestSymbols x 8 confidenceBins = 1536 states
+        private final short[] sseCounts = new short[1536 * 4];
+        private int lastSseState = -1;
+
         private long fwdHist = 0L;
         private long rcHist = 0L;
 
@@ -952,6 +956,52 @@ public final class QuantumContextRepeatMixer {
                 else if (f2 >= f3) f2 += diff;
                 else f3 += diff;
             }
+
+            // 10. Secondary Symbol Estimation (SSE)
+            if (!leanMode && pos >= 2) {
+                int sBest = 0;
+                int fMax = f0;
+                if (f1 > fMax) { sBest = 1; fMax = f1; }
+                if (f2 > fMax) { sBest = 2; fMax = f2; }
+                if (f3 > fMax) { sBest = 3; fMax = f3; }
+
+                int c2 = (int) (fwdHist & 15L);
+                int bin = Math.min(7, Math.max(0, (fMax - 8192) / 3072));
+                int sseState = (((phase * 16 + c2) << 2) | sBest) * 8 + bin;
+                lastSseState = sseState;
+
+                int sseBase = sseState << 2;
+                int sc0 = sseCounts[sseBase];
+                int sc1 = sseCounts[sseBase + 1];
+                int sc2 = sseCounts[sseBase + 2];
+                int sc3 = sseCounts[sseBase + 3];
+                int scSum = sc0 + sc1 + sc2 + sc3;
+
+                if (scSum > 0) {
+                    int w = Math.min(8, scSum >> 1); // blend weight up to 8/32 = 25%
+                    long sseDenom = (long) scSum;
+                    int sf0 = (int) (((long) sc0 * TOT + (sseDenom >> 1)) / sseDenom);
+                    int sf1 = (int) (((long) sc1 * TOT + (sseDenom >> 1)) / sseDenom);
+                    int sf2 = (int) (((long) sc2 * TOT + (sseDenom >> 1)) / sseDenom);
+                    int sf3 = (int) (((long) sc3 * TOT + (sseDenom >> 1)) / sseDenom);
+
+                    f0 = Math.max(1, ((32 - w) * f0 + w * sf0 + 16) >> 5);
+                    f1 = Math.max(1, ((32 - w) * f1 + w * sf1 + 16) >> 5);
+                    f2 = Math.max(1, ((32 - w) * f2 + w * sf2 + 16) >> 5);
+                    f3 = Math.max(1, ((32 - w) * f3 + w * sf3 + 16) >> 5);
+
+                    diff = TOT - (f0 + f1 + f2 + f3);
+                    if (diff != 0) {
+                        if (f0 >= f1 && f0 >= f2 && f0 >= f3) f0 += diff;
+                        else if (f1 >= f2 && f1 >= f3) f1 += diff;
+                        else if (f2 >= f3) f2 += diff;
+                        else f3 += diff;
+                    }
+                }
+            } else {
+                lastSseState = -1;
+            }
+
             outFreqs[0] = f0;
             outFreqs[1] = f1;
             outFreqs[2] = f2;
@@ -985,6 +1035,19 @@ public final class QuantumContextRepeatMixer {
                 if (updated < 0) updated = 0;
                 else if (updated > 8192) updated = 8192;
                 rw[m] = updated;
+            }
+
+            // 4. Secondary Symbol Estimation (SSE) update
+            if (lastSseState >= 0) {
+                int sseBase = lastSseState << 2;
+                sseCounts[sseBase + sym] = (short) (sseCounts[sseBase + sym] + 2);
+                int sSum = sseCounts[sseBase] + sseCounts[sseBase + 1] + sseCounts[sseBase + 2] + sseCounts[sseBase + 3];
+                if (sSum >= 128) {
+                    sseCounts[sseBase] = (short) (sseCounts[sseBase] >>> 1);
+                    sseCounts[sseBase + 1] = (short) (sseCounts[sseBase + 1] >>> 1);
+                    sseCounts[sseBase + 2] = (short) (sseCounts[sseBase + 2] >>> 1);
+                    sseCounts[sseBase + 3] = (short) (sseCounts[sseBase + 3] >>> 1);
+                }
             }
 
             // 4. Advance active Repeat Heads BEFORE inserting current k-mer into RepeatSeedIndex
