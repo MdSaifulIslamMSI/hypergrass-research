@@ -370,6 +370,14 @@ public final class CanonicalSyncmerEngine {
 
     /** Applies accumulated votes and rebuilds the seed index. */
     public static AnchorBank polishAnchor(AnchorBank bank, byte[] counts) {
+        return polishAnchor(bank, counts, true);
+    }
+
+    /**
+     * Applies accumulated votes; the seed index can be deferred so a bounded encoder builds the
+     * (large) index only after the vote buffer is dead, which keeps the peak under 256 MiB.
+     */
+    public static AnchorBank polishAnchor(AnchorBank bank, byte[] counts, boolean buildIndex) {
         int len = bank.length;
         byte[] bases = bank.bases.clone();
         int changed = 0;
@@ -391,12 +399,27 @@ public final class CanonicalSyncmerEngine {
                 changed++;
             }
         }
+        if (!buildIndex) {
+            return new AnchorBank(bases, len, bank.primarySeedLen, EMPTY_DONORS, null);
+        }
         // Pre-size for two keys per SEED_STEP position at a 0.7 load factor so polishing a large
         // anchor does not pay transient rehash copies (it matters under a 256 MiB RSS budget).
         int seedSlots = (int) Math.min(Integer.MAX_VALUE, (long) (len / SEED_STEP) * 3 + 1024);
         SeedHashTable index = new SeedHashTable(Math.max(1024, seedSlots));
         indexRange(bases, 0, len, index);
         return new AnchorBank(bases, len, bank.primarySeedLen, EMPTY_DONORS, index);
+    }
+
+    /** Builds the seed index for a bank that was polished with index construction deferred. */
+    public static AnchorBank withSeedIndex(AnchorBank bank) {
+        if (bank.index != null) {
+            return bank;
+        }
+        int seedSlots = (int) Math.min(Integer.MAX_VALUE,
+                (long) (bank.length / SEED_STEP) * 3 + 1024);
+        SeedHashTable index = new SeedHashTable(Math.max(1024, seedSlots));
+        indexRange(bank.bases, 0, bank.length, index);
+        return new AnchorBank(bank.bases, bank.length, bank.primarySeedLen, EMPTY_DONORS, index);
     }
 
     private static void bumpVote(byte[] counts, int pos, int base) {

@@ -52,9 +52,9 @@ PROFILES = (
         "level": "consensus-anchor",
         "options": [
             "--pangenome", "--single-thread", "--anchor-single-page",
-            "--block-mib", "32", "--anchor-mib", "9",
+            "--block-mib", "64", "--anchor-mib", "9",
         ],
-        "jvm": ["-Dhypergrass.matchMin=104"],
+        "jvm": ["-Dhypergrass.matchMin=104", "-Dhypergrass.rangeModel=count"],
         "heap": "1536m",
         "memory": "2g",
     },
@@ -64,9 +64,9 @@ PROFILES = (
         "level": "bounded-256m",
         "options": [
             "--pangenome", "--bounded", "--single-thread", "--anchor-single-page",
-            "--block-mib", "2", "--anchor-mib", "9",
+            "--block-mib", "16", "--anchor-mib", "9",
         ],
-        "jvm": ["-Dhypergrass.matchMin=104"],
+        "jvm": ["-Dhypergrass.matchMin=104", "-Dhypergrass.rangeModel=count"],
         "heap": "192m",
         "memory": "256m",
     },

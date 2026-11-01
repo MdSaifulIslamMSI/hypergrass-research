@@ -163,8 +163,13 @@ public final class HyperGraSS {
             boolean useAnchor = opts.maxAnchorBases > 0
                     && totalDna >= CanonicalSyncmerEngine.K * 2L;
             AnchorBank bank = useAnchor ? builder.finish() : null;
+            // The builder shares the bank's seed index; dropping it here lets the index die before
+            // polishing allocates a replacement, which is what keeps the bounded peak under 256 MiB.
+            builder = null;
             // Match the in-memory path: polish the anchor to the cross-genome majority base.
             // Votes are accumulated by streaming the slices again, so no chunk is retained.
+            // The seed index is built after the last vote buffer dies: building it inside the
+            // pass would hold a ~37 MB vote array and a ~56 MB index alive at the same time.
             if (bank != null && bank.length > 0 && numBlocks > 1
                     && CanonicalSyncmerEngine.consensusEnabled()) {
                 for (int pass = 0; pass < CanonicalSyncmerEngine.CONSENSUS_PASSES; pass++) {
@@ -174,8 +179,9 @@ public final class HyperGraSS {
                         CanonicalSyncmerEngine.accumulateAnchorVotes(
                                 bank, chunk.dnaBases, chunk.dnaLen, votes);
                     }
-                    bank = CanonicalSyncmerEngine.polishAnchor(bank, votes);
+                    bank = CanonicalSyncmerEngine.polishAnchor(bank, votes, false);
                 }
+                bank = CanonicalSyncmerEngine.withSeedIndex(bank);
             }
 
             List<BlockDirEntry> dir = new ArrayList<>(numBlocks);
