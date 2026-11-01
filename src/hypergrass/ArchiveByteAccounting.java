@@ -301,7 +301,7 @@ public final class ArchiveByteAccounting {
     private static Aux auxHeader(Cursor in) {
         int mode = in.u8();
         if (mode == 0) return new Aux(0, 0);
-        if (mode != 1 && mode != 2) throw in.error("Unknown auxiliary mode: " + mode);
+        if (mode < 1 || mode > 3) throw in.error("Unknown auxiliary mode: " + mode);
         int rawLength = in.positive("auxiliary raw length");
         int payloadLength = mode == 1 ? rawLength : in.positive("auxiliary compressed length");
         return new Aux(rawLength, payloadLength);

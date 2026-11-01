@@ -237,12 +237,26 @@ public final class VarIntCodec {
     }
 
     /**
-     * Writes an auxiliary channel choosing the strictly smaller of raw bytes vs headerless Deflate.
+     * Writes an auxiliary channel choosing the strictly smallest of raw bytes, headerless Deflate,
+     * an order-1 range coder, and a LEB128 digit-plane transform.
      * Mode 0: empty (1 byte total).
      * Mode 1: raw uncompressed.
      * Mode 2: raw Deflate (level 9, nowrap=true).
+     * Mode 3: order-1 adaptive range coder.
+     * Mode 4: LEB128 digit planes (self-delimiting continuation bits) coded separately.
      */
     public static void writeCompressedAux(ByteOut out, byte[] raw, int rawLen) {
+        writeCompressedAux(out, raw, rawLen, true);
+    }
+
+    private static final boolean PLANES =
+            !"false".equals(System.getProperty("hypergrass.planeAux"));
+    private static final boolean LZ =
+            !"false".equals(System.getProperty("hypergrass.lzAux"));
+    private static final boolean AUX_DIAG =
+            "true".equals(System.getProperty("hypergrass.auxDiag"));
+
+    private static void writeCompressedAux(ByteOut out, byte[] raw, int rawLen, boolean allowPlanes) {
         if (rawLen == 0) {
             out.writeByte(0);
             return;
@@ -253,24 +267,166 @@ public final class VarIntCodec {
             out.writeBytes(raw, 0, rawLen);
             return;
         }
+        ByteOut simple = new ByteOut(rawLen / 2 + 64);
+        writeSimpleAux(simple, raw, rawLen);
+        byte[] bestBuf = Arrays.copyOf(simple.internalBuffer(), simple.size());
+        if (allowPlanes && PLANES && rawLen >= 1024) {
+            ByteOut planes = tryPlaneAux(raw, rawLen);
+            if (AUX_DIAG) {
+                System.err.println("AUXPLANE raw=" + rawLen + " simple=" + simple.size()
+                        + " planes=" + (planes == null ? -1 : planes.size()));
+            }
+            if (planes != null && 1 + planes.size() < bestBuf.length) {
+                bestBuf = new byte[1 + planes.size()];
+                bestBuf[0] = 4;
+                System.arraycopy(planes.internalBuffer(), 0, bestBuf, 1, planes.size());
+            }
+        }
+        if (allowPlanes && LZ && rawLen >= 4096) {
+            byte[] lz = LzRangeCoder.encode(raw, rawLen);
+            int total = 1 + varIntSize(rawLen) + varIntSize(lz.length) + lz.length;
+            if (AUX_DIAG) {
+                System.err.println("AUXLZ raw=" + rawLen + " simple=" + simple.size()
+                        + " lz=" + total);
+            }
+            if (total < bestBuf.length) {
+                out.writeByte(5);
+                out.writeVarInt(rawLen);
+                out.writeVarInt(lz.length);
+                out.writeBytes(lz, 0, lz.length);
+                return;
+            }
+        }
+        out.writeBytes(bestBuf, 0, bestBuf.length);
+    }
+
+    /**
+     * Rewrites a canonical LEB128 stream into per-digit planes, where bit 7 of every symbol is a
+     * "value continues in the next plane" flag. Splitting a value's low digit from its high digits
+     * stops high-order noise from disturbing the very predictable low-digit context, which is worth
+     * ~15% on variant-gap streams. Returns null when the input is not canonical LEB128.
+     */
+    private static ByteOut tryPlaneAux(byte[] raw, int rawLen) {
+        int[] digitCounts = new int[9];
+        int values = 0;
+        int maxDigits = 0;
+        long v = 0;
+        int digits = 0;
+        int shift = 0;
+        for (int i = 0; i < rawLen; i++) {
+            int b = raw[i] & 0xFF;
+            if (digits >= 8) {
+                return null;
+            }
+            v |= (long) (b & 0x7F) << shift;
+            digits++;
+            shift += 7;
+            if ((b & 0x80) == 0) {
+                if (varIntSizeLong(v) != digits) {
+                    return null;
+                }
+                digitCounts[digits]++;
+                values++;
+                maxDigits = Math.max(maxDigits, digits);
+                v = 0;
+                digits = 0;
+                shift = 0;
+            }
+        }
+        if (digits != 0 || values < 2) {
+            return null;
+        }
+        int[] planeLen = new int[maxDigits];
+        for (int k = 0; k < maxDigits; k++) {
+            int len = 0;
+            for (int l = k + 1; l <= maxDigits; l++) {
+                len += digitCounts[l];
+            }
+            planeLen[k] = len;
+        }
+        byte[][] planes = new byte[maxDigits][];
+        for (int k = 0; k < maxDigits; k++) {
+            planes[k] = new byte[planeLen[k]];
+        }
+        int[] cursor = new int[maxDigits];
+        v = 0;
+        digits = 0;
+        shift = 0;
+        for (int i = 0; i < rawLen; i++) {
+            int b = raw[i] & 0xFF;
+            v |= (long) (b & 0x7F) << shift;
+            digits++;
+            shift += 7;
+            if ((b & 0x80) == 0) {
+                for (int k = 0; k < digits; k++) {
+                    int sym = (int) ((v >>> (7 * k)) & 0x7F);
+                    if (k < digits - 1) {
+                        sym |= 0x80;
+                    }
+                    planes[k][cursor[k]++] = (byte) sym;
+                }
+                v = 0;
+                digits = 0;
+                shift = 0;
+            }
+        }
+        ByteOut body = new ByteOut(rawLen / 2 + 64);
+        body.writeVarInt(rawLen);
+        body.writeVarInt(values);
+        body.writeByte(maxDigits);
+        for (int k = 0; k < maxDigits; k++) {
+            body.writeVarInt(planeLen[k]);
+            writeCompressedAux(body, planes[k], planeLen[k], false);
+        }
+        return body;
+    }
+
+    private static int varIntSizeLong(long value) {
+        int n = 1;
+        long v = value;
+        while ((v & ~0x7FL) != 0) {
+            n++;
+            v >>>= 7;
+        }
+        return n;
+    }
+
+    private static void writeSimpleAux(ByteOut out, byte[] raw, int rawLen) {
         Deflater deflater = new Deflater(Deflater.BEST_COMPRESSION, true);
+        int compLen;
+        byte[] comp;
         try {
             deflater.setInput(raw, 0, rawLen);
             deflater.finish();
-            byte[] comp = new byte[rawLen + 32];
-            int compLen = deflater.deflate(comp);
-            if (deflater.finished() && compLen + varIntSize(compLen) < rawLen) {
-                out.writeByte(2);
-                out.writeVarInt(rawLen);
-                out.writeVarInt(compLen);
-                out.writeBytes(comp, 0, compLen);
-            } else {
-                out.writeByte(1);
-                out.writeVarInt(rawLen);
-                out.writeBytes(raw, 0, rawLen);
+            comp = new byte[rawLen + 32];
+            compLen = deflater.deflate(comp);
+            if (!deflater.finished()) {
+                compLen = rawLen;
             }
         } finally {
             deflater.end();
+        }
+        byte[] ranged = null;
+        int rangedLen = 0;
+        if (rawLen >= 256 && !"false".equals(System.getProperty("hypergrass.rangeAux"))) {
+            ranged = RangeCoder.encode(raw, rawLen);
+            rangedLen = ranged.length;
+        }
+        if (ranged != null && rangedLen + varIntSize(rangedLen) + varIntSize(rawLen) + 1 < compLen
+                && rangedLen < rawLen) {
+            out.writeByte(3);
+            out.writeVarInt(rawLen);
+            out.writeVarInt(rangedLen);
+            out.writeBytes(ranged, 0, rangedLen);
+        } else if (compLen + varIntSize(compLen) < rawLen) {
+            out.writeByte(2);
+            out.writeVarInt(rawLen);
+            out.writeVarInt(compLen);
+            out.writeBytes(comp, 0, compLen);
+        } else {
+            out.writeByte(1);
+            out.writeVarInt(rawLen);
+            out.writeBytes(raw, 0, rawLen);
         }
     }
 
@@ -286,6 +442,49 @@ public final class VarIntCodec {
         int rawLen = in.readVarInt();
         if (mode == 1) {
             return in.readBytes(rawLen);
+        }
+        if (mode == 3) {
+            int compLen = in.readVarInt();
+            return RangeCoder.decode(in.readBytes(compLen), rawLen);
+        }
+        if (mode == 5) {
+            int compLen = in.readVarInt();
+            return LzRangeCoder.decode(in.readBytes(compLen), rawLen);
+        }
+        if (mode == 4) {
+            int values = in.readVarInt();
+            int planes = in.readByte();
+            byte[][] digits = new byte[planes][];
+            for (int k = 0; k < planes; k++) {
+                int len = in.readVarInt();
+                digits[k] = readCompressedAux(in);
+                if (digits[k].length != len) {
+                    throw new IllegalStateException("Plane " + k + " length mismatch");
+                }
+            }
+            ByteOut out = new ByteOut(rawLen);
+            int[] cursor = new int[planes];
+            for (int i = 0; i < values; i++) {
+                long v = 0L;
+                int shift = 0;
+                for (int k = 0; k < planes; k++) {
+                    int sym = digits[k][cursor[k]++] & 0xFF;
+                    v |= (long) (sym & 0x7F) << shift;
+                    shift += 7;
+                    if ((sym & 0x80) == 0) {
+                        break;
+                    }
+                }
+                while ((v & ~0x7FL) != 0) {
+                    out.writeByte((int) (v & 0x7F) | 0x80);
+                    v >>>= 7;
+                }
+                out.writeByte((int) v);
+            }
+            if (out.size() != rawLen) {
+                throw new IllegalStateException("Plane aux decode mismatch: " + out.size() + " vs " + rawLen);
+            }
+            return Arrays.copyOf(out.internalBuffer(), out.size());
         }
         if (mode == 2) {
             int compLen = in.readVarInt();

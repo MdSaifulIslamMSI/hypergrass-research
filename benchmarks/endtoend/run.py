@@ -91,16 +91,28 @@ def percentile(values: list[float], fraction: float) -> float:
     return ordered[index]
 
 
-def query_plan(fasta: Path) -> tuple[list[dict], int]:
+def query_plan(fasta: Path, queries_per_record: int = 1) -> tuple[list[dict], int]:
     headers, starts, lengths = parse_fasta(fasta)
-    records = list(range(0, len(headers), 2))
-    if records[-1] != len(headers) - 1:
-        records.append(len(headers) - 1)
+    if queries_per_record <= 1:
+        records = list(range(0, len(headers), 2))
+        if records[-1] != len(headers) - 1:
+            records.append(len(headers) - 1)
+        offsets = [(record, 0.37) for record in records]
+    else:
+        fractions = [
+            (index + 1) / (queries_per_record + 1)
+            for index in range(queries_per_record)
+        ]
+        offsets = [
+            (record, fraction)
+            for record in range(len(headers))
+            for fraction in fractions
+        ]
     queries = []
-    for record in records:
+    for record, fraction in offsets:
         available = lengths[record]
         length = min(QUERY_LENGTH, available)
-        offset = min(max(0, int(available * 0.37)), available - length)
+        offset = min(max(0, int(available * fraction)), available - length)
         queries.append(
             {
                 "record": record,
@@ -136,6 +148,7 @@ def main(argv=None) -> int:
     parser.add_argument("--timeout", type=float, default=900.0)
     parser.add_argument("--profiles", default=None)
     parser.add_argument("--max-queries", type=int, default=None)
+    parser.add_argument("--queries-per-record", type=int, default=1)
     args = parser.parse_args(argv)
 
     manifest = json.loads((PANGENOME / "manifest.json").read_text(encoding="utf-8"))
@@ -179,7 +192,7 @@ def main(argv=None) -> int:
         raise SystemExit(f"run directory already exists: {run_dir}")
     run_dir.mkdir(parents=True)
 
-    queries, record_count = query_plan(fasta)
+    queries, record_count = query_plan(fasta, args.queries_per_record)
     if args.max_queries is not None:
         queries = queries[: args.max_queries]
     profiles = [
@@ -203,6 +216,7 @@ def main(argv=None) -> int:
         "workload": {
             "query_length": QUERY_LENGTH,
             "query_count": len(queries),
+            "queries_per_record": args.queries_per_record,
             "queries": queries,
             "restore": "one full decompress per profile",
         },
@@ -231,7 +245,7 @@ def main(argv=None) -> int:
         archive_c = to_container(PROJECT, archive)
         query_results = []
         print(f"  {name} ...", flush=True)
-        for query in queries:
+        for index, query in enumerate(queries):
             record = query["record"]
             start = query["offset"]
             end = start + query["length"]
@@ -249,9 +263,9 @@ def main(argv=None) -> int:
                     "python3", "-B", "/work/benchmarks/endtoend/extract.py",
                     profile["kind"], archive_c, str(record), str(start), str(end),
                 ]
-            query_file = work / f"query-{record}.seq"
+            query_file = work / f"query-{index:03d}.seq"
             operation = run_operation(
-                PROJECT, image, run_dir, f"{name}/query-{record}",
+                PROJECT, image, run_dir, f"{name}/query-{index:03d}",
                 command, work, args.timeout, memory=profile["memory"],
                 stdout_artifact=query_file,
             )
@@ -259,6 +273,7 @@ def main(argv=None) -> int:
             observed = observed.rstrip(b"\r\n")
             query_results.append(
                 {
+                    "query_index": index,
                     "record": record,
                     "offset": start,
                     "length": query["length"],

@@ -210,13 +210,16 @@ Use `:` instead of `;` in the classpath on Linux/macOS. Omit `--bench` to run ar
 ## Reproduced Benchmarks
 
 The frozen corpus and the 100 MB+ pangenome scale test are documented in
-[`docs/BENCHMARKS.md`](docs/BENCHMARKS.md); the anchor-bank ablation is in
-[`docs/ABLATION.md`](docs/ABLATION.md) and the query workload in
-[`docs/END-TO-END.md`](docs/END-TO-END.md). Every table in `BENCHMARKS.md`
-and `END-TO-END.md` is rendered from a machine-readable `report.json`; the
-ablation tables are transcribed from the committed ablation reports. The
-corpus report is also re-hashed and recomputed by `benchmarks/corpus/audit.py`
-before publication.
+[`docs/BENCHMARKS.md`](docs/BENCHMARKS.md); independent replication on two
+additional pangenomes is in
+[`docs/INDEPENDENT.md`](docs/INDEPENDENT.md), the anchor-bank ablation is in
+[`docs/ABLATION.md`](docs/ABLATION.md), the query workload is in
+[`docs/END-TO-END.md`](docs/END-TO-END.md), and the specialized-compressor
+scale check is in [`docs/SPECIALIZED.md`](docs/SPECIALIZED.md). Every table in
+`BENCHMARKS.md` and `END-TO-END.md` is rendered from a machine-readable
+`report.json`; the independent, specialized, and ablation tables are generated
+from or transcribed from the committed reports. The corpus report is also
+re-hashed and recomputed by `benchmarks/corpus/audit.py` before publication.
 The corpus is a locally conducted held-out benchmark against pinned tool
 versions, not an independent third-party audit. Deviations, timeouts, and
 non-applicable cells are reported rather than dropped.
@@ -231,17 +234,31 @@ Measured headlines, stated without rounding up:
 | 121.8 MB pangenome, default HyperGraSS | 9,215,764 B, 13.22x, 45.9 s, 1,083 MiB peak RSS |
 | 121.8 MB pangenome, `--pangenome` (tuned) | **4,885,851 B, 24.93x**, 30.6 s, 1,008 MiB peak RSS |
 | 121.8 MB pangenome, xz -9 | 8,394,900 B, 14.51x, 186.3 s, 738 MiB peak RSS |
+| 122.3 MB Salmonella pangenome, tuned | 3,443,600 B, 35.50x, 28.6 s, **43.7% smaller than xz** |
+| 124.5 MB Klebsiella pangenome, tuned | 3,464,423 B, 35.92x, 10.6 s, **46.2% smaller than xz** |
+| Same 120.1 Mbp sequence, JARVIS3 l7 | **3,896,361 B, 0.260 bits/base**, 95.4 s, 286 MiB peak RSS |
 | 121.8 MB pangenome, `--lean` (`-Xmx8m`) | 28,910,764 B, 4.21x, 52 MiB peak RSS |
 | Verification | every round trip byte-exact; 3/3 record queries exact per HyperGraSS profile |
 
 So the **default** archive is narrowly smallest on the completed small/medium
 sequence-only cells, but **xz -9 is 9.8% smaller than the default on the
 100 MB+ pangenome**. The opt-in `--pangenome` profile reverses that result:
-4,885,851 B is **41.8% smaller than xz -9** and compresses faster, with exact
-record queries; xz decompresses faster. The profile remains opt-in because one
-pangenome, one host, and two runs are not enough evidence to change the default
-for every input. The bounded-memory mode fits a small heap at a large size
-cost.
+4,885,851 B is **41.8% smaller than xz -9** on the original pangenome, and the
+same profile was **43.7% and 46.2% smaller** on two independent *Salmonella*
+and *Klebsiella* pangenomes (median 44.96%). It also compressed faster than xz
+in those runs and answered exact record queries. xz decompressed faster on the
+original pangenome; restore time was mixed on the independent sets. The profile
+remains opt-in because three pangenomes from one bacterial family, one host,
+and one run each are not enough evidence to change the default for every
+input. The bounded-memory mode fits a small heap at a large size cost.
+
+**This is not a compression breakthrough.** On the identical 120.1 Mbp
+sequence, JARVIS3 level 7 produced a **3,896,361-byte archive, 20.3% smaller
+than the tuned HyperGraSS archive** (4,885,851 B), and it round-tripped exactly.
+HyperGraSS compressed about 3x faster and restored about 5x faster in that
+comparison, so the trade is speed for size, not an outright win. The 41.8% xz
+margin is real, but xz is a general-purpose baseline, not the state of the art
+for DNA. See [`docs/SPECIALIZED.md`](docs/SPECIALIZED.md).
 
 On the query workload (13 exact 2,000-base slices), the tuned profile tied xz's
 query latency (1.35 s versus 1.36 s median) while storing 42% fewer bytes, but

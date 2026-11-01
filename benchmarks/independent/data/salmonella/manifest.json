@@ -1,0 +1,140 @@
+{
+  "schema_version": 1,
+  "source": "NCBI Nucleotide (RefSeq complete genomes: salmonella)",
+  "query": "\"Salmonella enterica\"[Organism] AND \"complete genome\"[Title] AND refseq[Filter]",
+  "selection": "NCBI relevance order; distinct accessions; 3000000-7500000 bp; stop at target bases",
+  "target_bases": 120000000,
+  "total_bases": 120527038,
+  "fasta": {
+    "path": "pangenome.fasta",
+    "size_bytes": 122251418,
+    "sha256": "c54a499e6172f3474dba6c363c9f05ebc764d73976ed272d97ddd01a387f26a2"
+  },
+  "records": [
+    {
+      "accession": "NZ_CP051372.1",
+      "length": 4644025,
+      "title": "Salmonella enterica subsp. enterica serovar Newport strain CVM 24374 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_CP039503.1",
+      "length": 4882218,
+      "title": "Salmonella enterica subsp. enterica serovar Worthington strain 7101.67 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_CP104488.1",
+      "length": 4806677,
+      "title": "Salmonella enterica strain SalSpp_sample_10_No.2 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_CP104482.1",
+      "length": 4796592,
+      "title": "Salmonella enterica strain SalSpp_sample_08_No.4 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_CP104491.1",
+      "length": 4964371,
+      "title": "Salmonella enterica strain SalSpp_sample_05_No.1 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_CP104479.1",
+      "length": 4919686,
+      "title": "Salmonella enterica strain SalSpp_sample_09_No.5 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_CP104366.1",
+      "length": 4863704,
+      "title": "Salmonella enterica subsp. enterica serovar Typhimurium strain PNUSAS028809 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_CP102827.1",
+      "length": 4821996,
+      "title": "Salmonella enterica subsp. enterica serovar Indiana strain XZ14C1328 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_AP046299.1",
+      "length": 4793093,
+      "title": "Salmonella enterica subsp. enterica serovar Typhimurium strain ATCC 13311 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_AP051960.1",
+      "length": 4676754,
+      "title": "Salmonella enterica strain Sal_769 isolate Sal_769 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_AP051950.1",
+      "length": 4645424,
+      "title": "Salmonella enterica strain Sal_1645 isolate Sal_1645 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_AP051956.1",
+      "length": 4707105,
+      "title": "Salmonella enterica strain Sal_18 isolate Sal_18 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_AP051966.1",
+      "length": 4704527,
+      "title": "Salmonella enterica strain Sal_923 isolate Sal_923 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_AP051954.1",
+      "length": 4621037,
+      "title": "Salmonella enterica strain Sal_17 isolate Sal_17 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_AP051952.1",
+      "length": 4661091,
+      "title": "Salmonella enterica strain Sal_1647 isolate Sal_1647 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_CP071388.1",
+      "length": 4856956,
+      "title": "Salmonella enterica subsp. enterica serovar Agona strain 18-SA00377-0 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_CP081187.1",
+      "length": 4972233,
+      "title": "Salmonella enterica strain sg1722-1 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_AP023299.1",
+      "length": 4916924,
+      "title": "Salmonella enterica subsp. enterica serovar 4,[5],12:i:- strain L-4334 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_AP023290.1",
+      "length": 4957303,
+      "title": "Salmonella enterica subsp. enterica serovar 4,[5],12:i:- strain L-3844 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_AP023309.1",
+      "length": 4889480,
+      "title": "Salmonella enterica subsp. enterica serovar 4,[5],12:i:- strain L-4578 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_AP023311.1",
+      "length": 4915174,
+      "title": "Salmonella enterica subsp. enterica serovar 4,[5],12:i:- strain L-4596 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_AP023300.1",
+      "length": 4916896,
+      "title": "Salmonella enterica subsp. enterica serovar 4,[5],12:i:- strain L-4445 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_CP075138.1",
+      "length": 4881088,
+      "title": "Salmonella enterica strain CFSAN044875 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_CP075135.1",
+      "length": 4866315,
+      "title": "Salmonella enterica strain CFSAN044888 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_CP077704.1",
+      "length": 4846369,
+      "title": "Salmonella enterica subsp. enterica strain CFSAN058565 chromosome, complete genome"
+    }
+  ]
+}

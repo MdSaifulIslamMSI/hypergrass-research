@@ -44,6 +44,144 @@ public final class FastaStreamFactorizer {
         }
     }
 
+    /** Result of a single streaming scan used to slice a file into blocks and hash it. */
+    public static final class FilePartition {
+        public final List<BlockSlice> slices;
+        public final long size;
+        public final int crc32;
+
+        public FilePartition(List<BlockSlice> slices, long size, int crc32) {
+            this.slices = slices;
+            this.size = size;
+            this.crc32 = crc32;
+        }
+    }
+
+    /**
+     * Streaming equivalent of {@link #partitionIntoBlocks(byte[], int)}: computes identical
+     * slices without materializing the input, and also returns the CRC-32 of every byte.
+     */
+    public static FilePartition partitionFile(java.nio.file.Path path, int targetBlockBytes) throws java.io.IOException {
+        long size = java.nio.file.Files.size(path);
+        if (size > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("Input larger than 2 GiB is not supported by this format");
+        }
+        List<BlockSlice> slices = new ArrayList<>();
+        java.util.zip.CRC32 crc = new java.util.zip.CRC32();
+        if (size == 0) {
+            slices.add(new BlockSlice(0, 0, 0, 1, 0L));
+            return new FilePartition(slices, 0, 0);
+        }
+
+        try (java.io.BufferedInputStream in = new java.io.BufferedInputStream(
+                java.nio.file.Files.newInputStream(path), 1 << 20)) {
+            int b = in.read();
+            if (b == -1) {
+                slices.add(new BlockSlice(0, 0, 0, 1, 0L));
+                return new FilePartition(slices, 0, 0);
+            }
+            boolean startsWithHeader = b == '>';
+            long blockStart = 0;
+            int globalRecordIdx = startsWithHeader ? -1 : 0;
+            int blockFirstRecord = 0;
+            int blockRecordCount = startsWithHeader ? 0 : 1;
+            long currentRecordBaseAcc = 0L;
+            long blockFirstRecOffset = 0L;
+            long offset = 0;
+
+            while (true) {
+                long lineStart = offset;
+                int lineFirstByte = b;
+                long lineEnd = -1;
+                long lastContentOffset = -1;
+                int lastContentByte = -1;
+                while (true) {
+                    crc.update(b);
+                    if (b == '\n') {
+                        lineEnd = offset;
+                        break;
+                    }
+                    lastContentOffset = offset;
+                    lastContentByte = b;
+                    int next = in.read();
+                    if (next == -1) break;
+                    offset++;
+                    b = next;
+                }
+                boolean eof = lineEnd < 0;
+                long contentEnd = eof
+                        ? size
+                        : ((lastContentOffset == lineEnd - 1 && lastContentByte == '\r') ? lineEnd - 1 : lineEnd);
+                boolean isHeader = contentEnd > lineStart && lineFirstByte == '>';
+
+                if (isHeader) {
+                    if (lineStart > blockStart && (lineStart - blockStart) >= targetBlockBytes && blockRecordCount > 0) {
+                        slices.add(new BlockSlice((int) blockStart, (int) lineStart,
+                                blockFirstRecord, blockRecordCount, blockFirstRecOffset));
+                        blockStart = lineStart;
+                        blockFirstRecord = globalRecordIdx + 1;
+                        blockRecordCount = 0;
+                        blockFirstRecOffset = 0L;
+                    }
+                    globalRecordIdx++;
+                    if (blockRecordCount == 0) {
+                        blockFirstRecord = globalRecordIdx;
+                        blockFirstRecOffset = 0L;
+                    }
+                    blockRecordCount++;
+                    currentRecordBaseAcc = 0L;
+                } else {
+                    long lineChars = contentEnd - lineStart;
+                    if (lineStart > blockStart && (lineStart - blockStart) >= (targetBlockBytes * 2L)) {
+                        slices.add(new BlockSlice((int) blockStart, (int) lineStart,
+                                blockFirstRecord, Math.max(1, blockRecordCount), blockFirstRecOffset));
+                        blockStart = lineStart;
+                        blockFirstRecord = Math.max(0, globalRecordIdx);
+                        blockRecordCount = 1;
+                        blockFirstRecOffset = currentRecordBaseAcc;
+                    } else if (lineChars > targetBlockBytes * 2L) {
+                        long subPos = lineStart;
+                        if (subPos > blockStart) {
+                            slices.add(new BlockSlice((int) blockStart, (int) subPos,
+                                    blockFirstRecord, Math.max(1, blockRecordCount), blockFirstRecOffset));
+                            blockStart = subPos;
+                            blockFirstRecord = Math.max(0, globalRecordIdx);
+                            blockRecordCount = 1;
+                            blockFirstRecOffset = currentRecordBaseAcc;
+                        }
+                        long nextP = eof ? size : lineEnd + 1;
+                        while (nextP - blockStart > targetBlockBytes * 2L) {
+                            long cut = blockStart + targetBlockBytes;
+                            slices.add(new BlockSlice((int) blockStart, (int) cut,
+                                    blockFirstRecord, 1, blockFirstRecOffset));
+                            currentRecordBaseAcc += (cut - blockStart);
+                            blockStart = cut;
+                            blockFirstRecOffset = currentRecordBaseAcc;
+                        }
+                        currentRecordBaseAcc += (contentEnd - blockStart);
+                        if (eof) break;
+                        offset = lineEnd + 1;
+                        b = in.read();
+                        if (b == -1) break;
+                        continue;
+                    }
+                    currentRecordBaseAcc += lineChars;
+                }
+
+                if (eof) break;
+                offset = lineEnd + 1;
+                b = in.read();
+                if (b == -1) break;
+            }
+
+            if (blockStart < size) {
+                slices.add(new BlockSlice((int) blockStart, (int) size,
+                        Math.max(0, blockFirstRecord), Math.max(1, blockRecordCount), blockFirstRecOffset));
+            }
+        }
+        return new FilePartition(slices, size, (int) crc.getValue());
+    }
+
     public static final class RecordSpan {
         public final byte[] headerBytes; // null if raw headerless record
         public final int firstSeqLine;

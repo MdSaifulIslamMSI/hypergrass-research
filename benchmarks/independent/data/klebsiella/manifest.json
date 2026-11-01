@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "source": "NCBI Nucleotide (RefSeq complete genomes: klebsiella)",
+  "query": "\"Klebsiella pneumoniae\"[Organism] AND \"complete genome\"[Title] AND refseq[Filter]",
+  "selection": "NCBI relevance order; distinct accessions; 3000000-7500000 bp; stop at target bases",
+  "target_bases": 120000000,
+  "total_bases": 122700601,
+  "fasta": {
+    "path": "pangenome.fasta",
+    "size_bytes": 124455339,
+    "sha256": "fa5d322d96e585dbc779665341c346f74eeedfc1fe888befe5e70e27da9390ae"
+  },
+  "records": [
+    {
+      "accession": "NZ_AP040891.1",
+      "length": 5187164,
+      "title": "Klebsiella pneumoniae strain a1-38 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_CP076518.1",
+      "length": 5322657,
+      "title": "Klebsiella pneumoniae strain K186 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_CP065034.1",
+      "length": 5088943,
+      "title": "Klebsiella pneumoniae strain 2016-1400 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_AP018747.1",
+      "length": 5256831,
+      "title": "Klebsiella pneumoniae strain KP33 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_CP195045.1",
+      "length": 5475955,
+      "title": "Klebsiella pneumoniae strain CYH1535 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_CP195040.1",
+      "length": 5464322,
+      "title": "Klebsiella pneumoniae strain CYH4028 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_CP104312.1",
+      "length": 5403764,
+      "title": "Klebsiella pneumoniae strain KP8132 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_CP058940.1",
+      "length": 5369690,
+      "title": "Klebsiella pneumoniae strain BA39649 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_CP168099.1",
+      "length": 5356995,
+      "title": "Klebsiella pneumoniae strain LA19 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_CP172747.1",
+      "length": 5383357,
+      "title": "Klebsiella pneumoniae strain FRC1 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_CP172751.1",
+      "length": 5368231,
+      "title": "Klebsiella pneumoniae strain DCC3 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_CP172753.1",
+      "length": 5238864,
+      "title": "Klebsiella pneumoniae strain DCC2 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_CP172750.1",
+      "length": 5194998,
+      "title": "Klebsiella pneumoniae strain FNC1 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_CP172778.1",
+      "length": 5424149,
+      "title": "Klebsiella pneumoniae strain BATC1 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_CP145341.1",
+      "length": 5414797,
+      "title": "Klebsiella pneumoniae strain 12Gaza2023 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_CP145367.1",
+      "length": 5059504,
+      "title": "Klebsiella pneumoniae strain 29Gaza2023 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_CP145330.1",
+      "length": 5412092,
+      "title": "Klebsiella pneumoniae strain 33Gaza2023 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_CP145336.1",
+      "length": 5418887,
+      "title": "Klebsiella pneumoniae strain 11Gaza2023 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_CP058581.1",
+      "length": 5314991,
+      "title": "Klebsiella pneumoniae strain ICU_OXA48-1 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_CP150854.1",
+      "length": 5413199,
+      "title": "Klebsiella pneumoniae strain KP-A1 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_CP145355.1",
+      "length": 5417553,
+      "title": "Klebsiella pneumoniae strain 23Gaza2023 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_CP145347.1",
+      "length": 5295041,
+      "title": "Klebsiella pneumoniae strain 18Gaza2023 chromosome, complete genome"
+    },
+    {
+      "accession": "NZ_CP145324.1",
+      "length": 5418617,
+      "title": "Klebsiella pneumoniae strain 17Gaza2023 chromosome, complete genome"
+    }
+  ]
+}

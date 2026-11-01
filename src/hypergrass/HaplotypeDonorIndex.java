@@ -39,8 +39,10 @@ final class HaplotypeDonorIndex {
     }
 
     int[] get(int donorId) {
-        return donors[donorId];
+        return donorId >= 0 && donorId < size ? donors[donorId] : EMPTY;
     }
+
+    private static final int[] EMPTY = new int[0];
 
     void add(int[] variants) {
         if (size < donors.length) {

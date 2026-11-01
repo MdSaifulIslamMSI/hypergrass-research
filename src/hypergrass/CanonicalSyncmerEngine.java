@@ -35,12 +35,30 @@ public final class CanonicalSyncmerEngine {
     private static final long KMER_MASK = (1L << (K << 1)) - 1L; // 32-bit exact 16-mer mask
     private static final int SEED_STEP = 4; // Any >= 19-bp exact island is guaranteed to hit a seed!
     private static final int MIN_MATCH_LEN = 22;
+    /** Acceptance threshold for target-to-anchor matches; tunable to reject seed-repeat detours. */
+    private static final int MATCH_ACCEPT_MIN =
+            Math.max(MIN_MATCH_LEN, Integer.getInteger("hypergrass.matchMin", MIN_MATCH_LEN));
     private static final int NOVEL_SEGMENT_MIN = 64;
     public static final int ANCHOR_PAGE_SIZE = 65_536;
     public static final int DEFAULT_MAX_ANCHOR_BASES = 4 * 1024 * 1024; // 4 Mbp
 
     private static final int MAX_DONOR_POOL = 512;
     private static final int MAX_GLOBAL_DONORS = 96;
+    /** Encoder tuning knob: address donors by anchor span so homologous haplotypes can share. */
+    private static final boolean REGIONAL_DONORS =
+            !"false".equals(System.getProperty("hypergrass.regionalDonors"));
+    /** Encoder tuning knob: polish the anchor bank to the per-position majority of all genomes. */
+    private static final boolean CONSENSUS_ANCHOR =
+            !"false".equals(System.getProperty("hypergrass.consensusAnchor"));
+    /** Encoder tuning knob: number of consensus polishing passes over the anchor bank. */
+    public static final int CONSENSUS_PASSES =
+            Math.max(1, Integer.getInteger("hypergrass.consensusPasses", 1));
+    private static final boolean STATS = Boolean.getBoolean("hypergrass.stats");
+    /** Diagnostic: measure the global variant matrix (instances vs distinct sites). */
+    private static final boolean MATRIX_STATS = Boolean.getBoolean("hypergrass.matrixStats");
+    private static long[] matrixVariants = new long[1 << 20];
+    private static int matrixCount;
+    private static int matrixBlocks;
     private static final int[] EMPTY_INTS = new int[0];
     public static final int[][] EMPTY_DONORS = new int[0][];
 
@@ -83,7 +101,9 @@ public final class CanonicalSyncmerEngine {
 
     /** Flat open-addressed primitive hash table mapping 32-bit 16-mers to (strandBit << 30) | pos. */
     static final class SeedHashTable {
-        private long[] keys;
+        // 32-bit keys and 32-bit values: 8 bytes per slot instead of 16. The value is -1
+        // for an empty slot, so every 32-bit k-mer (including 0xFFFFFFFF) remains valid.
+        private int[] keys;
         private int[] vals;
         private int mask;
         private int size;
@@ -91,27 +111,28 @@ public final class CanonicalSyncmerEngine {
         SeedHashTable(int initialCapPowerOf2) {
             int cap = 1;
             while (cap < initialCapPowerOf2) cap <<= 1;
-            this.keys = new long[cap];
+            this.keys = new int[cap];
             this.vals = new int[cap];
-            Arrays.fill(this.keys, -1L);
+            Arrays.fill(this.vals, -1);
             this.mask = cap - 1;
             this.size = 0;
         }
 
         void insert(long kmer32, int strand, int pos) {
-            if ((size + 1) * 2 >= keys.length) {
+            if ((size + 1) * 10 >= keys.length * 7) {
                 rehash();
             }
+            int key = (int) kmer32;
             int slot = mix32(kmer32) & mask;
             int probes = 0;
-            while (keys[slot] != -1L) {
-                if (keys[slot] == kmer32) {
+            while (vals[slot] != -1) {
+                if (keys[slot] == key) {
                     probes++;
                     if (probes >= 6) return;
                 }
                 slot = (slot + 1) & mask;
             }
-            keys[slot] = kmer32;
+            keys[slot] = key;
             vals[slot] = (strand << 30) | pos;
             size++;
         }
@@ -121,7 +142,7 @@ public final class CanonicalSyncmerEngine {
         }
 
         long keyAt(int slot) {
-            return keys[slot];
+            return keys[slot] & 0xFFFFFFFFL;
         }
 
         int valAt(int slot) {
@@ -133,19 +154,18 @@ public final class CanonicalSyncmerEngine {
         }
 
         private void rehash() {
-            long[] oldK = keys;
+            int[] oldK = keys;
             int[] oldV = vals;
             int newCap = oldK.length << 1;
-            keys = new long[newCap];
+            keys = new int[newCap];
             vals = new int[newCap];
-            Arrays.fill(keys, -1L);
+            Arrays.fill(vals, -1);
             mask = newCap - 1;
             size = 0;
             for (int i = 0; i < oldK.length; i++) {
-                long k = oldK[i];
-                if (k != -1L) {
-                    int v = oldV[i];
-                    insert(k, (v >>> 30) & 1, v & 0x3FFFFFFF);
+                int v = oldV[i];
+                if (v != -1) {
+                    insert(oldK[i] & 0xFFFFFFFFL, (v >>> 30) & 1, v & 0x3FFFFFFF);
                 }
             }
         }
@@ -159,49 +179,43 @@ public final class CanonicalSyncmerEngine {
     }
 
     /**
-     * Builds an incremental deduplicated AnchorBank across chunks AND harvests 1-hop Global
-     * Virtual Clade Ancestor haplotypes when multi-record homologous clades are present.
+     * Incremental accumulator used by the bounded two-pass compressor. Feeding chunks one at a
+     * time produces the same bank as {@link #buildAnchorBank(FactorizedChunk[], int)} before
+     * global-donor harvesting, while keeping only one chunk resident at a time.
      */
-    public static AnchorBank buildAnchorBank(FactorizedChunk[] chunks, int maxAnchorBases) {
-        int totalDna = 0;
-        int totalRecords = 0;
-        for (FactorizedChunk c : chunks) {
-            totalDna += c.dnaLen;
-            totalRecords += Math.max(1, c.numHeaders);
-        }
-        int capLimit = Math.min(maxAnchorBases, totalDna);
-        if (capLimit < MIN_MATCH_LEN) {
-            return new AnchorBank(new byte[0], 0, 0, EMPTY_DONORS, new SeedHashTable(64));
-        }
+    public static final class AnchorBankBuilder {
+        private final int maxAnchorBases;
+        private byte[] bank;
+        private int bankLen;
+        private int primarySeedLen;
+        private final SeedHashTable index;
+        private final boolean initialized;
+        private boolean sawFirstChunk;
+        private int firstRecordTargetLen;
+        private boolean completedFirstRecord;
 
-        byte[] bank = new byte[Math.min(capLimit, 65536)];
-        int bankLen = 0;
-        int primarySeedLen = 0;
-        SeedHashTable index = new SeedHashTable(32768);
-
-        // Determine DNA length of the very first FASTA record so its complete sequence (including
-        // short <256-bp 3' tail) forms a clean circular-ready primary archetype!
-        int firstRecordTargetLen = 0;
-        for (FactorizedChunk c : chunks) {
-            if (c.dnaLen > 0) {
-                RecordSpan[] spans = c.getRecordSpans();
-                if (spans.length > 1) {
-                    // Approximate DNA length of record 0 (exact when no N/exceptions, bounded otherwise)
-                    firstRecordTargetLen = Math.min(c.dnaLen, spans[0].seqCharEnd - spans[0].seqCharStart);
-                } else {
-                    firstRecordTargetLen = c.dnaLen;
-                }
-                break;
-            }
+        public AnchorBankBuilder(int maxAnchorBases, long totalDnaUpperBound) {
+            this.maxAnchorBases = maxAnchorBases;
+            int capLimit = (int) Math.min(maxAnchorBases, totalDnaUpperBound);
+            this.initialized = capLimit >= MIN_MATCH_LEN;
+            this.index = new SeedHashTable(initialized ? 32768 : 64);
+            this.bank = new byte[initialized ? Math.min(capLimit, 65536) : 0];
         }
 
-        boolean completedFirstRecord = false;
-
-        for (FactorizedChunk chunk : chunks) {
-            if (bankLen >= maxAnchorBases) break;
+        public void addChunk(FactorizedChunk chunk) {
+            if (!initialized || bankLen >= maxAnchorBases) return;
             byte[] seq = chunk.dnaBases;
             int n = chunk.dnaLen;
-            if (n == 0) continue;
+            if (n == 0) return;
+            if (!sawFirstChunk) {
+                sawFirstChunk = true;
+                RecordSpan[] spans = chunk.getRecordSpans();
+                if (spans.length > 1) {
+                    firstRecordTargetLen = Math.min(n, spans[0].seqCharEnd - spans[0].seqCharStart);
+                } else {
+                    firstRecordTargetLen = n;
+                }
+            }
 
             int pos = 0;
             int unalignedStart = 0;
@@ -216,7 +230,7 @@ public final class CanonicalSyncmerEngine {
                 if (seedLen == n) {
                     primarySeedLen = bankLen;
                     completedFirstRecord = true;
-                    continue;
+                    return;
                 }
             }
 
@@ -298,26 +312,13 @@ public final class CanonicalSyncmerEngine {
             }
         }
 
-        if (primarySeedLen <= 0) {
-            primarySeedLen = bankLen;
+        public AnchorBank finish() {
+            if (primarySeedLen <= 0) {
+                primarySeedLen = bankLen;
+            }
+            byte[] trimmed = (bankLen == bank.length) ? bank : Arrays.copyOf(bank, bankLen);
+            return new AnchorBank(trimmed, bankLen, primarySeedLen, EMPTY_DONORS, index);
         }
-        byte[] trimmed = (bankLen == bank.length) ? bank : Arrays.copyOf(bank, bankLen);
-
-        // Polish anchor bank to consensus majority allele across all chunks if multi-record cohort
-        if (bankLen >= MIN_MATCH_LEN && totalRecords >= 2 && chunks.length > 1) {
-            AnchorBank rawBank = new AnchorBank(trimmed, bankLen, primarySeedLen, EMPTY_DONORS, index);
-            AnchorBank polished = consensusAnchor(rawBank, chunks);
-            trimmed = polished.bases;
-            index = polished.index;
-        }
-
-        // Harvest 1-hop Global Virtual Clade Ancestor haplotypes when multi-record cohorts exist
-        int[][] globalDonors = EMPTY_DONORS;
-        if (bankLen >= MIN_MATCH_LEN && totalRecords >= 6) {
-            globalDonors = harvestGlobalCladeDonors(chunks, trimmed, bankLen, primarySeedLen, index);
-        }
-
-        return new AnchorBank(trimmed, bankLen, primarySeedLen, globalDonors, index);
     }
 
     /**
@@ -334,7 +335,9 @@ public final class CanonicalSyncmerEngine {
     }
 
     /**
-     * Accumulates per-position base votes for one already-factorized chunk.
+     * Accumulates per-position base votes for one already-factorized chunk. Split out of
+     * {@link #consensusAnchor} so the bounded compressor can vote while streaming chunks instead
+     * of retaining them all.
      */
     public static void accumulateAnchorVotes(
             AnchorBank bank, byte[] dna, int dnaLen, byte[] counts) {
@@ -360,12 +363,9 @@ public final class CanonicalSyncmerEngine {
         }
     }
 
-    private static void bumpVote(byte[] counts, int pos, int base) {
-        if (pos < 0) return;
-        int at = (pos << 2) | (base & 3);
-        if (at >= counts.length) return;
-        int cur = counts[at] & 0xFF;
-        if (cur < 255) counts[at] = (byte) (cur + 1);
+    /** True when the encoder polishes anchors to the cross-genome majority base. */
+    public static boolean consensusEnabled() {
+        return CONSENSUS_ANCHOR;
     }
 
     /** Applies accumulated votes and rebuilds the seed index. */
@@ -391,13 +391,53 @@ public final class CanonicalSyncmerEngine {
                 changed++;
             }
         }
-        if (changed == 0) {
-            return bank;
-        }
+        // Pre-size for two keys per SEED_STEP position at a 0.7 load factor so polishing a large
+        // anchor does not pay transient rehash copies (it matters under a 256 MiB RSS budget).
         int seedSlots = (int) Math.min(Integer.MAX_VALUE, (long) (len / SEED_STEP) * 3 + 1024);
         SeedHashTable index = new SeedHashTable(Math.max(1024, seedSlots));
         indexRange(bases, 0, len, index);
-        return new AnchorBank(bases, len, bank.primarySeedLen, bank.globalDonors, index);
+        return new AnchorBank(bases, len, bank.primarySeedLen, EMPTY_DONORS, index);
+    }
+
+    private static void bumpVote(byte[] counts, int pos, int base) {
+        int at = (pos << 2) + base;
+        if ((counts[at] & 0xFF) < 255) counts[at]++;
+    }
+
+    /**
+     * Builds an incremental deduplicated AnchorBank across chunks AND harvests 1-hop Global
+     * Virtual Clade Ancestor haplotypes when multi-record homologous clades are present.
+     */
+    public static AnchorBank buildAnchorBank(FactorizedChunk[] chunks, int maxAnchorBases) {
+        AnchorBank partial = buildAnchorBankBases(chunks, maxAnchorBases);
+        if (CONSENSUS_ANCHOR && partial.length >= MIN_MATCH_LEN && chunks.length > 1) {
+            for (int pass = 0; pass < CONSENSUS_PASSES; pass++) {
+                partial = consensusAnchor(partial, chunks);
+            }
+        }
+        int totalRecords = 0;
+        for (FactorizedChunk c : chunks) {
+            totalRecords += Math.max(1, c.numHeaders);
+        }
+        if (partial.length >= MIN_MATCH_LEN && totalRecords >= 6) {
+            int[][] globalDonors = harvestGlobalCladeDonors(
+                    chunks, partial.bases, partial.length, partial.primarySeedLen, partial.index);
+            return new AnchorBank(
+                    partial.bases, partial.length, partial.primarySeedLen, globalDonors, partial.index);
+        }
+        return partial;
+    }
+
+    private static AnchorBank buildAnchorBankBases(FactorizedChunk[] chunks, int maxAnchorBases) {
+        int totalDna = 0;
+        for (FactorizedChunk c : chunks) {
+            totalDna += c.dnaLen;
+        }
+        AnchorBankBuilder builder = new AnchorBankBuilder(maxAnchorBases, totalDna);
+        for (FactorizedChunk c : chunks) {
+            builder.addChunk(c);
+        }
+        return builder.finish();
     }
 
     /**
@@ -583,8 +623,8 @@ public final class CanonicalSyncmerEngine {
         int probes = 0;
 
         while (probes < 14) {
+            if (index.valAt(slot) == -1) break;
             long key = index.keyAt(slot);
-            if (key == -1L) break;
             if (key == kmer32) {
                 int val = index.valAt(slot);
                 int strand = (val >>> 30) & 1;
@@ -800,7 +840,7 @@ public final class CanonicalSyncmerEngine {
                 int queryStart = pos - K + 1;
                 MatchResult m = findBestMatch(
                         target, targetLen, queryStart, litStart, rollingFwd, anchor, anchorLen, primarySeedLen, index);
-                if (m != null && m.matchLen >= MIN_MATCH_LEN) {
+                if (m != null && m.matchLen >= MATCH_ACCEPT_MIN) {
                     int litLen = m.targetStart - litStart;
                     if (litLen > 0) {
                         if (keepLiterals) {
@@ -932,6 +972,19 @@ public final class CanonicalSyncmerEngine {
         if (aln.numMatches == 0 || aln.matchedBasesTotal * 5 < targetLen) {
             return encodeMode1Qcrm(target, targetLen, leanMode);
         }
+        if (STATS) {
+            int g1 = 0, g2 = 0, g3 = 0;
+            for (int i = 0; i < aln.totalSnps; i++) {
+                int g = aln.snpGaps[i];
+                if (g < 128) g1++;
+                else if (g < 16384) g2++;
+                else g3++;
+            }
+            System.err.println("STATS target=" + targetLen + " matches=" + aln.numMatches
+                    + " snps=" + aln.totalSnps + " lits=" + aln.totalLiterals
+                    + " matched=" + aln.matchedBasesTotal
+                    + " gap1=" + g1 + " gap2=" + g2 + " gap3=" + g3);
+        }
 
         // Encode shared prefix (literals + strands) once or compare Mode 2 vs Mode 3
         byte[] encodedLits = encodeResiduals(aln.literals, aln.totalLiterals, leanMode);
@@ -939,7 +992,9 @@ public final class CanonicalSyncmerEngine {
         byte[] best = mode2;
 
         if (aln.numMatches >= 1) {
-            byte[] mode3 = buildMode3AcHmcBytes(aln, encodedLits, bank.primarySeedLen, bank.globalDonors, null);
+            boolean regional = REGIONAL_DONORS;
+            byte[] mode3 = buildMode3AcHmcBytes(
+                    aln, encodedLits, bank.primarySeedLen, bank.globalDonors, null, regional);
             if (mode3.length < best.length) {
                 best = mode3;
             }
@@ -947,7 +1002,7 @@ public final class CanonicalSyncmerEngine {
             // when its complete compressed representation beats the legacy Mode 2/3 winner.
             if (costAware && !leanMode && aln.totalSnps > 0 && aln.totalSnps <= 8_192 && aln.numMatches <= 256) {
                 byte[] candidate = buildMode3AcHmcBytes(aln, encodedLits, bank.primarySeedLen,
-                        bank.globalDonors, new CostAwareDonorSelector(1_048_576));
+                        bank.globalDonors, new CostAwareDonorSelector(1_048_576), false);
                 if (candidate != null && candidate.length < best.length) best = candidate;
             }
         }
@@ -958,6 +1013,9 @@ public final class CanonicalSyncmerEngine {
             if (mode1.length <= best.length) {
                 return mode1;
             }
+        }
+        if (STATS) {
+            System.err.println("STATS mode2=" + mode2.length + " best=" + best.length);
         }
         return best;
     }
@@ -1121,13 +1179,16 @@ public final class CanonicalSyncmerEngine {
 
     private static byte[] buildMode3AcHmcBytes(
             ParsedAlignment aln, byte[] encodedLits, int primarySeedLen, int[][] globalDonors,
-            CostAwareDonorSelector costSelector) {
+            CostAwareDonorSelector costSelector, boolean regionalDonors) {
         int numMatches = aln.numMatches;
         ByteOut out = new ByteOut(256 + encodedLits.length);
-        out.writeByte(3); // Mode 3: AC-HMC + VCAI + Circular Geometry
+        // Mode 4 shares the Mode 3 framing but keeps an unbounded donor pool addressed by anchor
+        // span; the decoder only needs to keep every donor instead of the first MAX_DONOR_POOL.
+        out.writeByte(regionalDonors ? 5 : 6);
         out.writeVarInt(numMatches);
         out.writeVarInt(aln.totalLiterals);
         out.writeVarInt(aln.totalSnps);
+        int chLitLens = out.size();
 
         // 1. Literal lengths + tail literal
         ByteOut litLenBuf = new ByteOut(numMatches * 2 + 4);
@@ -1136,6 +1197,7 @@ public final class CanonicalSyncmerEngine {
         }
         litLenBuf.writeVarInt(aln.tailLit);
         VarIntCodec.writeCompressedAux(out, litLenBuf);
+        int chLits = out.size();
 
         // 2. Residual literals
         out.writeBytes(encodedLits);
@@ -1148,18 +1210,49 @@ public final class CanonicalSyncmerEngine {
             }
         }
         VarIntCodec.writeCompressedAux(out, strandBits, strandBits.length);
+        int chStrands = out.size();
 
-        // 4. Circular-aware interleaved geometry (collapses 3 of 4 circular coordinates to 0!)
+        // 4. Anchor geometry. Sequential prediction (refOffset continues where the previous
+        // match ended, length repeats) collapses the common colinear case to a zero residual;
+        // the old circular predictor predicted absolute offsets and cost ~7 raw bytes/match.
         ByteOut geomBuf = new ByteOut(numMatches * 3 + 8);
         int coreEnd = Math.max(1, primarySeedLen);
         geomBuf.writeVarInt(coreEnd);
         for (int m = 0; m < numMatches; m++) {
-            int predRef = predictCircularRefOffset(m, aln.refOffsets, aln.matchLens, coreEnd);
+            int predRef = predictSequentialRefOffset(m, aln.refOffsets, aln.matchLens);
             geomBuf.writeSignedVarInt(aln.refOffsets[m] - predRef);
-            int predLen = predictCircularMatchLen(m, aln.refOffsets, aln.matchLens, coreEnd);
+            int predLen = predictSequentialMatchLen(m, aln.matchLens);
             geomBuf.writeSignedVarInt(aln.matchLens[m] - predLen);
         }
+        if (STATS) {
+            int zr = 0, sr = 0, lr = 0, zl = 0, sl = 0, ll = 0, rev = 0;
+            long absr = 0, absl = 0;
+            for (int m = 0; m < numMatches; m++) {
+                int dr = aln.refOffsets[m] - predictSequentialRefOffset(m, aln.refOffsets, aln.matchLens);
+                int dl = aln.matchLens[m] - predictSequentialMatchLen(m, aln.matchLens);
+                absr += Math.abs((long) dr);
+                absl += Math.abs((long) dl);
+                if (dr == 0) zr++; else if (dr > -128 && dr < 128) sr++; else lr++;
+                if (dl == 0) zl++; else if (dl > -128 && dl < 128) sl++; else ll++;
+                if (aln.strands[m] != 0) rev++;
+            }
+            System.err.println("GEOMSTAT zeroRef=" + zr + " smallRef=" + sr + " bigRef=" + lr
+                    + " zeroLen=" + zl + " smallLen=" + sl + " bigLen=" + ll
+                    + " meanAbsRef=" + (absr / Math.max(1, numMatches))
+                    + " meanAbsLen=" + (absl / Math.max(1, numMatches))
+                    + " reverse=" + rev);
+            StringBuilder sample = new StringBuilder("GEOMSAMPLE");
+            for (int m = 0; m < Math.min(12, numMatches); m++) {
+                int pred = predictSequentialRefOffset(m, aln.refOffsets, aln.matchLens);
+                sample.append(' ').append(m).append(':').append(aln.refOffsets[m])
+                        .append('/').append(pred).append('/').append(aln.matchLens[m])
+                        .append('/').append(aln.strands[m]);
+            }
+            System.err.println(sample);
+            System.err.println("GEOMALT" + measureGeomAlternatives(aln));
+        }
         VarIntCodec.writeCompressedAux(out, geomBuf);
+        int chGeom = out.size();
 
         // 5. Canonical Anchor-Coordinate Haplotype Sweeps with Dynamic VCAI
         if (aln.totalSnps > 0) {
@@ -1172,12 +1265,22 @@ public final class CanonicalSyncmerEngine {
             ByteOut addedGapBuf = new ByteOut(aln.totalSnps);
             ByteOut addedDiffBuf = new ByteOut(aln.totalSnps);
 
-            HaplotypeDonorIndex donorPool = new HaplotypeDonorIndex(MAX_DONOR_POOL);
+            int totalPossibleDonors = (globalDonors != null ? globalDonors.length : 0) + numSweeps + 16;
+            HaplotypeDonorIndex donorPool = new HaplotypeDonorIndex(
+                    regionalDonors ? Math.max(MAX_DONOR_POOL, totalPossibleDonors) : MAX_DONOR_POOL);
+            RegionalDonorIndex regional = regionalDonors ? new RegionalDonorIndex() : null;
+            int donorCap = regionalDonors ? Integer.MAX_VALUE : MAX_DONOR_POOL;
             if (globalDonors != null) {
                 for (int[] gd : globalDonors) {
-                    if (donorPool.size() < MAX_DONOR_POOL) donorPool.add(gd);
+                    addDonor(donorPool, regional, gd, donorCap);
                 }
             }
+            int statTotal = 0;
+            int statAdded = 0;
+            int statInherited = 0;
+            int statMode1 = 0;
+            int statMode2 = 0;
+            int statMode3 = 0;
 
             for (int g = 0; g < numSweeps; g++) {
                 int[] v = sweeps[g];
@@ -1185,11 +1288,30 @@ public final class CanonicalSyncmerEngine {
                     sweepModes[g] = 0;
                     continue;
                 }
+                if (MATRIX_STATS) recordMatrixVariants(v);
+                statTotal += v.length;
 
-                int[] commonCounts = donorPool.countIntersections(v);
+                int[] commonCounts = null;
                 int bestDonor = -1;
                 int bestCommon = 0;
-                if (costSelector == null) {
+                if (regional != null) {
+                    int rangeLo = v[0] >>> 2;
+                    int rangeHi = (v[v.length - 1] >>> 2) + 1;
+                    int bestSavingsScore = 8; // require saving >= 1 byte over scratch mode 1
+                    for (int d : regional.candidates(rangeLo, rangeHi)) {
+                        int[] cand = donorPool.get(d);
+                        int common = intersectCount(v, cand);
+                        if (common == 0) continue;
+                        int maskBits = (common == cand.length) ? 0 : cand.length;
+                        int score = common * 18 - maskBits - 8; // ~18 bits saved per shared SNP
+                        if (score > bestSavingsScore) {
+                            bestSavingsScore = score;
+                            bestDonor = d;
+                            bestCommon = common;
+                        }
+                    }
+                } else if (costSelector == null) {
+                    commonCounts = donorPool.countIntersections(v);
                     int bestSavingsScore = 8; // require saving >= 1 byte over scratch mode 1
                     int poolSize = donorPool.size();
                     for (int d = 0; d < poolSize; d++) {
@@ -1205,18 +1327,22 @@ public final class CanonicalSyncmerEngine {
                         }
                     }
                 } else {
+                    commonCounts = donorPool.countIntersections(v);
                     bestDonor = costSelector.select(v, donorPool, commonCounts);
                     if (bestDonor == CostAwareDonorSelector.BUDGET_EXHAUSTED) return null;
                     if (bestDonor >= 0) bestCommon = commonCounts[bestDonor];
                 }
 
+                if (STATS && g < 30) {
+                    System.err.println("ENCSEQ " + g + ":" + bestDonor + ":" + donorPool.size());
+                }
                 if (bestDonor < 0) {
                     sweepModes[g] = 1; // Scratch sweep
+                    statAdded += v.length;
+                    statMode1++;
                     addedCntBuf.writeVarInt(v.length);
                     writeVariantList(v, v.length, addedGapBuf, addedDiffBuf);
-                    if (donorPool.size() < MAX_DONOR_POOL) {
-                        donorPool.add(v);
-                    }
+                    addDonor(donorPool, regional, v, donorCap);
                 } else {
                     int[] dArr = donorPool.get(bestDonor);
                     if (bestCommon == dArr.length) {
@@ -1225,12 +1351,13 @@ public final class CanonicalSyncmerEngine {
                         donorIdxBuf.writeVarInt(bestDonor);
                         int addCnt = v.length - dArr.length;
                         addedCntBuf.writeVarInt(addCnt);
+                        statInherited += dArr.length;
+                        statAdded += addCnt;
+                        statMode2++;
                         if (addCnt > 0) {
                             int[] added = subtractSortedSubset(v, dArr, addCnt);
                             writeVariantList(added, addCnt, addedGapBuf, addedDiffBuf);
-                            if (donorPool.size() < MAX_DONOR_POOL) {
-                                donorPool.add(v);
-                            }
+                            addDonor(donorPool, regional, v, donorCap);
                         }
                     } else {
                         // Mode 3: Partial inheritance with retained bitmask + VCAI clade inference!
@@ -1239,6 +1366,9 @@ public final class CanonicalSyncmerEngine {
                         byte[] maskBytes = new byte[(dArr.length + 7) >>> 3];
                         int[] retained = new int[bestCommon];
                         int[] added = new int[v.length - bestCommon];
+                        statInherited += bestCommon;
+                        statAdded += added.length;
+                        statMode3++;
                         diffSortedLists(v, dArr, maskBytes, retained, added);
 
                         maskBuf.writeBytes(maskBytes);
@@ -1247,26 +1377,209 @@ public final class CanonicalSyncmerEngine {
                             writeVariantList(added, added.length, addedGapBuf, addedDiffBuf);
                         }
 
-                        if (donorPool.size() < MAX_DONOR_POOL) {
-                            donorPool.add(v);
-                        }
-                        if (bestCommon >= 2 && bestCommon < dArr.length && bestCommon < v.length
-                                && donorPool.size() < MAX_DONOR_POOL) {
-                            donorPool.add(retained); // VCAI: synthesize Virtual Clade Ancestor!
+                        addDonor(donorPool, regional, v, donorCap);
+                        if (bestCommon >= 2 && bestCommon < dArr.length && bestCommon < v.length) {
+                            addDonor(donorPool, regional, retained, donorCap); // VCAI virtual clade ancestor
                         }
                     }
                 }
             }
 
             VarIntCodec.writeCompressedAux(out, sweepModes, numSweeps);
+            int chModes = out.size();
             VarIntCodec.writeCompressedAux(out, donorIdxBuf);
+            int chDonor = out.size();
             VarIntCodec.writeCompressedAux(out, maskBuf);
+            int chMask = out.size();
             VarIntCodec.writeCompressedAux(out, addedCntBuf);
+            int chCnt = out.size();
             VarIntCodec.writeCompressedAux(out, addedGapBuf);
+            int chGap = out.size();
             VarIntCodec.writeCompressedAux(out, addedDiffBuf);
+            int chDiff = out.size();
+            if (STATS) {
+                System.err.println("CHANNELS modes=" + (chModes - chGeom) + " donor=" + (chDonor - chModes)
+                        + " mask=" + (chMask - chDonor) + " cnt=" + (chCnt - chMask)
+                        + " gap=" + (chGap - chCnt) + " diff=" + (chDiff - chGap)
+                        + " geom=" + (chGeom - chStrands) + " strands=" + (chStrands - chLits)
+                        + " lits=" + (chLits - chLitLens) + " geomRaw=" + geomBuf.size()
+                        + " gapRaw=" + addedGapBuf.size() + " diffRaw=" + addedDiffBuf.size());
+            }
+            if (STATS) {
+                System.err.println("STATS3 sweeps=" + numSweeps + " variants=" + statTotal
+                        + " added=" + statAdded + " inherited=" + statInherited
+                        + " mode1=" + statMode1 + " mode2=" + statMode2 + " mode3=" + statMode3);
+                System.err.println("ENTROPY gap=" + entropyReport(addedGapBuf)
+                        + " diff=" + entropyReport(addedDiffBuf)
+                        + " litLen=" + entropyReport(litLenBuf)
+                        + " mask=" + entropyReport(maskBuf));
+                System.err.println("MATRIX" + matrixReport());
+            }
+            dumpAux("gap", addedGapBuf);
+            dumpAux("diff", addedDiffBuf);
+            dumpAux("mask", maskBuf);
+            dumpAux("litLen", litLenBuf);
+            dumpAux("geom", geomBuf);
+            dumpAuxBytes("lits", encodedLits);
         }
 
         return out.toByteArray();
+    }
+
+    private static int predictSequentialRefOffset(int m, int[] refOffsets, int[] matchLens) {
+        return m == 0 ? 0 : refOffsets[m - 1] + matchLens[m - 1];
+    }
+
+    /** Diagnostic: order-0 / order-1 byte entropy in bits for one auxiliary stream. */
+    private static void recordMatrixVariants(int[] v) {
+        if (matrixCount + v.length > matrixVariants.length) {
+            int grown = Math.max(matrixVariants.length << 1, matrixCount + v.length);
+            matrixVariants = java.util.Arrays.copyOf(matrixVariants, grown);
+        }
+        for (int x : v) {
+            matrixVariants[matrixCount++] = x & 0xFFFFFFFFL;
+        }
+        matrixBlocks++;
+    }
+
+    /**
+     * Diagnostic for the sparse-variant-matrix hypothesis: how many variant *instances* collapse
+     * onto distinct (position, allele) sites, and how many genomes share each position.
+     */
+    private static String matrixReport() {
+        if (matrixCount == 0) return " instances=0";
+        long[] sorted = java.util.Arrays.copyOf(matrixVariants, matrixCount);
+        java.util.Arrays.sort(sorted);
+        int distinctSites = 0;
+        int distinctPositions = 0;
+        int mult1 = 0, mult2to4 = 0, mult5to9 = 0, mult10plus = 0;
+        int run = 0;
+        long prev = -1;
+        for (int i = 0; i < sorted.length; i++) {
+            long cur = sorted[i];
+            if (cur != prev) {
+                if (run == 1) mult1++;
+                else if (run <= 4) mult2to4++;
+                else if (run <= 9) mult5to9++;
+                else mult10plus++;
+                if (run > 0) distinctPositions++;
+                distinctSites++;
+                run = 1;
+                prev = cur;
+            } else {
+                run++;
+            }
+        }
+        if (run == 1) mult1++;
+        else if (run <= 4) mult2to4++;
+        else if (run <= 9) mult5to9++;
+        else mult10plus++;
+        if (run > 0) distinctPositions++;
+        return " instances=" + sorted.length
+                + " siteAlleles=" + distinctSites
+                + " distinctPos=" + distinctPositions
+                + " mult1=" + mult1 + " mult2to4=" + mult2to4
+                + " mult5to9=" + mult5to9 + " mult10plus=" + mult10plus
+                + " blocks=" + matrixBlocks;
+    }
+
+    /** Diagnostic: writes a raw auxiliary channel so its entropy can be modelled offline. */
+    private static final String DUMP_AUX = System.getProperty("hypergrass.dumpAux");
+
+    private static void dumpAux(String name, VarIntCodec.ByteOut buf) {
+        if (DUMP_AUX == null) return;
+        if (name.equals("gap")) System.err.println("DUMPAUX dir=" + DUMP_AUX);
+        dumpAuxBytes(name, buf.internalBuffer(), buf.size());
+    }
+
+    private static void dumpAuxBytes(String name, byte[] bytes) {
+        dumpAuxBytes(name, bytes, bytes.length);
+    }
+
+    private static void dumpAuxBytes(String name, byte[] bytes, int len) {
+        if (DUMP_AUX == null) return;
+        try {
+            java.nio.file.Path dir = java.nio.file.Path.of(DUMP_AUX);
+            java.nio.file.Files.createDirectories(dir);
+            java.nio.file.Files.write(dir.resolve(name + ".bin"), java.util.Arrays.copyOf(bytes, len));
+        } catch (java.io.IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static String entropyReport(VarIntCodec.ByteOut buf) {
+        int n = buf.size();
+        if (n == 0) return "0/0";
+        byte[] data = buf.internalBuffer();
+        long[] symbols = new long[256];
+        long[] prevCounts = new long[256];
+        long[] joint = new long[65536];
+        int prev = 0;
+        for (int i = 0; i < n; i++) {
+            int b = data[i] & 0xFF;
+            symbols[b]++;
+            prevCounts[prev]++;
+            joint[(prev << 8) | b]++;
+            prev = b;
+        }
+        double order0 = 0;
+        for (long c : symbols) {
+            if (c > 0) order0 += c * (Math.log((double) n / c) / Math.log(2));
+        }
+        double order1 = 0;
+        for (int p = 0; p < 256; p++) {
+            if (prevCounts[p] == 0) continue;
+            for (int c = 0; c < 256; c++) {
+                long v = joint[(p << 8) | c];
+                if (v > 0) {
+                    order1 += v * (Math.log((double) prevCounts[p] / v) / Math.log(2));
+                }
+            }
+        }
+        return String.format("%.0f/%.0f", order0, order1);
+    }
+
+    /**
+     * Diagnostic: measures the compressed size of the geometry channel under alternative
+     * predictors so one encoding run ranks them. Not part of the decode path.
+     */
+    private static String measureGeomAlternatives(ParsedAlignment aln) {
+        int n = aln.numMatches;
+        int[] strandLastEnd = new int[2];
+        StringBuilder sb = new StringBuilder();
+        ByteOut[] bufs = {
+            new ByteOut(n * 3 + 8), // 0 current: prev end
+            new ByteOut(n * 3 + 8), // 1 prev end + literals before this match
+            new ByteOut(n * 3 + 8), // 2 same-strand previous end
+            new ByteOut(n * 3 + 8), // 3 order-2 previous end
+            new ByteOut(n * 3 + 8), // 4 previous ref start
+        };
+        for (int m = 0; m < n; m++) {
+            int ref = aln.refOffsets[m];
+            int len = aln.matchLens[m];
+            int st = aln.strands[m];
+            int prevEnd = (m == 0) ? 0 : aln.refOffsets[m - 1] + aln.matchLens[m - 1];
+            int withLits = prevEnd + ((m == 0) ? 0 : aln.litLens[m]);
+            int sameStrand = (m == 0) ? 0 : strandLastEnd[st];
+            int order2 = (m < 2) ? 0 : aln.refOffsets[m - 2] + aln.matchLens[m - 2];
+            int prevStart = (m == 0) ? 0 : aln.refOffsets[m - 1];
+            int[] preds = {prevEnd, withLits, sameStrand, order2, prevStart};
+            for (int v = 0; v < preds.length; v++) {
+                bufs[v].writeSignedVarInt(ref - preds[v]);
+                bufs[v].writeSignedVarInt(len - predictSequentialMatchLen(m, aln.matchLens));
+            }
+            strandLastEnd[st] = ref + len;
+        }
+        for (int v = 0; v < bufs.length; v++) {
+            ByteOut tmp = new ByteOut(bufs[v].size() / 2 + 32);
+            VarIntCodec.writeCompressedAux(tmp, bufs[v]);
+            sb.append(' ').append(v).append('=').append(tmp.size());
+        }
+        return sb.toString();
+    }
+
+    private static int predictSequentialMatchLen(int m, int[] matchLens) {
+        return m == 0 ? 0 : matchLens[m - 1];
     }
 
     private static int predictCircularRefOffset(int m, int[] refOffsets, int[] matchLens, int coreEnd) {
@@ -1334,6 +1647,30 @@ public final class CanonicalSyncmerEngine {
             }
         }
         return c;
+    }
+
+    /** Adds a donor to both pools so regional IDs always match the decoder's flat donor list. */
+    private static void addDonor(
+            HaplotypeDonorIndex pool, RegionalDonorIndex regional, int[] variants, int cap) {
+        if (pool.size() >= cap) return;
+        pool.add(variants);
+        if (regional != null) regional.add(variants);
+    }
+
+    private static int intersectCount(int[] a, int[] b) {
+        int i = 0, j = 0, common = 0;
+        while (i < a.length && j < b.length) {
+            if (a[i] == b[j]) {
+                common++;
+                i++;
+                j++;
+            } else if (a[i] < b[j]) {
+                i++;
+            } else {
+                j++;
+            }
+        }
+        return common;
     }
 
     private static int[] intersectSorted(int[] a, int[] b, int commonLen) {
@@ -1409,8 +1746,13 @@ public final class CanonicalSyncmerEngine {
     }
 
     private static int[][] decodeMode3SweepVariants(
-            ByteIn in, int[] sweepStarts, int[][] globalDonors) {
+            ByteIn in, int[] sweepStarts, int[][] globalDonors, boolean unboundedDonors) {
         int numSweeps = sweepStarts.length - 1;
+        if (STATS) {
+            System.err.println("DECODE sweeps=" + numSweeps + " globals="
+                    + (globalDonors == null ? -1 : globalDonors.length));
+        }
+        int donorCap = unboundedDonors ? Integer.MAX_VALUE : MAX_DONOR_POOL;
         byte[] sweepModes = VarIntCodec.readCompressedAux(in);
         ByteIn donorIdxIn = new ByteIn(VarIntCodec.readCompressedAux(in));
         ByteIn maskIn = new ByteIn(VarIntCodec.readCompressedAux(in));
@@ -1422,20 +1764,23 @@ public final class CanonicalSyncmerEngine {
         List<int[]> donorPool = new ArrayList<>(MAX_DONOR_POOL);
         if (globalDonors != null) {
             for (int[] gd : globalDonors) {
-                if (donorPool.size() < MAX_DONOR_POOL) donorPool.add(gd);
+                if (donorPool.size() < donorCap) donorPool.add(gd);
             }
         }
 
         int[][] sweeps = new int[numSweeps][];
         for (int g = 0; g < numSweeps; g++) {
             int sm = sweepModes[g] & 0xFF;
+            if (STATS && g < 30) {
+                System.err.println("DECSEQ " + g + ":" + sm + ":" + donorPool.size());
+            }
             if (sm == 0) {
                 sweeps[g] = EMPTY_INTS;
             } else if (sm == 1) {
                 int cnt = addedCntIn.readVarInt();
                 int[] v = readVariantList(cnt, addedGapIn, addedDiffs, diffCursor);
                 sweeps[g] = v;
-                if (donorPool.size() < MAX_DONOR_POOL) {
+                if (donorPool.size() < donorCap) {
                     donorPool.add(v);
                 }
             } else if (sm == 2) {
@@ -1448,7 +1793,7 @@ public final class CanonicalSyncmerEngine {
                     int[] added = readVariantList(addCnt, addedGapIn, addedDiffs, diffCursor);
                     int[] v = mergeSortedDisjoint(dArr, added);
                     sweeps[g] = v;
-                    if (donorPool.size() < MAX_DONOR_POOL) {
+                    if (donorPool.size() < donorCap) {
                         donorPool.add(v);
                     }
                 }
@@ -1475,11 +1820,11 @@ public final class CanonicalSyncmerEngine {
                 int[] v = mergeSortedDisjoint(retained, added);
                 sweeps[g] = v;
 
-                if (donorPool.size() < MAX_DONOR_POOL) {
+                if (donorPool.size() < donorCap) {
                     donorPool.add(v);
                 }
                 if (retCnt >= 2 && retCnt < dArr.length && retCnt < v.length
-                        && donorPool.size() < MAX_DONOR_POOL) {
+                        && donorPool.size() < donorCap) {
                     donorPool.add(retained);
                 }
             } else {
@@ -1497,7 +1842,12 @@ public final class CanonicalSyncmerEngine {
         int savedPos = in.position();
         boolean[] needed = new boolean[numAnchorPages];
         int mode = in.readByte();
-        if ((mode != 2 && mode != 3) || numAnchorPages == 0) {
+        if ((mode < 2 || mode > 6) || numAnchorPages == 0) {
+            in.setPosition(savedPos);
+            return needed;
+        }
+        if (numAnchorPages == 1) {
+            needed[0] = true;
             in.setPosition(savedPos);
             return needed;
         }
@@ -1525,10 +1875,15 @@ public final class CanonicalSyncmerEngine {
             }
         } else {
             int coreEnd = geomIn.readVarInt();
+            boolean sequentialGeom = mode >= 5;
             for (int m = 0; m < numMatches; m++) {
-                int predRef = predictCircularRefOffset(m, refOffsets, matchLens, coreEnd);
+                int predRef = sequentialGeom
+                        ? predictSequentialRefOffset(m, refOffsets, matchLens)
+                        : predictCircularRefOffset(m, refOffsets, matchLens, coreEnd);
                 refOffsets[m] = predRef + geomIn.readSignedVarInt();
-                int predLen = predictCircularMatchLen(m, refOffsets, matchLens, coreEnd);
+                int predLen = sequentialGeom
+                        ? predictSequentialMatchLen(m, matchLens)
+                        : predictCircularMatchLen(m, refOffsets, matchLens, coreEnd);
                 matchLens[m] = predLen + geomIn.readSignedVarInt();
             }
         }
@@ -1590,7 +1945,7 @@ public final class CanonicalSyncmerEngine {
             ByteIn rcSlice = new ByteIn(in.readBytes(rcLen));
             return QuantumContextRepeatMixer.decode(rcSlice, targetLen, leanMode);
         }
-        if (mode != 2 && mode != 3) {
+        if (mode < 2 || mode > 6) {
             throw new IllegalStateException("Unknown DNA block mode: " + mode);
         }
 
@@ -1624,12 +1979,26 @@ public final class CanonicalSyncmerEngine {
             }
         } else {
             int coreEnd = geomIn.readVarInt();
+            boolean sequentialGeom = mode >= 5;
             for (int m = 0; m < numMatches; m++) {
-                int predRef = predictCircularRefOffset(m, refOffsets, matchLens, coreEnd);
+                int predRef = sequentialGeom
+                        ? predictSequentialRefOffset(m, refOffsets, matchLens)
+                        : predictCircularRefOffset(m, refOffsets, matchLens, coreEnd);
                 refOffsets[m] = predRef + geomIn.readSignedVarInt();
-                int predLen = predictCircularMatchLen(m, refOffsets, matchLens, coreEnd);
+                int predLen = sequentialGeom
+                        ? predictSequentialMatchLen(m, matchLens)
+                        : predictCircularMatchLen(m, refOffsets, matchLens, coreEnd);
                 matchLens[m] = predLen + geomIn.readSignedVarInt();
             }
+        }
+
+        if (STATS) {
+            StringBuilder sample = new StringBuilder("DGEOM");
+            for (int m = 0; m < Math.min(12, numMatches); m++) {
+                sample.append(' ').append(m).append(':').append(refOffsets[m])
+                        .append('/').append(matchLens[m]);
+            }
+            System.err.println(sample);
         }
 
         if (mode == 2) {
@@ -1704,7 +2073,7 @@ public final class CanonicalSyncmerEngine {
         int[][] sweepVariants = null;
         if (totalSnps > 0) {
             sweepStarts = computeSweepStarts(refOffsets, matchLens, numMatches);
-            sweepVariants = decodeMode3SweepVariants(in, sweepStarts, globalDonors);
+            sweepVariants = decodeMode3SweepVariants(in, sweepStarts, globalDonors, mode == 4 || mode == 5);
         }
 
         byte[] out = new byte[targetLen];
@@ -1790,7 +2159,7 @@ public final class CanonicalSyncmerEngine {
         }
         int savedPos = in.position();
         int mode = in.readByte();
-        if (mode != 2 && mode != 3) {
+        if (mode < 2 || mode > 6) {
             in.setPosition(savedPos);
             byte[] full = decodeBlockDna(in, targetLen, anchorBases, globalDonors, leanMode);
             return Arrays.copyOfRange(full, rangeStart, rangeEnd);
@@ -1826,10 +2195,15 @@ public final class CanonicalSyncmerEngine {
             }
         } else {
             int coreEnd = geomIn.readVarInt();
+            boolean sequentialGeom = mode >= 5;
             for (int m = 0; m < numMatches; m++) {
-                int predRef = predictCircularRefOffset(m, refOffsets, matchLens, coreEnd);
+                int predRef = sequentialGeom
+                        ? predictSequentialRefOffset(m, refOffsets, matchLens)
+                        : predictCircularRefOffset(m, refOffsets, matchLens, coreEnd);
                 refOffsets[m] = predRef + geomIn.readSignedVarInt();
-                int predLen = predictCircularMatchLen(m, refOffsets, matchLens, coreEnd);
+                int predLen = sequentialGeom
+                        ? predictSequentialMatchLen(m, matchLens)
+                        : predictCircularMatchLen(m, refOffsets, matchLens, coreEnd);
                 matchLens[m] = predLen + geomIn.readSignedVarInt();
             }
         }
@@ -1935,7 +2309,7 @@ public final class CanonicalSyncmerEngine {
         int[][] sweepVariants = null;
         if (totalSnps > 0) {
             sweepStarts = computeSweepStarts(refOffsets, matchLens, numMatches);
-            sweepVariants = decodeMode3SweepVariants(in, sweepStarts, globalDonors);
+            sweepVariants = decodeMode3SweepVariants(in, sweepStarts, globalDonors, mode == 4 || mode == 5);
         }
 
         int[] matchTargetStarts = new int[numMatches];

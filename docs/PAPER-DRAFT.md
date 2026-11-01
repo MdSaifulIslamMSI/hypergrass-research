@@ -19,11 +19,15 @@ stopped after 179 of 280 planned results (6 of 10 datasets complete) and on a
 cells the default archive is smallest by a median margin of 1.36%; on the
 121.8 MB complete-FASTA pangenome, the default profile is 9.8% larger than
 xz -9, while an opt-in 16 MiB bank / 8 MiB block profile is 41.8% smaller and
-answers exact record queries. A measured ablation attributes that result to the
-default's 4 MiB anchor-bank cap. The contribution is a working system plus a
-reproducible measurement harness with byte-exact verification and explicit
-deviations; the results do not establish universal superiority over
-specialized compressors.
+answers exact record queries. The tuned profile replicated on two additional
+~120 Mbp RefSeq pangenomes, *Salmonella enterica* (43.7% smaller than xz) and
+*Klebsiella pneumoniae* (46.2% smaller). A measured ablation attributes that
+result to the default's 4 MiB anchor-bank cap. On the identical sequence,
+however, JARVIS3 level 7 produced a 3,896,361-byte archive, 20.3% smaller than
+the tuned profile, so the xz margin is not a state-of-the-art DNA compression
+result. The contribution is a working system plus a reproducible measurement
+harness with byte-exact verification and explicit deviations; the results do
+not establish universal superiority over specialized compressors.
 
 ## 1. Introduction
 
@@ -185,17 +189,48 @@ trip and all three record queries were exact. xz decompressed faster (7.1 s at
 full decompression. `--lean` completed the round trip and all three queries
 with 52 MiB peak RSS, but its archive is 28,910,764 bytes, 3.14x the default.
 
+**Independent replication.** Two additional ~120 Mbp pangenomes were fetched
+with the same NCBI selection rule after the tuned profile was fixed. On
+*Salmonella enterica* (25 records, 120.5 Mbp), the default produced 7,317,099
+bytes (+19.56% versus xz at 6,120,260) and the tuned profile produced 3,443,600
+bytes (43.73% smaller than xz). On *Klebsiella pneumoniae* (23 records,
+122.7 Mbp), the default produced 8,571,498 bytes (+33.12% versus xz at
+6,438,744) and the tuned profile produced 3,464,423 bytes (46.19% smaller).
+Every round trip and all three slice queries per HyperGraSS archive were exact.
+The median independent margin is 44.96%, so the direction and rough magnitude
+of the original 41.8% result replicate. The default loses to xz on all three
+pangenomes. Compression and restore times moved in the tuned profile's favor
+on these runs, but host variance was large (the gzip baseline took 97.6 s on
+Salmonella and 201.1 s on Klebsiella for nearly the same input size), so sizes
+and round trips are the stable measurements.
+
+**Specialized compressors.** The corpus comparison against JARVIS3 and GeCo3
+uses single genomes. To test whether the pangenome margin survives against
+tools designed for DNA, the same 120.1 Mbp sequence was extracted from the
+pangenome (headers, line breaks, case, and 2,357 non-ACGT symbols removed or
+normalized) and given to JARVIS3 level 7, GeCo3 levels 3 and 6, and xz -9. This
+input is slightly smaller than the complete multi-FASTA given to HyperGraSS, so
+the normalization favors the specialized tools. JARVIS3 level 7 produced
+3,896,361 bytes (0.260 bits/base) and restored the sequence exactly in 84.2 s,
+using 286 MiB peak RSS. That is 20.3% smaller than the tuned HyperGraSS archive,
+although HyperGraSS compressed faster (30.6 s versus 95.4 s) and restored faster
+(16.4 s versus 84.2 s). The scale result therefore does not show that
+HyperGraSS compresses pangenomes better than specialized DNA compressors; it
+shows that the tuned profile beats xz, a general-purpose baseline, by a wide
+margin, and that the margin over specialized tools is negative at this scale.
+
 **Interpretation.** HyperGraSS is competitive at small and medium sequence-only
 scales and narrowly first on the completed corpus cells. With the default
 profile it is not the smallest at 100 MB+ pangenome scale; the measured
 ablation shows the 4 MiB anchor-bank cap was the ceiling. Raising the bank to
 8 MiB at the same block size cut the archive by 43.9%, and 16 MiB with 8 MiB
 blocks reached 4,885,851 bytes. The winning archive holds 144 anchor pages,
-about 9.4 Mbp, so the 16 MiB cap is not fully consumed. This is a tuning win on
-one pangenome, not a new compression law; the opt-in profile has not been
-tested on other species or read data. The demonstrated advantages are pure-Java
-implementation, byte-exact round trips, an indexed query interface, and a
-bounded-memory mode, not universal compression superiority.
+about 9.4 Mbp, so the 16 MiB cap is not fully consumed. This is a tuning result
+that replicates on three *Enterobacteriaceae* pangenomes, not a new compression
+law; the opt-in profile has not been tested on read data or outside this
+bacterial family. The demonstrated advantages are pure-Java implementation,
+byte-exact round trips, an indexed query interface, and a bounded-memory mode,
+not universal compression superiority.
 
 **Query workload.** A separate workload served 13 deterministic 2,000-base
 slices from the same pangenome, each in a fresh process. The tuned profile
@@ -216,14 +251,20 @@ capability with workload-dependent value, not an automatic speedup.
   the two sets are not directly comparable.
 - GeCo3 level 9 is not a practical baseline under the 180 s cap, and the
   reported timeouts describe the cap rather than the tool's best size.
-- HyperGraSS with the default profile does not beat xz on the 121.8 MB
-  pangenome; the anchor bank is capped below one record's length, so
+- HyperGraSS with the default profile does not beat xz on any of the three
+  120 Mbp pangenomes; the anchor bank is capped below one record's length, so
   cross-record redundancy is only partly captured. The opt-in `--pangenome`
-  profile does beat xz on that input, but it has been measured on one pangenome
-  from one species.
-- The scale test is one pangenome from one species. Most profiles have one
-  measured run; the two best ablation configurations were repeated with
-  byte-identical archives, while wall times varied by up to 2.5x across runs.
+  profile does beat xz on all three, but they are all from one bacterial
+  family, and each independent dataset has one measured run.
+- The scale test covers three pangenomes from one bacterial family. Most
+  profiles have one measured run; the two best ablation configurations were
+  repeated with byte-identical archives, while wall times varied by up to 2.5x
+  across runs.
+- The specialized comparison is one run on one sequence. JARVIS3 level 26 and
+  GeCo3 level 9 were infeasible at this scale under the 2 GiB container and
+  180 s corpus conditions, so it is not a comparison against either tool's
+  maximum setting. The specialized tools received header-free sequence input,
+  which slightly favors them.
 - The query workload is one run of 13 slices on one host. It does not measure
   repeated queries, concurrency, or a long-lived server; JVM/Python startup is
   included in every query.

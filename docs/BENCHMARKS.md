@@ -14,6 +14,11 @@ workload is reported separately in [`END-TO-END.md`](END-TO-END.md).
    multi-strain *E. coli* RefSeq pangenome, complete multi-FASTA input
    contract, including `--lean` under `-Xmx8m`.
 
+Replication on two additional pangenomes is reported separately in
+[`INDEPENDENT.md`](INDEPENDENT.md); the specialized-compressor scale check is
+in [`SPECIALIZED.md`](SPECIALIZED.md). Those documents have their own protocols
+and are not folded into the tables below.
+
 The corpus is a held-out benchmark conducted in this workspace. The datasets
 were selected for size and record structure before these measurements, not for
 observed compressibility. They are not a random sample of all genomes, and the

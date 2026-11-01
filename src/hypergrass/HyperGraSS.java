@@ -57,6 +57,8 @@ public final class HyperGraSS {
         public boolean optimize = false;
         public int blockSizeBytes = DEFAULT_BLOCK_BYTES;
         public int maxAnchorBases = CanonicalSyncmerEngine.DEFAULT_MAX_ANCHOR_BASES;
+        public boolean anchorSinglePage = false;
+        public boolean bounded = false;
 
         public static CompressOptions defaults() {
             return new CompressOptions();
@@ -120,9 +122,90 @@ public final class HyperGraSS {
             compressStreamingLean(input, output);
             return;
         }
+        if (opts.bounded) {
+            compressFileBounded(input, output, opts);
+            return;
+        }
         byte[] raw = Files.readAllBytes(input);
         byte[] compressed = compressBytes(raw, opts);
         Files.write(output, compressed);
+    }
+
+    /**
+     * Two-pass bounded-memory compressor for the anchor-bank format. Pass one slices and
+     * factorizes the file one block at a time to build the anchor bank; pass two re-reads and
+     * encodes each block. The input and the full chunk set are never resident together.
+     */
+    public static void compressFileBounded(Path input, Path output, CompressOptions opts) throws IOException {
+        int blockBytes = (!opts.leanMode
+                && opts.blockSizeBytes == DEFAULT_BLOCK_BYTES
+                && Files.size(input) >= 16 * 1024 * 1024)
+                ? (2 * 1024 * 1024)
+                : opts.blockSizeBytes;
+        FastaStreamFactorizer.FilePartition part = FastaStreamFactorizer.partitionFile(input, blockBytes);
+        List<BlockSlice> slices = part.slices;
+        int numBlocks = slices.size();
+
+        try (FileChannel ch = FileChannel.open(input, StandardOpenOption.READ)) {
+            CanonicalSyncmerEngine.AnchorBankBuilder builder =
+                    new CanonicalSyncmerEngine.AnchorBankBuilder(opts.maxAnchorBases, part.size);
+            long totalDna = 0L;
+            int totalRecords = 0;
+            for (BlockSlice s : slices) {
+                FactorizedChunk chunk = factorizeSlice(ch, s);
+                totalDna += chunk.dnaLen;
+                totalRecords = Math.max(totalRecords, s.firstRecordIndex + s.recordCount);
+                builder.addChunk(chunk);
+            }
+            if (part.size == 0) {
+                totalRecords = 0;
+            }
+            boolean useAnchor = opts.maxAnchorBases > 0
+                    && totalDna >= CanonicalSyncmerEngine.K * 2L;
+            AnchorBank bank = useAnchor ? builder.finish() : null;
+            // Match the in-memory path: polish the anchor to the cross-genome majority base.
+            // Votes are accumulated by streaming the slices again, so no chunk is retained.
+            if (bank != null && bank.length > 0 && numBlocks > 1
+                    && CanonicalSyncmerEngine.consensusEnabled()) {
+                for (int pass = 0; pass < CanonicalSyncmerEngine.CONSENSUS_PASSES; pass++) {
+                    byte[] votes = new byte[bank.length << 2];
+                    for (BlockSlice s : slices) {
+                        FactorizedChunk chunk = factorizeSlice(ch, s);
+                        CanonicalSyncmerEngine.accumulateAnchorVotes(
+                                bank, chunk.dnaBases, chunk.dnaLen, votes);
+                    }
+                    bank = CanonicalSyncmerEngine.polishAnchor(bank, votes);
+                }
+            }
+
+            List<BlockDirEntry> dir = new ArrayList<>(numBlocks);
+            byte[][] encodedBlocks = new byte[numBlocks][];
+            for (int i = 0; i < numBlocks; i++) {
+                BlockSlice s = slices.get(i);
+                FactorizedChunk chunk = factorizeSlice(ch, s);
+                encodedBlocks[i] = encodeChunkPayload(chunk, bank, false);
+                BlockDirEntry e = new BlockDirEntry();
+                e.firstRecordIdx = s.firstRecordIndex;
+                e.recordCount = s.recordCount;
+                e.firstRecordBaseOffset = s.firstRecordBaseOffset;
+                e.blockSeqChars = chunk.totalSeqChars;
+                dir.add(e);
+            }
+            byte[] archive = serializeMultiBlockArchive(
+                    part.size, part.crc32, totalRecords, totalDna, dir, encodedBlocks,
+                    bank, bank != null && bank.length > 0, opts);
+            Files.write(output, archive);
+        }
+    }
+
+    private static FactorizedChunk factorizeSlice(FileChannel ch, BlockSlice slice) throws IOException {
+        int len = slice.endByte - slice.startByte;
+        if (len == 0) {
+            return FastaStreamFactorizer.factorize(new byte[0], 0, 0);
+        }
+        ByteBuffer buf = ByteBuffer.allocate(len);
+        readFully(ch, slice.startByte, buf);
+        return FastaStreamFactorizer.factorize(buf.array(), 0, len);
     }
 
     /** Decompresses a .hgs archive on disk to output path, verifying CRC-32 integrity. */
@@ -137,10 +220,80 @@ public final class HyperGraSS {
                 decompressStreaming(ch, output, modeFlags);
                 return;
             }
+            if ((modeFlags & FLAG_COMPACT_SINGLE) == 0) {
+                decompressMultiBlockStreaming(ch, output, modeFlags);
+                return;
+            }
         }
         byte[] comp = Files.readAllBytes(archive);
         byte[] raw = decompressBytes(comp);
         Files.write(output, raw);
+    }
+
+    /**
+     * Streaming decompressor for multi-block archives: decodes the anchor once, then decodes and
+     * writes one block at a time. Peak heap is one compressed block plus its DNA and raw bytes.
+     */
+    private static void decompressMultiBlockStreaming(
+            FileChannel ch, Path output, int modeFlags) throws IOException {
+        boolean hasAnchor = (modeFlags & FLAG_HAS_ANCHOR) != 0;
+        boolean leanMode = (modeFlags & FLAG_LEAN_MODE) != 0;
+        ParsedFooter footer = readFooterFromChannel(ch);
+        if (footer.entries.isEmpty()) {
+            throw new IllegalStateException("Archive has no blocks");
+        }
+        long firstBlockOffset = footer.entries.get(0).fileOffset;
+
+        byte[] anchorBases = null;
+        int[][] globalDonors = CanonicalSyncmerEngine.EMPTY_DONORS;
+        if (hasAnchor) {
+            int headerLen = (int) (firstBlockOffset - 5L);
+            ByteBuffer headerBuf = ByteBuffer.allocate(headerLen);
+            readFully(ch, 5L, headerBuf);
+            ByteIn in = new ByteIn(headerBuf.array());
+            boolean fast2Bit = (in.readByte() == 0);
+            int anchorLen = in.readVarInt();
+            int numPages = in.readVarInt();
+            globalDonors = CanonicalSyncmerEngine.readGlobalDonors(in).globalDonors;
+            int[] pageBaseLens = new int[numPages];
+            int[] pageByteLens = new int[numPages];
+            for (int p = 0; p < numPages; p++) {
+                pageBaseLens[p] = in.readVarInt();
+                pageByteLens[p] = in.readVarInt();
+            }
+            anchorBases = new byte[anchorLen];
+            int anchorOffset = 0;
+            for (int p = 0; p < numPages; p++) {
+                byte[] pagePayload = in.readBytes(pageByteLens[p]);
+                byte[] dec = decodeAnchorPage(pagePayload, pageBaseLens[p], fast2Bit, leanMode);
+                System.arraycopy(dec, 0, anchorBases, anchorOffset, pageBaseLens[p]);
+                anchorOffset += pageBaseLens[p];
+            }
+        }
+
+        CRC32 crc = new CRC32();
+        long produced = 0L;
+        try (OutputStream out = new BufferedOutputStream(Files.newOutputStream(output), 1 << 20)) {
+            for (BlockDirEntry e : footer.entries) {
+                ByteBuffer blockBuf = ByteBuffer.allocate(e.compressedLen);
+                readFully(ch, e.fileOffset, blockBuf);
+                ByteIn bIn = new ByteIn(blockBuf.array());
+                FactorizedChunk chunk = FastaStreamFactorizer.readAuxMetadata(bIn);
+                byte[] dna = CanonicalSyncmerEngine.decodeBlockDna(
+                        bIn, chunk.dnaLen, anchorBases, globalDonors, leanMode);
+                byte[] recBytes = FastaStreamFactorizer.reconstructBytes(chunk, dna);
+                crc.update(recBytes, 0, recBytes.length);
+                out.write(recBytes);
+                produced += recBytes.length;
+            }
+        }
+        if (produced != footer.totalRawBytes) {
+            throw new IllegalStateException(
+                    "Raw byte count mismatch: expected " + footer.totalRawBytes + ", got " + produced);
+        }
+        if ((int) crc.getValue() != footer.crc32) {
+            throw new IllegalStateException("CRC-32 integrity check failed!");
+        }
     }
 
     /**
@@ -506,6 +659,31 @@ public final class HyperGraSS {
             }
         }
 
+        List<BlockDirEntry> dir = new ArrayList<>(numBlocks);
+        for (int i = 0; i < numBlocks; i++) {
+            BlockSlice s = slices.get(i);
+            BlockDirEntry e = new BlockDirEntry();
+            e.firstRecordIdx = s.firstRecordIndex;
+            e.recordCount = s.recordCount;
+            e.firstRecordBaseOffset = s.firstRecordBaseOffset;
+            e.blockSeqChars = chunks[i].totalSeqChars;
+            dir.add(e);
+        }
+        return serializeMultiBlockArchive(
+                rawByteLen, crcVal, totalRecords, totalDna, dir, encodedBlocks, bank, useAnchor, opts);
+    }
+
+    private static byte[] serializeMultiBlockArchive(
+            long rawByteLen,
+            int crcVal,
+            int totalRecords,
+            long totalDna,
+            List<BlockDirEntry> dir,
+            byte[][] encodedBlocks,
+            AnchorBank bank,
+            boolean useAnchor,
+            CompressOptions opts) {
+        int numBlocks = encodedBlocks.length;
         int modeFlags = 0;
         if (useAnchor) modeFlags |= FLAG_HAS_ANCHOR;
         if (opts.leanMode) modeFlags |= FLAG_LEAN_MODE;
@@ -517,7 +695,9 @@ public final class HyperGraSS {
         // Serialize page-partitioned AnchorBank + 1-hop Global Clade Catalog
         if (useAnchor) {
             int anchorLen = bank.length;
-            int pageSize = CanonicalSyncmerEngine.ANCHOR_PAGE_SIZE;
+            int pageSize = opts.anchorSinglePage
+                    ? Math.max(1, anchorLen)
+                    : CanonicalSyncmerEngine.ANCHOR_PAGE_SIZE;
             int numPages = (anchorLen + pageSize - 1) / pageSize;
             final boolean preferFast2Bit = (totalDna >= 12L * anchorLen);
 
@@ -528,14 +708,14 @@ public final class HyperGraSS {
                     int pStart = p * pageSize;
                     int pLen = Math.min(pageSize, anchorLen - pStart);
                     pageBaseLens[p] = pLen;
-                    encPages[p] = encodeAnchorPage(finalBank.bases, pStart, pLen, preferFast2Bit, opts.leanMode);
+                    encPages[p] = encodeAnchorPage(bank.bases, pStart, pLen, preferFast2Bit, opts.leanMode);
                 });
             } else {
                 for (int p = 0; p < numPages; p++) {
                     int pStart = p * pageSize;
                     int pLen = Math.min(pageSize, anchorLen - pStart);
                     pageBaseLens[p] = pLen;
-                    encPages[p] = encodeAnchorPage(finalBank.bases, pStart, pLen, preferFast2Bit, opts.leanMode);
+                    encPages[p] = encodeAnchorPage(bank.bases, pStart, pLen, preferFast2Bit, opts.leanMode);
                 }
             }
 
@@ -563,17 +743,10 @@ public final class HyperGraSS {
             }
         }
 
-        List<BlockDirEntry> dir = new ArrayList<>(numBlocks);
         for (int i = 0; i < numBlocks; i++) {
-            BlockSlice s = slices.get(i);
-            BlockDirEntry e = new BlockDirEntry();
+            BlockDirEntry e = dir.get(i);
             e.fileOffset = out.size();
             e.compressedLen = encodedBlocks[i].length;
-            e.firstRecordIdx = s.firstRecordIndex;
-            e.recordCount = s.recordCount;
-            e.firstRecordBaseOffset = s.firstRecordBaseOffset;
-            e.blockSeqChars = chunks[i].totalSeqChars;
-            dir.add(e);
             out.writeBytes(encodedBlocks[i]);
         }
 
@@ -675,11 +848,14 @@ public final class HyperGraSS {
             }
             anchorBases = new byte[anchorLen];
             final byte[] targetAnchor = anchorBases;
+            final int[] pageOffsets = new int[numPages + 1];
+            for (int p = 0; p < numPages; p++) {
+                pageOffsets[p + 1] = pageOffsets[p] + pageBaseLens[p];
+            }
             if (numPages > 1) {
                 IntStream.range(0, numPages).parallel().forEach(p -> {
                     byte[] dec = decodeAnchorPage(pageBytes[p], pageBaseLens[p], fast2Bit, leanMode);
-                    System.arraycopy(
-                            dec, 0, targetAnchor, p * CanonicalSyncmerEngine.ANCHOR_PAGE_SIZE, pageBaseLens[p]);
+                    System.arraycopy(dec, 0, targetAnchor, pageOffsets[p], pageBaseLens[p]);
                 });
             } else if (numPages == 1) {
                 byte[] dec = decodeAnchorPage(pageBytes[0], pageBaseLens[0], fast2Bit, leanMode);
@@ -975,13 +1151,17 @@ public final class HyperGraSS {
             int[] baseLens,
             boolean fast2Bit,
             boolean leanMode) throws IOException {
-        int pageSize = CanonicalSyncmerEngine.ANCHOR_PAGE_SIZE;
+        int pageOffset = 0;
         for (int p = 0; p < numPages; p++) {
-            if (!needed[p]) continue;
+            if (!needed[p]) {
+                pageOffset += baseLens[p];
+                continue;
+            }
             ByteBuffer pBuf = ByteBuffer.allocate(byteLens[p]);
             readFully(ch, offsets[p], pBuf);
             byte[] dec = decodeAnchorPage(pBuf.array(), baseLens[p], fast2Bit, leanMode);
-            System.arraycopy(dec, 0, anchorBases, p * pageSize, baseLens[p]);
+            System.arraycopy(dec, 0, anchorBases, pageOffset, baseLens[p]);
+            pageOffset += baseLens[p];
         }
     }
 
@@ -1138,6 +1318,10 @@ public final class HyperGraSS {
                         // Scale-tuned profile: 16 MiB anchor bank, 8 MiB blocks.
                         opts.maxAnchorBases = 16 * 1024 * 1024;
                         opts.blockSizeBytes = 8 * 1024 * 1024;
+                    } else if ("--anchor-single-page".equals(args[idx])) {
+                        opts.anchorSinglePage = true;
+                    } else if ("--bounded".equals(args[idx])) {
+                        opts.bounded = true;
                     } else if ("--anchor-mib".equals(args[idx])) {
                         if (idx + 1 >= args.length) {
                             printUsage();
@@ -1225,8 +1409,9 @@ public final class HyperGraSS {
 
     private static void printUsage() {
         System.out.println("HyperGraSS CLI (Java 21):");
-        System.out.println("  compress [--lean] [--single-thread] [--optimize] <input.fa> <output.hgs>");
+        System.out.println("  compress [--lean] [--single-thread] [--optimize] [--bounded] <input.fa> <output.hgs>");
         System.out.println("    --optimize: bounded extra size search for small archives; costs more CPU");
+        System.out.println("    --bounded: two-pass bounded-memory compression for large anchored archives");
         System.out.println("    --pangenome: scale-tuned 16 MiB anchor bank and 8 MiB blocks");
         System.out.println("    --anchor-mib N / --block-mib N: explicit tuning for large inputs");
         System.out.println("  decompress <input.hgs> <output.fa>");

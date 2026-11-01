@@ -26,6 +26,10 @@ benchmarks/pangenome/scale-run*.log
 benchmarks/preview.md
 benchmarks/ablation/runs/
 benchmarks/endtoend/runs/
+benchmarks/independent/data/*/pangenome.fasta
+benchmarks/independent/data/*/pangenome.fasta.tmp
+benchmarks/independent/runs/
+benchmarks/specialized/runs/
 benchmarks/panman/data/
 benchmarks/panman/logs/
 benchmarks/panman/panman/

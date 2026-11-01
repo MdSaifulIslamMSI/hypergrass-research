@@ -30,7 +30,17 @@ def fmt_mib(value) -> str:
     return f"{value / 1048576:.0f}" if isinstance(value, (int, float)) else "?"
 
 
-def query_records(profiles: list[dict]) -> str:
+def query_records(workload: dict, profiles: list[dict]) -> str:
+    if workload.get("queries_per_record", 1) > 1:
+        records = sorted({
+            query["record"]
+            for profile in profiles
+            for query in profile.get("queries", [])
+        })
+        return (
+            f"all {len(records)} records, "
+            f"{workload['queries_per_record']} offsets each"
+        )
     for profile in profiles:
         if profile.get("queries"):
             records = [query["record"] for query in profile["queries"]]
@@ -64,7 +74,7 @@ def tables(report: dict) -> str:
             count=workload["query_count"], length=fmt_int(workload["query_length"])
         )
     )
-    lines.append(f"| Records queried | {query_records(profiles)} |")
+    lines.append(f"| Records queried | {query_records(workload, profiles)} |")
     lines.append("| Restore | one full decompress per profile, from the scale report |")
     lines.append("")
 
@@ -95,11 +105,20 @@ def tables(report: dict) -> str:
             )
         )
     lines.append("")
-    lines.append(
-        "With 13 samples, the p95 column equals the maximum. Query time varies "
-        "strongly by record and profile; the median is not a constant-time "
-        "claim.\n"
-    )
+    count = workload["query_count"]
+    if count <= 20:
+        note = (
+            f"With {count} samples, the p95 column equals the maximum. Query time "
+            "varies strongly by record and profile; the median is not a constant-time "
+            "claim.\n"
+        )
+    else:
+        note = (
+            f"With {count} samples, the p95 column is the 95th-percentile "
+            "observation, not the maximum. Query time varies strongly by record and "
+            "profile; the median is not a constant-time claim.\n"
+        )
+    lines.append(note)
 
     analysis = report["analysis"]
     lines.append("### Query speedup\n")

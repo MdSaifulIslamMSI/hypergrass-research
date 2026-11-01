@@ -57,6 +57,22 @@ directly interchangeable.
 Both archives are byte-identical to run 1. Wall times differ by 15–30%, which
 is consistent with the timing variance already documented for the scale test.
 
+## Run 3: 32 MiB bank check
+
+The 16 MiB bank stored only 9.43 Mbp of anchors, so a larger cap should not
+change the archive unless selection was still hitting the cap. This run tested
+that prediction directly.
+
+| Bank | Block | Archive | Δ vs xz | Δ vs default | Compress | Decompress | Wall | Peak RSS | Exact |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| 32 MiB | 8 MiB | 4,885,851 B | −41.80% | −46.98% | 29.6 s | 10.2 s | 55.8 s | 1,194 MiB | yes |
+
+The archive is byte-identical to the 16 MiB / 8 MiB result: the same 12 blocks,
+144 anchor pages, and 9,434,480 anchor bases. Doubling the cap bought nothing
+and did not reduce RSS. This is a negative result for the "more bank is better"
+hypothesis and confirms that anchor selection, not the cap, is the binding
+constraint on this input.
+
 ## Findings
 
 1. **The 4 MiB bank was the ceiling.** Moving to 8 MiB reduced the archive from
@@ -70,10 +86,11 @@ is consistent with the timing variance already documented for the scale test.
    default**.
 4. **The 16 MiB cap is not fully consumed.** The winning archive contains 144
    anchor pages, about 9.4 Mbp of anchors, not the full 16 MiB. The bank
-   selection stops before the cap, so a larger cap alone is not a guarantee of
-   more anchors.
+   selection stops before the cap. Raising the cap to 32 MiB produced a
+   byte-identical archive, so more bank space alone does not buy more anchors.
 5. **The result is not marginal.** The tuned archive is 3.5 MB smaller than xz
-   on this input, with faster compression and decompression in the harness.
+   on this input, with faster compression than xz and faster compression and
+   decompression than the 4 MiB default. xz still restores faster.
 
 ## Query verification
 
@@ -85,7 +102,9 @@ coordinate error, not an archive failure.
 ## Limits
 
 - One pangenome from one species, one host, one full grid, and one repeat of the
-  two best configurations.
+  two best configurations. The grid was not repeated on another species; the
+  independent runs in [`INDEPENDENT.md`](INDEPENDENT.md) test only the tuned
+  profile, not the full grid.
 - xz was not rerun; its baseline comes from the same input and pinned tool.
 - Peak RSS includes compression and decompression together.
 - The ablation does not test whether the tuned profile generalizes to other
@@ -99,9 +118,10 @@ coordinate error, not an archive failure.
 javac -cp bin -d bin benchmarks/ablation/AnchorBankAblation.java
 python -B benchmarks/ablation/run.py --run-id anchor-ablation-1
 python -B benchmarks/ablation/run.py --run-id anchor-ablation-2 --banks 8,16 --blocks 8
+python -B benchmarks/ablation/run.py --run-id anchor-ablation-32 --banks 32 --blocks 8
 ```
 
 The harness and protocol are in [`benchmarks/ablation`](../benchmarks/ablation).
-Reports are written under `benchmarks/ablation/runs/`. The two published
+Reports are written under `benchmarks/ablation/runs/`. The three published
 `report.json` files are force-added as evidence; the work directories and
 archives remain gitignored.
