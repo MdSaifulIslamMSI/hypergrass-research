@@ -22,12 +22,15 @@ xz -9, while an opt-in 16 MiB bank / 8 MiB block profile is 41.8% smaller and
 answers exact record queries. The tuned profile replicated on two additional
 ~120 Mbp RefSeq pangenomes, *Salmonella enterica* (43.7% smaller than xz) and
 *Klebsiella pneumoniae* (46.2% smaller). A measured ablation attributes that
-result to the default's 4 MiB anchor-bank cap. On the identical sequence,
-however, JARVIS3 level 7 produced a 3,896,361-byte archive, 20.3% smaller than
-the tuned profile, so the xz margin is not a state-of-the-art DNA compression
-result. The contribution is a working system plus a reproducible measurement
-harness with byte-exact verification and explicit deviations; the results do
-not establish universal superiority over specialized compressors.
+result to the default's 4 MiB anchor-bank cap. An LZ77 plus range-coder gap
+channel then changes the specialized comparison: on the identical 120.1 Mbp
+sequence the tuned profile reaches 3,810,409 bytes, 2.21% below JARVIS3 level 7
+(3,896,361 bytes) at 9.3x its compression time, so the margin against a
+specialized DNA compressor is real but narrow. A 256 MiB bounded variant misses
+its archive-size and memory gates. The contribution is a working system plus a
+reproducible measurement harness with byte-exact verification and explicit
+deviations; the results do not establish universal superiority over
+specialized compressors.
 
 ## 1. Introduction
 
@@ -107,6 +110,14 @@ requested slice. The footer is Deflate-compressed when that is smaller.
 keeps per-block buffers bounded. The scale test measures the actual heap and
 peak RSS; the implementation does not claim a specific bound beyond what that
 test reports.
+
+`--bounded` is a two-pass path for the anchor-bank format: the input is
+factorized one block at a time, the anchor is built and polished by streaming
+the file again, and the seed index is rebuilt only after the vote buffer is
+released. On the 120.1 Mbp pangenome with 16 MiB blocks and a 192 MiB heap it
+peaks at 272.5 MiB and produces an archive 8.44% larger than the 64 MiB-block
+profile, so it misses both the 256 MiB and the 2% gates; 32 MiB and 64 MiB
+blocks exhaust the heap before the first block completes.
 
 ## 3. Evaluation protocol
 
@@ -212,12 +223,16 @@ normalized) and given to JARVIS3 level 7, GeCo3 levels 3 and 6, and xz -9. This
 input is slightly smaller than the complete multi-FASTA given to HyperGraSS, so
 the normalization favors the specialized tools. JARVIS3 level 7 produced
 3,896,361 bytes (0.260 bits/base) and restored the sequence exactly in 84.2 s,
-using 286 MiB peak RSS. That is 20.3% smaller than the tuned HyperGraSS archive,
-although HyperGraSS compressed faster (30.6 s versus 95.4 s) and restored faster
-(16.4 s versus 84.2 s). The scale result therefore does not show that
-HyperGraSS compresses pangenomes better than specialized DNA compressors; it
-shows that the tuned profile beats xz, a general-purpose baseline, by a wide
-margin, and that the margin over specialized tools is negative at this scale.
+using 286 MiB peak RSS. The tuned HyperGraSS profile, extended with an LZ77
+plus range-coder channel for variant gaps, produced **3,810,409 bytes** on the
+same input, **2.21% smaller**, and restored it exactly in 82.4 s. The cost is
+compression time and memory: 887.3 s versus 95.4 s and 999 MiB versus 286 MiB.
+The scale result therefore shows a narrow size win over a specialized DNA
+compressor at this scale, paid for with 9.3x the compression time, not the
+earlier 20.3% deficit. The 256 MiB bounded variant is a measured failure: 16 MiB
+blocks produce 4,131,860 bytes (+8.44%) and peak at 272.5 MiB, and 32 or 64 MiB
+blocks run out of heap under the cap, so it misses both the size and the
+compress-side memory gate.
 
 **Interpretation.** HyperGraSS is competitive at small and medium sequence-only
 scales and narrowly first on the completed corpus cells. With the default
@@ -229,8 +244,9 @@ about 9.4 Mbp, so the 16 MiB cap is not fully consumed. This is a tuning result
 that replicates on three *Enterobacteriaceae* pangenomes, not a new compression
 law; the opt-in profile has not been tested on read data or outside this
 bacterial family. The demonstrated advantages are pure-Java implementation,
-byte-exact round trips, an indexed query interface, and a bounded-memory mode,
-not universal compression superiority.
+byte-exact round trips, an indexed query interface, and a bounded-memory mode
+that is measured but misses its 256 MiB gate at 120 MB scale, not universal
+compression superiority.
 
 **Query workload.** A separate workload served 13 deterministic 2,000-base
 slices from the same pangenome, each in a fresh process. The tuned profile

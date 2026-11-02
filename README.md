@@ -232,11 +232,13 @@ Measured headlines, stated without rounding up:
 | Smallest archive on completed corpus cells | 7 of 7 datasets |
 | Median margin over the best completed baseline | +1.36% (range +0.56% to +17.52%) |
 | 121.8 MB pangenome, default HyperGraSS | 9,215,764 B, 13.22x, 45.9 s, 1,083 MiB peak RSS |
-| 121.8 MB pangenome, `--pangenome` (tuned) | **4,885,851 B, 24.93x**, 30.6 s, 1,008 MiB peak RSS |
+| 121.8 MB pangenome, `--pangenome` (tuned, multi-FASTA) | **4,885,851 B, 24.93x**, 30.6 s, 1,008 MiB peak RSS |
 | 121.8 MB pangenome, xz -9 | 8,394,900 B, 14.51x, 186.3 s, 738 MiB peak RSS |
 | 122.3 MB Salmonella pangenome, tuned | 3,443,600 B, 35.50x, 28.6 s, **43.7% smaller than xz** |
 | 124.5 MB Klebsiella pangenome, tuned | 3,464,423 B, 35.92x, 10.6 s, **46.2% smaller than xz** |
-| Same 120.1 Mbp sequence, JARVIS3 l7 | **3,896,361 B, 0.260 bits/base**, 95.4 s, 286 MiB peak RSS |
+| Same 120.1 Mbp sequence, tuned + LZ gap coder | **3,810,409 B, 0.254 bits/base, 31.52x**, 887.3 s, 999 MiB peak RSS |
+| Same 120.1 Mbp sequence, JARVIS3 l7 | 3,896,361 B, 0.260 bits/base, 95.4 s, 286 MiB peak RSS |
+| Same sequence, bounded 256 MiB attempt | 4,131,860 B, 272.5 MiB, 149.5 s; misses size and RSS gates |
 | 121.8 MB pangenome, `--lean` (`-Xmx8m`) | 28,910,764 B, 4.21x, 52 MiB peak RSS |
 | Verification | every round trip byte-exact; 3/3 record queries exact per HyperGraSS profile |
 
@@ -250,15 +252,19 @@ in those runs and answered exact record queries. xz decompressed faster on the
 original pangenome; restore time was mixed on the independent sets. The profile
 remains opt-in because three pangenomes from one bacterial family, one host,
 and one run each are not enough evidence to change the default for every
-input. The bounded-memory mode fits a small heap at a large size cost.
+input. The bounded-memory mode does not clear its gates: at 16 MiB blocks it
+needs 272.5 MiB and gives back 8.44% in size, and larger blocks run out of heap
+under the 256 MiB cap.
 
-**This is not a compression breakthrough.** On the identical 120.1 Mbp
-sequence, JARVIS3 level 7 produced a **3,896,361-byte archive, 20.3% smaller
-than the tuned HyperGraSS archive** (4,885,851 B), and it round-tripped exactly.
-HyperGraSS compressed about 3x faster and restored about 5x faster in that
-comparison, so the trade is speed for size, not an outright win. The 41.8% xz
-margin is real, but xz is a general-purpose baseline, not the state of the art
-for DNA. See [`docs/SPECIALIZED.md`](docs/SPECIALIZED.md).
+**The margin over the best specialized tool is real but narrow.** On the
+identical 120.1 Mbp sequence, the tuned HyperGraSS archive is **2.21% smaller
+than JARVIS3 level 7** (3,810,409 versus 3,896,361 B), and both round-trip
+exactly. The cost is 9.3x longer compression (887.3 versus 95.4 s) and 3.5x the
+compression RSS (999 versus 286 MiB); restore time is equal (82.4 versus
+84.2 s). That is a size win, not a speed win, and it is not a compression
+breakthrough: 2.21% on one pangenome is a narrow margin, and the 41.8% xz
+margin is measured against a general-purpose baseline rather than the state of
+the art for DNA. See [`docs/SPECIALIZED.md`](docs/SPECIALIZED.md).
 
 On the query workload (13 exact 2,000-base slices), the tuned profile tied xz's
 query latency (1.35 s versus 1.36 s median) while storing 42% fewer bytes, but

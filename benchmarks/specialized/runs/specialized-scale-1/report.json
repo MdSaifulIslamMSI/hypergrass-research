@@ -1,0 +1,148 @@
+{
+  "schema_version": 1,
+  "kind": "specialized-scale-test",
+  "run_id": "specialized-scale-1",
+  "started_utc": "2026-11-01T11:33:37.704047+00:00",
+  "image_id": "sha256:d6ca62a74e3724172a5c49720e28ab2066eb31b3c965dadfb6220e112dbc3bb3",
+  "source": "benchmarks\\pangenome\\data\\pangenome.fasta",
+  "sliced": false,
+  "input": {
+    "fasta": {
+      "path": "benchmarks\\pangenome\\data\\pangenome.fasta",
+      "size_bytes": 121825884,
+      "sha256": "f03f0dd10c541b99ddf63d18053e3a9c6009910a81700ba18f15e24dcb7d2285",
+      "records": 24,
+      "bases": 120108223
+    },
+    "sequence": {
+      "path": "benchmarks\\specialized\\runs\\specialized-scale-1\\input.seq",
+      "size_bytes": 120108223,
+      "bases": 120108223,
+      "sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb",
+      "non_acgt_bases_masked": 2357,
+      "base_counts": {
+        "A": 29610181,
+        "C": 30430258,
+        "G": 30463227,
+        "T": 29602200
+      }
+    },
+    "normalization": "headers removed, letters uppercased, non-ACGT replaced with A; both tools receive this sequence and are verified against it"
+  },
+  "profiles": [
+    "jarvis3-l7",
+    "geco3-l3",
+    "geco3-l6",
+    "xz-9"
+  ],
+  "results": [
+    {
+      "profile": "jarvis3-l7",
+      "kind": "jarvis3",
+      "level": "7",
+      "input_bytes": 120108223,
+      "input_sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb",
+      "input_bases": 120108223,
+      "status": "success",
+      "roundtrip_ok": true,
+      "artifact_bytes": 3896361,
+      "bits_per_base": 0.25952334670707766,
+      "wall_seconds": 95.38808756200001,
+      "cpu_seconds": 41.043310999999996,
+      "peak_rss_bytes": 299630592,
+      "error": null,
+      "returncode": 0,
+      "decompress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 84.23333504399989,
+        "cpu_seconds": 34.478842,
+        "peak_rss_bytes": 299630592,
+        "error": null
+      }
+    },
+    {
+      "profile": "geco3-l3",
+      "kind": "geco3",
+      "level": "3",
+      "input_bytes": 120108223,
+      "input_sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb",
+      "input_bases": 120108223,
+      "status": "success",
+      "roundtrip_ok": true,
+      "artifact_bytes": 14389043,
+      "bits_per_base": 0.958405187628161,
+      "wall_seconds": 506.753102806,
+      "cpu_seconds": 491.075734,
+      "peak_rss_bytes": 135790592,
+      "error": null,
+      "returncode": 0,
+      "decompress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 488.50211659900015,
+        "cpu_seconds": 474.391115,
+        "peak_rss_bytes": 135397376,
+        "error": null
+      }
+    },
+    {
+      "profile": "geco3-l6",
+      "kind": "geco3",
+      "level": "6",
+      "input_bytes": 120108223,
+      "input_sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb",
+      "input_bases": 120108223,
+      "status": "success",
+      "roundtrip_ok": true,
+      "artifact_bytes": 8409358,
+      "bits_per_base": 0.5601187189323416,
+      "wall_seconds": 534.4391077849996,
+      "cpu_seconds": 520.277324,
+      "peak_rss_bytes": 538312704,
+      "error": null,
+      "returncode": 0,
+      "decompress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 357.6831257159997,
+        "cpu_seconds": 341.555173,
+        "peak_rss_bytes": 538181632,
+        "error": null
+      }
+    },
+    {
+      "profile": "xz-9",
+      "kind": "xz",
+      "level": "9",
+      "input_bytes": 120108223,
+      "input_sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb",
+      "input_bases": 120108223,
+      "status": "success",
+      "roundtrip_ok": true,
+      "artifact_bytes": 5663640,
+      "bits_per_base": 0.3772357867620771,
+      "wall_seconds": 144.32492510999964,
+      "cpu_seconds": 144.762367,
+      "peak_rss_bytes": 765067264,
+      "error": null,
+      "returncode": 0,
+      "decompress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 6.619265509999877,
+        "cpu_seconds": 0.7162569999999999,
+        "peak_rss_bytes": 193593344,
+        "error": null
+      }
+    }
+  ],
+  "status": "success",
+  "baseline": {
+    "profile": "xz-9",
+    "archive_bytes": 8394900,
+    "source": "benchmarks\\pangenome\\runs\\pangenome-scale-2\\report.json"
+  },
+  "failures": 0,
+  "finished_utc": "2026-11-01T12:10:56.286746+00:00"
+}

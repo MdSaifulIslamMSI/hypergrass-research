@@ -1,25 +1,58 @@
 # Entropy floor for the 100:1 target
 
-Input: 120,108,223 bases, 24 genomes.
+Input: 120,108,223 bases, 24 genomes. Target: 1,200,000 B (100:1).
 
-| Term | Bytes | Basis |
+## Measured decomposition of the current archive
+
+The tuned archive is **3,810,409 B** (0.254 bits/base), 2.21% smaller than
+JARVIS3 level 7 (3,896,361 B). It splits into two parts:
+
+| Part | Bytes | Basis |
 |---|---:|---|
-| Anchor content (9,434,480 bases) | 2,129,748 | 1.806 bits/base |
-| SNP positions (1,577,229 instances) | 1,514,899 | independence model |
-| SNP alleles (>=1 bit each) | 197,154 | lower bound |
-| Literal bases (404,521) | 91,317 | measured DNA rate |
-| **Case A total** | **3,933,118** | anchor + edits |
-| Case B total (one genome + 23 edited) | 2,869,971 | reference + edits |
+| Anchor (9,434,480 bases) + container | 2,257,234 | 1.914 bits/base |
+| Gap (variant distances) | 882,215 | LZ77 + range coder |
+| Strand bits | 239,808 | packed |
+| Diff (SNP alleles) | 160,236 | range coder |
+| Geom (match geometry) | 143,771 | digit planes |
+| Mask | 80,818 | range coder |
+| Literals | 30,647 | QCRM residuals |
+| Donor, counts, modes | 15,680 | varints |
+| **Total** | **3,810,409** | |
 
-Target: 1,200,000 B. Current: 4,153,891 B. JARVIS3 l7: 3,896,361 B.
+Two measured facts bound the target:
 
-The SNP-position term alone is 1.262x the entire target budget.
+1. **The non-anchor channels alone are 1,553,175 B**, which is 1.29x the entire
+   1.2 MB budget. Reaching 100:1 would require coding all variant metadata for
+   free *and* shrinking it by 23% on top.
+2. **The anchor is 1.88x the target by itself.** Fitting the 9,434,480 distinct
+   anchor bases in 1.2 MB requires 1.018 bits/base. The best measured DNA rate in
+   this project is QCRM at 1.806 bits/base on a single *E. coli* genome, and
+   JARVIS3 reaches 2.035 bits/base on this anchor. No measured DNA coder is
+   within 1.7x of 1.018 bits/base.
+
+## Earlier estimate, corrected
+
+An earlier version of this note summed an anchor term (1.806 bits/base), an
+independence-model SNP-position term, one bit per SNP allele, and a literal
+term to 3,933,118 B and called it a floor. That was an *estimate*, not a bound,
+and the finished archive beats it by 122,709 B: the independence model charged
+1,514,899 B for SNP positions, while the measured gap + diff + geom + mask
+channels total 1,267,040 B. It should not have been labelled a floor.
 
 ## Verdict
 
 **infeasible**
 
-- QCRM's measured 1.806 bits/base on a single 5.07 Mbp E. coli genome is the best DNA rate measured in this project and is used as the floor for distinct sequence; no known method compresses E. coli DNA below ~1.7 bits/base.
-- SNP positions are bounded by the independence model, which gives shared variants no credit; phylogenetic sharing can only lower this term.
-- The anchor bank (9,434,480 bases) is the distinct non-redundant content of the 24 genomes; any faithful archive must convey it or convey a reference genome plus the same amount of variation.
-- Literal bases are the unmatched (indel/accessory) bases measured in the current archive; they are in addition to the SNP instances.
+- 100:1 needs 1.018 bits/base on the distinct anchor content alone, 1.77x better
+  than the best DNA rate measured here and below every specialized tool measured
+  on this input.
+- Even with a free anchor, the measured variant metadata is already 29% over the
+  whole budget.
+- The gap from the current archive to 1.2 MB is 3.18x. Closing it would need a
+  coding gain larger than the entire gain HyperGraSS achieved over xz (5,663,640
+  -> 3,810,409 B, 1.49x), repeated more than four times.
+
+These are measured bounds from four coders and a channel decomposition, not an
+information-theoretic proof. A radically different representation (for example,
+one that reconstructs genomes from a generative model) could in principle do
+better, but no measured method is close.

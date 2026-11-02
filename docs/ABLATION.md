@@ -35,6 +35,11 @@ directly interchangeable.
 
 ## Run 1: full grid
 
+> These numbers predate the auxiliary LZ77 coder and use a different block
+> layout. The current tuned result is 3,810,409 B at 64 MiB blocks and a 9 MiB
+> anchor; see [`SPECIALIZED.md`](SPECIALIZED.md). The table is kept as the
+> controlled anchor/block ablation it was.
+
 | Bank | Block | Archive | Ratio | Bits/byte | Δ vs xz | Δ vs default | Compress | Decompress | Wall | Peak RSS | Exact |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
 | 4 MiB | 2 MiB | 9,215,764 B | 13.22x | 0.605 | +9.78% | 0.00% | 46.2 s | 40.1 s | 99.3 s | 1,263 MiB | yes |

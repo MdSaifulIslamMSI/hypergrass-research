@@ -1,0 +1,20 @@
+{
+  "verdict": "pass",
+  "problems": [],
+  "original": "benchmarks\\specialized\\runs\\hypergrass-lz-1\\input.seq",
+  "restored": "benchmarks\\specialized\\runs\\hypergrass-lz-1\\ops\\hypergrass-pangenome\\restored.seq",
+  "archive": "benchmarks\\specialized\\runs\\hypergrass-lz-1\\ops\\hypergrass-pangenome\\archive.hgs",
+  "original_bytes": 120108223,
+  "restored_bytes": 120108223,
+  "archive_bytes": 3810409,
+  "bytes_compared": 120108223,
+  "byte_identical": true,
+  "first_mismatch_offset": null,
+  "original_sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb",
+  "restored_sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb",
+  "archive_sha256": "c8d27a6fb00e3ef0808d1a22e3de65534f85a8e319f15d5cab32f074256cf991",
+  "expected_sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb",
+  "chunk_bytes": 8388608,
+  "seconds": 1.262,
+  "comparison": "streaming byte comparison independent of the codec"
+}

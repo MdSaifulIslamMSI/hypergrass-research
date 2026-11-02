@@ -1,0 +1,20 @@
+{
+  "verdict": "pass",
+  "problems": [],
+  "original": "benchmarks\\specialized\\runs\\hypergrass-lz-1\\input.seq",
+  "restored": "benchmarks\\specialized\\runs\\hypergrass-lz-1\\ops\\hypergrass-bounded-256m\\restored.seq",
+  "archive": "benchmarks\\specialized\\runs\\hypergrass-lz-1\\ops\\hypergrass-bounded-256m\\archive.hgs",
+  "original_bytes": 120108223,
+  "restored_bytes": 120108223,
+  "archive_bytes": 4131860,
+  "bytes_compared": 120108223,
+  "byte_identical": true,
+  "first_mismatch_offset": null,
+  "original_sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb",
+  "restored_sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb",
+  "archive_sha256": "3351848c2d93f991ff1e81c27002dd04eb7f3815379ea598d336303863694ac8",
+  "expected_sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb",
+  "chunk_bytes": 8388608,
+  "seconds": 0.988,
+  "comparison": "streaming byte comparison independent of the codec"
+}
