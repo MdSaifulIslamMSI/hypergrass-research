@@ -26,11 +26,11 @@ result to the default's 4 MiB anchor-bank cap. An LZ77 plus range-coder gap
 channel then changes the specialized comparison: on the identical 120.1 Mbp
 sequence the tuned profile reaches 3,810,409 bytes, 2.21% below JARVIS3 level 7
 (3,896,361 bytes) at 9.3x its compression time, so the margin against a
-specialized DNA compressor is real but narrow. A 256 MiB bounded variant misses
-its archive-size and memory gates. The contribution is a working system plus a
-reproducible measurement harness with byte-exact verification and explicit
-deviations; the results do not establish universal superiority over
-specialized compressors.
+specialized DNA compressor is real but narrow. A 256 MiB bounded variant meets
+its RSS and speed gates but misses the 2% archive-size gate. The contribution
+is a working system plus a reproducible measurement harness with byte-exact
+verification and explicit deviations; the results do not establish universal
+superiority over specialized compressors.
 
 ## 1. Introduction
 
@@ -114,10 +114,16 @@ test reports.
 `--bounded` is a two-pass path for the anchor-bank format: the input is
 factorized one block at a time, the anchor is built and polished by streaming
 the file again, and the seed index is rebuilt only after the vote buffer is
-released. On the 120.1 Mbp pangenome with 16 MiB blocks and a 192 MiB heap it
-peaks at 272.5 MiB and produces an archive 8.44% larger than the 64 MiB-block
-profile, so it misses both the 256 MiB and the 2% gates; 32 MiB and 64 MiB
-blocks exhaust the heap before the first block completes.
+released. The bounded encoder packs the four consensus counters per anchor
+position into 4 bits and carries a 256 KiB gap history across block boundaries
+(aux mode 7), which lets it run at a 160 MiB heap. On the 120.1 Mbp pangenome
+with 16 MiB blocks it produces 3,997,232 bytes, 4.90% above the 64 MiB-block
+profile, and peaks at 252.7 MiB compressing (a 3.3 MiB margin) and 221.2 MiB
+restoring, so it meets the 256 MiB RSS and 2x speed gates but misses the 2%
+size gate by 110,615 bytes. The 4-bit counters saturate at 15 votes, which costs 2,218
+bytes against exact 8-bit counts; the unbounded path keeps the exact form.
+32 MiB blocks at a 224 MiB heap complete but peak at 272 MiB RSS, and 64 MiB
+blocks exhaust a 192 MiB heap before the first block completes.
 
 ## 3. Evaluation protocol
 
@@ -229,10 +235,12 @@ same input, **2.21% smaller**, and restored it exactly in 82.4 s. The cost is
 compression time and memory: 887.3 s versus 95.4 s and 999 MiB versus 286 MiB.
 The scale result therefore shows a narrow size win over a specialized DNA
 compressor at this scale, paid for with 9.3x the compression time, not the
-earlier 20.3% deficit. The 256 MiB bounded variant is a measured failure: 16 MiB
-blocks produce 4,131,860 bytes (+8.44%) and peak at 272.5 MiB, and 32 or 64 MiB
-blocks run out of heap under the cap, so it misses both the size and the
-compress-side memory gate.
+earlier 20.3% deficit. The 256 MiB bounded variant now meets the memory and
+speed gates: 16 MiB blocks, a 160 MiB heap, packed 4-bit vote counters, and a
+256 KiB cross-block gap history produce 3,997,232 bytes (+4.90%) at 252.7 MiB
+compress RSS and 221.2 MiB restore RSS. It still misses the 2% size gate by
+110,615 bytes; 32 MiB blocks reach 272 MiB RSS and 64 MiB blocks exhaust the
+heap, so 16 MiB is the largest block the RSS cap allows.
 
 **Interpretation.** HyperGraSS is competitive at small and medium sequence-only
 scales and narrowly first on the completed corpus cells. With the default
@@ -245,7 +253,7 @@ that replicates on three *Enterobacteriaceae* pangenomes, not a new compression
 law; the opt-in profile has not been tested on read data or outside this
 bacterial family. The demonstrated advantages are pure-Java implementation,
 byte-exact round trips, an indexed query interface, and a bounded-memory mode
-that is measured but misses its 256 MiB gate at 120 MB scale, not universal
+that holds 256 MiB RSS at 120 MB scale with a 4.9% size penalty, not universal
 compression superiority.
 
 **Query workload.** A separate workload served 13 deterministic 2,000-base

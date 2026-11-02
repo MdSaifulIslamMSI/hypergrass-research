@@ -238,7 +238,8 @@ Measured headlines, stated without rounding up:
 | 124.5 MB Klebsiella pangenome, tuned | 3,464,423 B, 35.92x, 10.6 s, **46.2% smaller than xz** |
 | Same 120.1 Mbp sequence, tuned + LZ gap coder | **3,810,409 B, 0.254 bits/base, 31.52x**, 887.3 s, 999 MiB peak RSS |
 | Same 120.1 Mbp sequence, JARVIS3 l7 | 3,896,361 B, 0.260 bits/base, 95.4 s, 286 MiB peak RSS |
-| Same sequence, bounded 256 MiB attempt | 4,131,860 B, 272.5 MiB, 149.5 s; misses size and RSS gates |
+| Same sequence, bounded 256 MiB attempt | 4,131,860 B, 272.5 MiB, 149.5 s; missed size and RSS gates |
+| Same sequence, bounded 256 MiB tuned | 3,997,232 B, 252.7 MiB, 149.5 s; misses only the 2% size gate (+4.90%) |
 | 121.8 MB pangenome, `--lean` (`-Xmx8m`) | 28,910,764 B, 4.21x, 52 MiB peak RSS |
 | Verification | every round trip byte-exact; 3/3 record queries exact per HyperGraSS profile |
 
@@ -252,9 +253,10 @@ in those runs and answered exact record queries. xz decompressed faster on the
 original pangenome; restore time was mixed on the independent sets. The profile
 remains opt-in because three pangenomes from one bacterial family, one host,
 and one run each are not enough evidence to change the default for every
-input. The bounded-memory mode does not clear its gates: at 16 MiB blocks it
-needs 272.5 MiB and gives back 8.44% in size, and larger blocks run out of heap
-under the 256 MiB cap.
+input. The bounded-memory mode now holds the 256 MiB cap: at 16 MiB blocks with
+a 256 KiB cross-block gap history and packed vote counters it peaks at
+252.7 MiB compressing and 221.2 MiB restoring, but gives back 4.90% in size,
+so the 2% size gate still fails; larger blocks exceed the RSS cap.
 
 **The margin over the best specialized tool is real but narrow.** On the
 identical 120.1 Mbp sequence, the tuned HyperGraSS archive is **2.21% smaller

@@ -1,0 +1,20 @@
+{
+  "verdict": "pass",
+  "problems": [],
+  "original": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\hypergrass-lz-2\\input.seq",
+  "restored": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\hypergrass-lz-2\\ops\\hypergrass-bounded-256m\\restored.seq",
+  "archive": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\hypergrass-lz-2\\ops\\hypergrass-bounded-256m\\archive.hgs",
+  "original_bytes": 120108223,
+  "restored_bytes": 120108223,
+  "archive_bytes": 3995014,
+  "bytes_compared": 120108223,
+  "byte_identical": true,
+  "first_mismatch_offset": null,
+  "original_sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb",
+  "restored_sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb",
+  "archive_sha256": "7db73db2ca3b435c135a7b0075c8a89bcea4061a91b8cdb459d1fa1092b5d435",
+  "expected_sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb",
+  "chunk_bytes": 8388608,
+  "seconds": 0.393,
+  "comparison": "streaming byte comparison independent of the codec"
+}

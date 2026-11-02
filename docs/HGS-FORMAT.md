@@ -60,10 +60,17 @@ Mode flags:
 | `0x01` | `HAS_ANCHOR` | Multi-block layout with an anchor bank. |
 | `0x02` | `LEAN_MODE` | Streaming/low-memory encoder settings. |
 | `0x04` | `COMPACT_SINGLE` | Compact single-block layout. |
+| `0x08` | `SHARED_GAP` | Block gap channels share a 256 KiB LZ history across blocks. |
 
 `COMPACT_SINGLE` and `HAS_ANCHOR` are mutually exclusive. `COMPACT_SINGLE`
 implies no anchor bank. `LEAN_MODE` affects the payload encoding choices, not
-the framing.
+the framing. `SHARED_GAP` means each block's gap channel may be an `aux` mode-7
+stream: `uvarint rawLen`, `uvarint compLen`, then `compLen` bytes of an
+LZ77+range-coded stream decoded against the preceding 256 KiB of gap plaintext.
+The encoder appends only the block's chosen gap plaintext to the history, and
+the decoder appends the plaintext it recovered, so both sides rebuild the same
+dictionary deterministically. The bounded multiblock path sets this flag; a
+reader that ignores it cannot decode mode-7 gap streams.
 
 ## 4. Compact single-block layout
 
@@ -273,7 +280,7 @@ bytes and reject truncated or overlong input.
 - The 1.0.0 decoder rejects malformed magic, footer magic, impossible lengths,
   truncated varints, and directory entries that point outside the file. It
   currently ignores reserved header flag bits; a future or independent reader
-  should reject any bit outside `0x07` rather than guess at its meaning.
+  should reject any bit outside `0x0F` rather than guess at its meaning.
 - A round trip is successful only when the restored byte sequence is identical
   to the input, not merely when it decodes without error.
 

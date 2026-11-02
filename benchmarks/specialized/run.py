@@ -66,8 +66,27 @@ PROFILES = (
             "--pangenome", "--bounded", "--single-thread", "--anchor-single-page",
             "--block-mib", "16", "--anchor-mib", "9",
         ],
-        "jvm": ["-Dhypergrass.matchMin=104", "-Dhypergrass.rangeModel=count"],
+        "jvm": [
+            "-Dhypergrass.matchMin=104", "-Dhypergrass.rangeModel=count",
+            "-Dhypergrass.boundedVotes8=true",
+        ],
         "heap": "192m",
+        "memory": "256m",
+    },
+    {
+        "id": "hypergrass-bounded-256m-tuned",
+        "kind": "hypergrass",
+        "level": "bounded-256m",
+        "options": [
+            "--pangenome", "--bounded", "--single-thread", "--anchor-single-page",
+            "--block-mib", "16", "--anchor-mib", "9",
+        ],
+        "jvm": [
+            "-Dhypergrass.matchMin=104", "-Dhypergrass.rangeModel=count",
+            "-XX:+UseSerialGC", "-XX:ReservedCodeCacheSize=32m",
+            "-XX:MaxMetaspaceSize=64m", "-XX:CICompilerCount=2", "-Xss512k",
+        ],
+        "heap": "160m",
         "memory": "256m",
     },
 )

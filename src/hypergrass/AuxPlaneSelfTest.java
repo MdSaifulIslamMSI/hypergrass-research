@@ -61,6 +61,25 @@ public final class AuxPlaneSelfTest {
         }
         check("repeat-far", far);
 
+        // Cross-block dictionary: a chunk that is entirely a copy of the prior 256 KB must
+        // round-trip through the history-aware LZ coder and compress to a tiny token stream.
+        byte[] dict = new byte[300000];
+        for (int i = 0; i < dict.length; i++) {
+            dict[i] = (byte) ((i * 31 + (i >>> 7)) & 0xFF);
+        }
+        byte[] hist = java.util.Arrays.copyOfRange(dict, 0, 256 * 1024);
+        byte[] chunk = java.util.Arrays.copyOfRange(dict, 200000, 240000);
+        byte[] dictEnc = LzRangeCoder.encode(chunk, chunk.length, hist, hist.length);
+        byte[] dictBack = LzRangeCoder.decode(dictEnc, chunk.length, hist, hist.length);
+        if (!java.util.Arrays.equals(chunk, dictBack)) {
+            throw new IllegalStateException("history round-trip mismatch");
+        }
+        if (dictEnc.length * 10 >= chunk.length) {
+            throw new IllegalStateException("history dictionary did not help: "
+                    + chunk.length + " -> " + dictEnc.length);
+        }
+        System.out.println("history-dict: " + chunk.length + " -> " + dictEnc.length);
+
         byte[] mixed = new byte[120000];
         for (int i = 0; i < mixed.length; i++) {
             mixed[i] = (byte) (rnd.nextInt(100) < 70 ? block[i % block.length] : rnd.nextInt(256));

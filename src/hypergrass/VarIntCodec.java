@@ -14,6 +14,54 @@ public final class VarIntCodec {
 
     private VarIntCodec() {}
 
+    /**
+     * Rolling window of raw auxiliary bytes shared across blocks by the bounded codec. The
+     * encoder uses it as an immutable match dictionary while a block is being built; the raw
+     * bytes are appended only after that block's representation has been chosen. The decoder
+     * appends the plaintext it just recovered, so both sides see the same prefix history.
+     */
+    public static final class AuxHistory {
+        private final int cap;
+        private byte[] buf;
+        private int len;
+
+        public AuxHistory(int cap) {
+            this.cap = Math.max(1, cap);
+            this.buf = new byte[Math.min(this.cap, 1 << 16)];
+        }
+
+        public void append(byte[] raw, int rawLen) {
+            if (rawLen <= 0) {
+                return;
+            }
+            if (rawLen >= cap) {
+                if (buf.length < cap) {
+                    buf = Arrays.copyOf(buf, cap);
+                }
+                System.arraycopy(raw, rawLen - cap, buf, 0, cap);
+                len = cap;
+                return;
+            }
+            int keep = Math.min(len, cap - rawLen);
+            if (buf.length < cap) {
+                buf = Arrays.copyOf(buf, cap);
+            }
+            if (keep > 0 && keep < len) {
+                System.arraycopy(buf, len - keep, buf, 0, keep);
+            }
+            System.arraycopy(raw, 0, buf, keep, rawLen);
+            len = keep + rawLen;
+        }
+
+        public byte[] buffer() {
+            return buf;
+        }
+
+        public int length() {
+            return len;
+        }
+    }
+
     /** Growable byte output buffer with zero-boxing primitive writers. */
     public static final class ByteOut {
         private byte[] buf;
@@ -246,9 +294,20 @@ public final class VarIntCodec {
      * Mode 4: LEB128 digit planes (self-delimiting continuation bits) coded separately.
      * Mode 5: LZ77 + range coder (256 KB window).
      * Mode 6: order-1 adaptive range coder (frequency-count estimator).
+     * Mode 7: LZ77 + range coder with an explicit cross-block history (bounded anchor mode).
      */
     public static void writeCompressedAux(ByteOut out, byte[] raw, int rawLen) {
-        writeCompressedAux(out, raw, rawLen, true);
+        writeCompressedAux(out, raw, rawLen, true, null, 0);
+    }
+
+    /**
+     * Writes an auxiliary stream that may reference up to {@code histLen} bytes of preceding
+     * context. The history is read-only here; the caller appends the raw bytes once the block
+     * choice is final.
+     */
+    public static void writeCompressedAux(
+            ByteOut out, byte[] raw, int rawLen, byte[] hist, int histLen) {
+        writeCompressedAux(out, raw, rawLen, true, hist, histLen);
     }
 
     private static final boolean PLANES =
@@ -263,7 +322,14 @@ public final class VarIntCodec {
         return "  ".repeat(diagDepth);
     }
 
-    private static void writeCompressedAux(ByteOut out, byte[] raw, int rawLen, boolean allowPlanes) {
+    private static void writeCompressedAux(
+            ByteOut out, byte[] raw, int rawLen, boolean allowPlanes) {
+        writeCompressedAux(out, raw, rawLen, allowPlanes, null, 0);
+    }
+
+    private static void writeCompressedAux(
+            ByteOut out, byte[] raw, int rawLen, boolean allowPlanes,
+            byte[] hist, int histLen) {
         if (rawLen == 0) {
             out.writeByte(0);
             return;
@@ -290,17 +356,30 @@ public final class VarIntCodec {
             }
         }
         if (allowPlanes && LZ && rawLen >= 4096) {
-            byte[] lz = LzRangeCoder.encode(raw, rawLen);
-            int total = 1 + varIntSize(rawLen) + varIntSize(lz.length) + lz.length;
-            if (AUX_DIAG) {
+            byte[] bestLz = LzRangeCoder.encode(raw, rawLen);
+            int bestMode = 5;
+            int bestTotal = 1 + varIntSize(rawLen) + varIntSize(bestLz.length) + bestLz.length;
+            if (hist != null && histLen > 0) {
+                byte[] dictLz = LzRangeCoder.encode(raw, rawLen, hist, histLen);
+                int dictTotal = 1 + varIntSize(rawLen) + varIntSize(dictLz.length) + dictLz.length;
+                if (AUX_DIAG) {
+                    System.err.println("AUXDICT raw=" + rawLen + " hist=" + histLen
+                            + " lz=" + bestTotal + " dict=" + dictTotal);
+                }
+                if (dictTotal < bestTotal) {
+                    bestMode = 7;
+                    bestLz = dictLz;
+                    bestTotal = dictTotal;
+                }
+            } else if (AUX_DIAG) {
                 System.err.println("AUXLZ raw=" + rawLen + " simple=" + simple.size()
-                        + " lz=" + total);
+                        + " lz=" + bestTotal);
             }
-            if (total < bestBuf.length) {
-                out.writeByte(5);
+            if (bestTotal < bestBuf.length) {
+                out.writeByte(bestMode);
                 out.writeVarInt(rawLen);
-                out.writeVarInt(lz.length);
-                out.writeBytes(lz, 0, lz.length);
+                out.writeVarInt(bestLz.length);
+                out.writeBytes(bestLz, 0, bestLz.length);
                 return;
             }
         }
@@ -453,6 +532,11 @@ public final class VarIntCodec {
         writeCompressedAux(out, payload.internalBuffer(), payload.size());
     }
 
+    public static void writeCompressedAux(
+            ByteOut out, ByteOut payload, byte[] hist, int histLen) {
+        writeCompressedAux(out, payload.internalBuffer(), payload.size(), true, hist, histLen);
+    }
+
     public static byte[] readCompressedAux(ByteIn in) {
         int mode = in.readByte();
         if (mode == 0) {
@@ -468,6 +552,42 @@ public final class VarIntCodec {
         } finally {
             diagDepth--;
         }
+    }
+
+    /**
+     * Reads a stream that may carry a mode-7 block and appends the recovered plaintext to
+     * {@code hist}. Only the gap channel uses this entry point; nested plane streams go through
+     * the plain method and never touch the shared history.
+     */
+    public static byte[] readCompressedAux(ByteIn in, AuxHistory hist) {
+        int mode = in.readByte();
+        if (mode == 0) {
+            return new byte[0];
+        }
+        int rawLen = in.readVarInt();
+        if (AUX_DIAG) {
+            System.err.println(indent() + "AUXR mode=" + mode + " raw=" + rawLen);
+        }
+        diagDepth++;
+        byte[] raw;
+        try {
+            if (mode == 7) {
+                if (hist == null) {
+                    throw new IllegalStateException("Mode 7 aux stream requires a history");
+                }
+                int compLen = in.readVarInt();
+                raw = LzRangeCoder.decode(in.readBytes(compLen), rawLen,
+                        hist.buffer(), hist.length());
+            } else {
+                raw = readCompressedAuxBody(in, mode, rawLen);
+            }
+        } finally {
+            diagDepth--;
+        }
+        if (hist != null) {
+            hist.append(raw, raw.length);
+        }
+        return raw;
     }
 
     private static byte[] readCompressedAuxBody(ByteIn in, int mode, int rawLen) {

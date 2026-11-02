@@ -338,6 +338,8 @@ public final class CanonicalSyncmerEngine {
      * Accumulates per-position base votes for one already-factorized chunk. Split out of
      * {@link #consensusAnchor} so the bounded compressor can vote while streaming chunks instead
      * of retaining them all.
+     *
+     * <p>{@code counts} holds four 8-bit counters per position ({@code (pos << 2) | base}).
      */
     public static void accumulateAnchorVotes(
             AnchorBank bank, byte[] dna, int dnaLen, byte[] counts) {
@@ -352,11 +354,42 @@ public final class CanonicalSyncmerEngine {
             int mLen = aln.matchLens[m];
             if (aln.strands[m] == 0) {
                 for (int d = 0; d < mLen; d++) {
-                    bumpVote(counts, aStart + d, dna[tPos + d] & 3);
+                    bumpVote8(counts, aStart + d, dna[tPos + d] & 3);
                 }
             } else {
                 for (int d = 0; d < mLen; d++) {
-                    bumpVote(counts, aStart + mLen - 1 - d, (dna[tPos + d] ^ 3) & 3);
+                    bumpVote8(counts, aStart + mLen - 1 - d, (dna[tPos + d] ^ 3) & 3);
+                }
+            }
+            tPos += mLen;
+        }
+    }
+
+    /**
+     * Packed variant for the bounded encoder: four 4-bit counters per position, two per byte.
+     * Counters saturate at 15. Saturation preserves argmax unless two bases at the same position
+     * both exceed 15 votes, which overlapping matches can cause; the bounded anchor then differs
+     * from the 8-bit anchor by 2,218 B on the pangenome (measured). The unbounded path keeps the
+     * 8-bit form, so its archive is unchanged.
+     */
+    public static void accumulateAnchorVotesPacked(
+            AnchorBank bank, byte[] dna, int dnaLen, byte[] counts) {
+        if (dnaLen < MIN_MATCH_LEN) return;
+        ParsedAlignment aln = alignTargetToAnchor(
+                dna, dnaLen, bank.bases, bank.length, bank.primarySeedLen, bank.index, false);
+        if (aln == null || aln.numMatches == 0) return;
+        int tPos = 0;
+        for (int m = 0; m < aln.numMatches; m++) {
+            tPos += aln.litLens[m];
+            int aStart = aln.refOffsets[m];
+            int mLen = aln.matchLens[m];
+            if (aln.strands[m] == 0) {
+                for (int d = 0; d < mLen; d++) {
+                    bumpVotePacked(counts, aStart + d, dna[tPos + d] & 3);
+                }
+            } else {
+                for (int d = 0; d < mLen; d++) {
+                    bumpVotePacked(counts, aStart + mLen - 1 - d, (dna[tPos + d] ^ 3) & 3);
                 }
             }
             tPos += mLen;
@@ -370,34 +403,58 @@ public final class CanonicalSyncmerEngine {
 
     /** Applies accumulated votes and rebuilds the seed index. */
     public static AnchorBank polishAnchor(AnchorBank bank, byte[] counts) {
-        return polishAnchor(bank, counts, true);
+        return polishAnchor(bank, counts, false, true);
     }
 
     /**
      * Applies accumulated votes; the seed index can be deferred so a bounded encoder builds the
      * (large) index only after the vote buffer is dead, which keeps the peak under 256 MiB.
+     * {@code packed} selects the 4-bit layout written by
+     * {@link #accumulateAnchorVotesPacked(AnchorBank, byte[], int, byte[])}.
      */
-    public static AnchorBank polishAnchor(AnchorBank bank, byte[] counts, boolean buildIndex) {
+    public static AnchorBank polishAnchor(
+            AnchorBank bank, byte[] counts, boolean packed, boolean buildIndex) {
         int len = bank.length;
         byte[] bases = bank.bases.clone();
         int changed = 0;
+        long maxTotal = 0;
         for (int p = 0; p < len; p++) {
-            int at = p << 2;
-            int cA = counts[at] & 0xFF;
-            int cC = counts[at + 1] & 0xFF;
-            int cG = counts[at + 2] & 0xFF;
-            int cT = counts[at + 3] & 0xFF;
+            int cA, cC, cG, cT;
+            if (packed) {
+                int at = p << 1;
+                cA = counts[at] & 0xF;
+                cC = (counts[at] >> 4) & 0xF;
+                cG = counts[at + 1] & 0xF;
+                cT = (counts[at + 1] >> 4) & 0xF;
+            } else {
+                int at = p << 2;
+                cA = counts[at] & 0xFF;
+                cC = counts[at + 1] & 0xFF;
+                cG = counts[at + 2] & 0xFF;
+                cT = counts[at + 3] & 0xFF;
+            }
             int total = cA + cC + cG + cT;
+            if (total > maxTotal) maxTotal = total;
             if (total < 2) continue;
             int best = 0, bestCount = cA;
             if (cC > bestCount) { best = 1; bestCount = cC; }
             if (cG > bestCount) { best = 2; bestCount = cG; }
             if (cT > bestCount) { best = 3; bestCount = cT; }
             int current = bases[p] & 3;
-            if (bestCount > counts[at + current] && best != current) {
+            int currentCount = switch (current) {
+                case 0 -> cA;
+                case 1 -> cC;
+                case 2 -> cG;
+                default -> cT;
+            };
+            if (bestCount > currentCount && best != current) {
                 bases[p] = (byte) best;
                 changed++;
             }
+        }
+        if (STATS) {
+            System.err.println("VOTES maxTotal=" + maxTotal + " changed=" + changed
+                    + (packed ? " packed" : ""));
         }
         if (!buildIndex) {
             return new AnchorBank(bases, len, bank.primarySeedLen, EMPTY_DONORS, null);
@@ -422,9 +479,16 @@ public final class CanonicalSyncmerEngine {
         return new AnchorBank(bank.bases, bank.length, bank.primarySeedLen, EMPTY_DONORS, index);
     }
 
-    private static void bumpVote(byte[] counts, int pos, int base) {
+    private static void bumpVote8(byte[] counts, int pos, int base) {
         int at = (pos << 2) + base;
         if ((counts[at] & 0xFF) < 255) counts[at]++;
+    }
+
+    private static void bumpVotePacked(byte[] counts, int pos, int base) {
+        int at = (pos << 1) + (base >> 1);
+        int shift = (base & 1) << 2;
+        int v = (counts[at] >> shift) & 0xF;
+        if (v < 15) counts[at] = (byte) (counts[at] + (1 << shift));
     }
 
     /**
@@ -977,11 +1041,17 @@ public final class CanonicalSyncmerEngine {
      */
     public static byte[] encodeBlockDna(
             byte[] target, int targetLen, AnchorBank bank, boolean leanMode) {
-        return encodeBlockDna(target, targetLen, bank, leanMode, false);
+        return encodeBlockDna(target, targetLen, bank, leanMode, false, null);
     }
 
     static byte[] encodeBlockDna(
             byte[] target, int targetLen, AnchorBank bank, boolean leanMode, boolean costAware) {
+        return encodeBlockDna(target, targetLen, bank, leanMode, costAware, null);
+    }
+
+    static byte[] encodeBlockDna(
+            byte[] target, int targetLen, AnchorBank bank, boolean leanMode, boolean costAware,
+            VarIntCodec.AuxHistory gapHistory) {
         if (targetLen == 0) {
             return new byte[] {0}; // mode 0: empty
         }
@@ -1013,20 +1083,29 @@ public final class CanonicalSyncmerEngine {
         byte[] encodedLits = encodeResiduals(aln.literals, aln.totalLiterals, leanMode);
         byte[] mode2 = buildMode2Bytes(aln, encodedLits);
         byte[] best = mode2;
+        byte[] bestGapRaw = null;
 
         if (aln.numMatches >= 1) {
             boolean regional = REGIONAL_DONORS;
-            byte[] mode3 = buildMode3AcHmcBytes(
-                    aln, encodedLits, bank.primarySeedLen, bank.globalDonors, null, regional);
-            if (mode3.length < best.length) {
-                best = mode3;
+            byte[] histBuf = gapHistory == null ? null : gapHistory.buffer();
+            int histLen = gapHistory == null ? 0 : gapHistory.length();
+            Mode3Encoding mode3 = buildMode3AcHmcBytes(
+                    aln, encodedLits, bank.primarySeedLen, bank.globalDonors, null, regional,
+                    histBuf, histLen);
+            if (mode3 != null && mode3.bytes.length < best.length) {
+                best = mode3.bytes;
+                bestGapRaw = mode3.gapRaw;
             }
             // Raw channel costs are only a proxy for Deflate. Bound the trial and retain it only
             // when its complete compressed representation beats the legacy Mode 2/3 winner.
             if (costAware && !leanMode && aln.totalSnps > 0 && aln.totalSnps <= 8_192 && aln.numMatches <= 256) {
-                byte[] candidate = buildMode3AcHmcBytes(aln, encodedLits, bank.primarySeedLen,
-                        bank.globalDonors, new CostAwareDonorSelector(1_048_576), false);
-                if (candidate != null && candidate.length < best.length) best = candidate;
+                Mode3Encoding candidate = buildMode3AcHmcBytes(aln, encodedLits, bank.primarySeedLen,
+                        bank.globalDonors, new CostAwareDonorSelector(1_048_576), false,
+                        histBuf, histLen);
+                if (candidate != null && candidate.bytes.length < best.length) {
+                    best = candidate.bytes;
+                    bestGapRaw = candidate.gapRaw;
+                }
             }
         }
 
@@ -1039,6 +1118,9 @@ public final class CanonicalSyncmerEngine {
         }
         if (STATS) {
             System.err.println("STATS mode2=" + mode2.length + " best=" + best.length);
+        }
+        if (bestGapRaw != null && gapHistory != null) {
+            gapHistory.append(bestGapRaw, bestGapRaw.length);
         }
         return best;
     }
@@ -1200,10 +1282,22 @@ public final class CanonicalSyncmerEngine {
         return sweeps;
     }
 
-    private static byte[] buildMode3AcHmcBytes(
+    private static final class Mode3Encoding {
+        final byte[] bytes;
+        final byte[] gapRaw;
+
+        Mode3Encoding(byte[] bytes, byte[] gapRaw) {
+            this.bytes = bytes;
+            this.gapRaw = gapRaw;
+        }
+    }
+
+    private static Mode3Encoding buildMode3AcHmcBytes(
             ParsedAlignment aln, byte[] encodedLits, int primarySeedLen, int[][] globalDonors,
-            CostAwareDonorSelector costSelector, boolean regionalDonors) {
+            CostAwareDonorSelector costSelector, boolean regionalDonors,
+            byte[] hist, int histLen) {
         int numMatches = aln.numMatches;
+        byte[] gapRaw = null;
         ByteOut out = new ByteOut(256 + encodedLits.length);
         // Mode 4 shares the Mode 3 framing but keeps an unbounded donor pool addressed by anchor
         // span; the decoder only needs to keep every donor instead of the first MAX_DONOR_POOL.
@@ -1416,7 +1510,8 @@ public final class CanonicalSyncmerEngine {
             int chMask = out.size();
             VarIntCodec.writeCompressedAux(out, addedCntBuf);
             int chCnt = out.size();
-            VarIntCodec.writeCompressedAux(out, addedGapBuf);
+            VarIntCodec.writeCompressedAux(out, addedGapBuf, hist, histLen);
+            gapRaw = Arrays.copyOf(addedGapBuf.internalBuffer(), addedGapBuf.size());
             int chGap = out.size();
             VarIntCodec.writeCompressedAux(out, addedDiffBuf);
             int chDiff = out.size();
@@ -1446,7 +1541,7 @@ public final class CanonicalSyncmerEngine {
             dumpAuxBytes("lits", encodedLits);
         }
 
-        return out.toByteArray();
+        return new Mode3Encoding(out.toByteArray(), gapRaw);
     }
 
     private static int predictSequentialRefOffset(int m, int[] refOffsets, int[] matchLens) {
@@ -1769,7 +1864,8 @@ public final class CanonicalSyncmerEngine {
     }
 
     private static int[][] decodeMode3SweepVariants(
-            ByteIn in, int[] sweepStarts, int[][] globalDonors, boolean unboundedDonors) {
+            ByteIn in, int[] sweepStarts, int[][] globalDonors, boolean unboundedDonors,
+            VarIntCodec.AuxHistory gapHistory) {
         int numSweeps = sweepStarts.length - 1;
         if (STATS) {
             System.err.println("DECODE sweeps=" + numSweeps + " globals="
@@ -1780,7 +1876,7 @@ public final class CanonicalSyncmerEngine {
         ByteIn donorIdxIn = new ByteIn(VarIntCodec.readCompressedAux(in));
         ByteIn maskIn = new ByteIn(VarIntCodec.readCompressedAux(in));
         ByteIn addedCntIn = new ByteIn(VarIntCodec.readCompressedAux(in));
-        ByteIn addedGapIn = new ByteIn(VarIntCodec.readCompressedAux(in));
+        ByteIn addedGapIn = new ByteIn(VarIntCodec.readCompressedAux(in, gapHistory));
         byte[] addedDiffs = VarIntCodec.readCompressedAux(in);
         int[] diffCursor = {0};
 
@@ -1953,12 +2049,22 @@ public final class CanonicalSyncmerEngine {
     }
 
     public static byte[] decodeBlockDna(ByteIn in, int targetLen, byte[] anchorBases, boolean leanMode) {
-        return decodeBlockDna(in, targetLen, anchorBases, EMPTY_DONORS, leanMode);
+        return decodeBlockDna(in, targetLen, anchorBases, EMPTY_DONORS, leanMode, null);
     }
 
     /** Decodes a block's primary 2-bit DNA sequence from Mode 1 (QCRM), Mode 2 (BC-LZG), or Mode 3 (AC-HMC). */
     public static byte[] decodeBlockDna(
             ByteIn in, int targetLen, byte[] anchorBases, int[][] globalDonors, boolean leanMode) {
+        return decodeBlockDna(in, targetLen, anchorBases, globalDonors, leanMode, null);
+    }
+
+    /**
+     * Decodes one block with the cross-block gap history used by bounded archives. The history
+     * must be advanced exactly once per block, in archive order.
+     */
+    public static byte[] decodeBlockDna(
+            ByteIn in, int targetLen, byte[] anchorBases, int[][] globalDonors, boolean leanMode,
+            VarIntCodec.AuxHistory gapHistory) {
         int mode = in.readByte();
         if (mode == 0 || targetLen == 0) {
             return EMPTY_BYTES;
@@ -2096,7 +2202,8 @@ public final class CanonicalSyncmerEngine {
         int[][] sweepVariants = null;
         if (totalSnps > 0) {
             sweepStarts = computeSweepStarts(refOffsets, matchLens, numMatches);
-            sweepVariants = decodeMode3SweepVariants(in, sweepStarts, globalDonors, mode == 4 || mode == 5);
+            sweepVariants = decodeMode3SweepVariants(in, sweepStarts, globalDonors, mode == 4 || mode == 5,
+                    gapHistory);
         }
 
         byte[] out = new byte[targetLen];
@@ -2332,7 +2439,8 @@ public final class CanonicalSyncmerEngine {
         int[][] sweepVariants = null;
         if (totalSnps > 0) {
             sweepStarts = computeSweepStarts(refOffsets, matchLens, numMatches);
-            sweepVariants = decodeMode3SweepVariants(in, sweepStarts, globalDonors, mode == 4 || mode == 5);
+            sweepVariants = decodeMode3SweepVariants(in, sweepStarts, globalDonors, mode == 4 || mode == 5,
+                    null);
         }
 
         int[] matchTargetStarts = new int[numMatches];

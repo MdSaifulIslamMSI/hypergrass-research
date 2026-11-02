@@ -5,7 +5,9 @@ Input: 120,108,223 bases, 24 genomes. Target: 1,200,000 B (100:1).
 ## Measured decomposition of the current archive
 
 The tuned archive is **3,810,409 B** (0.254 bits/base), 2.21% smaller than
-JARVIS3 level 7 (3,896,361 B). It splits into two parts:
+JARVIS3 level 7 (3,896,361 B). The bounded-memory variant is 3,997,232 B, so
+holding 256 MiB only widens the gap; the argument below uses the smaller
+unbounded archive. It splits into two parts:
 
 | Part | Bytes | Basis |
 |---|---:|---|

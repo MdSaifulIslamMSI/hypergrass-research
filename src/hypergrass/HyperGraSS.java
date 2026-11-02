@@ -48,6 +48,9 @@ public final class HyperGraSS {
     private static final int FLAG_HAS_ANCHOR = 1;
     private static final int FLAG_LEAN_MODE = 2;
     private static final int FLAG_COMPACT_SINGLE = 4;
+    /** Blocks carry a mode-7 gap channel whose LZ dictionary spans block boundaries. */
+    private static final int FLAG_SHARED_GAP = 8;
+    private static final int GAP_HISTORY_BYTES = 256 * 1024;
 
     private HyperGraSS() {}
 
@@ -169,27 +172,39 @@ public final class HyperGraSS {
             // Match the in-memory path: polish the anchor to the cross-genome majority base.
             // Votes are accumulated by streaming the slices again, so no chunk is retained.
             // The seed index is built after the last vote buffer dies: building it inside the
-            // pass would hold a ~37 MB vote array and a ~56 MB index alive at the same time.
+            // pass would hold the vote array and the ~56 MB index alive at the same time.
+            // The default packs four counters per position (18.9 MB on this bank, 4 bits each);
+            // -Dhypergrass.boundedVotes8=true selects the exact 8-bit form (37.7 MB) for the
+            // saturation ablation. Saturation at 15 votes costs 2,218 B on the pangenome.
             if (bank != null && bank.length > 0 && numBlocks > 1
                     && CanonicalSyncmerEngine.consensusEnabled()) {
+                boolean exactVotes = "true".equals(
+                        System.getProperty("hypergrass.boundedVotes8"));
                 for (int pass = 0; pass < CanonicalSyncmerEngine.CONSENSUS_PASSES; pass++) {
-                    byte[] votes = new byte[bank.length << 2];
+                    byte[] votes = new byte[bank.length << (exactVotes ? 2 : 1)];
                     for (BlockSlice s : slices) {
                         FactorizedChunk chunk = factorizeSlice(ch, s);
-                        CanonicalSyncmerEngine.accumulateAnchorVotes(
-                                bank, chunk.dnaBases, chunk.dnaLen, votes);
+                        if (exactVotes) {
+                            CanonicalSyncmerEngine.accumulateAnchorVotes(
+                                    bank, chunk.dnaBases, chunk.dnaLen, votes);
+                        } else {
+                            CanonicalSyncmerEngine.accumulateAnchorVotesPacked(
+                                    bank, chunk.dnaBases, chunk.dnaLen, votes);
+                        }
                     }
-                    bank = CanonicalSyncmerEngine.polishAnchor(bank, votes, false);
+                    bank = CanonicalSyncmerEngine.polishAnchor(bank, votes, !exactVotes, false);
                 }
                 bank = CanonicalSyncmerEngine.withSeedIndex(bank);
             }
 
             List<BlockDirEntry> dir = new ArrayList<>(numBlocks);
             byte[][] encodedBlocks = new byte[numBlocks][];
+            VarIntCodec.AuxHistory gapHistory =
+                    new VarIntCodec.AuxHistory(GAP_HISTORY_BYTES);
             for (int i = 0; i < numBlocks; i++) {
                 BlockSlice s = slices.get(i);
                 FactorizedChunk chunk = factorizeSlice(ch, s);
-                encodedBlocks[i] = encodeChunkPayload(chunk, bank, false);
+                encodedBlocks[i] = encodeChunkPayload(chunk, bank, false, false, gapHistory);
                 BlockDirEntry e = new BlockDirEntry();
                 e.firstRecordIdx = s.firstRecordIndex;
                 e.recordCount = s.recordCount;
@@ -199,7 +214,7 @@ public final class HyperGraSS {
             }
             byte[] archive = serializeMultiBlockArchive(
                     part.size, part.crc32, totalRecords, totalDna, dir, encodedBlocks,
-                    bank, bank != null && bank.length > 0, opts);
+                    bank, bank != null && bank.length > 0, true, opts);
             Files.write(output, archive);
         }
     }
@@ -244,6 +259,7 @@ public final class HyperGraSS {
             FileChannel ch, Path output, int modeFlags) throws IOException {
         boolean hasAnchor = (modeFlags & FLAG_HAS_ANCHOR) != 0;
         boolean leanMode = (modeFlags & FLAG_LEAN_MODE) != 0;
+        boolean sharedGap = (modeFlags & FLAG_SHARED_GAP) != 0;
         ParsedFooter footer = readFooterFromChannel(ch);
         if (footer.entries.isEmpty()) {
             throw new IllegalStateException("Archive has no blocks");
@@ -279,6 +295,8 @@ public final class HyperGraSS {
 
         CRC32 crc = new CRC32();
         long produced = 0L;
+        VarIntCodec.AuxHistory gapHistory =
+                sharedGap ? new VarIntCodec.AuxHistory(GAP_HISTORY_BYTES) : null;
         try (OutputStream out = new BufferedOutputStream(Files.newOutputStream(output), 1 << 20)) {
             for (BlockDirEntry e : footer.entries) {
                 ByteBuffer blockBuf = ByteBuffer.allocate(e.compressedLen);
@@ -286,7 +304,7 @@ public final class HyperGraSS {
                 ByteIn bIn = new ByteIn(blockBuf.array());
                 FactorizedChunk chunk = FastaStreamFactorizer.readAuxMetadata(bIn);
                 byte[] dna = CanonicalSyncmerEngine.decodeBlockDna(
-                        bIn, chunk.dnaLen, anchorBases, globalDonors, leanMode);
+                        bIn, chunk.dnaLen, anchorBases, globalDonors, leanMode, gapHistory);
                 byte[] recBytes = FastaStreamFactorizer.reconstructBytes(chunk, dna);
                 crc.update(recBytes, 0, recBytes.length);
                 out.write(recBytes);
@@ -676,7 +694,8 @@ public final class HyperGraSS {
             dir.add(e);
         }
         return serializeMultiBlockArchive(
-                rawByteLen, crcVal, totalRecords, totalDna, dir, encodedBlocks, bank, useAnchor, opts);
+                rawByteLen, crcVal, totalRecords, totalDna, dir, encodedBlocks, bank, useAnchor,
+                false, opts);
     }
 
     private static byte[] serializeMultiBlockArchive(
@@ -688,11 +707,13 @@ public final class HyperGraSS {
             byte[][] encodedBlocks,
             AnchorBank bank,
             boolean useAnchor,
+            boolean sharedGap,
             CompressOptions opts) {
         int numBlocks = encodedBlocks.length;
         int modeFlags = 0;
         if (useAnchor) modeFlags |= FLAG_HAS_ANCHOR;
         if (opts.leanMode) modeFlags |= FLAG_LEAN_MODE;
+        if (sharedGap) modeFlags |= FLAG_SHARED_GAP;
 
         ByteOut out = new ByteOut(4096);
         out.writeBytes(MAGIC);
@@ -793,14 +814,21 @@ public final class HyperGraSS {
     }
 
     private static byte[] encodeChunkPayload(FactorizedChunk chunk, AnchorBank bank, boolean leanMode) {
-        return encodeChunkPayload(chunk, bank, leanMode, false);
+        return encodeChunkPayload(chunk, bank, leanMode, false, null);
     }
 
     private static byte[] encodeChunkPayload(
             FactorizedChunk chunk, AnchorBank bank, boolean leanMode, boolean costAware) {
+        return encodeChunkPayload(chunk, bank, leanMode, costAware, null);
+    }
+
+    private static byte[] encodeChunkPayload(
+            FactorizedChunk chunk, AnchorBank bank, boolean leanMode, boolean costAware,
+            VarIntCodec.AuxHistory gapHistory) {
         ByteOut out = new ByteOut(256);
         FastaStreamFactorizer.writeAuxMetadata(out, chunk);
-        byte[] dnaEnc = CanonicalSyncmerEngine.encodeBlockDna(chunk.dnaBases, chunk.dnaLen, bank, leanMode, costAware);
+        byte[] dnaEnc = CanonicalSyncmerEngine.encodeBlockDna(
+                chunk.dnaBases, chunk.dnaLen, bank, leanMode, costAware, gapHistory);
         out.writeBytes(dnaEnc);
         return out.toByteArray();
     }
@@ -820,6 +848,7 @@ public final class HyperGraSS {
         boolean hasAnchor = (modeFlags & FLAG_HAS_ANCHOR) != 0;
         boolean leanMode = (modeFlags & FLAG_LEAN_MODE) != 0;
         boolean compactSingle = (modeFlags & FLAG_COMPACT_SINGLE) != 0;
+        boolean sharedGap = (modeFlags & FLAG_SHARED_GAP) != 0;
 
         if (compactSingle) {
             int expectedRawLen = in.readIntLE();
@@ -874,7 +903,17 @@ public final class HyperGraSS {
         byte[][] decodedBlocks = new byte[numBlocks][];
         final byte[] finalAnchor = anchorBases;
         final int[][] finalGlobalDonors = globalDonors;
-        if (numBlocks > 1) {
+        if (sharedGap) {
+            VarIntCodec.AuxHistory gapHistory = new VarIntCodec.AuxHistory(GAP_HISTORY_BYTES);
+            for (int b = 0; b < numBlocks; b++) {
+                BlockDirEntry e = footer.entries.get(b);
+                ByteIn bIn = new ByteIn(archive, (int) e.fileOffset, e.compressedLen);
+                FactorizedChunk chunk = FastaStreamFactorizer.readAuxMetadata(bIn);
+                byte[] dna = CanonicalSyncmerEngine.decodeBlockDna(
+                        bIn, chunk.dnaLen, finalAnchor, finalGlobalDonors, leanMode, gapHistory);
+                decodedBlocks[b] = FastaStreamFactorizer.reconstructBytes(chunk, dna);
+            }
+        } else if (numBlocks > 1) {
             IntStream.range(0, numBlocks).parallel().forEach(b -> {
                 BlockDirEntry e = footer.entries.get(b);
                 ByteIn bIn = new ByteIn(archive, (int) e.fileOffset, e.compressedLen);

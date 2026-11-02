@@ -55,26 +55,54 @@ final class LzRangeCoder {
     }
 
     static byte[] encode(byte[] raw, int len) {
+        return encode(raw, len, null, 0);
+    }
+
+    /**
+     * Encodes {@code raw} with up to {@code histLen} bytes of preceding context. Matches may
+     * point into the history, so the decoder must rebuild the same prefix before decoding.
+     * The caller keeps the history immutable while this runs and appends the raw bytes only
+     * after the encoded block has been selected.
+     */
+    static byte[] encode(byte[] raw, int len, byte[] hist, int histLen) {
+        histLen = Math.max(0, Math.min(histLen, WINDOW));
+        byte[] buf;
+        int start;
+        if (histLen > 0) {
+            start = histLen;
+            buf = new byte[histLen + len];
+            System.arraycopy(hist, 0, buf, 0, histLen);
+            System.arraycopy(raw, 0, buf, histLen, len);
+        } else {
+            start = 0;
+            buf = raw;
+        }
+        int total = start + len;
         Encoder enc = new Encoder(len);
         int[] head = new int[1 << HASH_BITS];
         Arrays.fill(head, -1);
-        int[] prev = new int[len];
+        int[] prev = new int[total];
         Arrays.fill(prev, -1);
-        int i = 0;
-        int prevByte = 0;
+        for (int p = 0; p + MIN_MATCH <= start; p++) {
+            int h = hash(buf, p);
+            prev[p] = head[h];
+            head[h] = p;
+        }
+        int i = start;
+        int prevByte = start > 0 ? (buf[start - 1] & 0xFF) : 0;
         int prevSlot = 0;
         boolean lastWasMatch = false;
-        while (i < len) {
+        while (i < total) {
             int bestLen = 0;
             int bestDist = 0;
-            if (i + MIN_MATCH <= len) {
-                int h = hash(raw, i);
+            if (i + MIN_MATCH <= total) {
+                int h = hash(buf, i);
                 int cand = head[h];
                 int chain = 0;
-                int limit = Math.min(MAX_MATCH, len - i);
+                int limit = Math.min(MAX_MATCH, total - i);
                 while (cand >= 0 && i - cand <= WINDOW && chain < MAX_CHAIN) {
                     int l = 0;
-                    while (l < limit && raw[cand + l] == raw[i + l]) {
+                    while (l < limit && buf[cand + l] == buf[i + l]) {
                         l++;
                     }
                     if (l > bestLen) {
@@ -113,16 +141,16 @@ final class LzRangeCoder {
                 prevSlot = slot;
                 lastWasMatch = true;
                 for (int j = 0; j < bestLen; j++) {
-                    if (i + j + MIN_MATCH <= len) {
-                        int h = hash(raw, i + j);
+                    if (i + j + MIN_MATCH <= total) {
+                        int h = hash(buf, i + j);
                         prev[i + j] = head[h];
                         head[h] = i + j;
                     }
                 }
-                prevByte = raw[i + bestLen - 1] & 0xFF;
+                prevByte = buf[i + bestLen - 1] & 0xFF;
                 i += bestLen;
             } else {
-                int sym = raw[i] & 0xFF;
+                int sym = buf[i] & 0xFF;
                 enc.encodeBit(OFF_IS_MATCH + (lastWasMatch ? 1 : 0), 0);
                 int base = OFF_LITERAL + (prevByte << 8);
                 int node = 1;
@@ -131,8 +159,8 @@ final class LzRangeCoder {
                     enc.encodeBit(base + node, b);
                     node = (node << 1) | b;
                 }
-                if (i + MIN_MATCH <= len) {
-                    int h = hash(raw, i);
+                if (i + MIN_MATCH <= total) {
+                    int h = hash(buf, i);
                     prev[i] = head[h];
                     head[h] = i;
                 }
@@ -145,13 +173,22 @@ final class LzRangeCoder {
     }
 
     static byte[] decode(byte[] comp, int rawLen) {
+        return decode(comp, rawLen, null, 0);
+    }
+
+    static byte[] decode(byte[] comp, int rawLen, byte[] hist, int histLen) {
+        histLen = Math.max(0, Math.min(histLen, WINDOW));
         Decoder dec = new Decoder(comp);
-        byte[] out = new byte[rawLen];
-        int i = 0;
-        int prevByte = 0;
+        byte[] out = new byte[histLen + rawLen];
+        if (histLen > 0) {
+            System.arraycopy(hist, 0, out, 0, histLen);
+        }
+        int i = histLen;
+        int total = i + rawLen;
+        int prevByte = histLen > 0 ? (out[histLen - 1] & 0xFF) : 0;
         int prevSlot = 0;
         boolean lastWasMatch = false;
-        while (i < rawLen) {
+        while (i < total) {
             int isMatch = dec.decodeBit(OFF_IS_MATCH + (lastWasMatch ? 1 : 0));
             if (isMatch == 0) {
                 int base = OFF_LITERAL + (prevByte << 8);
@@ -187,8 +224,8 @@ final class LzRangeCoder {
                 if (dist <= 0 || dist > i) {
                     throw new IllegalStateException("Invalid LZ distance " + dist + " at " + i);
                 }
-                if (i + len > rawLen) {
-                    len = rawLen - i;
+                if (i + len > total) {
+                    len = total - i;
                 }
                 for (int j = 0; j < len; j++) {
                     out[i] = out[i - dist];
@@ -199,7 +236,7 @@ final class LzRangeCoder {
                 lastWasMatch = true;
             }
         }
-        return out;
+        return histLen == 0 ? out : Arrays.copyOfRange(out, histLen, total);
     }
 
     private static int hash(byte[] raw, int i) {

@@ -25,8 +25,12 @@ information is between genomes rather than within one genome?
   corpus their 4.6 MB *E. coli* cells reached about 2.14 GB RSS and the 180 s
   cap, so they are not feasible on 120 MB under the same 2 GiB container.
 - HyperGraSS profiles: `--pangenome` with 64 MiB blocks (the tuned unbounded
-  profile) and `--bounded` with 16 MiB blocks and a 192 MiB heap in a 256 MiB
-  container (the bounded profile).
+  profile) and `--bounded` with 16 MiB blocks in a 256 MiB container. The
+  bounded profile carries a 256 KiB gap history across block boundaries (aux
+  mode 7), packs consensus votes into 4 bits per counter, and runs at a 160 MiB
+  heap with SerialGC, a 32 MiB code cache, and a 64 MiB metaspace cap. The
+  earlier bounded attempt used the same blocks with a 192 MiB heap but no
+  cross-block history; it is kept in the table as the failure baseline.
 - Bounded-mode gates, fixed before the run: at most 256 MiB peak RSS for
   compress and restore, at most 2% archive growth, and at most 2x wall time
   against the tuned unbounded profile.
@@ -41,7 +45,8 @@ information is between genomes rather than within one genome?
 | GeCo3 l6 | 8,409,358 B | 0.560 | 534.4 s | 357.7 s | 513 / 513 MiB | yes |
 | xz -9 | 5,663,640 B | 0.377 | 144.3 s | 6.6 s | 730 / 185 MiB | yes |
 | HyperGraSS unbounded (64 MiB blocks) | **3,810,409 B** | **0.254** | 887.3 s | 82.4 s | 999 / 535 MiB | yes |
-| HyperGraSS bounded (16 MiB blocks) | 4,131,860 B | 0.275 | 149.5 s | 73.4 s | 273 / 237 MiB | yes |
+| HyperGraSS bounded, first attempt (16 MiB blocks, 192 MiB heap) | 4,131,860 B | 0.275 | 149.5 s | 73.4 s | 273 / 237 MiB | yes |
+| HyperGraSS bounded, tuned (16 MiB blocks, 160 MiB heap, shared gap) | 3,997,232 B | 0.266 | 149.5 s | 67.6 s | **253 / 221 MiB** | yes |
 <!-- SPECIALIZED-TABLES:END -->
 
 ## Findings
@@ -61,33 +66,50 @@ versus 285.8 MiB. The earlier 4,885,851-byte tuned archive was 20.3% *larger*
 than JARVIS3; the LZ77 plus range-coder gap channel described in
 [`ENTROPY-FLOOR.md`](ENTROPY-FLOOR.md) removed that deficit and then some.
 
-The bounded profile does not meet its gates. At 16 MiB blocks and a 192 MiB
-heap it produces 4,131,860 B (0.275 bits/base), **8.44% larger** than the
-unbounded archive, and peaks at **272.5 MiB**, 16.5 MiB over the 256 MiB cap.
-It does compress 5.9x faster (149.5 s) and restores at 237.3 MiB, so the speed
-gate passes comfortably and the restore side of the memory gate passes; the
-archive-size gate and the compress-side memory gate fail. The 256 MiB cgroup
-did not kill the process: `ru_maxrss` counts resident pages, including shared
-file-backed pages that cgroup accounting does not charge to the container, so
-the cgroup limit and the RSS metric are not the same quantity. The gate is
-defined on measured peak RSS, and it fails.
+The tuned bounded profile meets two of its three gates. At 16 MiB blocks, a
+160 MiB heap, and a 256 KiB gap history shared across blocks it produces
+**3,997,232 B (0.266 bits/base)** and peaks at **252.7 MiB** while compressing
+and **221.2 MiB** while restoring, both under the 256 MiB cap; the
+compress-side margin is only 3.3 MiB, so this is a thin pass rather than a
+comfortable one. Compression
+takes 149.5 s, 5.9x faster than the unbounded profile and well inside the 2x
+speed gate. The archive is still **4.90% larger** than the unbounded one
+(+186,823 B), so the 2% size gate fails by 110,615 B. The first bounded
+attempt (4,131,860 B) and the intermediate 8-bit-vote build (3,995,014 B)
+both restore byte-exactly as well; they are kept as committed evidence for the
+failure and the ablation.
 
-The size regression is the variant-gap channel. Seven of the eight bounded
-blocks already encode 1,130,591 B of gaps against **882,215 B** for the single
-64 MiB-block archive, and the 2.7 MB remainder adds roughly 30-40 KB more.
-Over those seven blocks the other channels are close to their global totals:
-mask is 50,680 B *smaller*, diff is 19,173 B larger, geom 33,691 B larger,
-strands 61,037 B larger, and lits 4,170 B larger. Splitting the sequence forces the factorizer to emit more
-gap entries and shortens the match history the LZ coder can see.
+Two changes produced the improvement. First, the gap channel now shares a
+256 KiB LZ history across block boundaries (aux mode 7): over the first seven
+blocks the gap channel falls from 1,130,591 B to 993,743 B, and the archive,
+still using exact 8-bit vote counters, drops by 136,846 B to 3,995,014 B.
+Second, the
+bounded encoder packs the four vote counters per anchor position into 4 bits,
+cutting the 37.7 MB vote buffer to 18.9 MB and letting the run complete at a
+160 MiB heap; the 8-bit buffer exhausts that heap. The packing is not free:
+counters saturate at 15, the exact 8-bit path reaches 351 votes at one
+position, and 1,891 positions end with two bases tied at the cap, so some
+anchor calls differ. That costs 2,218 B (3,995,014 to 3,997,232 B). The
+unbounded path keeps exact 8-bit counts, so its archive is unchanged.
 
-Larger blocks fix the ratio but not the memory. Measured on the same host with
-the same input: 32 MiB blocks at a 192 MiB heap and 64 MiB blocks at a 192 MiB
-heap both die with `OutOfMemoryError` in `FastaStreamFactorizer.factorize`
-before finishing the first block, and 16 MiB blocks at a 160 MiB heap also die.
-16 MiB is the largest block that completes at a 192 MiB heap, and that
-configuration misses the size gate by 6.4 percentage points. A gap model that
-carries history across block boundaries is the remaining lever; I did not
-build one, so the gate is open rather than proven impossible.
+The size regression is the variant-gap channel plus the block seams of the
+other channels. Measured against the single 64 MiB-block archive: gap
++111,528 B, strands +61,037 B, geom +33,691 B, diff +19,173 B, lits +4,170 B,
+cnt +946 B, donor -2,814 B, mask -50,680 B, modes -48 B, framing +7,602 B,
+and +2,218 B from vote saturation. Mask and donor improve because smaller
+blocks change which anchors and donors are selected, but the 119,017 B of extra
+seam cost across diff/geom/strands/lits/cnt is structural: eight block
+boundaries force the factorizer to emit more gap entries and shorten the match
+history the LZ coder can see. A predictor ensemble does not remove that cost.
+
+Larger blocks fix the ratio but not the memory. On the same host and input,
+32 MiB blocks at a 224 MiB heap complete but peak at 272 MiB RSS, over the
+cap, and 64 MiB blocks at a 192 MiB heap exhaust the heap before the first
+block completes. 16 MiB is the largest block size that meets the RSS gate. The
+remaining 110,615 B to the 2% target would need a longer cross-block gap
+history or a better seam model; the plausible levers are estimated at tens of
+KB, so the gate is probably unreachable at this block size, but it is not
+proven impossible.
 
 This does **not** overturn the frozen-corpus result. On single genomes, JARVIS3
 and GeCo3 are close to HyperGraSS, and on some cells they are better. What it
@@ -112,11 +134,17 @@ was strongest.
   not a comparison against either tool's maximum-compression setting.
 - The specialized tools have no equivalent of the record-aware anchor bank or
   the page index; this measures their out-of-the-box sequence mode.
-- The bounded profile misses two of its three gates. The failure is measured,
-  not inferred: it is the 16 MiB factorization granularity, which the 256 MiB
-  cap cannot raise.
+- The bounded profile misses one of its three gates. It meets the 256 MiB RSS
+  cap (252.7 MiB compress, 221.2 MiB restore) and the 2x speed gate, but its
+  archive is 4.90% larger than the unbounded one, 110,615 B over the 2% target.
+  The residual is measured, not inferred: it is the 16 MiB factorization
+  granularity, which the RSS cap cannot raise.
 - Times are indicative; the original scale test already documents large
-  wall-time variance on this host.
+  wall-time variance on this host. The same 8-bit ablation archive took 51.4 s
+  in the lz-2 run and 119.9 s in a later local rerun with byte-identical
+  output; the host reports a 1.5 GHz nominal clock, so cross-session wall and
+  CPU times move by more than 2x. Archive sizes and within-run ratios are the
+  stable comparisons.
 
 ## Reproduce
 
@@ -127,11 +155,27 @@ python -B benchmarks/specialized/run.py \
   --timeout 7200
 python -B benchmarks/specialized/run.py \
   --run-id hypergrass-lz-1 \
-  --profiles hypergrass-pangenome,hypergrass-bounded-256m \
+  --profiles hypergrass-pangenome \
   --timeout 7200
+# The 192 MiB profile now selects the exact 8-bit vote counters for the ablation.
+python -B benchmarks/specialized/run.py \
+  --run-id hypergrass-lz-2 \
+  --profiles hypergrass-bounded-256m \
+  --timeout 3600
+python -B benchmarks/specialized/run.py \
+  --run-id hypergrass-lz-4 \
+  --profiles hypergrass-bounded-256m-tuned \
+  --timeout 3600
 python -B benchmarks/specialized/summarize.py --run hypergrass-lz-1
+python -B benchmarks/specialized/summarize.py --run hypergrass-lz-2
+python -B benchmarks/specialized/summarize.py --run hypergrass-lz-4
 ```
 
+The lz-1 report also carries the first bounded attempt (4,131,860 B); that
+entry predates the shared gap history and the packed vote array and is kept as
+failure evidence. The current `hypergrass-bounded-256m` profile selects the
+exact 8-bit vote counters and reproduces the lz-2 entry.
+
 The sequence extract and archives are gitignored; `report.json` is the
-published evidence, and `verify.json` in each operation directory is the
+published evidence, and `verification.json` in each operation directory is the
 independent codec-agnostic round-trip verdict.
