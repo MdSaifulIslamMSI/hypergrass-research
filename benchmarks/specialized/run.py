@@ -6,6 +6,12 @@ test. Their archives exclude metadata; HyperGraSS and xz archives include it.
 That asymmetry slightly favors the specialized tools, which is the conservative
 direction for a HyperGraSS comparison.
 
+GraSS is the published ancestor of HyperGraSS. Its raw path accepts the flat
+headerless sequence and restores it byte-for-byte, so it receives the identical
+120,108,223-byte `input.seq` rather than a FASTA wrapper. Its archive is the
+native `FinalBsc.bsc` produced by the bundled grammar/substitution pipeline and
+`libbsc -e2`; the harness records the exact GraSS and libbsc commits.
+
 A small prefix slice can be used as a pilot to estimate full-scale runtime
 before committing hours to a 121.8 MB run.
 
@@ -89,7 +95,19 @@ PROFILES = (
         "heap": "160m",
         "memory": "256m",
     },
+    {
+        "id": "grass",
+        "kind": "grass",
+        "level": "default-e2",
+        "heap": "1500m",
+        "memory": "2g",
+    },
 )
+
+# The GraSS paper build expects these exact upstream revisions. The checkout is
+# a local, gitignored build tree; fetch_vendor.ps1 recreates it.
+GRASS_COMMIT = "6d93700f5a2de8841f7cf2c20064413c80df2c4a"
+LIBBSC_COMMIT = "1dc676540cb40a41562af6f2db04bd1adce97f90"
 
 VERIFIER = Path(__file__).resolve().parent.parent / "verify" / "verify.py"
 
@@ -264,6 +282,20 @@ def main(argv: list[str] | None = None) -> int:
         "results": [],
         "status": "running",
     }
+    if "grass" in wanted:
+        report["vendor"] = {
+            "grass": {
+                "repo": "https://github.com/AnshuOishik/GraSS",
+                "commit": GRASS_COMMIT,
+                "jvm": "OpenJDK 21",
+            },
+            "libbsc": {
+                "repo": "https://github.com/IlyaGrebnov/libbsc",
+                "commit": LIBBSC_COMMIT,
+                "bsc_version": "3.4.0",
+                "note": "GraSS invokes ./bsc e FinalTar.tar FinalBsc.bsc -e2",
+            },
+        }
     if not args.slice_bases:
         baseline_path = PROJECT / "benchmarks/pangenome/runs/pangenome-scale-2/report.json"
         if baseline_path.exists():
@@ -410,6 +442,49 @@ def main(argv: list[str] | None = None) -> int:
                         and restored.exists()
                         and sequence_sha256(restored) == sequence["sha256"]
                     )
+            elif profile["kind"] == "grass":
+                # GraSS is a FASTA/text codec, but its raw path accepts a headerless
+                # single-line sequence and restores it byte-for-byte (the "0" first
+                # line in F1.SSG). That lets it consume input.seq unchanged.
+                op_dir = run_dir / "ops" / profile["id"] / "compress"
+                dec_dir = run_dir / "ops" / profile["id"] / "decompress"
+                op_dir.mkdir(parents=True, exist_ok=True)
+                dec_dir.mkdir(parents=True, exist_ok=True)
+                bsc = PROJECT / "benchmarks/specialized/vendor/bin/bsc"
+                if not bsc.is_file():
+                    raise FileNotFoundError(
+                        "missing vendor/bin/bsc; run vendor/fetch_vendor.ps1"
+                    )
+                shutil.copyfile(bsc, op_dir / "bsc")
+                artifact = op_dir / "FinalBsc.bsc"
+                restored = dec_dir / "Final.SSG"
+                java = [
+                    "java", f"-Xmx{profile.get('heap', '1500m')}",
+                    "-XX:ActiveProcessorCount=1",
+                    "-cp", "/work/benchmarks/specialized/vendor/GraSS/build",
+                    "SSG.SSG",
+                ]
+                compress = pangenome_run.run_operation(
+                    PROJECT, image, run_dir, f"{profile['id']}/compress",
+                    java + ["compress",
+                            pangenome_run.to_container(PROJECT, run_dir / "input.seq")],
+                    op_dir, args.timeout, memory,
+                )
+                entry.update(compress)
+                if compress["status"] == "success" and artifact.exists():
+                    shutil.copyfile(artifact, dec_dir / "FinalBsc.bsc")
+                    shutil.copyfile(bsc, dec_dir / "bsc")
+                    decompress = pangenome_run.run_operation(
+                        PROJECT, image, run_dir, f"{profile['id']}/decompress",
+                        java + ["decompress"],
+                        dec_dir, args.timeout, memory,
+                    )
+                    entry["decompress"] = decompress
+                    entry["roundtrip_ok"] = (
+                        decompress["status"] == "success"
+                        and restored.exists()
+                        and sequence_sha256(restored) == sequence["sha256"]
+                    )
             else:
                 raise ValueError(f"unknown kind: {profile['kind']}")
         except Exception as error:
@@ -422,6 +497,8 @@ def main(argv: list[str] | None = None) -> int:
                 artifact = run_dir / "ops" / profile["id"] / "input.seq.co"
             elif profile["kind"] == "hypergrass":
                 artifact = run_dir / "ops" / profile["id"] / "archive.hgs"
+            elif profile["kind"] == "grass":
+                artifact = run_dir / "ops" / profile["id"] / "compress" / "FinalBsc.bsc"
             else:
                 artifact = run_dir / "ops" / profile["id"] / "archive.xz"
             if artifact.exists():

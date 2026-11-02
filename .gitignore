@@ -36,6 +36,11 @@ benchmarks/panman/panman/
 benchmarks/panman/info/
 benchmarks/panman/original-bin/
 
+# Third-party codec checkouts and builds (recreated by vendor/fetch_vendor.ps1)
+benchmarks/specialized/vendor/GraSS/
+benchmarks/specialized/vendor/libbsc/
+benchmarks/specialized/vendor/bin/
+
 # Editor and OS noise
 .idea/
 .vscode/

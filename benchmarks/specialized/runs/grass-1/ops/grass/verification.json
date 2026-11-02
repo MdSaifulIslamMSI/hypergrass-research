@@ -1,0 +1,20 @@
+{
+  "verdict": "pass",
+  "problems": [],
+  "original": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\grass-1\\input.seq",
+  "restored": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\grass-1\\ops\\grass\\decompress\\Final.SSG",
+  "archive": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\grass-1\\ops\\grass\\compress\\FinalBsc.bsc",
+  "original_bytes": 120108223,
+  "restored_bytes": 120108223,
+  "archive_bytes": 24777592,
+  "bytes_compared": 120108223,
+  "byte_identical": true,
+  "first_mismatch_offset": null,
+  "original_sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb",
+  "restored_sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb",
+  "archive_sha256": "9fe4a3adef002d725ab2154df2d02e25b99edee889fff0a147dd0a2209e2ce1b",
+  "expected_sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb",
+  "chunk_bytes": 8388608,
+  "seconds": 1.139,
+  "comparison": "streaming byte comparison independent of the codec"
+}

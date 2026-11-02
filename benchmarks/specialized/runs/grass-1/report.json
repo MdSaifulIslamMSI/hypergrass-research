@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "kind": "specialized-scale-test",
+  "run_id": "grass-1",
+  "started_utc": "2026-11-02T14:07:40.582409+00:00",
+  "image_id": "sha256:d6ca62a74e3724172a5c49720e28ab2066eb31b3c965dadfb6220e112dbc3bb3",
+  "source": "benchmarks\\pangenome\\data\\pangenome.fasta",
+  "sliced": false,
+  "input": {
+    "fasta": {
+      "path": "benchmarks\\pangenome\\data\\pangenome.fasta",
+      "size_bytes": 121825884,
+      "sha256": "f03f0dd10c541b99ddf63d18053e3a9c6009910a81700ba18f15e24dcb7d2285",
+      "records": 24,
+      "bases": 120108223
+    },
+    "sequence": {
+      "path": "benchmarks\\specialized\\runs\\grass-1\\input.seq",
+      "size_bytes": 120108223,
+      "bases": 120108223,
+      "sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb",
+      "non_acgt_bases_masked": 2357,
+      "base_counts": {
+        "A": 29610181,
+        "C": 30430258,
+        "G": 30463227,
+        "T": 29602200
+      }
+    },
+    "normalization": "headers removed, letters uppercased, non-ACGT replaced with A; both tools receive this sequence and are verified against it"
+  },
+  "profiles": [
+    "grass"
+  ],
+  "results": [
+    {
+      "profile": "grass",
+      "kind": "grass",
+      "level": "default-e2",
+      "input_bytes": 120108223,
+      "input_sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb",
+      "input_bases": 120108223,
+      "status": "success",
+      "roundtrip_ok": true,
+      "artifact_bytes": 24777592,
+      "bits_per_base": 1.650351083788826,
+      "wall_seconds": 224.4872773709999,
+      "cpu_seconds": 121.747257,
+      "peak_rss_bytes": 1315459072,
+      "error": null,
+      "returncode": 0,
+      "decompress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 165.54964673199993,
+        "cpu_seconds": 78.467126,
+        "peak_rss_bytes": 1068773376,
+        "error": null
+      },
+      "verification": {
+        "verdict": "pass",
+        "problems": [],
+        "original": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\grass-1\\input.seq",
+        "restored": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\grass-1\\ops\\grass\\decompress\\Final.SSG",
+        "archive": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\grass-1\\ops\\grass\\compress\\FinalBsc.bsc",
+        "original_bytes": 120108223,
+        "restored_bytes": 120108223,
+        "archive_bytes": 24777592,
+        "bytes_compared": 120108223,
+        "byte_identical": true,
+        "first_mismatch_offset": null,
+        "original_sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb",
+        "restored_sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb",
+        "archive_sha256": "9fe4a3adef002d725ab2154df2d02e25b99edee889fff0a147dd0a2209e2ce1b",
+        "expected_sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb",
+        "chunk_bytes": 8388608,
+        "seconds": 1.139,
+        "comparison": "streaming byte comparison independent of the codec"
+      },
+      "restored_sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb"
+    }
+  ],
+  "status": "success",
+  "vendor": {
+    "grass": {
+      "repo": "https://github.com/AnshuOishik/GraSS",
+      "commit": "6d93700f5a2de8841f7cf2c20064413c80df2c4a",
+      "jvm": "OpenJDK 21"
+    },
+    "libbsc": {
+      "repo": "https://github.com/IlyaGrebnov/libbsc",
+      "commit": "1dc676540cb40a41562af6f2db04bd1adce97f90",
+      "bsc_version": "3.4.0",
+      "note": "GraSS invokes ./bsc e FinalTar.tar FinalBsc.bsc -e2"
+    }
+  },
+  "baseline": {
+    "profile": "xz-9",
+    "archive_bytes": 8394900,
+    "source": "benchmarks\\pangenome\\runs\\pangenome-scale-2\\report.json"
+  },
+  "failures": 0,
+  "finished_utc": "2026-11-02T14:14:19.979800+00:00"
+}

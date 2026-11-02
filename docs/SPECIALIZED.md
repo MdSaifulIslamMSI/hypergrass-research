@@ -5,7 +5,9 @@
 The frozen corpus compares HyperGraSS with JARVIS3 and GeCo3 on individual
 genomes, where the margins are narrow. Does either specialized DNA compressor
 close the gap on a 121.8 MB multi-strain pangenome, where most of the redundant
-information is between genomes rather than within one genome?
+information is between genomes rather than within one genome? The comparison
+also includes the published GraSS implementation, the ancestor of HyperGraSS,
+so the effect of the HyperGraSS redesign is measured rather than assumed.
 
 ## Protocol
 
@@ -31,6 +33,15 @@ information is between genomes rather than within one genome?
   heap with SerialGC, a 32 MiB code cache, and a 64 MiB metaspace cap. The
   earlier bounded attempt used the same blocks with a 192 MiB heap but no
   cross-block history; it is kept in the table as the failure baseline.
+- GraSS (public implementation, commit
+  `6d93700f5a2de8841f7cf2c20064413c80df2c4a`) runs unmodified on the same flat
+  sequence through its headerless raw path. Its `bsc` backend is built from
+  libbsc commit `1dc676540cb40a41562af6f2db04bd1adce97f90` (bsc 3.4.0) with
+  the commands in `benchmarks/specialized/vendor/README.md`. The code fixes
+  `-e2`, 25 MB BSC blocks, and LZP preprocessing; the JVM gets `-Xmx1500m`
+  because the default heap in this 2 GiB container is 512 MiB and the input is
+  one 120M-character line. Its native archive is `FinalBsc.bsc`, a
+  BSC-compressed tar of `F1.SSG` and `F2.SSG`.
 - Bounded-mode gates, fixed before the run: at most 256 MiB peak RSS for
   compress and restore, at most 2% archive growth, and at most 2x wall time
   against the tuned unbounded profile.
@@ -41,6 +52,7 @@ information is between genomes rather than within one genome?
 | Profile | Archive | Bits/base | Compress | Decompress | Peak RSS (c / d) | Exact |
 | --- | ---: | ---: | ---: | ---: | ---: | :---: |
 | JARVIS3 l7 | 3,896,361 B | 0.260 | 95.4 s | 84.2 s | 286 / 286 MiB | yes |
+| GraSS (public implementation, `-e2`) | 24,777,592 B | 1.650 | 224.5 s | 165.5 s | 1,255 / 1,019 MiB | yes |
 | GeCo3 l3 | 14,389,043 B | 0.958 | 506.8 s | 488.5 s | 129 / 129 MiB | yes |
 | GeCo3 l6 | 8,409,358 B | 0.560 | 534.4 s | 357.7 s | 513 / 513 MiB | yes |
 | xz -9 | 5,663,640 B | 0.377 | 144.3 s | 6.6 s | 730 / 185 MiB | yes |
@@ -65,6 +77,21 @@ The trade is compression time and memory, not restore time. HyperGraSS needed
 versus 285.8 MiB. The earlier 4,885,851-byte tuned archive was 20.3% *larger*
 than JARVIS3; the LZ77 plus range-coder gap channel described in
 [`ENTROPY-FLOOR.md`](ENTROPY-FLOOR.md) removed that deficit and then some.
+
+The published GraSS implementation, the ancestor of HyperGraSS, is not
+competitive at this scale. Run unmodified on the identical 120,108,223-byte
+sequence, it produced **24,777,592 B (1.650 bits/base, 4.85x)**, which is
+**6.50x the HyperGraSS archive** and **6.36x JARVIS3 level 7**. It compressed
+in 224.5 s (121.7 CPU s) at 1,254.5 MiB peak RSS and restored in 165.5 s at
+1,019.3 MiB. JARVIS3 therefore dominates GraSS on every measured axis: 6.36x
+smaller, 2.35x faster to compress, 1.97x faster to restore, and 4.4x lower
+compress RSS. HyperGraSS trades 3.95x more compress time for a 6.50x smaller
+archive. The gap is structural: GraSS's grammar/substitution stage plus BSC has
+no cross-genome anchor bank or variant-gap channel, so the 24-strain redundancy
+reaches the backend only as generic BWT/LZP matches. This does not challenge the
+GraSS paper's single-genome results; it measures the published pipeline out of
+the box on a pangenome, with the same input and container as the other
+profiles.
 
 The tuned bounded profile meets two of its three gates. At 16 MiB blocks, a
 160 MiB heap, and a 256 KiB gap history shared across blocks it produces
@@ -134,6 +161,15 @@ was strongest.
   not a comparison against either tool's maximum-compression setting.
 - The specialized tools have no equivalent of the record-aware anchor bank or
   the page index; this measures their out-of-the-box sequence mode.
+- GraSS was given `-Xmx1500m`; the container default is 512 MiB. The code has
+  no compression-level switch, so `-e2`, 25 MB BSC blocks, and LZP are fixed.
+  It was built with bsc 3.4.0 (libbsc commit
+  `1dc676540cb40a41562af6f2db04bd1adce97f90`), which is newer than the libbsc
+  revision used in the 2025 paper; archive size may differ slightly from the
+  published figures. The GraSS source was not modified. Its tar container
+  embeds the F1/F2 modification times, so the archive bytes and size vary by a
+  few bytes between runs; two 2 MB reruns produced identical F1/F2 streams and
+  archives differing by 4 bytes. The 24,777,592 B figure is this run's size.
 - The bounded profile misses one of its three gates. It meets the 256 MiB RSS
   cap (252.7 MiB compress, 221.2 MiB restore) and the 2x speed gate, but its
   archive is 4.90% larger than the unbounded one, 110,615 B over the 2% target.
@@ -149,9 +185,15 @@ was strongest.
 ## Reproduce
 
 ```sh
+powershell -NoProfile -ExecutionPolicy Bypass \
+  -File benchmarks/specialized/vendor/fetch_vendor.ps1
 python -B benchmarks/specialized/run.py \
   --run-id specialized-scale-1 \
   --profiles jarvis3-l7,geco3-l3,geco3-l6,xz-9 \
+  --timeout 7200
+python -B benchmarks/specialized/run.py \
+  --run-id grass-1 \
+  --profiles grass \
   --timeout 7200
 python -B benchmarks/specialized/run.py \
   --run-id hypergrass-lz-1 \
@@ -169,7 +211,12 @@ python -B benchmarks/specialized/run.py \
 python -B benchmarks/specialized/summarize.py --run hypergrass-lz-1
 python -B benchmarks/specialized/summarize.py --run hypergrass-lz-2
 python -B benchmarks/specialized/summarize.py --run hypergrass-lz-4
+python -B benchmarks/specialized/summarize.py --run grass-1
 ```
+
+The GraSS run uses the native `bsc` binary built by `fetch_vendor.ps1`; the
+harness copies it into each operation directory because GraSS invokes
+`./bsc` relative to its working directory.
 
 The lz-1 report also carries the first bounded attempt (4,131,860 B); that
 entry predates the shared gap history and the packed vote array and is kept as

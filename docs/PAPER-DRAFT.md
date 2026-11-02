@@ -242,6 +242,15 @@ compress RSS and 221.2 MiB restore RSS. It still misses the 2% size gate by
 110,615 bytes; 32 MiB blocks reach 272 MiB RSS and 64 MiB blocks exhaust the
 heap, so 16 MiB is the largest block the RSS cap allows.
 
+The published GraSS pipeline, the ancestor of HyperGraSS, was also run
+unmodified on the identical sequence. It produced 24,777,592 bytes (1.650
+bits/base), 6.50x the HyperGraSS archive and 6.36x JARVIS3, with 224.5 s
+compress at 1,254.5 MiB peak RSS and 165.5 s restore at 1,019.3 MiB. JARVIS3
+is smaller, faster in both directions, and lower-memory, so the original
+grammar/substitution plus BSC design is not a competitive pangenome
+compressor. The gain comes from the HyperGraSS anchor and variant-gap model,
+not from the shared GraSS lineage.
+
 **Interpretation.** HyperGraSS is competitive at small and medium sequence-only
 scales and narrowly first on the completed corpus cells. With the default
 profile it is not the smallest at 100 MB+ pangenome scale; the measured
@@ -289,6 +298,10 @@ capability with workload-dependent value, not an automatic speedup.
   180 s corpus conditions, so it is not a comparison against either tool's
   maximum setting. The specialized tools received header-free sequence input,
   which slightly favors them.
+- GraSS was run unmodified with `-Xmx1500m` and its fixed `-e2`/25 MB BSC
+  settings; the backend is bsc 3.4.0, newer than the revision used in the
+  GraSS paper. Its tar container embeds F1/F2 modification times, so the
+  archive size varies by a few bytes between runs.
 - The query workload is one run of 13 slices on one host. It does not measure
   repeated queries, concurrency, or a long-lived server; JVM/Python startup is
   included in every query.
@@ -318,8 +331,11 @@ are committed.
 
 ## References
 
-1. Roy, Maity & Mukhopadhyay. GraSS: genomic sequence compression.
+1. Roy, Maity & Mukhopadhyay. A lossless reference-free sequence compression
+   algorithm leveraging grammatical, statistical, and substitution rules.
    *Briefings in Functional Genomics*, 2025, `elae050`.
 2. JARVIS3, pinned commit `4dcb37b05b1a1482c2bf864d4968244817b0ad0a`.
 3. GeCo3, pinned commit `69642a0a913e543599f35aee372e300601e4cbbe`.
 4. PanMAN 0.1.4, as used by the pinned fixture runner.
+5. GraSS implementation, commit `6d93700f5a2de8841f7cf2c20064413c80df2c4a`,
+   with libbsc commit `1dc676540cb40a41562af6f2db04bd1adce97f90`.

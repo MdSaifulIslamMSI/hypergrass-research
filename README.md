@@ -238,6 +238,7 @@ Measured headlines, stated without rounding up:
 | 124.5 MB Klebsiella pangenome, tuned | 3,464,423 B, 35.92x, 10.6 s, **46.2% smaller than xz** |
 | Same 120.1 Mbp sequence, tuned + LZ gap coder | **3,810,409 B, 0.254 bits/base, 31.52x**, 887.3 s, 999 MiB peak RSS |
 | Same 120.1 Mbp sequence, JARVIS3 l7 | 3,896,361 B, 0.260 bits/base, 95.4 s, 286 MiB peak RSS |
+| Same sequence, GraSS (public implementation, `-e2`) | 24,777,592 B, 1.650 bits/base, 4.85x, 224.5 s, 1,255 MiB compress RSS |
 | Same sequence, bounded 256 MiB attempt | 4,131,860 B, 272.5 MiB, 149.5 s; missed size and RSS gates |
 | Same sequence, bounded 256 MiB tuned | 3,997,232 B, 252.7 MiB, 149.5 s; misses only the 2% size gate (+4.90%) |
 | 121.8 MB pangenome, `--lean` (`-Xmx8m`) | 28,910,764 B, 4.21x, 52 MiB peak RSS |
@@ -266,7 +267,11 @@ compression RSS (999 versus 286 MiB); restore time is equal (82.4 versus
 84.2 s). That is a size win, not a speed win, and it is not a compression
 breakthrough: 2.21% on one pangenome is a narrow margin, and the 41.8% xz
 margin is measured against a general-purpose baseline rather than the state of
-the art for DNA. See [`docs/SPECIALIZED.md`](docs/SPECIALIZED.md).
+the art for DNA. The published GraSS implementation, the ancestor pipeline, is
+**6.50x the size of HyperGraSS and 6.36x the size of JARVIS3** on the same
+input, and JARVIS3 also beats it on compression time, restore time, and memory,
+so the specialized frontier remains JARVIS3. See
+[`docs/SPECIALIZED.md`](docs/SPECIALIZED.md).
 
 On the query workload (13 exact 2,000-base slices), the tuned profile tied xz's
 query latency (1.35 s versus 1.36 s median) while storing 42% fewer bytes, but
