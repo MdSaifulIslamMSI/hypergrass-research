@@ -109,6 +109,59 @@ The archive bytes are stable across runs; wall time on this host is not (the
 same stride-8 restore took 20.7 s in one session and 66.5 s in another). Only
 size and exactness are compared across sessions.
 
+### Full-profile sweep on JDK 27
+
+`full-all-methods-v1` ran the complete published profile set, one observation per
+profile, on the same `hypergrass-corpus:jdk27` image and 2 GiB container limit.
+Four profiles completed and restored byte-exactly. Six strict-cap profiles were
+OOM-killed before writing an archive and contribute no size: all four 32 MiB-block
+variants in the 256 MiB container (stride 4, tuned, paged CM, stride 8) at
+268.8–270.3 MiB wrapper RSS, and both wide variants at the 320 MiB cap
+(332.8–332.9 MiB).
+
+| Profile | Archive | Bits/base | Compress | Restore | Peak RSS | Exact |
+| --- | ---: | ---: | ---: | ---: | ---: | :---: |
+| HyperGraSS unbounded (64 MiB blocks) | **3,810,409 B** | **0.254** | 753.8 s | 70.9 s | 581 MiB | yes |
+| HyperGraSS bounded native (256 MiB limit) | 3,864,464 B | 0.257 | 158.6 s | 75.3 s | 240 MiB | yes |
+| HyperGraSS bounded stride 8 (16 MiB blocks, 144 MiB heap) | 3,965,049 B | 0.264 | 129.8 s | 65.4 s | 262 MiB | yes |
+| GraSS (public implementation, `-e2`) | 24,777,548 B | 1.650 | 166.9 s | 116.8 s | 1,322 MiB | yes |
+
+The archive bytes reproduce the earlier sessions; the single-observation wall
+times do not (the native profile took 158.6 s here against a 54.8 s median in
+`native-gate-3`). Only size and exactness are compared across sessions. This
+sweep also confirms the strict-cap result: no JVM profile fits 256 MiB, while
+the native build completes at 240 MiB.
+
+### Codec ablation on a 10 MB slice
+
+`codec-ablation-10m-v2` ran a 10,000,000-base prefix through the same harness to
+separate the payload models from the anchor and aux layers. Two diagnostic JVM
+properties make the ablation possible without changing defaults:
+`-Dhypergrass.dnaMode=1|2|3` forces QCRM, BC-LZG, or AC-HMC, and
+`-Dhypergrass.noCompact=true` bypasses the ≤32 MiB single-genome path so the
+anchor pipeline runs. Neither property is part of the archive format.
+
+| Profile | Archive | Bits/base | Compress | Restore | Peak RSS | Exact |
+| --- | ---: | ---: | ---: | ---: | ---: | :---: |
+| QCRM (lean) | 2,406,156 B | 1.925 | 13.5 s | 13.4 s | 88 MiB | yes |
+| Auto (all codecs) | **1,450,787 B** | **1.161** | 38.0 s | 29.8 s | 370 MiB | yes |
+| BC-LZG forced | 1,454,172 B | 1.163 | 35.3 s | 50.1 s | 224 MiB | yes |
+| AC-HMC forced | 1,450,787 B | 1.161 | 42.7 s | 34.0 s | 299 MiB | yes |
+| Anchor CM pages | 1,463,055 B | 1.170 | 19.5 s | 18.3 s | 269 MiB | yes |
+| Aux without LZ77 | 1,450,787 B | 1.161 | 37.4 s | 31.6 s | 219 MiB | yes |
+| Aux without planes | 1,451,603 B | 1.161 | 33.4 s | 31.8 s | 227 MiB | yes |
+| Aux basic (no optional aux) | 1,459,406 B | 1.168 | 34.5 s | 31.1 s | 212 MiB | yes |
+| GraSS | 2,341,794 B | 1.873 | 14.0 s | 14.4 s | 294 MiB | yes |
+
+Forced AC-HMC reproduces the auto archive byte-for-byte, so AC-HMC is selected
+for every block that matters on this slice. BC-LZG is 3,385 B behind; QCRM is
+955,369 B behind and 2.75% larger than GraSS on its own. The HyperGraSS margin
+therefore comes from the anchor bank plus AC-HMC, not from QCRM in isolation.
+Anchor CM pages cost 12,268 B (0.85%), which buys header speed rather than size.
+Removing the LZ77 aux coder changes nothing on this slice, the plane coder is
+worth 816 B, and all optional aux coders together are worth 8,619 B. Every
+HyperGraSS variant except pure QCRM is 37.5–38.1% smaller than GraSS here.
+
 ## Findings
 
 HyperGraSS wins this comparison, narrowly, and pays for it in compression
@@ -131,7 +184,10 @@ competitive at this scale. Run unmodified on the identical 120,108,223-byte
 sequence, it produced **24,777,592 B (1.650 bits/base, 4.85x)**, which is
 **6.50x the HyperGraSS archive** and **6.36x JARVIS3 level 7**. It compressed
 in 224.5 s (121.7 CPU s) at 1,254.5 MiB peak RSS and restored in 165.5 s at
-1,019.3 MiB. JARVIS3 therefore dominates GraSS on every measured axis: 6.36x
+1,019.3 MiB. A same-image JDK 27 rerun produced **24,777,548 B**, 44 B smaller;
+the tar container embeds modification times, so a few bytes move between runs
+without changing the 6.50x ratio. JARVIS3 therefore dominates GraSS on every
+measured axis: 6.36x
 smaller, 2.35x faster to compress, 1.97x faster to restore, and 4.4x lower
 compress RSS. HyperGraSS trades 3.95x more compress time for a 6.50x smaller
 archive. The gap is structural: GraSS's grammar/substitution stage plus BSC has
@@ -363,7 +419,8 @@ The protocol, diversity strata, and complete tables are in
   published figures. The GraSS source was not modified. Its tar container
   embeds the F1/F2 modification times, so the archive bytes and size vary by a
   few bytes between runs; two 2 MB reruns produced identical F1/F2 streams and
-  archives differing by 4 bytes. The 24,777,592 B figure is this run's size.
+  archives differing by 4 bytes. The 24,777,592 B figure is the JDK 21 run's
+  size; the JDK 27 sweep produced 24,777,548 B.
 - The JVM bounded profile misses two of its three gates. Its archive is 4.90%
   larger than the unbounded one at stride 4 (110,615 B over the 2% target;
   4.06% and 78,432 B over at stride 8), and its 256 MiB RSS gate fails in the
@@ -451,10 +508,22 @@ python -B benchmarks/specialized/run.py \
   --gate-baseline jarvis3-l7 \
   --gate-profiles hypergrass-bounded-native \
   --gate-size-baseline-bytes 3810409
+# Full published profile set plus GraSS on the identical input.
+python -B benchmarks/specialized/run.py \
+  --run-id full-all-methods-v1 \
+  --profiles hypergrass-pangenome,hypergrass-bounded-256m,hypergrass-bounded-256m-tuned,hypergrass-bounded-256m-cm-pages,hypergrass-bounded-256m-stride8,hypergrass-bounded-144m-stride8,hypergrass-bounded-wide,hypergrass-bounded-wide-cm,hypergrass-bounded-native,grass \
+  --repeats 1 --timeout 7200
+# Codec ablation on a 10 MB prefix; forced modes are diagnostic only.
+python -B benchmarks/specialized/run.py \
+  --run-id codec-ablation-10m-v2 --slice-bases 10000000 \
+  --profiles hypergrass-qcrm,hypergrass-auto,hypergrass-bclzg,hypergrass-achmc,hypergrass-anchor-cm,hypergrass-aux-no-lz,hypergrass-aux-no-plane,hypergrass-aux-basic,grass \
+  --repeats 1 --timeout 3600
 python -B benchmarks/specialized/summarize.py --run hypergrass-lz-1
 python -B benchmarks/specialized/summarize.py --run hypergrass-lz-2
 python -B benchmarks/specialized/summarize.py --run hypergrass-lz-4
 python -B benchmarks/specialized/summarize.py --run grass-1
+python -B benchmarks/specialized/summarize.py --run full-all-methods-v1
+python -B benchmarks/specialized/summarize.py --run codec-ablation-10m-v2
 ```
 
 The gate's ratio baseline is explicit. The JDK 27 command asks whether a
