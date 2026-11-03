@@ -33,7 +33,8 @@ public final class CanonicalSyncmerEngine {
 
     public static final int K = 16;
     private static final long KMER_MASK = (1L << (K << 1)) - 1L; // 32-bit exact 16-mer mask
-    private static final int SEED_STEP = 4; // Any >= 19-bp exact island is guaranteed to hit a seed!
+    /** Default seed stride: any >= 19-bp exact island is guaranteed to hit a seed. */
+    public static final int DEFAULT_SEED_STEP = 4;
     private static final int MIN_MATCH_LEN = 22;
     /** Acceptance threshold for target-to-anchor matches; tunable to reject seed-repeat detours. */
     private static final int MATCH_ACCEPT_MIN =
@@ -185,6 +186,7 @@ public final class CanonicalSyncmerEngine {
      */
     public static final class AnchorBankBuilder {
         private final int maxAnchorBases;
+        private final int seedStep;
         private byte[] bank;
         private int bankLen;
         private int primarySeedLen;
@@ -195,7 +197,12 @@ public final class CanonicalSyncmerEngine {
         private boolean completedFirstRecord;
 
         public AnchorBankBuilder(int maxAnchorBases, long totalDnaUpperBound) {
+            this(maxAnchorBases, totalDnaUpperBound, DEFAULT_SEED_STEP);
+        }
+
+        public AnchorBankBuilder(int maxAnchorBases, long totalDnaUpperBound, int seedStep) {
             this.maxAnchorBases = maxAnchorBases;
+            this.seedStep = Math.max(1, seedStep);
             int capLimit = (int) Math.min(maxAnchorBases, totalDnaUpperBound);
             this.initialized = capLimit >= MIN_MATCH_LEN;
             this.index = new SeedHashTable(initialized ? 32768 : 64);
@@ -223,7 +230,7 @@ public final class CanonicalSyncmerEngine {
                 int seedLen = Math.min(n, Math.min(maxAnchorBases, 4096));
                 bank = ensureCapacity(bank, seedLen);
                 System.arraycopy(seq, 0, bank, 0, seedLen);
-                indexRange(bank, 0, seedLen, index);
+                indexRange(bank, 0, seedLen, index, seedStep);
                 bankLen = seedLen;
                 pos = seedLen;
                 unalignedStart = seedLen;
@@ -244,7 +251,7 @@ public final class CanonicalSyncmerEngine {
                     if (rem > 0 && bankLen + rem <= maxAnchorBases) {
                         bank = ensureCapacity(bank, bankLen + rem);
                         System.arraycopy(seq, unalignedStart, bank, bankLen, rem);
-                        indexRange(bank, Math.max(0, bankLen - K), bankLen + rem, index);
+                        indexRange(bank, Math.max(0, bankLen - K), bankLen + rem, index, seedStep);
                         bankLen += rem;
                         unalignedStart = pos;
                     }
@@ -266,7 +273,7 @@ public final class CanonicalSyncmerEngine {
                             bank = ensureCapacity(bank, bankLen + add);
                             System.arraycopy(seq, unalignedStart, bank, bankLen, add);
                             int idxFrom = Math.max(0, bankLen - K);
-                            indexRange(bank, idxFrom, bankLen + add, index);
+                            indexRange(bank, idxFrom, bankLen + add, index, seedStep);
                             bankLen += add;
                             MatchResult m2 = findBestMatch(
                                     seq, n, queryStart, m.targetStart, rollingFwd, bank, bankLen, primarySeedLen, index);
@@ -289,7 +296,7 @@ public final class CanonicalSyncmerEngine {
                         bank = ensureCapacity(bank, bankLen + add);
                         System.arraycopy(seq, unalignedStart, bank, bankLen, add);
                         int idxFrom = Math.max(0, bankLen - K);
-                        indexRange(bank, idxFrom, bankLen + add, index);
+                        indexRange(bank, idxFrom, bankLen + add, index, seedStep);
                         bankLen += add;
                         unalignedStart += add;
                     }
@@ -303,7 +310,7 @@ public final class CanonicalSyncmerEngine {
                 bank = ensureCapacity(bank, bankLen + add);
                 System.arraycopy(seq, unalignedStart, bank, bankLen, add);
                 int idxFrom = Math.max(0, bankLen - K);
-                indexRange(bank, idxFrom, bankLen + add, index);
+                indexRange(bank, idxFrom, bankLen + add, index, seedStep);
                 bankLen += add;
             }
             if (!completedFirstRecord) {
@@ -327,11 +334,16 @@ public final class CanonicalSyncmerEngine {
      * serializes, so decoders need no changes. Positions covered fewer than twice keep the original.
      */
     public static AnchorBank consensusAnchor(AnchorBank bank, FactorizedChunk[] chunks) {
+        return consensusAnchor(bank, chunks, DEFAULT_SEED_STEP);
+    }
+
+    public static AnchorBank consensusAnchor(
+            AnchorBank bank, FactorizedChunk[] chunks, int seedStep) {
         byte[] counts = new byte[bank.length << 2];
         for (FactorizedChunk c : chunks) {
             accumulateAnchorVotes(bank, c.dnaBases, c.dnaLen, counts);
         }
-        return polishAnchor(bank, counts);
+        return polishAnchor(bank, counts, false, true, seedStep);
     }
 
     /**
@@ -414,6 +426,11 @@ public final class CanonicalSyncmerEngine {
      */
     public static AnchorBank polishAnchor(
             AnchorBank bank, byte[] counts, boolean packed, boolean buildIndex) {
+        return polishAnchor(bank, counts, packed, buildIndex, DEFAULT_SEED_STEP);
+    }
+
+    public static AnchorBank polishAnchor(
+            AnchorBank bank, byte[] counts, boolean packed, boolean buildIndex, int seedStep) {
         int len = bank.length;
         byte[] bases = bank.bases.clone();
         int changed = 0;
@@ -461,21 +478,25 @@ public final class CanonicalSyncmerEngine {
         }
         // Pre-size for two keys per SEED_STEP position at a 0.7 load factor so polishing a large
         // anchor does not pay transient rehash copies (it matters under a 256 MiB RSS budget).
-        int seedSlots = (int) Math.min(Integer.MAX_VALUE, (long) (len / SEED_STEP) * 3 + 1024);
+        int seedSlots = (int) Math.min(Integer.MAX_VALUE, (long) (len / seedStep) * 3 + 1024);
         SeedHashTable index = new SeedHashTable(Math.max(1024, seedSlots));
-        indexRange(bases, 0, len, index);
+        indexRange(bases, 0, len, index, seedStep);
         return new AnchorBank(bases, len, bank.primarySeedLen, EMPTY_DONORS, index);
     }
 
     /** Builds the seed index for a bank that was polished with index construction deferred. */
     public static AnchorBank withSeedIndex(AnchorBank bank) {
+        return withSeedIndex(bank, DEFAULT_SEED_STEP);
+    }
+
+    public static AnchorBank withSeedIndex(AnchorBank bank, int seedStep) {
         if (bank.index != null) {
             return bank;
         }
         int seedSlots = (int) Math.min(Integer.MAX_VALUE,
-                (long) (bank.length / SEED_STEP) * 3 + 1024);
+                (long) (bank.length / seedStep) * 3 + 1024);
         SeedHashTable index = new SeedHashTable(Math.max(1024, seedSlots));
-        indexRange(bank.bases, 0, bank.length, index);
+        indexRange(bank.bases, 0, bank.length, index, seedStep);
         return new AnchorBank(bank.bases, bank.length, bank.primarySeedLen, EMPTY_DONORS, index);
     }
 
@@ -496,10 +517,15 @@ public final class CanonicalSyncmerEngine {
      * Virtual Clade Ancestor haplotypes when multi-record homologous clades are present.
      */
     public static AnchorBank buildAnchorBank(FactorizedChunk[] chunks, int maxAnchorBases) {
-        AnchorBank partial = buildAnchorBankBases(chunks, maxAnchorBases);
+        return buildAnchorBank(chunks, maxAnchorBases, DEFAULT_SEED_STEP);
+    }
+
+    public static AnchorBank buildAnchorBank(
+            FactorizedChunk[] chunks, int maxAnchorBases, int seedStep) {
+        AnchorBank partial = buildAnchorBankBases(chunks, maxAnchorBases, seedStep);
         if (CONSENSUS_ANCHOR && partial.length >= MIN_MATCH_LEN && chunks.length > 1) {
             for (int pass = 0; pass < CONSENSUS_PASSES; pass++) {
-                partial = consensusAnchor(partial, chunks);
+                partial = consensusAnchor(partial, chunks, seedStep);
             }
         }
         int totalRecords = 0;
@@ -515,12 +541,13 @@ public final class CanonicalSyncmerEngine {
         return partial;
     }
 
-    private static AnchorBank buildAnchorBankBases(FactorizedChunk[] chunks, int maxAnchorBases) {
+    private static AnchorBank buildAnchorBankBases(
+            FactorizedChunk[] chunks, int maxAnchorBases, int seedStep) {
         int totalDna = 0;
         for (FactorizedChunk c : chunks) {
             totalDna += c.dnaLen;
         }
-        AnchorBankBuilder builder = new AnchorBankBuilder(maxAnchorBases, totalDna);
+        AnchorBankBuilder builder = new AnchorBankBuilder(maxAnchorBases, totalDna, seedStep);
         for (FactorizedChunk c : chunks) {
             builder.addChunk(c);
         }
@@ -660,9 +687,10 @@ public final class CanonicalSyncmerEngine {
         return Arrays.copyOf(arr, next);
     }
 
-    private static void indexRange(byte[] bank, int startPos, int endPos, SeedHashTable index) {
-        int firstSeed = ((startPos + SEED_STEP - 1) / SEED_STEP) * SEED_STEP;
-        for (int p = firstSeed; p + K <= endPos; p += SEED_STEP) {
+    private static void indexRange(
+            byte[] bank, int startPos, int endPos, SeedHashTable index, int seedStep) {
+        int firstSeed = ((startPos + seedStep - 1) / seedStep) * seedStep;
+        for (int p = firstSeed; p + K <= endPos; p += seedStep) {
             long fwd = 0L;
             long rev = 0L;
             for (int k = 0; k < K; k++) {

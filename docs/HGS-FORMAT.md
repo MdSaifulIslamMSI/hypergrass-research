@@ -9,7 +9,7 @@ malformed input; the encoder emits only the canonical choices described here.
 An `.hgs` file stores an arbitrary byte stream losslessly. When the input is
 FASTA, the encoder additionally factorizes headers, line layout, soft-masking,
 scaffold `N` runs, and non-ACGT symbols into separate channels, then compresses
-the DNA stream with a syncmer-anchored model. The decoder reconstructs the
+the DNA stream with a stride-sampled 16-mer anchor model. The decoder reconstructs the
 original bytes exactly, including headers, wrapping, case, and line endings.
 
 The format has two physical layouts:
@@ -251,7 +251,7 @@ The first byte selects the DNA encoding:
 | --- | --- |
 | `0` | Empty DNA stream. No further bytes. |
 | `1` | `uvarint compressedLen`, then that many bytes of a `QuantumContextRepeatMixer` stream that decodes to `dnaLen` bases. |
-| `2` | Syncmer matches with per-match literals and SNP residuals. |
+| `2` | Seed matches with per-match literals and SNP residuals. |
 | `3` | Anchor-coordinate haplotype matrix with donor reuse. |
 
 Modes 2 and 3 are internal to `CanonicalSyncmerEngine`. Their subfields use

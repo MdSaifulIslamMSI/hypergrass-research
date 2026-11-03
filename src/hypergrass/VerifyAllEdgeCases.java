@@ -334,6 +334,19 @@ public final class VerifyAllEdgeCases {
             throw new AssertionError("Bounded streamed writer is not deterministic");
         }
 
+        HyperGraSS.CompressOptions stride = HyperGraSS.CompressOptions.defaults();
+        stride.bounded = true;
+        stride.threads = 1;
+        stride.blockSizeBytes = 64 * 1024;
+        stride.maxAnchorBases = 32 * 1024;
+        stride.seedStep = 8;
+        Path stridePath = tmpDir.resolve("bounded-stride8.hgs");
+        HyperGraSS.compressFile(inPath, stridePath, stride);
+        if (!Arrays.equals(raw, HyperGraSS.decompressBytes(
+                Files.readAllBytes(stridePath)))) {
+            throw new AssertionError("Stride-8 bounded archive round-trip mismatch");
+        }
+
         HyperGraSS.CompressOptions par = HyperGraSS.CompressOptions.defaults();
         par.bounded = true;
         par.threads = 3;

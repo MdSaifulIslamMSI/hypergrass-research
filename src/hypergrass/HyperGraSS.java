@@ -63,6 +63,11 @@ public final class HyperGraSS {
         public int maxAnchorBases = CanonicalSyncmerEngine.DEFAULT_MAX_ANCHOR_BASES;
         public boolean anchorSinglePage = false;
         /**
+         * Anchor seed-index stride. 4 is the published default (any >= 19-bp exact island
+         * hits a seed); 8 halves the index at a 9 MiB anchor and still guarantees 23 bp.
+         */
+        public int seedStep = CanonicalSyncmerEngine.DEFAULT_SEED_STEP;
+        /**
          * Encode each 64 KiB anchor page with the context-mixing codec instead of one
          * whole-anchor page. Costs a little size (context resets) and saves most of the
          * header wall time on large anchors. Serial: per-page model allocation contends
@@ -165,7 +170,8 @@ public final class HyperGraSS {
 
         try (FileChannel ch = FileChannel.open(input, StandardOpenOption.READ)) {
             CanonicalSyncmerEngine.AnchorBankBuilder builder =
-                    new CanonicalSyncmerEngine.AnchorBankBuilder(opts.maxAnchorBases, part.size);
+                    new CanonicalSyncmerEngine.AnchorBankBuilder(
+                            opts.maxAnchorBases, part.size, opts.seedStep);
             long totalDna = 0L;
             int totalRecords = 0;
             for (BlockSlice s : slices) {
@@ -206,9 +212,10 @@ public final class HyperGraSS {
                                     bank, chunk.dnaBases, chunk.dnaLen, votes);
                         }
                     }
-                    bank = CanonicalSyncmerEngine.polishAnchor(bank, votes, !exactVotes, false);
+                    bank = CanonicalSyncmerEngine.polishAnchor(
+                            bank, votes, !exactVotes, false, opts.seedStep);
                 }
-                bank = CanonicalSyncmerEngine.withSeedIndex(bank);
+                bank = CanonicalSyncmerEngine.withSeedIndex(bank, opts.seedStep);
             }
 
             List<BlockDirEntry> dir = new ArrayList<>(numBlocks);
@@ -631,7 +638,8 @@ public final class HyperGraSS {
             // Probe AnchorBank compression density quickly
             boolean checkMulti = opts.maxAnchorBases > 0 && totalDna >= CanonicalSyncmerEngine.K * 2;
             AnchorBank probeBank = checkMulti
-                    ? CanonicalSyncmerEngine.buildAnchorBank(chunks, opts.maxAnchorBases)
+                    ? CanonicalSyncmerEngine.buildAnchorBank(
+                            chunks, opts.maxAnchorBases, opts.seedStep)
                     : null;
             boolean highlyRedundantCollection = (probeBank != null
                     && probeBank.length > 0
@@ -680,7 +688,8 @@ public final class HyperGraSS {
             CompressOptions opts) {
         boolean useAnchor = !opts.leanMode && opts.maxAnchorBases > 0 && totalDna >= CanonicalSyncmerEngine.K * 2;
         AnchorBank bank = useAnchor
-                ? CanonicalSyncmerEngine.buildAnchorBank(chunks, opts.maxAnchorBases)
+                ? CanonicalSyncmerEngine.buildAnchorBank(
+                        chunks, opts.maxAnchorBases, opts.seedStep)
                 : null;
         return buildMultiBlockArchiveWithBank(
                 rawByteLen, crcVal, slices, chunks, totalDna, totalRecords, opts, bank);
@@ -1471,6 +1480,16 @@ public final class HyperGraSS {
                         opts.anchorSinglePage = true;
                     } else if ("--anchor-cm-pages".equals(args[idx])) {
                         opts.anchorCmPages = true;
+                    } else if ("--seed-step".equals(args[idx])) {
+                        if (idx + 1 >= args.length) {
+                            printUsage();
+                            return;
+                        }
+                        opts.seedStep = Integer.parseInt(args[++idx]);
+                        if (opts.seedStep < 1 || opts.seedStep > 64) {
+                            System.err.println("error: --seed-step must be 1-64");
+                            return;
+                        }
                     } else if ("--bounded".equals(args[idx])) {
                         opts.bounded = true;
                     } else if ("--threads".equals(args[idx])) {
@@ -1579,6 +1598,7 @@ public final class HyperGraSS {
         System.out.println("    --anchor-mib N / --block-mib N: explicit tuning for large inputs");
         System.out.println("    --anchor-single-page: one anchor page (maximum compression, slower header)");
         System.out.println("    --anchor-cm-pages: 64 KiB context-mixing anchor pages (slightly larger, faster header)");
+        System.out.println("    --seed-step N: anchor seed stride (4 default, 8 halves the index)");
         System.out.println("  decompress <input.hgs> <output.fa>");
         System.out.println("  query <input.hgs> <recordIdx> [startBase endBase]");
         System.out.println("  inspect <input.hgs>");

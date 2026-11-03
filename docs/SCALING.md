@@ -68,6 +68,45 @@ cores.
 The archive footer already stores `totalRawBytes` as a `varLong` and block file offsets as
 `long` deltas, so the on-disk format does not need a version bump for Tier A.
 
+### Seed stride
+
+The seed index is the one hard limit that a format-level knob moves. With `K = 16`
+and stride `s`, an exact island of `L` bases is guaranteed to contain an indexed
+seed when `L >= 16 + s - 1`: 19 bp at `s = 4`, 23 bp at `s = 8`. The measured
+index footprint at a saturated 9.43 Mbp anchor is 67 MB at `s = 4` and 33.6 MB
+at `s = 8`.
+
+On the 120.1 Mbp input with 16 MiB blocks, `s = 8` produced **3,965,049 B**
+versus 3,997,232 B at `s = 4` (**-0.80%**) at the same 160 MiB heap. With 32 MiB
+blocks it produced 3,824,166 B, 1.85% below JARVIS3 l7 and 0.36% above the
+unbounded archive, but that profile needs a 256 MiB heap and peaks at
+339.1 MiB compress / 302.7 MiB restore. `--seed-step` defaults to 4 and is
+opt-in, so every published archive stays byte-identical.
+
+Stride 8 does not buy the 256 MiB gate at 16 MiB blocks:
+
+| Heap | Archive | Wall | Peak RSS (c / d) | Exact |
+|---:|---:|---:|---:|:---:|
+| 160m | 3,965,049 B | 51.2 s | 275.1 / 216.4 MiB | yes |
+| 144m | 3,965,049 B | 134.0 s | 258.3 / 189.9 MiB | yes |
+| 128m | — | — | OOM at 11 s | no |
+
+The index shrinks from 67 MB to 33.6 MB, but the peak is set by the anchor
+bank, block, and factorizer working set as well. The 144 MiB heap still
+exceeds the cap by 2.3 MiB and pays 2.6x the wall time; 128 MiB fails in
+`FastaStreamFactorizer.factorize`. Byte-identical archives have also varied by
+about 22 MiB peak RSS between runs, so a gate claim needs the worst of several
+interleaved observations, not one sample. In the final JDK 27 three-repeat run,
+both 16 MiB profiles measured 269.3–269.4 MiB and were OOM-killed 3/3 once swap
+was removed; the 275.1 MiB row is the upper end of the earlier host-noise range,
+not a separate configuration.
+
+The trade is not free in theory: `MATCH_ACCEPT_MIN` is 22 bp, one base below the
+`s = 8` guarantee, so a 22-bp island can be missed. The measured net effect on
+this input is still favourable because a sparser seed set removes short,
+expensive candidate matches. See [`FOUNDATIONS.md`](FOUNDATIONS.md) for the
+falsification test.
+
 ## Phase 0 - measure before changing anything
 
 Instrument one bounded run at 1 GB, 2.2 GB and 10 GB with:
