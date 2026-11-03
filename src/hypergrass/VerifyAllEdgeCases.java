@@ -72,6 +72,9 @@ public final class VerifyAllEdgeCases {
         // 6. Multi-record input whose blocks start inside long records
         passed += verifyMultiRecordMidBlockQueries(bueb18940, tmpDir);
 
+        // 7. Bounded file path: streamed archive assembly + parallel block window
+        passed += verifyBoundedFilePaths(tmpDir);
+
         System.out.println("\nALL " + passed + " VERIFICATION SUITES PASSED WITH 100% SHA-256 IDENTITY!");
     }
 
@@ -278,6 +281,87 @@ public final class VerifyAllEdgeCases {
         }
         System.out.printf("  [PASS] %-48s | Raw: %,8d B -> HGS: %,7d B | %d Records Queried%n",
                 "Records with Mid-Record Block Starts", raw.length, Files.size(hgsPath), numRecords);
+        return 1;
+    }
+
+    /** Bounded file path: streamed archive assembly and the parallel block window. */
+    private static int verifyBoundedFilePaths(Path tmpDir) throws Exception {
+        Random rng = new Random(20_261_103L);
+        int numRecords = 6;
+        int recordLen = 120_000;
+        char[] template = new char[recordLen];
+        for (int i = 0; i < recordLen; i++) {
+            template[i] = "ACGT".charAt(rng.nextInt(4));
+        }
+        StringBuilder fasta = new StringBuilder();
+        for (int r = 0; r < numRecords; r++) {
+            char[] arr = template.clone();
+            for (int m = 0; m < 400; m++) {
+                int p = rng.nextInt(arr.length);
+                arr[p] = mutateBase(arr[p], rng.nextDouble() < 0.75, rng);
+            }
+            fasta.append(">bounded_record_").append(r).append('\n');
+            for (int i = 0; i < arr.length; i += 70) {
+                fasta.append(arr, i, Math.min(70, arr.length - i)).append('\n');
+            }
+        }
+        byte[] raw = fasta.toString().getBytes(StandardCharsets.US_ASCII);
+        Path inPath = tmpDir.resolve("bounded.fna");
+        Files.write(inPath, raw);
+
+        HyperGraSS.CompressOptions seq = HyperGraSS.CompressOptions.defaults();
+        seq.bounded = true;
+        seq.threads = 1;
+        seq.blockSizeBytes = 64 * 1024;
+        seq.maxAnchorBases = 32 * 1024;
+        Path seqPath = tmpDir.resolve("bounded-seq.hgs");
+        HyperGraSS.compressFile(inPath, seqPath, seq);
+        byte[] seqArchive = Files.readAllBytes(seqPath);
+        if ((seqArchive[4] & 8) == 0) {
+            throw new AssertionError("Single-threaded bounded archive must carry FLAG_SHARED_GAP");
+        }
+        if (!Arrays.equals(raw, HyperGraSS.decompressBytes(seqArchive))) {
+            throw new AssertionError("Bounded streamed archive round-trip mismatch");
+        }
+        Path seqOut = tmpDir.resolve("bounded-seq.out");
+        HyperGraSS.decompressFile(seqPath, seqOut);
+        if (!Arrays.equals(raw, Files.readAllBytes(seqOut))) {
+            throw new AssertionError("Bounded streamed file round-trip mismatch");
+        }
+        Path seqPath2 = tmpDir.resolve("bounded-seq2.hgs");
+        HyperGraSS.compressFile(inPath, seqPath2, seq);
+        if (!Arrays.equals(seqArchive, Files.readAllBytes(seqPath2))) {
+            throw new AssertionError("Bounded streamed writer is not deterministic");
+        }
+
+        HyperGraSS.CompressOptions par = HyperGraSS.CompressOptions.defaults();
+        par.bounded = true;
+        par.threads = 3;
+        par.blockSizeBytes = 64 * 1024;
+        par.maxAnchorBases = 32 * 1024;
+        Path parPath = tmpDir.resolve("bounded-par.hgs");
+        HyperGraSS.compressFile(inPath, parPath, par);
+        byte[] parArchive = Files.readAllBytes(parPath);
+        if ((parArchive[4] & 8) != 0) {
+            throw new AssertionError("Parallel bounded archive must clear FLAG_SHARED_GAP");
+        }
+        if (!Arrays.equals(raw, HyperGraSS.decompressBytes(parArchive))) {
+            throw new AssertionError("Parallel bounded archive round-trip mismatch");
+        }
+        Path parOut = tmpDir.resolve("bounded-par.out");
+        HyperGraSS.decompressFile(parPath, parOut);
+        if (!Arrays.equals(raw, Files.readAllBytes(parOut))) {
+            throw new AssertionError("Parallel bounded file round-trip mismatch");
+        }
+
+        int seqBlocks = HyperGraSS.inspect(seqPath).numBlocks;
+        int parBlocks = HyperGraSS.inspect(parPath).numBlocks;
+        if (seqBlocks != parBlocks || seqBlocks < 2) {
+            throw new AssertionError(
+                    "Bounded block count mismatch: " + seqBlocks + " vs " + parBlocks);
+        }
+        System.out.printf("  [PASS] %-48s | Raw: %,8d B -> HGS: %,7d B | %d blocks, 1 vs 3 threads%n",
+                "Bounded streaming and parallel block paths", raw.length, seqArchive.length, seqBlocks);
         return 1;
     }
 

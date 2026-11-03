@@ -50,7 +50,8 @@ public final class VerifyArchiveAccounting {
         expect(report, "metadata.line_widths", 1);
         expect(report, "metadata.line_endings", 1);
         expect(report, "dna.framing", 1);
-        check(report.modeCounts().equals(Map.of(0, 1L, 1, 0L, 2, 0L, 3, 0L)), "Empty mode counts");
+        check(report.modeCounts().equals(Map.of(
+                0, 1L, 1, 0L, 2, 0L, 3, 0L, 4, 0L, 5, 0L, 6, 0L)), "Empty mode counts");
         for (var entry : report.categoryBytes().entrySet()) {
             if (!List.of("container.header", "metadata.framing", "metadata.line_widths",
                     "metadata.line_endings", "dna.framing").contains(entry.getKey())) {
@@ -169,7 +170,9 @@ public final class VerifyArchiveAccounting {
             ArchiveByteAccounting.Report report = checkReport(archive);
             check((archive[4] & 5) == 1, "Real multiblock archive has anchor");
             check(report.blockCount() > 1, "Real multiblock block count");
-            check(report.modeCounts().get(2) + report.modeCounts().get(3) > 0, "Real match mode used");
+            long matchBlocks = 0;
+            for (int mode = 2; mode <= 6; mode++) matchBlocks += report.modeCounts().get(mode);
+            check(matchBlocks > 0, "Real match mode used");
             check(Arrays.equals(raw, HyperGraSS.decompressBytes(archive)), "Real anchor archive round-trip");
             ByteIn anchor = new ByteIn(archive, 5, archive.length - 5);
             int anchorMode = anchor.readByte();
@@ -324,7 +327,7 @@ public final class VerifyArchiveAccounting {
         ArchiveByteAccounting.Report repeated = ArchiveByteAccounting.report(archive);
         check(report.equals(repeated), "Deterministic repeated report");
         check(report.toString().equals(repeated.toString()), "Deterministic iteration order");
-        check(new ArrayList<>(report.modeCounts().keySet()).equals(List.of(0, 1, 2, 3)), "Ordered mode counts");
+        check(new ArrayList<>(report.modeCounts().keySet()).equals(List.of(0, 1, 2, 3, 4, 5, 6)), "Ordered mode counts");
         check(Arrays.equals(before, archive), "Read-only archive bytes");
         try {
             report.categoryBytes().put("container.header", -1L);

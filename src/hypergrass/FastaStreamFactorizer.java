@@ -29,13 +29,13 @@ public final class FastaStreamFactorizer {
     private FastaStreamFactorizer() {}
 
     public static final class BlockSlice {
-        public final int startByte;
-        public final int endByte;
+        public final long startByte;
+        public final long endByte;
         public final int firstRecordIndex;
         public final int recordCount;
         public final long firstRecordBaseOffset;
 
-        public BlockSlice(int startByte, int endByte, int firstRecordIndex, int recordCount, long firstRecordBaseOffset) {
+        public BlockSlice(long startByte, long endByte, int firstRecordIndex, int recordCount, long firstRecordBaseOffset) {
             this.startByte = startByte;
             this.endByte = endByte;
             this.firstRecordIndex = firstRecordIndex;
@@ -63,9 +63,6 @@ public final class FastaStreamFactorizer {
      */
     public static FilePartition partitionFile(java.nio.file.Path path, int targetBlockBytes) throws java.io.IOException {
         long size = java.nio.file.Files.size(path);
-        if (size > Integer.MAX_VALUE) {
-            throw new IllegalArgumentException("Input larger than 2 GiB is not supported by this format");
-        }
         List<BlockSlice> slices = new ArrayList<>();
         java.util.zip.CRC32 crc = new java.util.zip.CRC32();
         if (size == 0) {
@@ -116,7 +113,7 @@ public final class FastaStreamFactorizer {
 
                 if (isHeader) {
                     if (lineStart > blockStart && (lineStart - blockStart) >= targetBlockBytes && blockRecordCount > 0) {
-                        slices.add(new BlockSlice((int) blockStart, (int) lineStart,
+                        slices.add(new BlockSlice(blockStart, lineStart,
                                 blockFirstRecord, blockRecordCount, blockFirstRecOffset));
                         blockStart = lineStart;
                         blockFirstRecord = globalRecordIdx + 1;
@@ -133,7 +130,7 @@ public final class FastaStreamFactorizer {
                 } else {
                     long lineChars = contentEnd - lineStart;
                     if (lineStart > blockStart && (lineStart - blockStart) >= (targetBlockBytes * 2L)) {
-                        slices.add(new BlockSlice((int) blockStart, (int) lineStart,
+                        slices.add(new BlockSlice(blockStart, lineStart,
                                 blockFirstRecord, Math.max(1, blockRecordCount), blockFirstRecOffset));
                         blockStart = lineStart;
                         blockFirstRecord = Math.max(0, globalRecordIdx);
@@ -142,7 +139,7 @@ public final class FastaStreamFactorizer {
                     } else if (lineChars > targetBlockBytes * 2L) {
                         long subPos = lineStart;
                         if (subPos > blockStart) {
-                            slices.add(new BlockSlice((int) blockStart, (int) subPos,
+                            slices.add(new BlockSlice(blockStart, subPos,
                                     blockFirstRecord, Math.max(1, blockRecordCount), blockFirstRecOffset));
                             blockStart = subPos;
                             blockFirstRecord = Math.max(0, globalRecordIdx);
@@ -152,7 +149,7 @@ public final class FastaStreamFactorizer {
                         long nextP = eof ? size : lineEnd + 1;
                         while (nextP - blockStart > targetBlockBytes * 2L) {
                             long cut = blockStart + targetBlockBytes;
-                            slices.add(new BlockSlice((int) blockStart, (int) cut,
+                            slices.add(new BlockSlice(blockStart, cut,
                                     blockFirstRecord, 1, blockFirstRecOffset));
                             currentRecordBaseAcc += (cut - blockStart);
                             blockStart = cut;
@@ -175,7 +172,7 @@ public final class FastaStreamFactorizer {
             }
 
             if (blockStart < size) {
-                slices.add(new BlockSlice((int) blockStart, (int) size,
+                slices.add(new BlockSlice(blockStart, size,
                         Math.max(0, blockFirstRecord), Math.max(1, blockRecordCount), blockFirstRecOffset));
             }
         }

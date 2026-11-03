@@ -12,6 +12,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
@@ -62,6 +63,12 @@ public final class HyperGraSS {
         public int maxAnchorBases = CanonicalSyncmerEngine.DEFAULT_MAX_ANCHOR_BASES;
         public boolean anchorSinglePage = false;
         public boolean bounded = false;
+        /**
+         * Encoder threads for the bounded path. One thread keeps the cross-block gap channel
+         * (the published 256 MiB profile); more than one encodes independent blocks in a
+         * bounded window and clears FLAG_SHARED_GAP.
+         */
+        public int threads = 1;
 
         public static CompressOptions defaults() {
             return new CompressOptions();
@@ -198,29 +205,75 @@ public final class HyperGraSS {
             }
 
             List<BlockDirEntry> dir = new ArrayList<>(numBlocks);
-            byte[][] encodedBlocks = new byte[numBlocks][];
+            int threads = Math.max(1, opts.threads);
+            boolean sharedGap = threads == 1;
             VarIntCodec.AuxHistory gapHistory =
-                    new VarIntCodec.AuxHistory(GAP_HISTORY_BYTES);
-            for (int i = 0; i < numBlocks; i++) {
-                BlockSlice s = slices.get(i);
-                FactorizedChunk chunk = factorizeSlice(ch, s);
-                encodedBlocks[i] = encodeChunkPayload(chunk, bank, false, false, gapHistory);
-                BlockDirEntry e = new BlockDirEntry();
-                e.firstRecordIdx = s.firstRecordIndex;
-                e.recordCount = s.recordCount;
-                e.firstRecordBaseOffset = s.firstRecordBaseOffset;
-                e.blockSeqChars = chunk.totalSeqChars;
-                dir.add(e);
+                    sharedGap ? new VarIntCodec.AuxHistory(GAP_HISTORY_BYTES) : null;
+            boolean hasAnchorHeader = bank != null && bank.length > 0;
+            ByteOut header = new ByteOut(4096);
+            header.writeBytes(MAGIC);
+            header.writeByte(archiveModeFlags(hasAnchorHeader, sharedGap, opts));
+            writeArchiveHeader(header, totalDna, bank, hasAnchorHeader, opts);
+
+            // Stream the archive so the encoded blocks never coexist in memory. This is what
+            // lets an input whose archive exceeds 2 GiB complete in the bounded profile.
+            try (FileChannel outCh = FileChannel.open(output,
+                    StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING,
+                    StandardOpenOption.WRITE)) {
+                long pos = writeFully(outCh, header.internalBuffer(), 0, header.size(), 0L);
+                if (sharedGap) {
+                    for (int i = 0; i < numBlocks; i++) {
+                        BlockSlice s = slices.get(i);
+                        FactorizedChunk chunk = factorizeSlice(ch, s);
+                        byte[] payload = encodeChunkPayload(chunk, bank, false, false, gapHistory);
+                        pos = writeBlock(outCh, pos, dir, s, chunk.totalSeqChars, payload);
+                    }
+                } else {
+                    // Encode a window of blocks in parallel, then append them in order. The
+                    // window bounds resident payloads to threads*2. The cross-block gap
+                    // channel is off, which FLAG_SHARED_GAP records for the decoder.
+                    int window = threads * 2;
+                    byte[][] payloads = new byte[window][];
+                    int[] seqChars = new int[window];
+                    final AnchorBank finalBank = bank;
+                    for (int base = 0; base < numBlocks; base += window) {
+                        int count = Math.min(window, numBlocks - base);
+                        final int windowBase = base;
+                        try {
+                            IntStream.range(0, count).parallel().forEach(k -> {
+                                try {
+                                    FactorizedChunk chunk =
+                                            factorizeSlice(ch, slices.get(windowBase + k));
+                                    seqChars[k] = chunk.totalSeqChars;
+                                    payloads[k] = encodeChunkPayload(
+                                            chunk, finalBank, false, false, null);
+                                } catch (IOException e) {
+                                    throw new UncheckedIOException(e);
+                                }
+                            });
+                        } catch (UncheckedIOException e) {
+                            throw e.getCause();
+                        }
+                        for (int k = 0; k < count; k++) {
+                            pos = writeBlock(outCh, pos, dir, slices.get(base + k),
+                                    seqChars[k], payloads[k]);
+                            payloads[k] = null;
+                        }
+                    }
+                }
+                ByteOut footer = buildFooterBytes(
+                        dir, part.size, totalRecords, part.crc32, pos);
+                writeFully(outCh, footer.internalBuffer(), 0, footer.size(), pos);
             }
-            byte[] archive = serializeMultiBlockArchive(
-                    part.size, part.crc32, totalRecords, totalDna, dir, encodedBlocks,
-                    bank, bank != null && bank.length > 0, true, opts);
-            Files.write(output, archive);
         }
     }
 
     private static FactorizedChunk factorizeSlice(FileChannel ch, BlockSlice slice) throws IOException {
-        int len = slice.endByte - slice.startByte;
+        long sliceLen = slice.endByte - slice.startByte;
+        if (sliceLen > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("A single block exceeds the 2 GiB in-memory limit");
+        }
+        int len = (int) sliceLen;
         if (len == 0) {
             return FastaStreamFactorizer.factorize(new byte[0], 0, 0);
         }
@@ -533,12 +586,12 @@ public final class HyperGraSS {
         if (opts.parallel && numBlocks > 1) {
             IntStream.range(0, numBlocks).parallel().forEach(i -> {
                 BlockSlice s = slices.get(i);
-                chunks[i] = FastaStreamFactorizer.factorize(raw, s.startByte, s.endByte);
+                chunks[i] = FastaStreamFactorizer.factorize(raw, (int) s.startByte, (int) s.endByte);
             });
         } else {
             for (int i = 0; i < numBlocks; i++) {
                 BlockSlice s = slices.get(i);
-                chunks[i] = FastaStreamFactorizer.factorize(raw, s.startByte, s.endByte);
+                chunks[i] = FastaStreamFactorizer.factorize(raw, (int) s.startByte, (int) s.endByte);
             }
         }
 
@@ -710,15 +763,44 @@ public final class HyperGraSS {
             boolean sharedGap,
             CompressOptions opts) {
         int numBlocks = encodedBlocks.length;
+        ByteOut out = new ByteOut(4096);
+        out.writeBytes(MAGIC);
+        out.writeByte(archiveModeFlags(useAnchor, sharedGap, opts));
+        writeArchiveHeader(out, totalDna, bank, useAnchor, opts);
+
+        for (int i = 0; i < numBlocks; i++) {
+            BlockDirEntry e = dir.get(i);
+            e.fileOffset = out.size();
+            e.compressedLen = encodedBlocks[i].length;
+            out.writeBytes(encodedBlocks[i]);
+        }
+
+        long footerOffset = out.size();
+        ByteOut footer = buildFooterBytes(dir, rawByteLen, totalRecords, crcVal, footerOffset);
+        out.writeBytes(footer.internalBuffer(), 0, footer.size());
+        return out.toByteArray();
+    }
+
+    private static int archiveModeFlags(
+            boolean useAnchor, boolean sharedGap, CompressOptions opts) {
         int modeFlags = 0;
         if (useAnchor) modeFlags |= FLAG_HAS_ANCHOR;
         if (opts.leanMode) modeFlags |= FLAG_LEAN_MODE;
         if (sharedGap) modeFlags |= FLAG_SHARED_GAP;
+        return modeFlags;
+    }
 
-        ByteOut out = new ByteOut(4096);
-        out.writeBytes(MAGIC);
-        out.writeByte(modeFlags);
-
+    /**
+     * Writes everything before the first block: magic, flags and the page-partitioned anchor
+     * bank. Shared by the in-memory serializer and the streaming bounded writer so both emit
+     * identical header bytes.
+     */
+    private static void writeArchiveHeader(
+            ByteOut out,
+            long totalDna,
+            AnchorBank bank,
+            boolean useAnchor,
+            CompressOptions opts) {
         // Serialize page-partitioned AnchorBank + 1-hop Global Clade Catalog
         if (useAnchor) {
             int anchorLen = bank.length;
@@ -769,18 +851,6 @@ public final class HyperGraSS {
                 out.writeBytes(encPages[p]);
             }
         }
-
-        for (int i = 0; i < numBlocks; i++) {
-            BlockDirEntry e = dir.get(i);
-            e.fileOffset = out.size();
-            e.compressedLen = encodedBlocks[i].length;
-            out.writeBytes(encodedBlocks[i]);
-        }
-
-        long footerOffset = out.size();
-        ByteOut footer = buildFooterBytes(dir, rawByteLen, totalRecords, crcVal, footerOffset);
-        out.writeBytes(footer.internalBuffer(), 0, footer.size());
-        return out.toByteArray();
     }
 
     private static byte[] encodeAnchorPage(
@@ -1336,6 +1406,32 @@ public final class HyperGraSS {
         }
     }
 
+    /** Writes a byte range at {@code pos} and returns the offset just past it. */
+    private static long writeFully(FileChannel ch, byte[] bytes, int off, int len, long pos)
+            throws IOException {
+        ByteBuffer buf = ByteBuffer.wrap(bytes, off, len);
+        long cur = pos;
+        while (buf.hasRemaining()) {
+            cur += ch.write(buf, cur);
+        }
+        return cur;
+    }
+
+    /** Appends one encoded block and records its directory entry. */
+    private static long writeBlock(
+            FileChannel outCh, long pos, List<BlockDirEntry> dir, BlockSlice s,
+            int seqChars, byte[] payload) throws IOException {
+        BlockDirEntry e = new BlockDirEntry();
+        e.fileOffset = pos;
+        e.compressedLen = payload.length;
+        e.firstRecordIdx = s.firstRecordIndex;
+        e.recordCount = s.recordCount;
+        e.firstRecordBaseOffset = s.firstRecordBaseOffset;
+        e.blockSeqChars = seqChars;
+        dir.add(e);
+        return writeFully(outCh, payload, 0, payload.length, pos);
+    }
+
     /** Command-line interface for HyperGraSS. */
     public static void main(String[] args) throws Exception {
         if (args.length >= 1
@@ -1367,6 +1463,17 @@ public final class HyperGraSS {
                         opts.anchorSinglePage = true;
                     } else if ("--bounded".equals(args[idx])) {
                         opts.bounded = true;
+                    } else if ("--threads".equals(args[idx])) {
+                        if (idx + 1 >= args.length) {
+                            printUsage();
+                            return;
+                        }
+                        int n = Integer.parseInt(args[++idx]);
+                        if (n < 1) {
+                            System.err.println("--threads must be at least 1");
+                            return;
+                        }
+                        opts.threads = n;
                     } else if ("--anchor-mib".equals(args[idx])) {
                         if (idx + 1 >= args.length) {
                             printUsage();
@@ -1457,6 +1564,7 @@ public final class HyperGraSS {
         System.out.println("  compress [--lean] [--single-thread] [--optimize] [--bounded] <input.fa> <output.hgs>");
         System.out.println("    --optimize: bounded extra size search for small archives; costs more CPU");
         System.out.println("    --bounded: two-pass bounded-memory compression for large anchored archives");
+        System.out.println("    --threads N: bounded encoder threads (default 1; N>1 drops the shared gap channel)");
         System.out.println("    --pangenome: scale-tuned 16 MiB anchor bank and 8 MiB blocks");
         System.out.println("    --anchor-mib N / --block-mib N: explicit tuning for large inputs");
         System.out.println("  decompress <input.hgs> <output.fa>");

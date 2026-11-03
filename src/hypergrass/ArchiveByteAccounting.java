@@ -89,7 +89,7 @@ public final class ArchiveByteAccounting {
         Parser(byte[] bytes) {
             this.bytes = bytes;
             for (String category : CATEGORIES) counts.put(category, 0L);
-            for (int mode = 0; mode <= 3; mode++) modes.put(mode, 0L);
+            for (int mode = 0; mode <= 6; mode++) modes.put(mode, 0L);
         }
 
         Report parse() {
@@ -227,7 +227,7 @@ public final class ArchiveByteAccounting {
 
         private void dna(Cursor in, int dnaLength, boolean hasAnchor) {
             int mode = in.u8();
-            if (mode > 3) throw in.error("Unknown DNA mode: " + mode);
+            if (mode > 6) throw in.error("Unknown DNA mode: " + mode);
             if ((mode == 0) != (dnaLength == 0)) throw in.error("DNA mode does not match empty/nonempty length");
             add("dna.framing", 1);
             modes.put(mode, modes.get(mode) + 1);
@@ -273,7 +273,7 @@ public final class ArchiveByteAccounting {
             if (strandLength != (matches + 7L) / 8) throw in.error("Strand length does not match match count");
             aux(in, "match.geometry");
             if (variants > 0) {
-                if (mode == 3) {
+                if (mode >= 3) {
                     aux(in, "donor.sweep_modes");
                     aux(in, "donor.indices");
                     aux(in, "donor.masks");
@@ -301,8 +301,19 @@ public final class ArchiveByteAccounting {
     private static Aux auxHeader(Cursor in) {
         int mode = in.u8();
         if (mode == 0) return new Aux(0, 0);
-        if (mode < 1 || mode > 3) throw in.error("Unknown auxiliary mode: " + mode);
+        if (mode < 1 || mode > 7) throw in.error("Unknown auxiliary mode: " + mode);
         int rawLength = in.positive("auxiliary raw length");
+        if (mode == 4) {
+            // The digit-plane body is self-delimiting and is consumed here, so the caller has
+            // no trailing payload to skip.
+            in.positive("plane value count");
+            int planes = in.u8();
+            for (int k = 0; k < planes; k++) {
+                in.positive("plane length");
+                skipAux(in);
+            }
+            return new Aux(rawLength, 0);
+        }
         int payloadLength = mode == 1 ? rawLength : in.positive("auxiliary compressed length");
         return new Aux(rawLength, payloadLength);
     }
