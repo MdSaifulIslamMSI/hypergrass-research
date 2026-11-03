@@ -41,6 +41,13 @@ result is not a claim of worldwide superiority.
 | Verification | SHA-256 and byte length of decompressed output must equal the input; three slice queries per HyperGraSS archive |
 | Timing | Child wall/CPU/peak RSS measured inside the container, Docker startup excluded |
 
+The rows above describe the frozen JDK 21 image (`hypergrass-corpus:locked`,
+digest `d6ca62a7…`) that produced the published corpus results. The build now
+targets JDK 27 and locks a separate `hypergrass-corpus:jdk27` image at
+`sha256:580e58b6ee16d43f4dd99a2871b1c920548b7c6e9b0c695a01f521c17701a4ae`; the
+earlier image and its reports remain valid because the tag and digest are
+unchanged.
+
 Profiles: `hypergrass`, `hypergrass --optimize`, `hypergrass --lean`,
 `gzip -9`, `xz -9`, `JARVIS3 -l 7`, `JARVIS3 -l 26`, `GeCo3 -l 9`,
 plus supplementary `GeCo3 -l 6` and `GeCo3 -l 3`.

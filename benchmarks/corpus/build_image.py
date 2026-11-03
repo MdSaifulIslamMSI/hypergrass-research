@@ -14,9 +14,9 @@ import tempfile
 from urllib.parse import urlsplit
 
 
-BASE_IMAGE = "eclipse-temurin@sha256:56f10ddc224d7b900698422ffe82432ed0e178f606bd66859ed1d179825dfbe3"
+BASE_IMAGE = "eclipse-temurin@sha256:e15cd4a9f3ad468a2f2ac82040c1dce55847ed15272482be60fb203e8ac3ed74"
 PLATFORM = "linux/amd64"
-IMAGE_TAG = "hypergrass-corpus:locked"
+IMAGE_TAG = "hypergrass-corpus:jdk27"
 SOURCE_COMMITS = {
     "jarvis3": "4dcb37b05b1a1482c2bf864d4968244817b0ad0a",
     "geco3": "69642a0a913e543599f35aee372e300601e4cbbe",

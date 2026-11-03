@@ -22,7 +22,7 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.release>21</maven.compiler.release>
+    <maven.compiler.release>27</maven.compiler.release>
   </properties>
 
   <build>
@@ -33,7 +33,7 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.13.0</version>
         <configuration>
-          <release>21</release>
+          <release>27</release>
           <compilerArgs>
             <arg>-Xlint:all</arg>
           </compilerArgs>

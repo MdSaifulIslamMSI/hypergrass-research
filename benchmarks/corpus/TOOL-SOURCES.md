@@ -25,8 +25,9 @@ both pinned Makefiles were inspected and place their binaries in `src/`.
 ## Image and artifacts
 
 - Base: `linux/amd64`,
-  `eclipse-temurin@sha256:56f10ddc224d7b900698422ffe82432ed0e178f606bd66859ed1d179825dfbe3`
-  (Alpine 3.24).
+  `eclipse-temurin@sha256:e15cd4a9f3ad468a2f2ac82040c1dce55847ed15272482be60fb203e8ac3ed74`
+  (Alpine 3.24, OpenJDK 27). The archived JDK 21 lock is
+  `benchmarks/corpus/image.lock.jdk21.json`.
 - Packages: Python 3, `build-base` (including GCC, make, and musl development
   files), GNU gzip, xz, and bash. Package installation is the only networked
   `RUN` step; compilation and environment recording have networking disabled.
@@ -44,7 +45,8 @@ both pinned Makefiles were inspected and place their binaries in `src/`.
 - Host output: `benchmarks/corpus/build.log` (appended per build) and
   `benchmarks/corpus/image.lock.json` (immutable image ID, build-input hashes,
   and the complete environment record).
-- Accepted image tag: `hypergrass-corpus:locked`.
+- Accepted image tag: `hypergrass-corpus:jdk27`. The earlier
+  `hypergrass-corpus:locked` tag and its reports are kept unchanged.
 
 The corpus directory is the Docker build context, not the project root.
 `.dockerignore` permits only the Dockerfile, ignore file, build helper,
@@ -73,7 +75,7 @@ must have networking disabled and bind **only this corpus directory** to
 `ABSOLUTE_CORPUS_PATH` with the absolute path to `benchmarks/corpus`:
 
 ```text
-docker run --rm --pull=never --network=none --platform linux/amd64 --mount "type=bind,source=ABSOLUTE_CORPUS_PATH,target=/work" hypergrass-corpus:locked python3 --version
+docker run --rm --pull=never --network=none --platform linux/amd64 --mount "type=bind,source=ABSOLUTE_CORPUS_PATH,target=/work" hypergrass-corpus:jdk27 python3 --version
 ```
 
 Prefer the `image_id` from `image.lock.json` over the mutable tag for measured

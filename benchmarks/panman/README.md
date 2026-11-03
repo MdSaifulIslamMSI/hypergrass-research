@@ -41,12 +41,12 @@ The original 13 lossless suites, eight donor-index suites, and four **default-mo
 
 ## Reproduce
 
-The engine still needs only **JDK 21**. This optional comparison additionally needs **Python 3** and a running **Linux Docker daemon** with the image below available. Pulling the image requires network access and roughly 140 MB of compressed layers. The runner never installs tools or pulls images itself.
+The engine still needs only **JDK 27**. This optional comparison additionally needs **Python 3** and a running **Linux Docker daemon** with the image below available. Pulling the image requires network access and roughly 140 MB of compressed layers. The runner never installs tools or pulls images itself.
 
 From the HyperGraSS project root:
 
 ```sh
-javac --release 21 -Xlint:all -d bin src/hypergrass/*.java
+javac --release 27 -Xlint:all -d bin src/hypergrass/*.java
 docker pull quay.io/biocontainers/panman@sha256:ae2e1ab9f4ef57d3bef248e5580f95a615a5aff9bb53be05cac03a0c56ea0a27
 python benchmarks/panman/run.py --optimize
 python -m unittest discover -s benchmarks/panman -p test_run.py -v

@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 eclipse-temurin@sha256:56f10ddc224d7b900698422ffe82432ed0e178f606bd66859ed1d179825dfbe3
+FROM --platform=linux/amd64 eclipse-temurin@sha256:e15cd4a9f3ad468a2f2ac82040c1dce55847ed15272482be60fb203e8ac3ed74
 
 RUN apk add --no-cache python3 build-base gzip xz bash
 

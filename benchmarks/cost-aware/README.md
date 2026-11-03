@@ -5,7 +5,7 @@ This is the first measured stage of the compression roadmap: **exact encoded-byt
 ## Use
 
 ```sh
-javac --release 21 -Xlint:all -d bin src/hypergrass/*.java
+javac --release 27 -Xlint:all -d bin src/hypergrass/*.java
 java -cp bin hypergrass.HyperGraSS compress input.fa default.hgs
 java -cp bin hypergrass.HyperGraSS compress --optimize input.fa optimized.hgs
 java -cp bin hypergrass.HyperGraSS profile optimized.hgs

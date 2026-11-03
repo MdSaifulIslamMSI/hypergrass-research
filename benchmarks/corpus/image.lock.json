@@ -1,14 +1,14 @@
 {
   "build_inputs": {
-    "base_image": "eclipse-temurin@sha256:56f10ddc224d7b900698422ffe82432ed0e178f606bd66859ed1d179825dfbe3",
+    "base_image": "eclipse-temurin@sha256:e15cd4a9f3ad468a2f2ac82040c1dce55847ed15272482be60fb203e8ac3ed74",
     "cflags": {
       "geco3": "-Wall -O3",
       "jarvis3": "-Wall -Ofast -DPROGRESS"
     },
     "context_sha256": {
       ".dockerignore": "3c2b87188417f1ab6bf669cb77d8d648d88790d40b9fe4bd083bee6e93391d9c",
-      "Dockerfile": "6850e70e0abf6e69a8e589e12b6998b4411152e542ea96cf191de65a6d9bca8a",
-      "build_image.py": "4cad2bb231c272690f9b69ace7bc1b496bef028a93693c7058e4fd9d9e7b3f99",
+      "Dockerfile": "24f112f2a55288875ccf8cbebf0a9893484a9949e9ead1dc60edb52c3c3377ae",
+      "build_image.py": "3390095e8dad60df7ee945153a48a87d8986e8dc8d4c6232d62df7cb2748f3c9",
       "sources.lock.json": "c08d25983ad84759b07d50207ad54b5062ff091938e925ed8f2f78c6b4002da2"
     },
     "platform": "linux/amd64",
@@ -42,7 +42,7 @@
       "apk-tools-3.0.8-r0",
       "bash-5.3.9-r1",
       "binutils-2.45.1-r1",
-      "brotli-libs-1.2.1-r0",
+      "brotli-libs-1.2.0-r1",
       "build-base-0.5-r4",
       "busybox-1.37.0-r31",
       "busybox-binsh-1.37.0-r31",
@@ -62,24 +62,11 @@
       "gcc-15.2.0-r5",
       "gdbm-1.26-r0",
       "gmp-6.3.0-r4",
-      "gnupg-2.4.9-r1",
-      "gnupg-dirmngr-2.4.9-r1",
-      "gnupg-gpgconf-2.4.9-r1",
-      "gnupg-keyboxd-2.4.9-r1",
-      "gnupg-utils-2.4.9-r1",
-      "gnupg-wks-client-2.4.9-r1",
-      "gnutls-3.8.13-r0",
-      "gpg-2.4.9-r1",
-      "gpg-agent-2.4.9-r1",
-      "gpg-wks-server-2.4.9-r1",
-      "gpgsm-2.4.9-r1",
-      "gpgv-2.4.9-r1",
       "gzip-1.14-r3",
       "isl26-0.26-r2",
       "jansson-2.15.0-r0",
       "less-702-r0",
       "libapk-3.0.8-r0",
-      "libassuan-3.0.2-r0",
       "libatomic-15.2.0-r5",
       "libattr-2.5.2-r2",
       "libbz2-1.0.8-r6",
@@ -89,23 +76,16 @@
       "libfontenc-1.1.9-r0",
       "libgcc-15.2.0-r5",
       "libgcc-static-15.2.0-r5",
-      "libgcrypt-1.12.2-r0",
       "libgomp-15.2.0-r5",
-      "libgpg-error-1.61-r0",
-      "libidn2-2.3.8-r0",
       "libintl-1.0-r0",
-      "libksba-1.7.0-r0",
-      "libldap-2.6.15-r0",
       "libmagic-5.47-r2",
       "libncursesw-6.6_p20260516-r0",
       "libpanelw-6.6_p20260516-r0",
       "libpng-1.6.59-r0",
-      "libsasl-2.1.28-r9",
       "libssl3-3.5.9-r0",
       "libstdc++-15.2.0-r5",
       "libstdc++-dev-15.2.0-r5",
       "libtasn1-4.21.0-r0",
-      "libunistring-1.4.2-r0",
       "make-4.4.1-r4",
       "mkfontscale-1.2.4-r0",
       "mpc1-1.3.1-r1",
@@ -117,13 +97,10 @@
       "musl-locales-lang-0.1.0-r1",
       "musl-utils-1.2.6-r3",
       "ncurses-terminfo-base-6.6_p20260516-r0",
-      "nettle-3.10.2-r0",
-      "npth-1.8-r0",
       "openssl-3.5.9-r0",
       "p11-kit-0.26.2-r0",
       "p11-kit-trust-0.26.2-r0",
       "patch-2.8-r0",
-      "pinentry-1.3.2-r0",
       "pyc-3.14.10-r1",
       "python3-3.14.10-r1",
       "python3-pyc-3.14.10-r1",
@@ -140,7 +117,7 @@
       "zlib-1.3.2-r1",
       "zstd-libs-1.5.7-r2"
     ],
-    "base_image": "eclipse-temurin@sha256:56f10ddc224d7b900698422ffe82432ed0e178f606bd66859ed1d179825dfbe3",
+    "base_image": "eclipse-temurin@sha256:e15cd4a9f3ad468a2f2ac82040c1dce55847ed15272482be60fb203e8ac3ed74",
     "cflags": {
       "geco3": "-Wall -O3",
       "jarvis3": "-Wall -Ofast -DPROGRESS"
@@ -172,7 +149,7 @@
       },
       "java": {
         "path": "/opt/java/openjdk/bin/java",
-        "sha256": "3ebc452dae73c83e495b1cccd84317fbfe6bdb320752ecbaeb04fef4c7023d7d"
+        "sha256": "cc5d1f49d0e160e9eae18712cdb4f00316fefa05dfb6d5f4d58d5760599f1a79"
       },
       "make": {
         "path": "/usr/bin/make",
@@ -210,12 +187,12 @@
     "versions": {
       "gcc": "gcc (Alpine 15.2.0) 15.2.0\nCopyright (C) 2025 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.",
       "gzip": "gzip 1.14\nCopyright (C) 2025 Free Software Foundation, Inc.\nCopyright (C) 1993 Jean-loup Gailly.\nThis is free software.  You may redistribute copies of it under the terms of\nthe GNU General Public License <https://www.gnu.org/licenses/gpl.html>.\nThere is NO WARRANTY, to the extent permitted by law.\n\nWritten by Jean-loup Gailly.",
-      "java": "openjdk version \"21.0.13\" 2026-10-20 LTS\nOpenJDK Runtime Environment Temurin-21.0.13+9 (build 21.0.13+9-LTS)\nOpenJDK 64-Bit Server VM Temurin-21.0.13+9 (build 21.0.13+9-LTS, mixed mode, sharing)",
+      "java": "openjdk version \"27\" 2026-09-15\nOpenJDK Runtime Environment Temurin-27+35 (build 27+35)\nOpenJDK 64-Bit Server VM Temurin-27+35 (build 27+35, mixed mode, sharing)",
       "python": "Python 3.14.10",
       "xz": "xz (XZ Utils) 5.8.4\nliblzma 5.8.4"
     }
   },
-  "image_id": "sha256:d6ca62a74e3724172a5c49720e28ab2066eb31b3c965dadfb6220e112dbc3bb3",
+  "image_id": "sha256:580e58b6ee16d43f4dd99a2871b1c920548b7c6e9b0c695a01f521c17701a4ae",
   "schema_version": 1,
-  "tag": "hypergrass-corpus:locked"
+  "tag": "hypergrass-corpus:jdk27"
 }

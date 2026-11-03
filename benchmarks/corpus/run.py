@@ -8,7 +8,7 @@ round trips are verified for every completed operation.
 
 Usage (from the HyperGraSS project root):
 
-    javac --release 21 -d bin src/hypergrass/*.java
+    javac --release 27 -d bin src/hypergrass/*.java
     python -B benchmarks/corpus/run.py
 
 The frozen protocol names one GeCo3 profile, ``geco3-l9``. A 1 MiB pilot
@@ -37,7 +37,7 @@ from process_metrics import run_process
 
 
 SCHEMA_VERSION = 1
-IMAGE_TAG = "hypergrass-corpus:locked"
+IMAGE_TAG = "hypergrass-corpus:jdk27"
 READ_CHUNK = 1024 * 1024
 
 PROFILES = (
