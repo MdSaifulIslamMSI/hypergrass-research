@@ -369,9 +369,14 @@ still reproduces as `1,125,629 B` with SHA-256 `14DD7E94…E1C5D6`.
 Throughput, not memory, is now the limit: 2.58 MB/s single-threaded is about 65 minutes
 for 10 GB and 4.5 days for 1 TB. `--threads N` parallelises the encode pass, but the
 bounded path makes four passes over the input and only one is parallel, so threads
-alone cap out well below linear. The remaining work - streaming, threads, sharded
-anchors, resumability, and whether a native kernel is ever justified - is sequenced in
-[`docs/SCALING.md`](docs/SCALING.md).
+alone cap out well below linear. The anchor header has a separate trade:
+`--anchor-cm-pages` uses 64 KiB context-mixing pages and costs 0.46% in archive size
+for 1.32x in wall on the 40.5 MB test; at the 160 MiB bounded heap on a 120 Mbp input
+it costs 0.49% and cuts compress wall by 1.2-1.3x. Fast 2-bit pages are the fastest
+mode at +2.33% and are already the default when `--anchor-single-page` is omitted. CM pages are
+encoded serially because parallel pages were slower. The remaining work - streaming,
+threads, sharded anchors, resumability, and whether a native kernel is ever justified -
+is sequenced in [`docs/SCALING.md`](docs/SCALING.md).
 
 ## Format Specification
 

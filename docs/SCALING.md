@@ -235,26 +235,45 @@ because host and container wall times differ by about 2.5x.
 | total | 11.4-12.1 s | |
 
 Inside the encode stage, block factorization plus encoding is only 3.65 s (1.50 s for
-the 16 MiB block, 2.15 s for the 22.7 MiB block). The remaining ~5 s is
-`writeArchiveHeader`: with `--anchor-single-page` it encodes the whole 2,800,646 bp
-anchor twice, once as fast 2-bit and once with the context-mixing codec, then keeps the
-smaller result. The trial is real but expensive:
+the 16 MiB block, 2.15 s for the 22.7 MiB block). The remaining ~5 s is the anchor
+header. It is not a trial: the header must emit one encoded anchor. With
+`--anchor-single-page` that payload is one 2,800,646 bp context-mixing stream, which
+costs 4.94 s; the fast 2-bit encode it beats costs 0.25 s. The loser is the only
+overhead, so sampling the decision would save 0.25 s, not 5 s.
 
-| Anchor codec | Size |
-|---|---:|
-| fast 2-bit | 643,228 B |
-| context-mixing | 623,708 B |
-| saving | 19,520 B (1.7% of the 1,125,629 B archive) |
+The real trade is anchor page size and codec:
 
-So 44% of the wall buys 1.7% of the archive. That is a bad default trade at this input
-size, and it is the largest single serial cost. The trial is per-page and independent,
-so the cheap fixes are to sample the decision, run the two trials on the encode pool,
-or drop the trial and choose by a size heuristic.
+| Anchor mode | Archive | Header | Total | Δ size |
+|---|---:|---:|---:|---:|
+| `--anchor-single-page` (one CM page) | 1,125,629 B | 5.19 s | 11.70 s | — |
+| `--anchor-cm-pages` (64 KiB CM pages) | 1,130,790 B | 2.38 s | 8.85 s | +0.46% |
+| default 64 KiB fast pages | 1,151,824 B | 0.20 s | 6.85 s | +2.33% |
 
-Ordered by measured impact, not intuition:
+Host JVM, 1 GiB heap, 40.5 MB campy-high. At the 160 MiB bounded heap the same three
+modes total 33.1 s, 25.1 s and 17.4 s: the ordering holds, GC makes each slower.
 
-1. **Anchor-header trial** (44% of wall, 1.7% of size). Sample or parallelize the
-   codec decision; do not serialize two full anchor encodes.
+In the locked 256 MiB / 2-CPU container on the 120.1 Mbp *E. coli* high input, the
+same option costs +0.489% (4,636,907 -> 4,659,584 B) and produced the same archive
+bytes on three runs. Tuned compress wall was 144.2 and 158.4 s; paged was 112.3,
+116.5 and 122.8 s. Decompress fell from 66.3-71.4 s to 40.3-53.3 s. Peak RSS was
+272.5-273.0 MiB for tuned and 272.0-272.6 MiB for paged, so the option does not
+change memory: this input sits at the 256 MiB cap in both modes. Absolute wall time
+swings by 3x between container sessions (the same tuned profile took 49.7 s in the
+broad panel), so only same-session comparisons are used.
+
+`--anchor-cm-pages` is the middle trade: it keeps the context-mixing codec, resets it
+every 64 KiB page, and costs 0.46% in size for 1.32x in wall. Parallel CM pages were
+slower (9.71 s vs 8.85 s serial at 1 GiB) because every page allocates its own model
+and the common pool contends, so CM pages are encoded serially. Fast pages are the
+fastest option and already the default when `--anchor-single-page` is omitted. The
+published bounded profile keeps `--anchor-single-page` so the 256 MiB gate and the
+broad-panel archives stay comparable; `--anchor-cm-pages` is opt-in.
+
+Ordered by measured impact, with the corrected accounting:
+
+1. **Anchor header** (44% of wall). Three measured modes: `--anchor-cm-pages` gives
+   1.32x for +0.46%; fast pages give 1.71x for +2.33%. Sampling the codec decision is
+   not worth it: it saves 0.25 s, not 5 s.
 2. **Block encode** (32% of wall). Already parallel; scales with the number of blocks
    and the per-worker memory budget, not with the anchor.
 3. **Anchor build + consensus** (19% of wall). Two serial reads. Fuse them, or build
@@ -262,10 +281,9 @@ Ordered by measured impact, not intuition:
 4. **Partition scan** (5% of wall). Fuse it with the anchor build so the input is read
    once instead of twice.
 
-That ordering does not change the Tier B conclusion. Even removing the entire anchor
-trial leaves ~6.4 s, and the remaining serial reads cap threads; sharding is still the
-structural fix. It does mean a ~1.8x single-node win is available on this input without
-a new language or a new format, before touching the serial passes.
+The header cannot be removed, only made cheaper. Even the fast-page floor is 6.85 s,
+and the remaining serial reads cap threads; sharding is still the structural fix, and
+no single-node mode reaches 2x on this input.
 
 ## Phase 4 - sharded anchors
 

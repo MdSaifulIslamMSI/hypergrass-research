@@ -33,6 +33,10 @@ so the effect of the HyperGraSS redesign is measured rather than assumed.
   heap with SerialGC, a 32 MiB code cache, and a 64 MiB metaspace cap. The
   earlier bounded attempt used the same blocks with a 192 MiB heap but no
   cross-block history; it is kept in the table as the failure baseline.
+  `--anchor-cm-pages` is an opt-in speed variant, not part of the published
+  comparison: it encodes 64 KiB context-mixing anchor pages instead of one
+  whole-anchor page. The tuned profile above keeps `--anchor-single-page` so
+  the 256 MiB gate and these archives stay comparable.
 - GraSS (public implementation, commit
   `6d93700f5a2de8841f7cf2c20064413c80df2c4a`) runs unmodified on the same flat
   sequence through its headerless raw path. Its `bsc` backend is built from

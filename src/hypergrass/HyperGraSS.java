@@ -62,6 +62,13 @@ public final class HyperGraSS {
         public int blockSizeBytes = DEFAULT_BLOCK_BYTES;
         public int maxAnchorBases = CanonicalSyncmerEngine.DEFAULT_MAX_ANCHOR_BASES;
         public boolean anchorSinglePage = false;
+        /**
+         * Encode each 64 KiB anchor page with the context-mixing codec instead of one
+         * whole-anchor page. Costs a little size (context resets) and saves most of the
+         * header wall time on large anchors. Serial: per-page model allocation contends
+         * under the common pool.
+         */
+        public boolean anchorCmPages = false;
         public boolean bounded = false;
         /**
          * Encoder threads for the bounded path. One thread keeps the cross-block gap channel
@@ -804,38 +811,39 @@ public final class HyperGraSS {
         // Serialize page-partitioned AnchorBank + 1-hop Global Clade Catalog
         if (useAnchor) {
             int anchorLen = bank.length;
-            int pageSize = opts.anchorSinglePage
+            int pageSize = opts.anchorSinglePage && !opts.anchorCmPages
                     ? Math.max(1, anchorLen)
                     : CanonicalSyncmerEngine.ANCHOR_PAGE_SIZE;
             int numPages = (anchorLen + pageSize - 1) / pageSize;
             final boolean preferFast2Bit = (totalDna >= 12L * anchorLen);
+            final boolean pageFast2Bit = opts.anchorCmPages ? false : preferFast2Bit;
 
             byte[][] encPages = new byte[numPages][];
             int[] pageBaseLens = new int[numPages];
-            if (opts.parallel && numPages > 1) {
+            if (opts.parallel && numPages > 1 && !opts.anchorCmPages) {
                 IntStream.range(0, numPages).parallel().forEach(p -> {
                     int pStart = p * pageSize;
                     int pLen = Math.min(pageSize, anchorLen - pStart);
                     pageBaseLens[p] = pLen;
-                    encPages[p] = encodeAnchorPage(bank.bases, pStart, pLen, preferFast2Bit, opts.leanMode);
+                    encPages[p] = encodeAnchorPage(bank.bases, pStart, pLen, pageFast2Bit, opts.leanMode);
                 });
             } else {
                 for (int p = 0; p < numPages; p++) {
                     int pStart = p * pageSize;
                     int pLen = Math.min(pageSize, anchorLen - pStart);
                     pageBaseLens[p] = pLen;
-                    encPages[p] = encodeAnchorPage(bank.bases, pStart, pLen, preferFast2Bit, opts.leanMode);
+                    encPages[p] = encodeAnchorPage(bank.bases, pStart, pLen, pageFast2Bit, opts.leanMode);
                 }
             }
 
-            boolean fast2BitAnchor = preferFast2Bit;
+            boolean fast2BitAnchor = pageFast2Bit;
             // Bound the extra context-mixing work to one page; reuse alone does not predict entropy.
             // A smaller payload also has a no-larger length varint. Keep the legacy choice on ties.
             if (!opts.leanMode && numPages == 1) {
-                byte[] alternate = encodeAnchorPage(bank.bases, 0, anchorLen, !preferFast2Bit, false);
+                byte[] alternate = encodeAnchorPage(bank.bases, 0, anchorLen, !pageFast2Bit, false);
                 if (alternate.length < encPages[0].length) {
                     encPages[0] = alternate;
-                    fast2BitAnchor = !preferFast2Bit;
+                    fast2BitAnchor = !pageFast2Bit;
                 }
             }
             out.writeByte(fast2BitAnchor ? 0 : 1);
@@ -1461,6 +1469,8 @@ public final class HyperGraSS {
                         opts.blockSizeBytes = 8 * 1024 * 1024;
                     } else if ("--anchor-single-page".equals(args[idx])) {
                         opts.anchorSinglePage = true;
+                    } else if ("--anchor-cm-pages".equals(args[idx])) {
+                        opts.anchorCmPages = true;
                     } else if ("--bounded".equals(args[idx])) {
                         opts.bounded = true;
                     } else if ("--threads".equals(args[idx])) {
@@ -1567,6 +1577,8 @@ public final class HyperGraSS {
         System.out.println("    --threads N: bounded encoder threads (default 1; N>1 drops the shared gap channel)");
         System.out.println("    --pangenome: scale-tuned 16 MiB anchor bank and 8 MiB blocks");
         System.out.println("    --anchor-mib N / --block-mib N: explicit tuning for large inputs");
+        System.out.println("    --anchor-single-page: one anchor page (maximum compression, slower header)");
+        System.out.println("    --anchor-cm-pages: 64 KiB context-mixing anchor pages (slightly larger, faster header)");
         System.out.println("  decompress <input.hgs> <output.fa>");
         System.out.println("  query <input.hgs> <recordIdx> [startBase endBase]");
         System.out.println("  inspect <input.hgs>");

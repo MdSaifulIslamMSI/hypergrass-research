@@ -354,6 +354,28 @@ public final class VerifyAllEdgeCases {
             throw new AssertionError("Parallel bounded file round-trip mismatch");
         }
 
+        HyperGraSS.CompressOptions cm = HyperGraSS.CompressOptions.defaults();
+        cm.bounded = true;
+        cm.threads = 1;
+        cm.blockSizeBytes = 64 * 1024;
+        cm.maxAnchorBases = 256 * 1024;
+        cm.anchorCmPages = true;
+        Path cmPath = tmpDir.resolve("bounded-cm-pages.hgs");
+        HyperGraSS.compressFile(inPath, cmPath, cm);
+        byte[] cmArchive = Files.readAllBytes(cmPath);
+        if (!Arrays.equals(raw, HyperGraSS.decompressBytes(cmArchive))) {
+            throw new AssertionError("Paged context-mixing anchor round-trip mismatch");
+        }
+        HyperGraSS.ArchiveMetadata cmMeta = HyperGraSS.inspect(cmPath);
+        if (cmMeta.numAnchorPages < 2) {
+            throw new AssertionError("Paged context-mixing anchor did not split into pages");
+        }
+        Path cmOut = tmpDir.resolve("bounded-cm-pages.out");
+        HyperGraSS.decompressFile(cmPath, cmOut);
+        if (!Arrays.equals(raw, Files.readAllBytes(cmOut))) {
+            throw new AssertionError("Paged context-mixing anchor file round-trip mismatch");
+        }
+
         int seqBlocks = HyperGraSS.inspect(seqPath).numBlocks;
         int parBlocks = HyperGraSS.inspect(parPath).numBlocks;
         if (seqBlocks != parBlocks || seqBlocks < 2) {

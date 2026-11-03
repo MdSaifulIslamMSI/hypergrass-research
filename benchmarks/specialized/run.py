@@ -96,6 +96,22 @@ PROFILES = (
         "memory": "256m",
     },
     {
+        "id": "hypergrass-bounded-256m-cm-pages",
+        "kind": "hypergrass",
+        "level": "bounded-256m-cm-pages",
+        "options": [
+            "--pangenome", "--bounded", "--single-thread", "--anchor-cm-pages",
+            "--block-mib", "16", "--anchor-mib", "9",
+        ],
+        "jvm": [
+            "-Dhypergrass.matchMin=104", "-Dhypergrass.rangeModel=count",
+            "-XX:+UseSerialGC", "-XX:ReservedCodeCacheSize=32m",
+            "-XX:MaxMetaspaceSize=64m", "-XX:CICompilerCount=2", "-Xss512k",
+        ],
+        "heap": "160m",
+        "memory": "256m",
+    },
+    {
         "id": "grass",
         "kind": "grass",
         "level": "default-e2",

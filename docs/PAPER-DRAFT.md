@@ -128,7 +128,15 @@ restoring, so it meets the 256 MiB RSS and 2x speed gates but misses the 2%
 size gate by 110,615 bytes. The 4-bit counters saturate at 15 votes, which costs 2,218
 bytes against exact 8-bit counts; the unbounded path keeps the exact form.
 32 MiB blocks at a 224 MiB heap complete but peak at 272 MiB RSS, and 64 MiB
-blocks exhaust a 192 MiB heap before the first block completes.
+blocks exhaust a 192 MiB heap before the first block completes. The anchor
+header has a separate speed trade: on the 40.5 MB test, one context-mixing
+anchor page takes 11.70 s, 64 KiB context-mixing pages (`--anchor-cm-pages`)
+take 8.85 s for +0.46% archive, and 2-bit pages take 6.85 s for +2.33%.
+Parallel context-mixing pages were slower because each page allocates its own
+model, so that mode stays serial. At the 160 MiB bounded heap on a 120.1 Mbp
+input, the paged mode cut compress wall from 144-158 s to 112-123 s and
+decompress wall from 66-71 s to 40-53 s for +0.49% archive, with the same
+272 MiB peak RSS in both modes.
 
 The bound is set by anchor saturation, not input size. The bank costs about
 1 byte per base and its seed index 7.1 bytes per base (`SEED_STEP=4`, both
