@@ -1,44 +1,52 @@
 {
-  "schema_version": 1,
-  "kind": "entropy-floor-analysis",
+  "schema_version": 2,
+  "kind": "entropy-feasibility-analysis",
   "input": {
     "bases": 120108223,
     "genomes": 24,
     "genome_bases_mean": 5004509.291666667,
-    "flat_input_sha256": null
-  },
-  "measured": {
-    "qcrms_bits_per_base_single_genome": 1.805928,
-    "anchor_bases": 9434480,
-    "snps_post_consensus": 1577229,
-    "snps_pre_consensus": 2007000,
-    "literal_bases": 404521,
-    "hypergrass_archive_bytes": 4153891,
-    "jarvis3_l7_archive_bytes": 3896361,
+    "flat_input_sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb",
     "target_100x_bytes": 1200000
   },
-  "floor": {
-    "anchor_bytes": 2129748,
-    "snp_position_bytes": 1514899,
-    "snp_allele_bytes_lower_bound": 197154,
-    "snp_allele_bytes_uniform": 312481,
-    "literal_bytes": 91317,
-    "case_a_total_bytes": 3933118,
-    "case_a_total_bytes_uniform_alleles": 4048445,
-    "case_b_total_bytes": 2869971
+  "measured": {
+    "hypergrass_archive_bytes": 3810409,
+    "hypergrass_bits_per_base": 0.253798,
+    "jarvis3_l7_archive_bytes": 3896361,
+    "anchor_bases": 9434480,
+    "channel_bytes": {
+      "anchor_and_container": 2257234,
+      "gap": 882215,
+      "strand": 239808,
+      "diff": 160236,
+      "geom": 143771,
+      "mask": 80818,
+      "literals": 30647,
+      "donor_counts_modes": 15680
+    },
+    "anchor_bytes": 2257234,
+    "non_anchor_bytes": 1553175,
+    "anchor_bits_per_base": 1.914029,
+    "qcrms_bits_per_base_single_genome": 1.805928,
+    "jarvis3_anchor_bits_per_base": 2.035
   },
   "sensitivity": {
-    "anchor_rate_to_fit_target_bits_per_base": 1.0175,
-    "position_floor_exceeds_target": true,
-    "position_over_target_ratio": 1.262,
-    "case_a_over_target_ratio": 3.28,
-    "case_b_over_target_ratio": 2.39
+    "anchor_rate_needed_for_target_bits_per_base": 1.0175,
+    "best_measured_over_needed_anchor_rate": 1.775,
+    "anchor_over_target_ratio": 1.881,
+    "non_anchor_over_target_ratio": 1.294,
+    "current_over_target_ratio": 3.175
+  },
+  "withdrawn_independence_estimate": {
+    "snp_position_bytes": 1514899,
+    "case_a_total_bytes": 3933118,
+    "note": "Not a lower bound. The finished 3,810,409-byte archive is 122,709 B smaller, because the independence model gives no credit for cross-genome sharing."
   },
   "verdict": "infeasible",
+  "verdict_basis": "The measured anchor channel alone is 2,257,234 B (1.88x the target) and would need 1.018 bits/base, 1.77x better than the best DNA rate measured here. Independently, the measured non-anchor channels alone are 1,553,175 B (1.29x the target). Both components exceed the whole budget. This is measured evidence, not an information-theoretic proof.",
   "assumptions": [
-    "QCRM's measured 1.806 bits/base on a single 5.07 Mbp E. coli genome is the best DNA rate measured in this project and is used as the floor for distinct sequence; no known method compresses E. coli DNA below ~1.7 bits/base.",
-    "SNP positions are bounded by the independence model, which gives shared variants no credit; phylogenetic sharing can only lower this term.",
-    "The anchor bank (9,434,480 bases) is the distinct non-redundant content of the 24 genomes; any faithful archive must convey it or convey a reference genome plus the same amount of variation.",
-    "Literal bases are the unmatched (indel/accessory) bases measured in the current archive; they are in addition to the SNP instances."
+    "The channel bytes are the measured ArchiveByteAccounting decomposition of the finished tuned archive and sum exactly to 3,810,409 B.",
+    "The best measured DNA rate is QCRM at 1.806 bits/base on a single 5.07 Mbp E. coli genome; JARVIS3 reaches 2.035 bits/base on this anchor, and the finished archive reaches 1.914 bits/base on it.",
+    "The anchor bank (9,434,480 bases) is the distinct non-redundant content of the 24 genomes; any faithful archive must convey it or a reference plus the same amount of variation.",
+    "A radically different generative representation could in principle beat these measured bounds, but no measured method is close."
   ]
 }
