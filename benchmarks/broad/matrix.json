@@ -1,0 +1,496 @@
+{
+  "schema_version": 1,
+  "kind": "broad-pangenome-matrix",
+  "created_utc": "2026-11-02T17:14:25.365859+00:00",
+  "profiles": {
+    "cross-taxon": [
+      "hypergrass-pangenome",
+      "hypergrass-bounded-256m-tuned",
+      "jarvis3-l7",
+      "xz-9",
+      "geco3-l6"
+    ],
+    "diversity": [
+      "hypergrass-pangenome",
+      "hypergrass-bounded-256m-tuned",
+      "jarvis3-l7",
+      "xz-9"
+    ],
+    "geco3-datasets": [
+      "campy",
+      "mtb",
+      "staph"
+    ],
+    "grass-datasets": [
+      "mtb",
+      "pseudo"
+    ]
+  },
+  "runs": [
+    {
+      "run_id": "broad-mtb-natural-1",
+      "panel": "cross-taxon",
+      "dataset": "mtb",
+      "organism": "Mycobacterium tuberculosis",
+      "stratum": "natural",
+      "source": "benchmarks/broad/data/mtb/natural.fasta",
+      "profiles": [
+        "hypergrass-pangenome",
+        "hypergrass-bounded-256m-tuned",
+        "jarvis3-l7",
+        "xz-9",
+        "geco3-l6",
+        "grass"
+      ],
+      "diversity": {
+        "mean_pairwise_distance": 0.0008297534033358281,
+        "median_pairwise_distance": 0.0007692756704505263,
+        "mean_mash_ani": 0.9991702465966642,
+        "record_count": 28,
+        "total_bases": 123510953,
+        "file": {
+          "path": "benchmarks/broad/data/mtb/natural.fasta",
+          "size_bytes": 125277953,
+          "sha256": "5217c248e3eb24f7c43f345cbdd38531cb5ee5dec708f84805721b0cd1f8d633",
+          "records": 28,
+          "bases": 123510953
+        }
+      }
+    },
+    {
+      "run_id": "broad-staph-natural-1",
+      "panel": "cross-taxon",
+      "dataset": "staph",
+      "organism": "Staphylococcus aureus",
+      "stratum": "natural",
+      "source": "benchmarks/broad/data/staph/natural.fasta",
+      "profiles": [
+        "hypergrass-pangenome",
+        "hypergrass-bounded-256m-tuned",
+        "jarvis3-l7",
+        "xz-9",
+        "geco3-l6"
+      ],
+      "diversity": {
+        "mean_pairwise_distance": 0.012461840000467699,
+        "median_pairwise_distance": 0.011209806089829051,
+        "mean_mash_ani": 0.9875381599995323,
+        "record_count": 43,
+        "total_bases": 120948278,
+        "file": {
+          "path": "benchmarks/broad/data/staph/natural.fasta",
+          "size_bytes": 122679657,
+          "sha256": "a96a924d241ae79af4f325d68c2a396c7e89adc0231c70e11aa5d641002e9d77",
+          "records": 43,
+          "bases": 120948278
+        }
+      }
+    },
+    {
+      "run_id": "broad-staph-low-1",
+      "panel": "diversity",
+      "dataset": "staph",
+      "organism": "Staphylococcus aureus",
+      "stratum": "low",
+      "source": "benchmarks/broad/data/staph/strata/low.fasta",
+      "profiles": [
+        "hypergrass-pangenome",
+        "hypergrass-bounded-256m-tuned",
+        "jarvis3-l7",
+        "xz-9"
+      ],
+      "diversity": {
+        "mean_pairwise_distance": 0.004814523636257563,
+        "median_pairwise_distance": 0.0032870772517487774,
+        "mean_mash_ani": 0.9951854763637424,
+        "record_count": 24,
+        "total_bases": 68623470,
+        "clusters_represented": [
+          0
+        ],
+        "file": {
+          "path": "benchmarks/broad/data/staph/strata/low.fasta",
+          "size_bytes": 69605795,
+          "sha256": "7c62905f5b4e3f3d423ed0e9a6fb4d357a3988f31b23ddc326dc18dac0c70877",
+          "records": 24,
+          "bases": 68623470
+        }
+      }
+    },
+    {
+      "run_id": "broad-staph-medium-1",
+      "panel": "diversity",
+      "dataset": "staph",
+      "organism": "Staphylococcus aureus",
+      "stratum": "medium",
+      "source": "benchmarks/broad/data/staph/strata/medium.fasta",
+      "profiles": [
+        "hypergrass-pangenome",
+        "hypergrass-bounded-256m-tuned",
+        "jarvis3-l7",
+        "xz-9"
+      ],
+      "diversity": {
+        "mean_pairwise_distance": 0.011397581415361902,
+        "median_pairwise_distance": 0.010352858069830922,
+        "mean_mash_ani": 0.988602418584638,
+        "record_count": 24,
+        "total_bases": 66797443,
+        "clusters_represented": [
+          0,
+          2
+        ],
+        "file": {
+          "path": "benchmarks/broad/data/staph/strata/medium.fasta",
+          "size_bytes": 67753654,
+          "sha256": "f3aca15238cd576cb17c08c0a2cc0f7331f737f86959155c4af38d3b04fa6bbe",
+          "records": 24,
+          "bases": 66797443
+        }
+      }
+    },
+    {
+      "run_id": "broad-staph-high-1",
+      "panel": "diversity",
+      "dataset": "staph",
+      "organism": "Staphylococcus aureus",
+      "stratum": "high",
+      "source": "benchmarks/broad/data/staph/strata/high.fasta",
+      "profiles": [
+        "hypergrass-pangenome",
+        "hypergrass-bounded-256m-tuned",
+        "jarvis3-l7",
+        "xz-9"
+      ],
+      "diversity": {
+        "mean_pairwise_distance": 0.015189200100102497,
+        "median_pairwise_distance": 0.015896709740838,
+        "mean_mash_ani": 0.9848107998998975,
+        "record_count": 24,
+        "total_bases": 67708982,
+        "clusters_represented": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "file": {
+          "path": "benchmarks/broad/data/staph/strata/high.fasta",
+          "size_bytes": 68678233,
+          "sha256": "ddd03717c3fba50236bf14f56c23d2975c337a64d44bc604294ffa29d4b16e93",
+          "records": 24,
+          "bases": 67708982
+        }
+      }
+    },
+    {
+      "run_id": "broad-pneumo-natural-1",
+      "panel": "cross-taxon",
+      "dataset": "pneumo",
+      "organism": "Streptococcus pneumoniae",
+      "stratum": "natural",
+      "source": "benchmarks/broad/data/pneumo/natural.fasta",
+      "profiles": [
+        "hypergrass-pangenome",
+        "hypergrass-bounded-256m-tuned",
+        "jarvis3-l7",
+        "xz-9"
+      ],
+      "diversity": {
+        "mean_pairwise_distance": 0.012233897872926934,
+        "median_pairwise_distance": 0.01244130318129988,
+        "mean_mash_ani": 0.987766102127073,
+        "record_count": 57,
+        "total_bases": 120099237,
+        "file": {
+          "path": "benchmarks/broad/data/pneumo/natural.fasta",
+          "size_bytes": 121819806,
+          "sha256": "d746b48c24cc3dbd9206f5c05523bd955bf2143e210f4d28389b063c96c1b2ef",
+          "records": 57,
+          "bases": 120099237
+        }
+      }
+    },
+    {
+      "run_id": "broad-pseudo-natural-1",
+      "panel": "cross-taxon",
+      "dataset": "pseudo",
+      "organism": "Pseudomonas aeruginosa",
+      "stratum": "natural",
+      "source": "benchmarks/broad/data/pseudo/natural.fasta",
+      "profiles": [
+        "hypergrass-pangenome",
+        "hypergrass-bounded-256m-tuned",
+        "jarvis3-l7",
+        "xz-9",
+        "grass"
+      ],
+      "diversity": {
+        "mean_pairwise_distance": 0.011330659503862169,
+        "median_pairwise_distance": 0.011242959641838175,
+        "mean_mash_ani": 0.9886693404961379,
+        "record_count": 19,
+        "total_bases": 126178242,
+        "file": {
+          "path": "benchmarks/broad/data/pseudo/natural.fasta",
+          "size_bytes": 127982550,
+          "sha256": "04bb6ecd4bf3d14c20df5b40eaf0284eec607eef1495ad7a475066559ef7ae7c",
+          "records": 19,
+          "bases": 126178242
+        }
+      }
+    },
+    {
+      "run_id": "broad-campy-natural-1",
+      "panel": "cross-taxon",
+      "dataset": "campy",
+      "organism": "Campylobacter jejuni",
+      "stratum": "natural",
+      "source": "benchmarks/broad/data/campy/natural.fasta",
+      "profiles": [
+        "hypergrass-pangenome",
+        "hypergrass-bounded-256m-tuned",
+        "jarvis3-l7",
+        "xz-9",
+        "geco3-l6"
+      ],
+      "diversity": {
+        "mean_pairwise_distance": 0.018970301666328532,
+        "median_pairwise_distance": 0.02048234687340727,
+        "mean_mash_ani": 0.9810296983336715,
+        "record_count": 72,
+        "total_bases": 120050681,
+        "file": {
+          "path": "benchmarks/broad/data/campy/natural.fasta",
+          "size_bytes": 121771673,
+          "sha256": "5ef0f5d5b128a68dc03fdd5b9e80b6b4389f74d47c2e65f884764fa809938c4d",
+          "records": 72,
+          "bases": 120050681
+        }
+      }
+    },
+    {
+      "run_id": "broad-campy-low-1",
+      "panel": "diversity",
+      "dataset": "campy",
+      "organism": "Campylobacter jejuni",
+      "stratum": "low",
+      "source": "benchmarks/broad/data/campy/strata/low.fasta",
+      "profiles": [
+        "hypergrass-pangenome",
+        "hypergrass-bounded-256m-tuned",
+        "jarvis3-l7",
+        "xz-9"
+      ],
+      "diversity": {
+        "mean_pairwise_distance": 0.010757882277647518,
+        "median_pairwise_distance": 0.016750411420320827,
+        "mean_mash_ani": 0.9892421177223525,
+        "record_count": 24,
+        "total_bases": 39331372,
+        "clusters_represented": [
+          2
+        ],
+        "file": {
+          "path": "benchmarks/broad/data/campy/strata/low.fasta",
+          "size_bytes": 39895247,
+          "sha256": "364faf4ca49041dfa86a4b38d4f1e3d71e20cb516284439ca96565534f17cb18",
+          "records": 24,
+          "bases": 39331372
+        }
+      }
+    },
+    {
+      "run_id": "broad-campy-medium-1",
+      "panel": "diversity",
+      "dataset": "campy",
+      "organism": "Campylobacter jejuni",
+      "stratum": "medium",
+      "source": "benchmarks/broad/data/campy/strata/medium.fasta",
+      "profiles": [
+        "hypergrass-pangenome",
+        "hypergrass-bounded-256m-tuned",
+        "jarvis3-l7",
+        "xz-9"
+      ],
+      "diversity": {
+        "mean_pairwise_distance": 0.011621617510980705,
+        "median_pairwise_distance": 0.011811656382486407,
+        "mean_mash_ani": 0.9883783824890193,
+        "record_count": 24,
+        "total_bases": 40179115,
+        "clusters_represented": [
+          0,
+          2
+        ],
+        "file": {
+          "path": "benchmarks/broad/data/campy/strata/medium.fasta",
+          "size_bytes": 40755101,
+          "sha256": "0873c0e87e51c04bb55a15602ade3f4386159a3bcfa0c97cd23c4a73c5a69c33",
+          "records": 24,
+          "bases": 40179115
+        }
+      }
+    },
+    {
+      "run_id": "broad-campy-high-1",
+      "panel": "diversity",
+      "dataset": "campy",
+      "organism": "Campylobacter jejuni",
+      "stratum": "high",
+      "source": "benchmarks/broad/data/campy/strata/high.fasta",
+      "profiles": [
+        "hypergrass-pangenome",
+        "hypergrass-bounded-256m-tuned",
+        "jarvis3-l7",
+        "xz-9"
+      ],
+      "diversity": {
+        "mean_pairwise_distance": 0.019009507492773945,
+        "median_pairwise_distance": 0.019129034530176656,
+        "mean_mash_ani": 0.980990492507226,
+        "record_count": 24,
+        "total_bases": 40540194,
+        "clusters_represented": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "file": {
+          "path": "benchmarks/broad/data/campy/strata/high.fasta",
+          "size_bytes": 41121325,
+          "sha256": "5471fffc5af36c4d1ab2ba1b53fcf897e209df69bfa30c42f00b7e7eda7b296e",
+          "records": 24,
+          "bases": 40540194
+        }
+      }
+    },
+    {
+      "run_id": "broad-chlamydia-natural-1",
+      "panel": "cross-taxon",
+      "dataset": "chlamydia",
+      "organism": "Chlamydia trachomatis",
+      "stratum": "natural",
+      "source": "benchmarks/broad/data/chlamydia/natural.fasta",
+      "profiles": [
+        "hypergrass-pangenome",
+        "hypergrass-bounded-256m-tuned",
+        "jarvis3-l7",
+        "xz-9"
+      ],
+      "diversity": {
+        "mean_pairwise_distance": 0.004504462195982913,
+        "median_pairwise_distance": 0.005247884158144095,
+        "mean_mash_ani": 0.9954955378040171,
+        "record_count": 66,
+        "total_bases": 68850777,
+        "file": {
+          "path": "benchmarks/broad/data/chlamydia/natural.fasta",
+          "size_bytes": 69839847,
+          "sha256": "81cf1a02a3555c51e88e92ca8257347eaf30d48d9198888569d780c301ae7a13",
+          "records": 66,
+          "bases": 68850777
+        }
+      }
+    },
+    {
+      "run_id": "broad-ecoli-low-1",
+      "panel": "diversity",
+      "dataset": "ecoli",
+      "organism": "Escherichia coli",
+      "stratum": "low",
+      "source": "benchmarks/broad/data/ecoli/strata/low.fasta",
+      "profiles": [
+        "hypergrass-pangenome",
+        "hypergrass-bounded-256m-tuned",
+        "jarvis3-l7",
+        "xz-9"
+      ],
+      "diversity": {
+        "mean_pairwise_distance": 0.011884606437643325,
+        "median_pairwise_distance": 0.011487834975564222,
+        "mean_mash_ani": 0.9881153935623567,
+        "record_count": 24,
+        "total_bases": 115177685,
+        "clusters_represented": [
+          0
+        ],
+        "file": {
+          "path": "benchmarks/broad/data/ecoli/strata/low.fasta",
+          "size_bytes": 116824935,
+          "sha256": "64c63cc7943600ff519cd4ba785ae8adf301dac82082eafddf1b716a07a70dc5",
+          "records": 24,
+          "bases": 115177685
+        }
+      }
+    },
+    {
+      "run_id": "broad-ecoli-medium-1",
+      "panel": "diversity",
+      "dataset": "ecoli",
+      "organism": "Escherichia coli",
+      "stratum": "medium",
+      "source": "benchmarks/broad/data/ecoli/strata/medium.fasta",
+      "profiles": [
+        "hypergrass-pangenome",
+        "hypergrass-bounded-256m-tuned",
+        "jarvis3-l7",
+        "xz-9"
+      ],
+      "diversity": {
+        "mean_pairwise_distance": 0.025326134270744025,
+        "median_pairwise_distance": 0.027502126456629885,
+        "mean_mash_ani": 0.974673865729256,
+        "record_count": 24,
+        "total_bases": 122948162,
+        "clusters_represented": [
+          0,
+          1,
+          2
+        ],
+        "file": {
+          "path": "benchmarks/broad/data/ecoli/strata/medium.fasta",
+          "size_bytes": 124706460,
+          "sha256": "751d834f00b106f568db0007d70e19be028e41c08db6637ebe96d5442938f811",
+          "records": 24,
+          "bases": 122948162
+        }
+      }
+    },
+    {
+      "run_id": "broad-ecoli-high-1",
+      "panel": "diversity",
+      "dataset": "ecoli",
+      "organism": "Escherichia coli",
+      "stratum": "high",
+      "source": "benchmarks/broad/data/ecoli/strata/high.fasta",
+      "profiles": [
+        "hypergrass-pangenome",
+        "hypergrass-bounded-256m-tuned",
+        "jarvis3-l7",
+        "xz-9"
+      ],
+      "diversity": {
+        "mean_pairwise_distance": 0.02595303133593156,
+        "median_pairwise_distance": 0.02782560098610523,
+        "mean_mash_ani": 0.9740469686640685,
+        "record_count": 24,
+        "total_bases": 120477659,
+        "clusters_represented": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "file": {
+          "path": "benchmarks/broad/data/ecoli/strata/high.fasta",
+          "size_bytes": 122200634,
+          "sha256": "109aedf4c4593d7356465b57f4b1ad322e4e2cea766e78947ef659cc6e2e9b8e",
+          "records": 24,
+          "bases": 120477659
+        }
+      }
+    }
+  ]
+}

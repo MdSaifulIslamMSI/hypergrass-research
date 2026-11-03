@@ -16,6 +16,43 @@ memory-architecture problems, not compiler problems.
 Tier A is the next milestone. Tier B requires a format change (sharding), not a language
 change. Tier C is a storage-system design, not a compression-kernel design.
 
+## What 1000x actually costs
+
+100 TB is 1000x the 100 GB class. At the measured 2.58 MB/s single-thread rate that is
+**10,800 core-hours** (449 core-days), and the compute is the cheap part: order
+$10^2-10^3 at spot prices. The binding resources are elsewhere.
+
+| Shard | Shards for 100 TB | Wall per shard | Cores for a 1 h wall |
+|---|---:|---:|---:|
+| 10 GB | 10,000 | 1.1 h | ~10,800 |
+| 100 GB | 1,000 | 10.8 h | unreachable; the shard wall is 10.8 h |
+
+Three costs dominate, none of them FLOPs:
+
+1. **Read amplification.** The bounded path reads every byte four times:
+   `partitionFile`, anchor build, one consensus pass, encode. 100 TB becomes
+   400 TB of reads, so a one-hour wall needs ~110 GB/s of aggregate storage
+   bandwidth. Verification is a second 100 TB workload: each shard is restored
+   and compared, which writes 100 TB and reads it back unless verification is
+   fused with decompression.
+2. **Shard-local anchors.** Each shard builds its own bank, so the 10 GB ratio is
+   not the 120 MB ratio. A fixed anchor budget covers a falling fraction of a
+   growing shard. This is the one number that decides whether 1000x costs
+   archive size, and it has not been measured.
+3. **Resumability and verification.** A 10.8 h shard that dies at hour ten must
+   resume, not restart, and every shard must be independently byte-exact.
+   Neither exists yet.
+
+More threads inside a shard do not fix this: the measured 2-thread speedup is 1.15x
+because only the encode pass is parallel, while the partition scan, anchor build and
+consensus pass are serial. Massive core count helps only after the work is
+partitioned, and partitioning is a format change (Phase 4), not a scheduler setting.
+
+A 1000x *single-stream* speedup is a different claim: 2.58 MB/s to 2.6 GB/s is
+~1.2 cycles per base at 3 GHz, below the cost of the range coder alone, and the serial
+passes cap thread scaling near 4x. That needs a different compression model, not more
+cores.
+
 ## Current hard limits
 
 | Limit | Where | Consequence |
@@ -26,7 +63,7 @@ change. Tier C is a storage-system design, not a compression-kernel design.
 | Archive is assembled in one `ByteOut` (`byte[]`) | `HyperGraSS.serializeMultiBlockArchive` | archive must fit ~2 GiB; all encoded blocks are retained |
 | In-memory decoder rejects >2 GiB | `HyperGraSS.decompressBytes` | `decompressFile` streams and is the supported path |
 | Random-access query uses `int` record positions | `HyperGraSS.query` | a single record >2 GiB cannot be queried |
-| Global anchor bank + seed index | `CanonicalSyncmerEngine.AnchorBankBuilder` | memory grows with pangenome diversity, not input size |
+| Global anchor bank + seed index | `CanonicalSyncmerEngine.AnchorBankBuilder` | memory grows with pangenome diversity, not input size: a saturated 9 MiB anchor carries a ~67 MB index and exhausts a 160 MB heap on a 123 MB diverse pangenome |
 
 The archive footer already stores `totalRawBytes` as a `varLong` and block file offsets as
 `long` deltas, so the on-disk format does not need a version bump for Tier A.
@@ -84,6 +121,33 @@ Gates 2, 3 and 4 pass. Gate 1 now passes as well: `VerifyArchiveAccounting` was 
 to parse DNA modes 4-6 and auxiliary modes 4-7, so the suite reports
 `ALL 34 ACCOUNTING SUITES PASSED (3326 checks, 1721 malformed archives rejected)`.
 
+### The bound is set by anchor saturation, not input size
+
+Gate 4 passes on the probe above because that input is 55 copies of one sequence: the
+anchor bank never saturates. It does not generalize to diverse input.
+
+The bank costs about 1 byte per base. Its seed index costs about **7.1 bytes per base**:
+`SEED_STEP = 4` indexes both strands, and the open-addressed table runs at 70% load
+with 8-byte slots (9,437,184 bases -> 4,718,592 entries -> 8,388,608 slots x 8 B =
+67.1 MB). At the 9 MiB cap that is 9 MB of bank plus 67 MB of index. With a 16 MiB raw
+block and its 16 MiB DNA array, the builder holds ~115 MB live, and a 160 MB heap has
+no room for the next block.
+
+Measured on the 122,948,162 B *E. coli* medium stratum (24 genomes, 9 MiB anchor,
+16 MiB blocks):
+
+- `OutOfMemoryError` in `FastaStreamFactorizer.factorize` at 18.7 s in the container
+  and 6.0 s on the host JVM;
+- heap 154 MB with 112 MB live at the failure, per `-Xlog:gc`;
+- the same input on the same 160 MB heap with `--anchor-mib 4` runs past that point
+  (still alive at 60 s, archive streaming), so the index is the cause.
+
+A diverse 123 MB pangenome fails where a repetitive 2.08 GB one passes. The bound
+tracks novelty, not bytes. For the gate this means the 9 MiB anchor and the 160 MB heap
+cannot both hold on diverse input; either cap the anchor (about 34 MB of index at 4 MiB,
+at a size cost) or raise the heap past the 256 MiB RSS budget. That trade is measured
+before the published profile changes.
+
 **The memory ceiling is gone; throughput is now the binding limit.** Extrapolating the
 measured single-threaded rate:
 
@@ -97,9 +161,10 @@ That is why parallel blocks and shards matter more than the archive writer. Phas
 removes the archive-size ceiling; it does not make 1 TB finish in a useful time.
 
 Phase 3's first measurement also sets the expectation honestly: the bounded path makes
-four passes over the input (anchor build, two consensus passes, encode) and only the
-last is parallel. Threads alone therefore cap out well below linear, which is why
-sharding - not more cores - is the Tier B answer.
+three factorization passes over the input (anchor build, one consensus pass, encode)
+plus the partitioning scan, and only the encode pass is parallel. Threads alone
+therefore cap out well below linear, which is why sharding - not more cores - is the
+Tier B answer.
 
 Phase 1 left one risk open: the archive writer materialized every encoded block. A
 2.2 GB input with a compressible payload stays under 2 GiB of archive, but a 10 GB
@@ -147,13 +212,60 @@ which has only 2 blocks:
 | `--threads 2` | 1,134,556 B | 26.6 s | 1.15x |
 
 A 1.15x end-to-end win from 2 threads on 2 blocks is the expected shape, not a defect
-to tune away: the anchor build and the two consensus passes are still serial, so
+to tune away: the partition scan, anchor build and consensus pass are still serial, so
 Amdahl caps this path. The encode pass is the only parallel stage. That is the argument
 for Phase 4 sharding rather than for more threads: with four passes over the input and
 one of them parallel, no thread count rescues Tier B.
 
 The +0.79% archive growth is the shared gap channel being switched off, recorded in
 `FLAG_SHARED_GAP` rather than hidden in a JVM flag.
+
+### Where the wall time goes
+
+Temporary stage instrumentation on the 40.5 MB campy-high input (2 blocks, host JVM,
+same 9 MiB anchor), removed before commit. Shares are more useful than absolute times
+because host and container wall times differ by about 2.5x.
+
+| Stage | Time | Share |
+|---|---:|---:|
+| `partitionFile` | 0.61-0.63 s | 5% |
+| anchor build | 1.06-1.10 s | 9% |
+| consensus (1 pass) | 1.02-1.05 s | 9% |
+| encode | 8.68-8.71 s | 76% |
+| total | 11.4-12.1 s | |
+
+Inside the encode stage, block factorization plus encoding is only 3.65 s (1.50 s for
+the 16 MiB block, 2.15 s for the 22.7 MiB block). The remaining ~5 s is
+`writeArchiveHeader`: with `--anchor-single-page` it encodes the whole 2,800,646 bp
+anchor twice, once as fast 2-bit and once with the context-mixing codec, then keeps the
+smaller result. The trial is real but expensive:
+
+| Anchor codec | Size |
+|---|---:|
+| fast 2-bit | 643,228 B |
+| context-mixing | 623,708 B |
+| saving | 19,520 B (1.7% of the 1,125,629 B archive) |
+
+So 44% of the wall buys 1.7% of the archive. That is a bad default trade at this input
+size, and it is the largest single serial cost. The trial is per-page and independent,
+so the cheap fixes are to sample the decision, run the two trials on the encode pool,
+or drop the trial and choose by a size heuristic.
+
+Ordered by measured impact, not intuition:
+
+1. **Anchor-header trial** (44% of wall, 1.7% of size). Sample or parallelize the
+   codec decision; do not serialize two full anchor encodes.
+2. **Block encode** (32% of wall). Already parallel; scales with the number of blocks
+   and the per-worker memory budget, not with the anchor.
+3. **Anchor build + consensus** (19% of wall). Two serial reads. Fuse them, or build
+   the bank per shard so the work partitions with the data.
+4. **Partition scan** (5% of wall). Fuse it with the anchor build so the input is read
+   once instead of twice.
+
+That ordering does not change the Tier B conclusion. Even removing the entire anchor
+trial leaves ~6.4 s, and the remaining serial reads cap threads; sharding is still the
+structural fix. It does mean a ~1.8x single-node win is available on this input without
+a new language or a new format, before touching the serial passes.
 
 ## Phase 4 - sharded anchors
 

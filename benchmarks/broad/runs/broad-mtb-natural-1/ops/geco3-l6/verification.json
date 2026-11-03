@@ -1,0 +1,20 @@
+{
+  "verdict": "pass",
+  "problems": [],
+  "original": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\broad\\runs\\broad-mtb-natural-1\\input.seq",
+  "restored": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\broad\\runs\\broad-mtb-natural-1\\ops\\geco3-l6\\input.seq.de",
+  "archive": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\broad\\runs\\broad-mtb-natural-1\\ops\\geco3-l6\\input.seq.co",
+  "original_bytes": 123510953,
+  "restored_bytes": 123510953,
+  "archive_bytes": 6772719,
+  "bytes_compared": 123510953,
+  "byte_identical": true,
+  "first_mismatch_offset": null,
+  "original_sha256": "fc771fb22880ab46e0afb88bad9e8bb7a43a0497014383675d7cabbc6d23af4f",
+  "restored_sha256": "fc771fb22880ab46e0afb88bad9e8bb7a43a0497014383675d7cabbc6d23af4f",
+  "archive_sha256": "d190026c189918d50932e87406f09f99298218f74c4a34a50040e76ddcd78df0",
+  "expected_sha256": "fc771fb22880ab46e0afb88bad9e8bb7a43a0497014383675d7cabbc6d23af4f",
+  "chunk_bytes": 8388608,
+  "seconds": 0.508,
+  "comparison": "streaming byte comparison independent of the codec"
+}

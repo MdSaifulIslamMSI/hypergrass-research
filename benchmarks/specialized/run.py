@@ -224,9 +224,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--profiles", default=",".join(p["id"] for p in PROFILES))
     parser.add_argument("--timeout", type=float, default=7200.0)
     parser.add_argument("--memory", default="2g")
+    parser.add_argument("--runs-dir", default=str(RUNS))
     args = parser.parse_args(argv)
 
-    source = Path(args.source)
+    source = Path(args.source).resolve()
     if not source.exists():
         raise SystemExit(f"missing source FASTA: {source}")
 
@@ -241,7 +242,9 @@ def main(argv: list[str] | None = None) -> int:
 
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     run_id = args.run_id or f"specialized-{stamp}"
-    run_dir = RUNS / run_id
+    runs_root = Path(args.runs_dir).resolve()
+    runs_root.mkdir(parents=True, exist_ok=True)
+    run_dir = runs_root / run_id
     if run_dir.exists():
         raise SystemExit(f"run directory already exists: {run_dir}")
     run_dir.mkdir(parents=True)
@@ -296,7 +299,7 @@ def main(argv: list[str] | None = None) -> int:
                 "note": "GraSS invokes ./bsc e FinalTar.tar FinalBsc.bsc -e2",
             },
         }
-    if not args.slice_bases:
+    if not args.slice_bases and source.resolve() == SOURCE.resolve():
         baseline_path = PROJECT / "benchmarks/pangenome/runs/pangenome-scale-2/report.json"
         if baseline_path.exists():
             baseline = json.loads(baseline_path.read_text(encoding="utf-8"))

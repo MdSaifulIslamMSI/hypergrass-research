@@ -1,0 +1,20 @@
+{
+  "verdict": "pass",
+  "problems": [],
+  "original": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\broad\\runs\\broad-ecoli-low-1\\input.seq",
+  "restored": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\broad\\runs\\broad-ecoli-low-1\\ops\\xz-9\\restored.seq",
+  "archive": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\broad\\runs\\broad-ecoli-low-1\\ops\\xz-9\\archive.xz",
+  "original_bytes": 115177685,
+  "restored_bytes": 115177685,
+  "archive_bytes": 5071132,
+  "bytes_compared": 115177685,
+  "byte_identical": true,
+  "first_mismatch_offset": null,
+  "original_sha256": "18183ec9f8ec26ad1b156e3542c40e048c50711314fad61816a712688aff9433",
+  "restored_sha256": "18183ec9f8ec26ad1b156e3542c40e048c50711314fad61816a712688aff9433",
+  "archive_sha256": "4251b7ce73791d7f88f8e05846dd0ff1097fa7074a9c4361b3e35734dba3b3ee",
+  "expected_sha256": "18183ec9f8ec26ad1b156e3542c40e048c50711314fad61816a712688aff9433",
+  "chunk_bytes": 8388608,
+  "seconds": 0.425,
+  "comparison": "streaming byte comparison independent of the codec"
+}

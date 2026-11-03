@@ -1,0 +1,20 @@
+{
+  "verdict": "pass",
+  "problems": [],
+  "original": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\broad\\runs\\broad-staph-low-1\\input.seq",
+  "restored": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\broad\\runs\\broad-staph-low-1\\ops\\jarvis3-l7\\restored.seq",
+  "archive": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\broad\\runs\\broad-staph-low-1\\ops\\jarvis3-l7\\archive.jc",
+  "original_bytes": 68623470,
+  "restored_bytes": 68623470,
+  "archive_bytes": 1003593,
+  "bytes_compared": 68623470,
+  "byte_identical": true,
+  "first_mismatch_offset": null,
+  "original_sha256": "30dc34f3366c3de6c8b2d12109caea6e1c19f6d153bd131641c7ac145b143983",
+  "restored_sha256": "30dc34f3366c3de6c8b2d12109caea6e1c19f6d153bd131641c7ac145b143983",
+  "archive_sha256": "ea085ea54f0c4ffdf97da7d337440ac6b965a10b7e9441a2ef860bf28d99818b",
+  "expected_sha256": "30dc34f3366c3de6c8b2d12109caea6e1c19f6d153bd131641c7ac145b143983",
+  "chunk_bytes": 8388608,
+  "seconds": 0.232,
+  "comparison": "streaming byte comparison independent of the codec"
+}

@@ -95,6 +95,12 @@ java -cp bin hypergrass.HyperGraSS compress --pangenome input.fna archive_pangen
 # Bounded-memory streaming mode; the measured scale result is in docs/BENCHMARKS.md
 java -Xmx8m -cp bin hypergrass.HyperGraSS compress --lean input.fna archive_lean.hgs
 
+# Bounded anchored mode above 2 GiB; one block resident, archive streamed to disk
+java -Xmx160m -cp bin hypergrass.HyperGraSS compress --bounded --anchor-mib 9 --block-mib 16 big.fna big.hgs
+
+# Same, encoding independent blocks on N threads (drops the shared gap channel)
+java -Xmx4g -cp bin hypergrass.HyperGraSS compress --bounded --threads 8 --anchor-mib 64 --block-mib 64 big.fna big.hgs
+
 # Inspect archive metadata in O(1)
 java -cp bin hypergrass.HyperGraSS inspect archive.hgs
 
@@ -236,6 +242,10 @@ Measured headlines, stated without rounding up:
 | 121.8 MB pangenome, xz -9 | 8,394,900 B, 14.51x, 186.3 s, 738 MiB peak RSS |
 | 122.3 MB Salmonella pangenome, tuned | 3,443,600 B, 35.50x, 28.6 s, **43.7% smaller than xz** |
 | 124.5 MB Klebsiella pangenome, tuned | 3,464,423 B, 35.92x, 10.6 s, **46.2% smaller than xz** |
+| Cross-taxon panel (6 collections, 5 phyla) | **6/6 smaller than JARVIS3 l7**, median 13.8% (range 4.7–29.4%), byte-exact |
+| Cross-taxon panel, published GraSS | 7.3–11.7x larger than HyperGraSS on the two collections measured |
+| Cross-taxon panel, 256 MiB bounded mode | 0/6 pass the size gate; 4/6 exceed 256 MiB RSS; 1 exhausts the heap |
+| Within-species gradient (3 species × 3 strata) | HyperGraSS smaller than JARVIS3 on **8/9**; *E. coli* medium is the first loss (−0.16%), byte-exact |
 | Same 120.1 Mbp sequence, tuned + LZ gap coder | **3,810,409 B, 0.254 bits/base, 31.52x**, 887.3 s, 999 MiB peak RSS |
 | Same 120.1 Mbp sequence, JARVIS3 l7 | 3,896,361 B, 0.260 bits/base, 95.4 s, 286 MiB peak RSS |
 | Same sequence, GraSS (public implementation, `-e2`) | 24,777,592 B, 1.650 bits/base, 4.85x, 224.5 s, 1,255 MiB compress RSS |
@@ -252,12 +262,12 @@ same profile was **43.7% and 46.2% smaller** on two independent *Salmonella*
 and *Klebsiella* pangenomes (median 44.96%). It also compressed faster than xz
 in those runs and answered exact record queries. xz decompressed faster on the
 original pangenome; restore time was mixed on the independent sets. The profile
-remains opt-in because three pangenomes from one bacterial family, one host,
-and one run each are not enough evidence to change the default for every
-input. The bounded-memory mode now holds the 256 MiB cap: at 16 MiB blocks with
-a 256 KiB cross-block gap history and packed vote counters it peaks at
-252.7 MiB compressing and 221.2 MiB restoring, but gives back 4.90% in size,
-so the 2% size gate still fails; larger blocks exceed the RSS cap.
+remains opt-in: nine pangenomes from five phyla, one host, and one run each are
+a sample rather than a guarantee for every input. The bounded-memory mode is not
+a general 256 MiB mode. On the *E. coli* anchor it peaks at 252.7 MiB
+compressing and 221.2 MiB restoring but gives back 4.90% in size. Across the
+six cross-taxon collections it misses the 2% size gate on all six, exceeds
+256 MiB RSS on four, and runs out of heap on *P. aeruginosa*.
 
 **The margin over the best specialized tool is real but narrow.** On the
 identical 120.1 Mbp sequence, the tuned HyperGraSS archive is **2.21% smaller
@@ -272,6 +282,26 @@ the art for DNA. The published GraSS implementation, the ancestor pipeline, is
 input, and JARVIS3 also beats it on compression time, restore time, and memory,
 so the specialized frontier remains JARVIS3. See
 [`docs/SPECIALIZED.md`](docs/SPECIALIZED.md).
+
+**The advantage is not an *E. coli* artifact.** Six unrelated natural
+collections were fetched with the same rule, one each from Actinomycetota,
+Bacillota, Pseudomonadota, Campylobacterota, and Chlamydiota, and given the
+identical flat sequence. HyperGraSS was smaller than JARVIS3 level 7 on all
+six, with a median margin of 13.8% (range 4.7–29.4%) and byte-exact round
+trips. The margin is not ordered by Mash diversity: *C. jejuni* (d = 0.0190)
+and *C. trachomatis* (d = 0.0045) have the largest margins, while *S. aureus*
+(d = 0.0125) has the smallest. The published GraSS pipeline is 7.3–11.7x
+larger than HyperGraSS on the two collections where it was measured.
+
+**The advantage shrinks, but does not vanish, as within-species diversity
+rises.** A nine-run gradient drew low/medium/high strata from the same
+72-genome pool for three species, with identical flat sequences. HyperGraSS
+beat JARVIS3 on eight of nine strata. *S. aureus* fell monotonically from
++11.14% to +5.07% to +1.25%; *E. coli* crossed zero at the medium stratum
+(−0.16%) and recovered to +2.18% at high; *C. jejuni* stayed between +16% and
++20%. The gradient is not one curve: Mash distance, genome size, and anchor
+coverage per base move together in this panel, so it does not separate them.
+Protocol, per-stratum tables, and limits are in [`docs/BROAD.md`](docs/BROAD.md).
 
 On the query workload (13 exact 2,000-base slices), the tuned profile tied xz's
 query latency (1.35 s versus 1.36 s median) while storing 42% fewer bytes, but
@@ -317,6 +347,31 @@ profile). The anchor-bank ablation is documented in
 `prepare.py` and `fetch.py` download public data; the repository commits the
 locks, not the sequences. The Docker image is pinned by digest in
 `benchmarks/corpus/image.lock.json`.
+
+## Scaling Beyond 2 GiB
+
+The bounded path previously rejected inputs above 2 GiB because block offsets were
+32-bit and the archive was assembled in one `byte[]`. Both are fixed: block offsets are
+`long`, and the writer streams header, blocks and footer to disk.
+
+Measured on a 2.08 GiB synthetic input (`-Xmx160m`, 16 MiB blocks, 9 MiB anchor):
+
+| Metric | Value |
+|---|---|
+| Input / archive | 2,229,710,670 B / 30,171,539 B |
+| Blocks | 132 |
+| Compress | 864.5 s, peak sampled working set 235 MB |
+| Restore | 238.2 s, CRC-32 OK, SHA-256 identical |
+
+Archive bytes are unchanged for inputs below 2 GiB: the campy-high bounded archive
+still reproduces as `1,125,629 B` with SHA-256 `14DD7E94…E1C5D6`.
+
+Throughput, not memory, is now the limit: 2.58 MB/s single-threaded is about 65 minutes
+for 10 GB and 4.5 days for 1 TB. `--threads N` parallelises the encode pass, but the
+bounded path makes four passes over the input and only one is parallel, so threads
+alone cap out well below linear. The remaining work - streaming, threads, sharded
+anchors, resumability, and whether a native kernel is ever justified - is sequenced in
+[`docs/SCALING.md`](docs/SCALING.md).
 
 ## Format Specification
 

@@ -1,0 +1,20 @@
+{
+  "verdict": "pass",
+  "problems": [],
+  "original": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\broad\\runs\\broad-mtb-natural-1\\input.seq",
+  "restored": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\broad\\runs\\broad-mtb-natural-1\\ops\\grass\\decompress\\Final.SSG",
+  "archive": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\broad\\runs\\broad-mtb-natural-1\\ops\\grass\\compress\\FinalBsc.bsc",
+  "original_bytes": 123510953,
+  "restored_bytes": 123510953,
+  "archive_bytes": 13327718,
+  "bytes_compared": 123510953,
+  "byte_identical": true,
+  "first_mismatch_offset": null,
+  "original_sha256": "fc771fb22880ab46e0afb88bad9e8bb7a43a0497014383675d7cabbc6d23af4f",
+  "restored_sha256": "fc771fb22880ab46e0afb88bad9e8bb7a43a0497014383675d7cabbc6d23af4f",
+  "archive_sha256": "6fd23fa1aedfb9693743f6c75ab68c39bc9cdc022ab3eeaf5c79cc4aa288264d",
+  "expected_sha256": "fc771fb22880ab46e0afb88bad9e8bb7a43a0497014383675d7cabbc6d23af4f",
+  "chunk_bytes": 8388608,
+  "seconds": 0.433,
+  "comparison": "streaming byte comparison independent of the codec"
+}

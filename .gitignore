@@ -29,6 +29,11 @@ benchmarks/endtoend/runs/
 benchmarks/independent/data/*/pangenome.fasta
 benchmarks/independent/data/*/pangenome.fasta.tmp
 benchmarks/independent/runs/
+benchmarks/broad/data/*/pangenome.fasta
+benchmarks/broad/data/*/natural.fasta
+benchmarks/broad/data/*/strata/*.fasta
+benchmarks/broad/data/*/sketches.npz
+benchmarks/broad/runs/
 benchmarks/specialized/runs/
 benchmarks/panman/data/
 benchmarks/panman/logs/

@@ -26,11 +26,16 @@ result to the default's 4 MiB anchor-bank cap. An LZ77 plus range-coder gap
 channel then changes the specialized comparison: on the identical 120.1 Mbp
 sequence the tuned profile reaches 3,810,409 bytes, 2.21% below JARVIS3 level 7
 (3,896,361 bytes) at 9.3x its compression time, so the margin against a
-specialized DNA compressor is real but narrow. A 256 MiB bounded variant meets
-its RSS and speed gates but misses the 2% archive-size gate. The contribution
-is a working system plus a reproducible measurement harness with byte-exact
-verification and explicit deviations; the results do not establish universal
-superiority over specialized compressors.
+specialized DNA compressor is real but narrow. On six additional natural
+collections spanning five phyla, the tuned profile was smaller than JARVIS3
+level 7 on all six, by a median of 13.8% (range 4.7–29.4%), while the published
+GraSS pipeline was 7.3–11.7x larger. The 256 MiB bounded variant does not
+generalize: it stays under the RSS cap on one of the six collections, reaches
+271–273 MiB on four, and exhausts its heap on *P. aeruginosa*; its archives are
+6.6–19.8% larger than the unbounded profile. The contribution is a working
+system plus a reproducible measurement harness with byte-exact verification and
+explicit deviations; the results do not establish universal superiority over
+specialized compressors.
 
 ## 1. Introduction
 
@@ -125,6 +130,17 @@ bytes against exact 8-bit counts; the unbounded path keeps the exact form.
 32 MiB blocks at a 224 MiB heap complete but peak at 272 MiB RSS, and 64 MiB
 blocks exhaust a 192 MiB heap before the first block completes.
 
+The bound is set by anchor saturation, not input size. The bank costs about
+1 byte per base and its seed index 7.1 bytes per base (`SEED_STEP=4`, both
+strands, 70% load), so a saturated 9 MiB anchor carries 67 MB of index before a
+block is factorized. On the 122.9 Mbp *E. coli* medium stratum a 160 MiB heap
+raises `OutOfMemoryError` in the factorizer; the 120.5 Mbp high stratum
+completes the same profile at 272.2 MiB peak RSS, byte-exact but over the
+256 MiB cap. A 2.08 GiB scale probe built from 55 copies of one sequence passes
+because the bank never saturates. The 256 MiB claim is therefore conditional on
+pangenome novelty: at 120 MB of diverse input the 9 MiB anchor and the 256 MiB
+RSS cap cannot both hold, and either the anchor or the heap has to give.
+
 ## 3. Evaluation protocol
 
 ### 3.1 Frozen corpus
@@ -165,7 +181,36 @@ SHA-256, and queries the first, middle, and last records. `--lean` runs with
 block-size ablation that selected those values is reported in
 [`ABLATION.md`](ABLATION.md).
 
-### 3.3 Metrics
+### 3.3 Cross-taxon and diversity panel
+
+The scale test and its two replications all use *Enterobacteriaceae*. To test
+whether the pangenome margin survives unrelated phyla, six additional natural
+collections were fetched with the same NCBI complete-genome rule: *M.
+tuberculosis* (Actinomycetota, ~66% GC), *S. aureus* and *S. pneumoniae*
+(Bacillota), *P. aeruginosa* (Pseudomonadota), *C. jejuni*
+(Campylobacterota), and *C. trachomatis* (Chlamydiota). Each pool holds a
+fixed-seed random sample of up to 72 eligible records. A natural collection is
+then taken in farthest-point order from the pool medoid until it reaches about
+120 MB, so the strain count varies with genome size.
+
+Diversity is measured, not assumed. Each genome is sketched as the bottom
+20,000 hashes of all canonical 21-mers; Jaccard similarity gives a Mash
+distance and an approximate ANI. For *E. coli*, *S. aureus*, and *C. jejuni*,
+three disjoint 24-genome strata are drawn from the same pool: low is the most
+central members of the tightest cluster, high is a farthest-point sample of the
+remainder, and medium is what remains. Every stratum records its mean, median,
+and range of pairwise distance, cluster coverage, and ANI, and monotonicity of
+the low/medium/high ordering is checked rather than assumed.
+
+Natural collections and the nine diversity strata both use the 64 MiB-block
+maximum-compression profile, so the gradient is not confounded with a profile
+change. Both panels include JARVIS3 level 7, `xz -9`, and the bounded 256 MiB
+profile; GeCo3 level 6 runs on three natural collections and the published
+GraSS implementation on two. All inputs are normalized to one flat A/C/G/T
+sequence, and every archive is verified against the input SHA-256 and a
+streaming byte comparison.
+
+### 3.4 Metrics
 
 - archive bytes, compression ratio, and bits per input byte;
 - wall time and child CPU time;
@@ -221,6 +266,40 @@ on these runs, but host variance was large (the gzip baseline took 97.6 s on
 Salmonella and 201.1 s on Klebsiella for nearly the same input size), so sizes
 and round trips are the stable measurements.
 
+**Cross-taxon replication.** To test whether the pangenome result is an
+*Enterobacteriaceae* artifact, six additional natural collections were fetched
+with the same rule, one each from Actinomycetota (*M. tuberculosis*), Bacillota
+(*S. aureus*, *S. pneumoniae*), Pseudomonadota (*P. aeruginosa*),
+Campylobacterota (*C. jejuni*), and Chlamydiota (*C. trachomatis*). Each targets
+about 120 MB by farthest-point selection from the pool medoid; *C. trachomatis*
+has only 66 eligible records and reaches 68.9 MB. On the identical flat
+sequence, the 64 MiB HyperGraSS profile was smaller than JARVIS3 level 7 on all
+six collections, with a median margin of 13.8% (range 4.7–29.4%), and every
+round trip was byte-exact. The margin is not ordered by Mash diversity: the
+largest are *C. jejuni* (d = 0.0190, 23.9%) and *C. trachomatis* (d = 0.0045,
+29.4%), while *S. aureus* (d = 0.0125) has the smallest at 4.7%. The published
+GraSS pipeline is 7.3–11.7x larger than HyperGraSS on the two collections where
+it was run. This establishes that the advantage is not confined to one
+bacterial family; it does not establish a monotone diversity law, which the
+gradient below tests directly.
+
+**Within-species diversity gradient.** Nine strata (three species, 24 genomes
+each) test whether the margin depends on diversity. HyperGraSS was smaller than
+JARVIS3 on eight of nine. *S. aureus* fell monotonically as mean Mash distance
+rose: +11.14% (d = 0.00481), +5.07% (d = 0.01140), and +1.25% (d = 0.01519).
+*E. coli* crossed zero at the medium stratum: +7.02% (d = 0.01188), -0.16%
+(d = 0.02533), and +2.18% (d = 0.02595); its medium and high strata are nearly
+identical in diversity, so that panel is effectively binary. *C. jejuni* was
+non-monotonic: +17.57% (d = 0.01076), +19.67% (d = 0.01162), and +16.07%
+(d = 0.01901), with low and medium close in distance. Against `xz -9` the
+HyperGraSS archive stayed smaller on all nine strata (+9.3% to +50.4%). The
+data do not support a single monotone law: the *S. aureus* decline is clean,
+the other two are not, and Mash distance, genome size, and anchor coverage per
+base move together in this design. The plausible mechanism is anchor coverage:
+a fixed 9 MiB bank covers a smaller fraction of 5 Mb *E. coli* genomes than of
+2.8 Mb *S. aureus* genomes. This panel does not separate that from genome size
+or variable-site count; an anchor-size sweep on one species would.
+
 **Specialized compressors.** The corpus comparison against JARVIS3 and GeCo3
 uses single genomes. To test whether the pangenome margin survives against
 tools designed for DNA, the same 120.1 Mbp sequence was extracted from the
@@ -235,12 +314,12 @@ same input, **2.21% smaller**, and restored it exactly in 82.4 s. The cost is
 compression time and memory: 887.3 s versus 95.4 s and 999 MiB versus 286 MiB.
 The scale result therefore shows a narrow size win over a specialized DNA
 compressor at this scale, paid for with 9.3x the compression time, not the
-earlier 20.3% deficit. The 256 MiB bounded variant now meets the memory and
-speed gates: 16 MiB blocks, a 160 MiB heap, packed 4-bit vote counters, and a
-256 KiB cross-block gap history produce 3,997,232 bytes (+4.90%) at 252.7 MiB
-compress RSS and 221.2 MiB restore RSS. It still misses the 2% size gate by
-110,615 bytes; 32 MiB blocks reach 272 MiB RSS and 64 MiB blocks exhaust the
-heap, so 16 MiB is the largest block the RSS cap allows.
+earlier 20.3% deficit. On the *E. coli* anchor, the 256 MiB bounded variant
+meets the memory and speed gates: 16 MiB blocks, a 160 MiB heap, packed 4-bit
+vote counters, and a 256 KiB cross-block gap history produce 3,997,232 bytes
+(+4.90%) at 252.7 MiB compress RSS and 221.2 MiB restore RSS. It still misses
+the 2% size gate by 110,615 bytes; 32 MiB blocks reach 272 MiB RSS and 64 MiB
+blocks exhaust the heap, so 16 MiB is the largest block the RSS cap allows.
 
 The published GraSS pipeline, the ancestor of HyperGraSS, was also run
 unmodified on the identical sequence. It produced 24,777,592 bytes (1.650
@@ -257,13 +336,17 @@ profile it is not the smallest at 100 MB+ pangenome scale; the measured
 ablation shows the 4 MiB anchor-bank cap was the ceiling. Raising the bank to
 8 MiB at the same block size cut the archive by 43.9%, and 16 MiB with 8 MiB
 blocks reached 4,885,851 bytes. The winning archive holds 144 anchor pages,
-about 9.4 Mbp, so the 16 MiB cap is not fully consumed. This is a tuning result
-that replicates on three *Enterobacteriaceae* pangenomes, not a new compression
-law; the opt-in profile has not been tested on read data or outside this
-bacterial family. The demonstrated advantages are pure-Java implementation,
-byte-exact round trips, an indexed query interface, and a bounded-memory mode
-that holds 256 MiB RSS at 120 MB scale with a 4.9% size penalty, not universal
-compression superiority.
+about 9.4 Mbp, so the 16 MiB cap is not fully consumed. The tuned profile also
+beat JARVIS3 level 7 on six collections from five additional phyla, with a
+median margin of 13.8%. This is a tuning result that replicates on nine
+pangenomes spanning five phyla, not a new compression law; the opt-in profile
+has not been tested on read data or outside bacteria. The 256 MiB bounded mode
+holds its RSS cap on the *E. coli* anchor and on *C. trachomatis* but misses
+the size gate on every natural collection and cannot complete on *P.
+aeruginosa*, so it remains an *E. coli*-calibrated prototype rather than a
+general mode. The demonstrated advantages are pure-Java implementation,
+byte-exact round trips, an indexed query interface, and a consistent size win
+over JARVIS3 on the tested pangenomes, not universal compression superiority.
 
 **Query workload.** A separate workload served 13 deterministic 2,000-base
 slices from the same pangenome, each in a fresh process. The tuned profile
@@ -289,10 +372,27 @@ capability with workload-dependent value, not an automatic speedup.
   cross-record redundancy is only partly captured. The opt-in `--pangenome`
   profile does beat xz on all three, but they are all from one bacterial
   family, and each independent dataset has one measured run.
-- The scale test covers three pangenomes from one bacterial family. Most
-  profiles have one measured run; the two best ablation configurations were
+- The natural-collection panel covers nine pangenomes spanning five phyla, but
+  each has one measured run on one host. The six cross-taxon collections are
+  random RefSeq samples, not phylogenetically balanced panels, and the 120 MB
+  target yields 19–72 records depending on genome size. Mash distance is an
+  alignment-free approximation. The two best ablation configurations were
   repeated with byte-identical archives, while wall times varied by up to 2.5x
   across runs.
+- The 256 MiB bounded mode is not a general mode. It misses the 2% size gate on
+  all seven natural collections (including the *E. coli* anchor), exceeds the
+  RSS cap on four, and exhausts its heap on *P. aeruginosa* and the *E. coli*
+  medium stratum. The heap limit is anchor saturation, not input size: a
+  saturated 9 MiB bank carries a 67 MB seed index, so the 160 MiB heap sits on
+  the OOM boundary, and the 120 MB high stratum completes at 272 MiB RSS. The
+  absolute overhead is roughly constant, so the percentage penalty grows as the
+  unbounded archive shrinks.
+- The diversity gradient holds up to 24 strains per stratum and uses the same
+  64 MiB profile as the natural collections. The strata differ in total size
+  with genome size, and three species with three strata each support an
+  ordering, not a significance test. The gradients are also uneven:
+  *S. aureus* separates cleanly, but *C. jejuni* low/medium and *E. coli*
+  medium/high are close in Mash distance.
 - The specialized comparison is one run on one sequence. JARVIS3 level 26 and
   GeCo3 level 9 were infeasible at this scale under the 2 GiB container and
   180 s corpus conditions, so it is not a comparison against either tool's

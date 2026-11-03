@@ -1,0 +1,133 @@
+{
+  "schema_version": 1,
+  "kind": "specialized-scale-test",
+  "run_id": "pilot-16m-1m",
+  "started_utc": "2026-11-02T15:20:11.309306+00:00",
+  "image_id": "sha256:d6ca62a74e3724172a5c49720e28ab2066eb31b3c965dadfb6220e112dbc3bb3",
+  "source": "benchmarks\\pangenome\\data\\pangenome.fasta",
+  "sliced": true,
+  "input": {
+    "fasta": {
+      "path": "benchmarks\\broad\\runs\\pilots\\pilot-16m-1m\\input.fasta",
+      "size_bytes": 1014358,
+      "sha256": "b84f04416355b5b474a90c7ca12d1d6cd193ddcab47fe08cb46ac58dfddff4c7",
+      "records": 1,
+      "bases": 1000000
+    },
+    "sequence": {
+      "path": "benchmarks\\broad\\runs\\pilots\\pilot-16m-1m\\input.seq",
+      "size_bytes": 1000000,
+      "bases": 1000000,
+      "sha256": "8faea7083f2293e83ecb4dfb7d1b4a1f6e8e12e0aa8343b675220734245d763e",
+      "non_acgt_bases_masked": 0,
+      "base_counts": {
+        "A": 242918,
+        "C": 246835,
+        "G": 264711,
+        "T": 245536
+      }
+    },
+    "normalization": "headers removed, letters uppercased, non-ACGT replaced with A; both tools receive this sequence and are verified against it"
+  },
+  "profiles": [
+    "hypergrass-pangenome-16m",
+    "hypergrass-bounded-256m-tuned"
+  ],
+  "results": [
+    {
+      "profile": "hypergrass-pangenome-16m",
+      "kind": "hypergrass",
+      "level": "consensus-anchor-16m",
+      "input_bytes": 1000000,
+      "input_sha256": "8faea7083f2293e83ecb4dfb7d1b4a1f6e8e12e0aa8343b675220734245d763e",
+      "input_bases": 1000000,
+      "status": "success",
+      "roundtrip_ok": true,
+      "artifact_bytes": 236441,
+      "bits_per_base": 1.891528,
+      "wall_seconds": 10.361148211999534,
+      "cpu_seconds": 12.522688,
+      "peak_rss_bytes": 149946368,
+      "error": null,
+      "returncode": 0,
+      "decompress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 7.727988902001016,
+        "cpu_seconds": 9.89937,
+        "peak_rss_bytes": 137125888,
+        "error": null
+      },
+      "verification": {
+        "verdict": "pass",
+        "problems": [],
+        "original": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\broad\\runs\\pilots\\pilot-16m-1m\\input.seq",
+        "restored": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\broad\\runs\\pilots\\pilot-16m-1m\\ops\\hypergrass-pangenome-16m\\restored.seq",
+        "archive": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\broad\\runs\\pilots\\pilot-16m-1m\\ops\\hypergrass-pangenome-16m\\archive.hgs",
+        "original_bytes": 1000000,
+        "restored_bytes": 1000000,
+        "archive_bytes": 236441,
+        "bytes_compared": 1000000,
+        "byte_identical": true,
+        "first_mismatch_offset": null,
+        "original_sha256": "8faea7083f2293e83ecb4dfb7d1b4a1f6e8e12e0aa8343b675220734245d763e",
+        "restored_sha256": "8faea7083f2293e83ecb4dfb7d1b4a1f6e8e12e0aa8343b675220734245d763e",
+        "archive_sha256": "23ac5b4e9fede4b46ba66650911b6d32831f78a4f19dfa9ea0bea4a4be1ca522",
+        "expected_sha256": "8faea7083f2293e83ecb4dfb7d1b4a1f6e8e12e0aa8343b675220734245d763e",
+        "chunk_bytes": 8388608,
+        "seconds": 0.056,
+        "comparison": "streaming byte comparison independent of the codec"
+      },
+      "restored_sha256": "8faea7083f2293e83ecb4dfb7d1b4a1f6e8e12e0aa8343b675220734245d763e"
+    },
+    {
+      "profile": "hypergrass-bounded-256m-tuned",
+      "kind": "hypergrass",
+      "level": "bounded-256m",
+      "input_bytes": 1000000,
+      "input_sha256": "8faea7083f2293e83ecb4dfb7d1b4a1f6e8e12e0aa8343b675220734245d763e",
+      "input_bases": 1000000,
+      "status": "success",
+      "roundtrip_ok": true,
+      "artifact_bytes": 237237,
+      "bits_per_base": 1.897896,
+      "wall_seconds": 8.199912321000738,
+      "cpu_seconds": 10.186976999999999,
+      "peak_rss_bytes": 128360448,
+      "error": null,
+      "returncode": 0,
+      "decompress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 7.9184177959996305,
+        "cpu_seconds": 8.972071,
+        "peak_rss_bytes": 115486720,
+        "error": null
+      },
+      "verification": {
+        "verdict": "pass",
+        "problems": [],
+        "original": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\broad\\runs\\pilots\\pilot-16m-1m\\input.seq",
+        "restored": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\broad\\runs\\pilots\\pilot-16m-1m\\ops\\hypergrass-bounded-256m-tuned\\restored.seq",
+        "archive": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\broad\\runs\\pilots\\pilot-16m-1m\\ops\\hypergrass-bounded-256m-tuned\\archive.hgs",
+        "original_bytes": 1000000,
+        "restored_bytes": 1000000,
+        "archive_bytes": 237237,
+        "bytes_compared": 1000000,
+        "byte_identical": true,
+        "first_mismatch_offset": null,
+        "original_sha256": "8faea7083f2293e83ecb4dfb7d1b4a1f6e8e12e0aa8343b675220734245d763e",
+        "restored_sha256": "8faea7083f2293e83ecb4dfb7d1b4a1f6e8e12e0aa8343b675220734245d763e",
+        "archive_sha256": "43b3b9ec1c1ed2a0a6dd26d1809d768e59ac7ef655592ef154119c9d322e612e",
+        "expected_sha256": "8faea7083f2293e83ecb4dfb7d1b4a1f6e8e12e0aa8343b675220734245d763e",
+        "chunk_bytes": 8388608,
+        "seconds": 0.047,
+        "comparison": "streaming byte comparison independent of the codec"
+      },
+      "restored_sha256": "8faea7083f2293e83ecb4dfb7d1b4a1f6e8e12e0aa8343b675220734245d763e"
+    }
+  ],
+  "status": "success",
+  "failures": 0,
+  "finished_utc": "2026-11-02T15:20:59.380446+00:00"
+}

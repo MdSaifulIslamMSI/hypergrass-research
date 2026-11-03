@@ -1,0 +1,20 @@
+{
+  "verdict": "pass",
+  "problems": [],
+  "original": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\broad\\runs\\broad-chlamydia-natural-1\\input.seq",
+  "restored": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\broad\\runs\\broad-chlamydia-natural-1\\ops\\hypergrass-bounded-256m-tuned\\restored.seq",
+  "archive": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\broad\\runs\\broad-chlamydia-natural-1\\ops\\hypergrass-bounded-256m-tuned\\archive.hgs",
+  "original_bytes": 68850777,
+  "restored_bytes": 68850777,
+  "archive_bytes": 355433,
+  "bytes_compared": 68850777,
+  "byte_identical": true,
+  "first_mismatch_offset": null,
+  "original_sha256": "584643848a4d5e2fcf9d6723c56548b0793c3a8beb969f85dabb7c2a15571268",
+  "restored_sha256": "584643848a4d5e2fcf9d6723c56548b0793c3a8beb969f85dabb7c2a15571268",
+  "archive_sha256": "9fd637a9c3bc8d385b2008f2c5860e4b017ca431727a091c3569f660a3b75cf7",
+  "expected_sha256": "584643848a4d5e2fcf9d6723c56548b0793c3a8beb969f85dabb7c2a15571268",
+  "chunk_bytes": 8388608,
+  "seconds": 0.214,
+  "comparison": "streaming byte comparison independent of the codec"
+}

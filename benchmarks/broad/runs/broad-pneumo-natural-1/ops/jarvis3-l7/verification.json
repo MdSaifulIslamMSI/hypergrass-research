@@ -1,0 +1,20 @@
+{
+  "verdict": "pass",
+  "problems": [],
+  "original": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\broad\\runs\\broad-pneumo-natural-1\\input.seq",
+  "restored": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\broad\\runs\\broad-pneumo-natural-1\\ops\\jarvis3-l7\\restored.seq",
+  "archive": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\broad\\runs\\broad-pneumo-natural-1\\ops\\jarvis3-l7\\archive.jc",
+  "original_bytes": 120099237,
+  "restored_bytes": 120099237,
+  "archive_bytes": 1899711,
+  "bytes_compared": 120099237,
+  "byte_identical": true,
+  "first_mismatch_offset": null,
+  "original_sha256": "4cf41c9ad7a2896ba4d3831782f0a0f08c7aacd01cc3550ff6bcebf6e70b0ced",
+  "restored_sha256": "4cf41c9ad7a2896ba4d3831782f0a0f08c7aacd01cc3550ff6bcebf6e70b0ced",
+  "archive_sha256": "be8ff1aaedb2f0764e77e4054e2456dd5272a6e280a0093ae5cc48b5d1171143",
+  "expected_sha256": "4cf41c9ad7a2896ba4d3831782f0a0f08c7aacd01cc3550ff6bcebf6e70b0ced",
+  "chunk_bytes": 8388608,
+  "seconds": 0.37,
+  "comparison": "streaming byte comparison independent of the codec"
+}

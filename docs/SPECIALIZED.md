@@ -151,6 +151,25 @@ decompression, so it is not a competitor for the slice-query workload in
 restore-rarely archives, which is the workload where HyperGraSS's size claim
 was strongest.
 
+## Cross-taxon extension
+
+The *E. coli* comparison above is the anchor for a broader panel: six unrelated
+natural collections (*M. tuberculosis*, *S. aureus*, *S. pneumoniae*,
+*P. aeruginosa*, *C. jejuni*, *C. trachomatis*), each about 120 MB except
+*C. trachomatis* at 68.9 MB, run with the same flat-sequence protocol and locked
+image. The 64 MiB HyperGraSS profile was smaller than JARVIS3 level 7 on all
+six, with a median margin of 13.8% (range 4.7–29.4%) and byte-exact round
+trips. The published GraSS pipeline was 7.3x larger on *P. aeruginosa* and
+11.7x larger on *M. tuberculosis*. The bounded profile did not generalize: it
+missed the 2% size gate on every natural collection, exceeded 256 MiB peak RSS
+on four, and exhausted its heap on *P. aeruginosa*.
+
+This does not change the *E. coli* verdict: the unbounded profile wins narrowly
+there (2.21%) and by more on several unrelated collections, while the bounded
+mode remains an *E. coli*-calibrated prototype rather than a general 256 MiB
+mode. The protocol, diversity strata, and complete tables are in
+[`BROAD.md`](BROAD.md) and `benchmarks/broad/summary.md`.
+
 ## Limits
 
 - One pangenome, one run, one host.
@@ -175,6 +194,12 @@ was strongest.
   archive is 4.90% larger than the unbounded one, 110,615 B over the 2% target.
   The residual is measured, not inferred: it is the 16 MiB factorization
   granularity, which the RSS cap cannot raise.
+- The bounded profile's memory is set by anchor saturation, not input size. At
+  the 9 MiB cap the seed index alone is 67 MB, so the 160 MB heap sits on the
+  OOM boundary: the 123 MB *E. coli* medium stratum fails in the factorizer,
+  while the 120 MB high stratum completes at 272 MiB peak RSS. The 2.08 GiB
+  repetitive probe passes because its bank never saturates. See
+  [`SCALING.md`](SCALING.md).
 - Times are indicative; the original scale test already documents large
   wall-time variance on this host. The same 8-bit ablation archive took 51.4 s
   in the lz-2 run and 119.9 s in a later local rerun with byte-identical

@@ -1,0 +1,20 @@
+{
+  "verdict": "pass",
+  "problems": [],
+  "original": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\broad\\runs\\pilots\\broad-pilot-staph-5m\\input.seq",
+  "restored": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\broad\\runs\\pilots\\broad-pilot-staph-5m\\ops\\hypergrass-pangenome\\restored.seq",
+  "archive": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\broad\\runs\\pilots\\broad-pilot-staph-5m\\ops\\hypergrass-pangenome\\archive.hgs",
+  "original_bytes": 5000000,
+  "restored_bytes": 5000000,
+  "archive_bytes": 722992,
+  "bytes_compared": 5000000,
+  "byte_identical": true,
+  "first_mismatch_offset": null,
+  "original_sha256": "6c242a54e8cfe7f3800f4c9e95a494dad068c25597990a7a8ef872a0b837770d",
+  "restored_sha256": "6c242a54e8cfe7f3800f4c9e95a494dad068c25597990a7a8ef872a0b837770d",
+  "archive_sha256": "17fe243bdebedd26f8e2de49cc4dc15042440938889c6883f6ac1166c64d5ffe",
+  "expected_sha256": "6c242a54e8cfe7f3800f4c9e95a494dad068c25597990a7a8ef872a0b837770d",
+  "chunk_bytes": 8388608,
+  "seconds": 0.048,
+  "comparison": "streaming byte comparison independent of the codec"
+}
