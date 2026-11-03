@@ -138,12 +138,14 @@ difference.
 
 ### Bounded-memory gate
 
-The bounded profile does not generalize at the 256 MiB gate. It fails on all
+The JVM bounded profile does not generalize at the 256 MiB gate. It fails on all
 seven natural collections: six produce an archive over the 2% size gate, and
 the seventh (*P. aeruginosa*) exhausts its 160 MiB heap before producing one.
 It exceeds 256 MiB peak RSS on four of the six that complete. The six new
 collections are tabulated below; the *E. coli* anchor is the seventh and is
-reported in [`SPECIALIZED.md`](SPECIALIZED.md).
+reported in [`SPECIALIZED.md`](SPECIALIZED.md). The opt-in GraalVM native image
+was gated only on the *E. coli* anchor and was not rerun on this panel, so these
+rows describe the JVM path.
 The absolute overhead is roughly constant at +22 kB to +251 kB, so the
 percentage penalty is worst where the unbounded archive is smallest. These
 bounded rows are single observations. Only *E. coli* (252.7 MiB) and

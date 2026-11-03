@@ -73,6 +73,16 @@ class SummaryTests(unittest.TestCase):
         self.assertEqual(summary["decompress"]["peak_rss_bytes"], 220 << 20)
         self.assertEqual(len(summary["observations"]), 3)
 
+    def test_native_runtime_is_recorded_in_config(self):
+        profile = self.profile()
+        profile["runtime"] = "native"
+        profile["binary"] = "bin/native/hypergrass"
+        summary = specialized_run.summarize_profile(
+            profile, [observation(10, 1, 1000)], 1,
+        )
+        self.assertEqual(summary["config"]["runtime"], "native")
+        self.assertEqual(summary["config"]["binary"], "bin/native/hypergrass")
+
     def test_size_disagreement_is_not_deterministic(self):
         summary = specialized_run.summarize_profile(
             self.profile(),
@@ -185,6 +195,62 @@ class FailureReportingTests(unittest.TestCase):
         )
 
 
+class OverrideTests(unittest.TestCase):
+    def profile(self):
+        return {
+            "id": "hypergrass-bounded-wide",
+            "kind": "hypergrass",
+            "heap": "256m",
+            "memory": "320m",
+            "options": ["--bounded"],
+            "jvm": ["-Dhypergrass.matchMin=104"],
+        }
+
+    def test_overrides_apply_to_copies(self):
+        original = [self.profile()]
+        selected = specialized_run.apply_overrides(
+            original,
+            heap="192m",
+            memory="256m",
+            jvm_extra="-XX:+UseSerialGC -XX:NativeMemoryTracking=summary",
+        )
+        self.assertEqual(selected[0]["heap"], "192m")
+        self.assertEqual(selected[0]["memory"], "256m")
+        self.assertEqual(
+            selected[0]["jvm"],
+            [
+                "-Dhypergrass.matchMin=104",
+                "-XX:+UseSerialGC",
+                "-XX:NativeMemoryTracking=summary",
+            ],
+        )
+        self.assertEqual(original[0]["heap"], "256m")
+        self.assertEqual(original[0]["memory"], "320m")
+        self.assertEqual(original[0]["jvm"], ["-Dhypergrass.matchMin=104"])
+
+    def test_native_override_records_runtime_and_binary(self):
+        selected = specialized_run.apply_overrides(
+            [self.profile()],
+            runtime="native",
+            binary="bin/native/hypergrass",
+            jvm_extra="-XX:+UseSerialGC",
+        )
+        self.assertEqual(selected[0]["runtime"], "native")
+        self.assertEqual(selected[0]["binary"], "bin/native/hypergrass")
+        self.assertEqual(selected[0]["jvm"], ["-Dhypergrass.matchMin=104"])
+
+    def test_non_hypergrass_profiles_get_no_jvm_flags(self):
+        selected = specialized_run.apply_overrides(
+            [{"id": "jarvis3-l7", "kind": "jarvis3", "memory": "2g"}],
+            heap="128m",
+            memory="256m",
+            jvm_extra="-XX:+UseSerialGC",
+        )
+        self.assertNotIn("heap", selected[0])
+        self.assertEqual(selected[0]["memory"], "2g")
+        self.assertNotIn("jvm", selected[0])
+
+
 class GateTests(unittest.TestCase):
     def summary(self, profile, size, wall, rss, restore=None, status="success"):
         return {
@@ -220,6 +286,38 @@ class GateTests(unittest.TestCase):
             check["check"] for check in gate["checks"] if not check["passed"]
         }
         self.assertEqual(failed, {"compress_rss", "size_ratio", "wall_ratio"})
+
+    def test_size_gate_can_use_a_separate_tuned_baseline(self):
+        gate = specialized_run.evaluate_gate(
+            [
+                self.summary("jarvis3-l7", 1000, 10.0, 200 << 20),
+                self.summary("bounded", 1030, 10.0, 200 << 20),
+            ],
+            "jarvis3-l7", 256.0, 1.02, 2.0,
+            size_baseline_bytes=1000,
+        )
+        self.assertFalse(gate["passed"])
+        self.assertIn("size_ratio", {
+            check["check"] for check in gate["checks"] if not check["passed"]
+        })
+        self.assertEqual(gate["thresholds"]["size_baseline_bytes"], 1000)
+
+    def test_wall_gate_can_pin_a_published_baseline_median(self):
+        gate = specialized_run.evaluate_gate(
+            [
+                self.summary("jarvis3-l7", 1000, 10.0, 200 << 20),
+                self.summary("bounded", 1000, 20.0, 200 << 20),
+            ],
+            "jarvis3-l7", 256.0, 1.02, 2.0,
+            wall_baseline_seconds=20.0,
+        )
+        self.assertTrue(gate["passed"], gate)
+        self.assertEqual(gate["thresholds"]["wall_baseline_seconds"], 20.0)
+        self.assertEqual(
+            next(check["value"] for check in gate["checks"]
+                 if check["check"] == "wall_ratio"),
+            1.0,
+        )
 
     def test_nondeterministic_candidate_fails_even_when_metrics_fit(self):
         candidate = self.summary("bounded", 1000, 10.0, 200 << 20)

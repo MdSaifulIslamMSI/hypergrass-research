@@ -45,8 +45,16 @@ so the effect of the HyperGraSS redesign is measured rather than assumed.
   whole-anchor page. The tuned profile above keeps `--anchor-single-page` so
   the 256 MiB gate and these archives stay comparable.
 - The JDK 27 replication adds `--seed-step 8` variants: 16 MiB blocks at a
-  160 MiB heap, and 32 MiB blocks at a 256 MiB heap. Stride 8 halves the seed
-  index but is opt-in; the published default remains stride 4.
+  160 MiB heap, and 32 MiB blocks at a 232-240 MiB heap. Stride 8 halves the
+  seed index but is opt-in; the published default remains stride 4.
+- The native bounded gate compiles the same sources with GraalVM 25 into a
+  static-musl image (`build-native.ps1`, `build-native.sh`) because NMT showed
+  that JVM runtime overhead, not codec data, caused the 256 MiB overrun. The
+  native profile adds `--split-tail-block`, so the 120 MB single-line record
+  becomes four blocks (32 + 32 + 32 + 18.5 MiB) instead of three
+  (32 + 32 + 56 MiB). The default build remains `--release 27`; `--release 25`
+  is a documented exception forced by the newest available native-image
+  release, and the native archive is verified against the JVM archive.
 - GraSS (public implementation, commit
   `6d93700f5a2de8841f7cf2c20064413c80df2c4a`) runs unmodified on the same flat
   sequence through its headerless raw path. Its `bsc` backend is built from
@@ -93,7 +101,7 @@ Percentages are against JARVIS3 l7; RSS is the peak of that observation.
 | --- | ---: | ---: | ---: | ---: | ---: | :---: |
 | JARVIS3 l7 | 3,896,361 B | — | 62.4 s | 63.9 s | 286.0 / 285.6 MiB | yes |
 | Bounded stride 8, 16 MiB blocks, 160 MiB heap | 3,965,049 B | +1.76% | 47.5 s | 20.7 s | 274.9 / 214.6 MiB | yes |
-| Bounded stride 8, 32 MiB blocks, 256 MiB heap | 3,824,166 B | **−1.85%** | 47.6 s | 23.5 s | 339.1 / 302.7 MiB | yes |
+| Bounded stride 8, 32 MiB blocks, 232 MiB heap | 3,824,166 B | **-1.85%** | 52.3 s | 36.6 s | 375.4 / 286.6 MiB | yes |
 | Bounded stride 8, 32 MiB blocks, paged CM | 3,849,995 B | −1.19% | 39.3 s | 14.0 s | 339.5 / 292.3 MiB | yes |
 | Control: bounded stride 4, 16 MiB blocks, 160 MiB heap | 3,997,232 B | +2.59% | 57.1 s | 24.6 s | 274.4 / 216.4 MiB | yes |
 
@@ -187,20 +195,23 @@ both gates.
 
 Stride 8 at **32 MiB blocks** reaches **3,824,166 B**, which is **1.85% below
 JARVIS3** and only 0.36% above the unbounded archive, so it passes the size
-gate for the first time. It needs a 256 MiB heap and peaks at **339.1 MiB
-compress / 302.7 MiB restore**, 83 and 47 MiB over the cap. The paged-CM
-variant is 3,849,995 B (1.19% below JARVIS3) at 339.5 / 292.3 MiB. The size gate
-is therefore reachable; the RSS cap is the binding constraint, and the 16 MiB
-profile that overruns least does not beat JARVIS3.
+gate for the first time. It needs at least 225-232 MiB of decoder heap. At the
+smallest completing heap (232 MiB) it peaks at **375.4 MiB compress / 286.6 MiB
+restore**; a 240 MiB heap peaks at 391.0 / 298.5 MiB. An earlier 256 MiB-heap
+sample recorded 339.1 / 302.7 MiB, but that is not the worst case. The paged-CM
+variant archived 3,849,995 B (1.19% below JARVIS3) in a separate sample and was
+not part of this sweep. The size gate is therefore reachable; the RSS cap is the
+binding constraint, and the 16 MiB profile that overruns least does not beat
+JARVIS3.
 
-The consequence is simple: **no bounded profile completes in a strict 256 MiB
-container, and no profile that beats JARVIS3 fits 256 MiB.** If the cap is
-relaxed just enough for the 16 MiB profile to finish, its smallest archive is
-3,965,049 B (stride 8), still 68,688 B (1.76%) larger than JARVIS3. The only
-profile that beats JARVIS3 is 3,824,166 B at 32 MiB blocks, which needs
-339.1 / 302.7 MiB. The published 110,615 B size gap is therefore not the only
-failure; the sub-cap profile is behind the specialized baseline even after the
-full stride-8 recovery.
+The JVM consequence is simple: **no JVM bounded profile completes in a strict
+256 MiB container.** If the cap is relaxed just enough for the 16 MiB profile
+to finish, its smallest archive is 3,965,049 B (stride 8), still 68,688 B
+(1.76%) larger than JARVIS3. The only JVM profile that beats JARVIS3 is
+3,824,166 B at 32 MiB blocks, which peaks at 375.4 / 286.6 MiB at its smallest
+completing heap (worst observed 391.0 / 298.5 MiB). The native runtime removes
+that overhead and does meet the cap; *Native runtime and the 256 MiB gate*
+below records the result.
 
 This does **not** overturn the frozen-corpus result. On single genomes, JARVIS3
 and GeCo3 are close to HyperGraSS, and on some cells they are better. What it
@@ -245,6 +256,12 @@ compress RSS, restore RSS, size ratio, and wall ratio for each) and exits 3.
 The partial archives written before a kill are truncated and are not reported as
 sizes; only completed round trips contribute archive bytes.
 
+A later one-observation sweep under the same strict 256 MiB cap killed 224, 240,
+and 248 MiB heaps at 5.8-6.4 s (cgroup 256.0 MiB, wrapper 247.1-247.9 MiB).
+The 320 MiB cap rows above are the earlier three-repeat run; both caps kill
+before the natural peak. See [`MEMORY-SWEEP.md`](MEMORY-SWEEP.md) for the
+natural-heap and NMT measurements.
+
 The harness now expands each profile into interleaved repeats
 (`r0/A, r0/B, r1/A, r1/B, …`), reports median wall and worst-case RSS, and
 keeps the per-repeat observations in the report. Memory comes from two
@@ -260,6 +277,52 @@ directory is never reused. A cross-process lock enforces one HyperGraSS
 container at a time. The gate is evaluated on the aggregated profile and exits
 3 when a bounded candidate misses it, so a single lucky sample cannot pass.
 
+### Native runtime and the 256 MiB gate
+
+The JVM measurements above led to a native test, not a language rewrite. The
+codec, archive format, and option parser are unchanged; the same sources are
+compiled ahead of time into a static-musl binary so the JIT compiler arenas,
+malloc transients, and shared class metadata disappear. The opt-in streaming
+decoder (`FastaStreamFactorizer.reconstructTo`) removes a third block-sized
+output array, and `--split-tail-block` cuts the 120 MB single-line record into
+four blocks instead of leaving a 56 MiB tail. Neither change affects the default
+archive path.
+
+`native-gate-3` interleaves three JARVIS3 l7 runs with three native runs on the
+identical input and image. The native profile runs under a strict
+`--memory=256m --memory-swap=256m`; JARVIS3 keeps the usual 2 GiB limit because
+it cannot complete under 256 MiB.
+
+| Profile (3 interleaved repeats) | Archive | Compress median | Worst compress RSS | Worst restore RSS | Worst cgroup peak | Exact |
+|---|---:|---:|---:|---:|---:|:---:|
+| JARVIS3 l7 (2 GiB limit) | 3,896,361 B | 58.3 s | 286.0 MiB | 285.9 MiB | 294.8 MiB | 3/3 |
+| Native bounded (256 MiB limit) | **3,864,464 B** | **54.8 s** | **240.1 MiB** | **225.5 MiB** | **251.1 MiB** | **3/3** |
+
+The archive is 1.42% above the unbounded 3,810,409 B (limit 3,886,617 B) and
+0.82% below JARVIS3. Every fixed gate check passes on the worst repeat:
+
+| Check | Value | Limit | Verdict |
+|---|---:|---:|:---:|
+| status | success / success | success | pass |
+| compress peak RSS | 240.1 MiB | 256.0 MiB | pass |
+| restore peak RSS | 225.5 MiB | 256.0 MiB | pass |
+| size ratio vs unbounded | 1.014 | 1.020 | pass |
+| wall ratio vs JARVIS3 median | 0.940 | 2.000 | pass |
+
+All three archives are byte-identical at
+`8f351911f318da52c368196a47d63dc4cf0ced3791b749e0ca1bd9d7e13c3705`; each of the
+three restores was compared over all 120,108,223 bytes by the separate
+verifier process. Compression used 50.2 / 51.3 / 48.0 CPU s and restore 24.6 /
+25.1 / 23.1 CPU s. The cgroup compress headroom is only 4.9 MiB (251.1 of
+256.0 MiB) even though `ru_maxrss` leaves 15.9 MiB, so the gate is real but
+thin. The native binary is 13,698,160 B, SHA-256
+`508f4d53d5d81563f408dd59f8ffdbb79ae60fd86ab4ff1eb14dfdbc3530b657`.
+
+Default-path bytes are unchanged: recompressing the 40.5 MB campy-high
+collection with the current `bin/` at 160 MiB and the original bounded flags
+reproduced `1,125,629 B`, SHA-256
+`14DD7E9413C10B8414E90EE831666B420D81A9A3BA2A9F8DBBC1BED149E1C5D6`, exactly.
+
 ## Cross-taxon extension
 
 The *E. coli* comparison above is the anchor for a broader panel: six unrelated
@@ -269,14 +332,16 @@ natural collections (*M. tuberculosis*, *S. aureus*, *S. pneumoniae*,
 image. The 64 MiB HyperGraSS profile was smaller than JARVIS3 level 7 on all
 six, with a median margin of 13.8% (range 4.7–29.4%) and byte-exact round
 trips. The published GraSS pipeline was 7.3x larger on *P. aeruginosa* and
-11.7x larger on *M. tuberculosis*. The bounded profile did not generalize: it
-missed the 2% size gate on every natural collection, exceeded 256 MiB peak RSS
-on four, and exhausted its heap on *P. aeruginosa*.
+11.7x larger on *M. tuberculosis*. The JVM bounded profile did not generalize:
+it missed the 2% size gate on every natural collection, exceeded 256 MiB peak
+RSS on four, and exhausted its heap on *P. aeruginosa*.
 
 This does not change the *E. coli* verdict: the unbounded profile wins narrowly
-there (2.21%) and by more on several unrelated collections, while the bounded
-mode remains an *E. coli*-calibrated prototype rather than a general 256 MiB
-mode. The protocol, diversity strata, and complete tables are in
+there (2.21%) and by more on several unrelated collections, while the JVM
+bounded mode remains an *E. coli*-calibrated prototype rather than a general
+256 MiB mode. The native mode was gated only on the *E. coli* anchor; the
+cross-taxon panel was not rerun with it, so no general 256 MiB claim follows.
+The protocol, diversity strata, and complete tables are in
 [`BROAD.md`](BROAD.md) and `benchmarks/broad/summary.md`.
 
 ## Limits
@@ -299,7 +364,7 @@ mode. The protocol, diversity strata, and complete tables are in
   embeds the F1/F2 modification times, so the archive bytes and size vary by a
   few bytes between runs; two 2 MB reruns produced identical F1/F2 streams and
   archives differing by 4 bytes. The 24,777,592 B figure is this run's size.
-- The bounded profile misses two of its three gates. Its archive is 4.90%
+- The JVM bounded profile misses two of its three gates. Its archive is 4.90%
   larger than the unbounded one at stride 4 (110,615 B over the 2% target;
   4.06% and 78,432 B over at stride 8), and its 256 MiB RSS gate fails in the
   final three-repeat run: all three stride-4 attempts and all three stride-8
@@ -307,20 +372,35 @@ mode. The protocol, diversity strata, and complete tables are in
   figure was a single-sample pass with swap headroom; later repeats of the same
   bytes measured 269.4 MiB before the hard cap killed them. The 144 MiB heap
   still peaks at 258.3 MiB and triples wall time, and 128 MiB exhausts the heap.
-- The 32 MiB stride-8 profile passes the size gate in a swap-enabled run
-  (0.36% growth, 1.85% below JARVIS3) but needs a 256 MiB heap. Under the strict
-  320 MiB cap it was OOM-killed 3/3 (332.7 MiB wrapper RSS, cgroup at cap); the
-  paged-CM variant was OOM-killed 3/3 at 332.9 MiB. Neither is a 256 MiB mode,
-  and no profile that meets 256 MiB beats JARVIS3.
+- The 32 MiB stride-8 JVM profile passes the size gate in a swap-enabled run
+  (0.36% growth, 1.85% below JARVIS3) but needs 225-232 MiB of decoder heap.
+  At 232 MiB it peaks at 375.4 / 286.6 MiB; the worst observed is 391.0 / 298.5
+  MiB at 240 MiB. Under a strict 256 MiB cap it is OOM-killed at 5.9 s (247.8
+  MiB wrapper RSS, cgroup at cap). The earlier 320 MiB cap killed the 256 MiB
+  run 3/3 at 332.7 MiB; the paged-CM variant at 332.9 MiB. Neither is a 256 MiB
+  mode, and no JVM profile that meets 256 MiB beats JARVIS3.
+- The native bounded profile passes every fixed gate on the *E. coli* anchor:
+  **3,864,464 B** (1.42% above unbounded, 0.82% below JARVIS3), 54.8 s median
+  compress, 240.1 / 225.5 MiB worst RSS, and 3/3 byte-exact round trips under
+  a no-swap 256 MiB cgroup cap. Its cgroup compress peak leaves only 4.9 MiB
+  of headroom, and the cross-taxon panel was not rerun natively, so the result
+  is an *E. coli* and host-specific 256 MiB mode, not a universal one.
+- The native build is an opt-in GraalVM 25 static-musl image. The default JVM
+  build remains `--release 27`; `--release 25` is a forced exception because
+  GraalVM 25 is the newest published native-image. The binary is gitignored
+  (13,698,160 B, SHA-256 `508f4d53…0b657`); each run records its size and hash.
+  It is x86-64 Linux only, and the native archive is byte-identical to the JVM
+  path so archives remain portable between the two runtimes.
 - Peak RSS has a measured ~22 MiB spread for byte-identical output. Gate
   verdicts are therefore based on the worst observation across interleaved
   repeats, with cgroup and `ru_maxrss` evidence, not on a single run.
-- The bounded profile's memory is set by anchor saturation, not input size. At
-  the 9 MiB cap the seed index alone is 67 MB, so the 160 MB heap sits on the
-  OOM boundary: the 123 MB *E. coli* medium stratum fails in the factorizer,
-  while the 120 MB high stratum completes at 272 MiB peak RSS. The 2.08 GiB
-  repetitive probe passes because its bank never saturates. See
-  [`SCALING.md`](SCALING.md).
+- The JVM bounded profile's memory is set by anchor saturation, not input size.
+  At the 9 MiB cap the stride-4 seed index alone is 67 MB, so the 160 MB heap
+  sits on the OOM boundary: the 123 MB *E. coli* medium stratum fails in the
+  factorizer, while the 120 MB high stratum completes at 272 MiB peak RSS. The
+  native gate uses `--seed-step 8` (33.6 MB index) and a 192 MiB heap, which is
+  why it clears the cap; the 2.08 GiB repetitive probe passes because its bank
+  never saturates. See [`SCALING.md`](SCALING.md).
 - Times are indicative; the original scale test already documents large
   wall-time variance on this host. The same 8-bit ablation archive took 51.4 s
   in the lz-2 run and 119.9 s in a later local rerun with byte-identical
@@ -362,18 +442,28 @@ python -B benchmarks/specialized/run.py \
   --repeats 3 --timeout 3600 \
   --gate-baseline jarvis3-l7 \
   --gate-profiles hypergrass-bounded-256m-tuned,hypergrass-bounded-256m-stride8,hypergrass-bounded-wide,hypergrass-bounded-wide-cm
+# Native 256 MiB gate. The binary is gitignored; the report records its hash.
+powershell -NoProfile -ExecutionPolicy Bypass -File build-native.ps1
+python -B benchmarks/specialized/run.py \
+  --run-id native-gate-3 \
+  --profiles jarvis3-l7,hypergrass-bounded-native \
+  --repeats 3 --timeout 1800 \
+  --gate-baseline jarvis3-l7 \
+  --gate-profiles hypergrass-bounded-native \
+  --gate-size-baseline-bytes 3810409
 python -B benchmarks/specialized/summarize.py --run hypergrass-lz-1
 python -B benchmarks/specialized/summarize.py --run hypergrass-lz-2
 python -B benchmarks/specialized/summarize.py --run hypergrass-lz-4
 python -B benchmarks/specialized/summarize.py --run grass-1
 ```
 
-The gate's ratio baseline is explicit. The published *bounded versus
-unbounded* gate uses `hypergrass-pangenome` as the baseline and compares the
-2% size growth with 3,810,409 B; the command above instead asks whether a
-bounded candidate is within 2% of JARVIS3 while staying under 256 MiB. Both
-questions matter, and the report records which baseline was used. A failed
-profile exits 2; a failed gate exits 3.
+The gate's ratio baseline is explicit. The JDK 27 command asks whether a
+bounded candidate is within 2% of JARVIS3 while staying under 256 MiB. The
+native command instead passes `--gate-size-baseline-bytes 3810409`, so the same
+candidate is measured against the tuned unbounded archive (2% = 3,886,617 B)
+while the wall gate still uses the measured JARVIS3 median. Both questions
+matter, and the report records which baseline was used. A failed profile exits
+2; a failed gate exits 3.
 
 The GraSS run uses the native `bsc` binary built by `fetch_vendor.ps1`; the
 harness copies it into each operation directory because GraSS invokes

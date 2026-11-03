@@ -76,6 +76,12 @@ public final class HyperGraSS {
         public boolean anchorCmPages = false;
         public boolean bounded = false;
         /**
+         * Cut the trailing piece of a single huge sequence line into target-sized blocks.
+         * Opt-in: the default keeps one tail block of up to twice the target to preserve
+         * existing archive bytes.
+         */
+        public boolean splitTailBlock = false;
+        /**
          * Encoder threads for the bounded path. One thread keeps the cross-block gap channel
          * (the published 256 MiB profile); more than one encodes independent blocks in a
          * bounded window and clears FLAG_SHARED_GAP.
@@ -164,7 +170,8 @@ public final class HyperGraSS {
                 && Files.size(input) >= 16 * 1024 * 1024)
                 ? (2 * 1024 * 1024)
                 : opts.blockSizeBytes;
-        FastaStreamFactorizer.FilePartition part = FastaStreamFactorizer.partitionFile(input, blockBytes);
+        FastaStreamFactorizer.FilePartition part = FastaStreamFactorizer.partitionFile(
+                input, blockBytes, opts.splitTailBlock);
         List<BlockSlice> slices = part.slices;
         int numBlocks = slices.size();
 
@@ -372,10 +379,7 @@ public final class HyperGraSS {
                 FactorizedChunk chunk = FastaStreamFactorizer.readAuxMetadata(bIn);
                 byte[] dna = CanonicalSyncmerEngine.decodeBlockDna(
                         bIn, chunk.dnaLen, anchorBases, globalDonors, leanMode, gapHistory);
-                byte[] recBytes = FastaStreamFactorizer.reconstructBytes(chunk, dna);
-                crc.update(recBytes, 0, recBytes.length);
-                out.write(recBytes);
-                produced += recBytes.length;
+                produced += FastaStreamFactorizer.reconstructTo(chunk, dna, out, crc);
             }
         }
         if (produced != footer.totalRawBytes) {
@@ -567,10 +571,7 @@ public final class HyperGraSS {
                 ByteIn blockIn = new ByteIn(buf.array());
                 FactorizedChunk chunk = FastaStreamFactorizer.readAuxMetadata(blockIn);
                 byte[] dna = CanonicalSyncmerEngine.decodeBlockDna(blockIn, chunk.dnaLen, null, leanMode);
-                byte[] recBytes = FastaStreamFactorizer.reconstructBytes(chunk, dna);
-                crc.update(recBytes, 0, recBytes.length);
-                out.write(recBytes);
-                produced += recBytes.length;
+                produced += FastaStreamFactorizer.reconstructTo(chunk, dna, out, crc);
             }
         }
         if (produced != footer.totalRawBytes) {
@@ -1492,6 +1493,8 @@ public final class HyperGraSS {
                         }
                     } else if ("--bounded".equals(args[idx])) {
                         opts.bounded = true;
+                    } else if ("--split-tail-block".equals(args[idx])) {
+                        opts.splitTailBlock = true;
                     } else if ("--threads".equals(args[idx])) {
                         if (idx + 1 >= args.length) {
                             printUsage();
@@ -1599,6 +1602,7 @@ public final class HyperGraSS {
         System.out.println("    --anchor-single-page: one anchor page (maximum compression, slower header)");
         System.out.println("    --anchor-cm-pages: 64 KiB context-mixing anchor pages (slightly larger, faster header)");
         System.out.println("    --seed-step N: anchor seed stride (4 default, 8 halves the index)");
+        System.out.println("    --split-tail-block: split a huge final record into target-sized blocks");
         System.out.println("  decompress <input.hgs> <output.fa>");
         System.out.println("  query <input.hgs> <recordIdx> [startBase endBase]");
         System.out.println("  inspect <input.hgs>");

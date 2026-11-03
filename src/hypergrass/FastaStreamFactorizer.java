@@ -2,10 +2,13 @@ package hypergrass;
 
 import hypergrass.VarIntCodec.ByteIn;
 import hypergrass.VarIntCodec.ByteOut;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.zip.CRC32;
 
 /**
  * Universal 6-Channel Orthogonal Lossless Factorizer for Raw, FASTA, RNA, and Multi-FASTA
@@ -62,6 +65,17 @@ public final class FastaStreamFactorizer {
      * slices without materializing the input, and also returns the CRC-32 of every byte.
      */
     public static FilePartition partitionFile(java.nio.file.Path path, int targetBlockBytes) throws java.io.IOException {
+        return partitionFile(path, targetBlockBytes, false);
+    }
+
+    /**
+     * Streaming partitioner. When {@code splitTailBlock} is set, the trailing slice of a
+     * single huge sequence line is cut into target-sized blocks instead of being left as
+     * one block of up to twice the target. The default preserves existing archives.
+     */
+    public static FilePartition partitionFile(
+            java.nio.file.Path path, int targetBlockBytes, boolean splitTailBlock)
+            throws java.io.IOException {
         long size = java.nio.file.Files.size(path);
         List<BlockSlice> slices = new ArrayList<>();
         java.util.zip.CRC32 crc = new java.util.zip.CRC32();
@@ -147,7 +161,10 @@ public final class FastaStreamFactorizer {
                             blockFirstRecOffset = currentRecordBaseAcc;
                         }
                         long nextP = eof ? size : lineEnd + 1;
-                        while (nextP - blockStart > targetBlockBytes * 2L) {
+                        long cutThreshold = splitTailBlock
+                                ? targetBlockBytes
+                                : targetBlockBytes * 2L;
+                        while (nextP - blockStart > cutThreshold) {
                             long cut = blockStart + targetBlockBytes;
                             slices.add(new BlockSlice(blockStart, cut,
                                     blockFirstRecord, 1, blockFirstRecOffset));
@@ -908,9 +925,70 @@ public final class FastaStreamFactorizer {
     }
 
     /**
-     * Extracts either a complete formatted FASTA record (when qStart < 0) or an exact sequence
-     * locus slice [qStart, qEnd) within localRecordIdx.
+     * Streams the exact reconstructed file bytes for one chunk without allocating the
+     * full output block. This is the bounded decoder path: the live set is the DNA bases
+     * plus the sequence-character buffer, not a third block-sized copy.
+     *
+     * @return number of bytes written
      */
+    public static long reconstructTo(
+            FactorizedChunk chunk, byte[] dnaBases, OutputStream out, CRC32 crc)
+            throws IOException {
+        if (chunk.numHeaders == 0 && chunk.numSeqLines == 0) {
+            return 0L;
+        }
+        byte[] seqChars = reconstructSequenceChars(chunk, dnaBases);
+        long written = 0L;
+        int h = 0;
+        int seqLine = 0;
+        int seqSinceLastHeader = 0;
+        int lineIdx = 0;
+        int seqCharPos = 0;
+
+        while (h < chunk.numHeaders || seqLine < chunk.numSeqLines) {
+            while (h < chunk.numHeaders && chunk.headerSeqLineDeltas[h] == seqSinceLastHeader) {
+                out.write('>');
+                crc.update('>');
+                written++;
+                byte[] hb = chunk.headerBytes[h];
+                out.write(hb);
+                crc.update(hb, 0, hb.length);
+                written += hb.length;
+                written += writeEol(out, crc, chunk.lineEolTypes[lineIdx++]);
+                h++;
+                seqSinceLastHeader = 0;
+            }
+            if (seqLine < chunk.numSeqLines) {
+                int len = chunk.seqLineLengths[seqLine];
+                if (len > 0) {
+                    out.write(seqChars, seqCharPos, len);
+                    crc.update(seqChars, seqCharPos, len);
+                    seqCharPos += len;
+                    written += len;
+                }
+                written += writeEol(out, crc, chunk.lineEolTypes[lineIdx++]);
+                seqLine++;
+                seqSinceLastHeader++;
+            }
+        }
+        return written;
+    }
+
+    private static int writeEol(OutputStream out, CRC32 crc, byte eol) throws IOException {
+        if (eol == 2) {
+            out.write('\r');
+            out.write('\n');
+            crc.update('\r');
+            crc.update('\n');
+            return 2;
+        }
+        if (eol == 1) {
+            out.write('\n');
+            crc.update('\n');
+            return 1;
+        }
+        return 0;
+    }
     public static byte[] extractRecordOrSlice(
             FactorizedChunk chunk, byte[] dnaBases, int localRecordIdx, int qStart, int qEnd) {
         RecordSpan[] spans = chunk.getRecordSpans();

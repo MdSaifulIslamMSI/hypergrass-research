@@ -79,9 +79,11 @@ at `s = 8`.
 On the 120.1 Mbp input with 16 MiB blocks, `s = 8` produced **3,965,049 B**
 versus 3,997,232 B at `s = 4` (**-0.80%**) at the same 160 MiB heap. With 32 MiB
 blocks it produced 3,824,166 B, 1.85% below JARVIS3 l7 and 0.36% above the
-unbounded archive, but that profile needs a 256 MiB heap and peaks at
-339.1 MiB compress / 302.7 MiB restore. `--seed-step` defaults to 4 and is
-opt-in, so every published archive stays byte-identical.
+unbounded archive. That profile is the only bounded candidate that passes the
+size gate, but it needs at least 225-232 MiB of decoder heap and peaks at
+375.4 MiB compress / 286.6 MiB restore at the smallest completing heap.
+`--seed-step` defaults to 4 and is opt-in, so every published archive stays
+byte-identical.
 
 Stride 8 does not buy the 256 MiB gate at 16 MiB blocks:
 
@@ -100,6 +102,45 @@ interleaved observations, not one sample. In the final JDK 27 three-repeat run,
 both 16 MiB profiles measured 269.3–269.4 MiB and were OOM-killed 3/3 once swap
 was removed; the 275.1 MiB row is the upper end of the earlier host-noise range,
 not a separate configuration.
+
+#### Heap sweep and native-memory attribution
+
+The 32 MiB profile was swept at four heaps under a permissive 512 MiB cap.
+Every run produced the same 3,824,166 B archive; only the 232 and 240 MiB heaps
+completed both directions and verified byte-exact.
+
+| Heap | Compress | Compress peak RSS | Restore | Restore peak RSS | Round trip |
+|---:|---:|---:|---:|---:|:---:|
+| 208m | 143.9 s | 362.1 MiB | OOM at 71.6 s | 255.4 MiB | no |
+| 224m | 47.2 s | 374.8 MiB | OOM at 21.0 s | 262.7 MiB | no |
+| 232m | 52.3 s | 375.4 MiB | 36.6 s | 286.6 MiB | yes |
+| 240m | 53.5 s | 391.0 MiB | 29.9 s | 298.5 MiB | yes |
+
+The encoder live set fits 208 MiB; the decoder needs more than 224 and no more
+than 232 MiB. NMT at 240 MiB reports 262.6 MiB committed at encoder exit but
+389.3 MiB peak RSS, with a 109.0 MiB `malloc` transient, a 56.0 MiB compiler
+arena, and 13.9 MiB of shared class space. The decoder exits at 271.8 MiB
+committed and peaks at 298.5 MiB. Under a strict 256 MiB cap, 224/240/248 MiB
+heaps are killed at 5.8-6.4 s (cgroup 256.0 MiB, wrapper 247.1-247.9 MiB), before
+the natural peak. The gap is JVM runtime tax, not codec data.
+
+A native image removes that tax without changing the archive format. With
+GraalVM 25, a 192 MiB heap, stride 8, 32 MiB blocks, and `--split-tail-block`,
+the same profile completed 3/3 under a strict no-swap 256 MiB cap:
+
+| Profile (3 interleaved repeats) | Archive | Compress median | Worst compress RSS | Worst restore RSS | cgroup peak | Exact |
+|---|---:|---:|---:|---:|---:|:---:|
+| JARVIS3 l7 (2 GiB limit) | 3,896,361 B | 58.3 s | 286.0 MiB | 285.9 MiB | 294.8 MiB | 3/3 |
+| Native bounded (256 MiB limit) | 3,864,464 B | 54.8 s | 240.1 MiB | 225.5 MiB | 251.1 MiB | 3/3 |
+
+The gate passes all five checks: status, compress RSS 240.1 <= 256, restore RSS
+225.5 <= 256, size ratio 1.014 <= 1.020 against the unbounded 3,810,409 B, and
+wall ratio 0.940 <= 2.0 against the JARVIS3 median. The archive is 1.42% above
+the unbounded profile and 0.82% below JARVIS3; every repeat is byte-identical at
+`8f351911f318da52c368196a47d63dc4cf0ced3791b749e0ca1bd9d7e13c3705`. The cgroup
+margin is 4.9 MiB, so this is a documented envelope boundary, not a comfortable
+default. `--split-tail-block` is opt-in; without it the last block is 56 MiB.
+Full evidence is in [`MEMORY-SWEEP.md`](MEMORY-SWEEP.md).
 
 The trade is not free in theory: `MATCH_ACCEPT_MIN` is 22 bp, one base below the
 `s = 8` guarantee, so a 22-bp island can be missed. The measured net effect on
@@ -344,10 +385,18 @@ manifest and continue from the first incomplete block.
 Gate: kill the process at 50%; resume reprocesses less than 5% of the input; final
 archive is byte-identical to an uninterrupted run.
 
-## Phase 6 - native kernels (optional, evidence-gated)
+## Phase 6 - native runtime and kernels (evidence-gated)
 
-Only after Phase 0 identifies a hot loop with a measured gap of at least 1.5x versus a
-tuned Java implementation. Extract that kernel, not the codec:
+A native image is now measured, and it is a deployment change rather than a
+kernel rewrite. `build-native.ps1`/`build-native.sh` compile the unchanged
+sources with GraalVM 25 into a static-musl binary; the archive bytes are
+identical to the JVM path, and the native bounded profile passes the 256 MiB
+gate on the *E. coli* anchor (see the gate table above). The binary is x86-64
+Linux only and gitignored; the run report records its SHA-256. The JVM remains
+the default build, at `--release 27`.
+
+A hand-written kernel is still optional and still gated on a measured hot loop
+with at least a 1.5x gap versus tuned Java. Extract that kernel, not the codec:
 
 - **Rust** if parser safety, no-GC memory control and a standalone CLI matter most;
 - **C++** if the deciding factor is an existing library (htslib, libdeflate, zstd, ISA-L);

@@ -102,6 +102,10 @@ java -Xmx160m -cp bin hypergrass.HyperGraSS compress --bounded --anchor-mib 9 --
 # Same, encoding independent blocks on N threads (drops the shared gap channel)
 java -Xmx4g -cp bin hypergrass.HyperGraSS compress --bounded --threads 8 --anchor-mib 64 --block-mib 64 big.fna big.hgs
 
+# Native 256 MiB mode (opt-in): build the static-musl image, then run it
+powershell -NoProfile -ExecutionPolicy Bypass -File build-native.ps1
+bin/native/hypergrass -Xmx192m -Dhypergrass.matchMin=104 -Dhypergrass.rangeModel=count compress --pangenome --bounded --single-thread --anchor-single-page --seed-step 8 --block-mib 32 --anchor-mib 9 --split-tail-block big.fna big.hgs
+
 # Inspect archive metadata in O(1)
 java -cp bin hypergrass.HyperGraSS inspect archive.hgs
 
@@ -253,7 +257,8 @@ Measured headlines, stated without rounding up:
 | Same sequence, bounded 256 MiB attempt | 4,131,860 B, 272.5 MiB, 149.5 s; missed size and RSS gates |
 | Same sequence, bounded tuned (stride 4, 16 MiB blocks) | 3,997,232 B, 57.1 s; OOM-killed 3/3 at the 256 MiB cap (269.4 MiB wrapper RSS); misses size and RSS gates (+4.90%) |
 | Same sequence, bounded stride 8 (16 MiB blocks) | 3,965,049 B, 51.2 s; OOM-killed 3/3 (269.4 MiB); 1.76% larger than JARVIS3, misses both gates |
-| Same sequence, bounded stride 8 (32 MiB blocks) | **3,824,166 B, 1.85% below JARVIS3**, 47.6 s; needs 339.1 / 302.7 MiB, OOM-killed 3/3 under a 320 MiB cap |
+| Same sequence, bounded stride 8 (32 MiB blocks) | **3,824,166 B, 1.85% below JARVIS3**, 52.3 s; needs 225-232 MiB decoder heap, peaks 375.4 / 286.6 MiB, OOM-killed at 5.9 s under a strict 256 MiB cap |
+| Same sequence, bounded native (GraalVM 25, 192 MiB heap) | **3,864,464 B**, 1.42% above unbounded and 0.82% below JARVIS3; 54.8 s / 240.1 MiB compress, 25.8 s / 225.5 MiB restore, **3/3 under a strict 256 MiB cap** |
 | 121.8 MB pangenome, `--lean` (`-Xmx8m`) | 28,910,764 B, 4.21x, 52 MiB peak RSS |
 | Verification | every round trip byte-exact; 3/3 record queries exact per HyperGraSS profile |
 
@@ -267,19 +272,28 @@ in those runs and answered exact record queries. xz decompressed faster on the
 original pangenome; restore time was mixed on the independent sets. The profile
 remains opt-in: nine pangenomes from five phyla, one host, and one run each are
 a sample rather than a guarantee for every input. The bounded-memory mode is not
-a general 256 MiB mode. On the *E. coli* anchor its first single run peaked at
-252.7 MiB compressing and 221.2 MiB restoring, but that pass had swap headroom.
-The final three-repeat run OOM-killed every bounded attempt at the cgroup cap:
-stride 4 and stride 8 with 16 MiB blocks died at 256 MiB (269.3–269.4 MiB
-wrapper RSS). It also gives back 4.90% in size. Stride 8 at 16 MiB blocks
-recovers 0.80% but remains 1.76% larger than JARVIS3 and is OOM-killed 3/3. The
-only profile that beats JARVIS3 (3,824,166 B, 1.85% below) uses 32 MiB blocks,
-needs 339.1 / 302.7 MiB when allowed to run, and is OOM-killed 3/3 under a
-320 MiB cap. No bounded profile completes in a strict no-swap 256 MiB container,
-so there is no ≤256 MiB mode that beats JARVIS3. Across the six cross-taxon
-collections the bounded mode misses the
-2% size gate on all six, exceeds 256 MiB RSS on four, and runs out of heap on
-*P. aeruginosa*.
+a general 256 MiB mode on the JVM. On the *E. coli* anchor its first single run
+peaked at 252.7 MiB compressing and 221.2 MiB restoring, but that pass had swap
+headroom. The final three-repeat JVM run OOM-killed every bounded attempt at the
+cgroup cap: stride 4 and stride 8 with 16 MiB blocks died at 256 MiB
+(269.3–269.4 MiB wrapper RSS). It also gives back 4.90% in size. Stride 8 at
+16 MiB blocks recovers 0.80% but remains 1.76% larger than JARVIS3 and is
+OOM-killed 3/3. The only JVM profile that beats JARVIS3 (3,824,166 B, 1.85%
+below) uses 32 MiB blocks, needs 225-232 MiB of decoder heap, and peaks at
+375.4 / 286.6 MiB (worst observed 391.0 / 298.5 MiB). It is OOM-killed at 5.9 s
+under a strict 256 MiB cap. No JVM bounded profile completes in a strict no-swap
+256 MiB container, so there is no ≤256 MiB JVM mode that beats JARVIS3.
+
+The opt-in native image changes that specific verdict. With GraalVM 25, a
+192 MiB heap, stride 8, 32 MiB blocks, and `--split-tail-block`, HyperGraSS
+completed 3/3 under a strict 256 MiB no-swap cap on the same input and image:
+**3,864,464 B** (1.42% above the unbounded archive, 0.82% below JARVIS3),
+54.8 s median compress at 240.1 MiB, 25.8 s restore at 225.5 MiB, every round
+trip byte-exact. The cgroup compress peak leaves only 4.9 MiB of headroom. The
+JVM path remains unable to meet the cap, and the native mode was not rerun on
+the cross-taxon panel; across those six collections the JVM bounded mode misses
+the 2% size gate on all six, exceeds 256 MiB RSS on four, and runs out of heap
+on *P. aeruginosa*.
 
 **The margin over the best specialized tool is real but narrow.** On the
 identical 120.1 Mbp sequence, the tuned HyperGraSS archive is **2.21% smaller
@@ -386,9 +400,10 @@ alone cap out well below linear. The anchor header has a separate trade:
 for 1.32x in wall on the 40.5 MB test; at the 160 MiB bounded heap on a 120 Mbp input
 it costs 0.49% and cuts compress wall by 1.2-1.3x. Fast 2-bit pages are the fastest
 mode at +2.33% and are already the default when `--anchor-single-page` is omitted. CM pages are
-encoded serially because parallel pages were slower. The remaining work - streaming,
-threads, sharded anchors, resumability, and whether a native kernel is ever justified -
-is sequenced in [`docs/SCALING.md`](docs/SCALING.md).
+encoded serially because parallel pages were slower. The remaining work - threads,
+sharded anchors, and resumability - is sequenced in [`docs/SCALING.md`](docs/SCALING.md).
+A native image has since been measured for the 256 MiB gate (above); it is a
+deployment choice that removes JVM runtime overhead, not an algorithm change.
 
 ## Format Specification
 

@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "kind": "entropy-floor-analysis",
+  "input": {
+    "bases": 120108223,
+    "genomes": 24,
+    "genome_bases_mean": 5004509.291666667,
+    "flat_input_sha256": null
+  },
+  "measured": {
+    "qcrms_bits_per_base_single_genome": 1.805928,
+    "anchor_bases": 9434480,
+    "snps_post_consensus": 1577229,
+    "snps_pre_consensus": 2007000,
+    "literal_bases": 404521,
+    "hypergrass_archive_bytes": 4153891,
+    "jarvis3_l7_archive_bytes": 3896361,
+    "target_100x_bytes": 1200000
+  },
+  "floor": {
+    "anchor_bytes": 2129748,
+    "snp_position_bytes": 1514899,
+    "snp_allele_bytes_lower_bound": 197154,
+    "snp_allele_bytes_uniform": 312481,
+    "literal_bytes": 91317,
+    "case_a_total_bytes": 3933118,
+    "case_a_total_bytes_uniform_alleles": 4048445,
+    "case_b_total_bytes": 2869971
+  },
+  "sensitivity": {
+    "anchor_rate_to_fit_target_bits_per_base": 1.0175,
+    "position_floor_exceeds_target": true,
+    "position_over_target_ratio": 1.262,
+    "case_a_over_target_ratio": 3.28,
+    "case_b_over_target_ratio": 2.39
+  },
+  "verdict": "infeasible",
+  "assumptions": [
+    "QCRM's measured 1.806 bits/base on a single 5.07 Mbp E. coli genome is the best DNA rate measured in this project and is used as the floor for distinct sequence; no known method compresses E. coli DNA below ~1.7 bits/base.",
+    "SNP positions are bounded by the independence model, which gives shared variants no credit; phylogenetic sharing can only lower this term.",
+    "The anchor bank (9,434,480 bases) is the distinct non-redundant content of the 24 genomes; any faithful archive must convey it or convey a reference genome plus the same amount of variation.",
+    "Literal bases are the unmatched (indel/accessory) bases measured in the current archive; they are in addition to the SNP instances."
+  ]
+}

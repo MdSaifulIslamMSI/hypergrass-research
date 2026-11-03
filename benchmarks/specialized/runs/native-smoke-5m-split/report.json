@@ -1,0 +1,187 @@
+{
+  "schema_version": 2,
+  "kind": "specialized-scale-test",
+  "run_id": "native-smoke-5m-split",
+  "started_utc": "2026-11-03T11:05:46.955131+00:00",
+  "image_id": "sha256:580e58b6ee16d43f4dd99a2871b1c920548b7c6e9b0c695a01f521c17701a4ae",
+  "image_tag": "hypergrass-corpus:jdk27",
+  "provenance": {
+    "git_commit": "961f235992d38dc46725bb3b81e4d535aa07a987",
+    "git_dirty": true,
+    "git_status": "M README.md\n M benchmarks/specialized/run.py\n M benchmarks/specialized/test_run.py\n M docs/FOUNDATIONS.md\n M docs/PAPER-DRAFT.md\n M docs/SCALING.md\n M docs/SPECIALIZED.md\n M src/hypergrass/FastaStreamFactorizer.java\n M src/hypergrass/HyperGraSS.java\n?? build-native.ps1\n?? build-native.sh\n?? docs/MEMORY-SWEEP.md",
+    "docker_version": "29.6.2",
+    "python": "3.12.10",
+    "platform": "Windows-11-10.0.28120-SP0"
+  },
+  "harness": {
+    "repeats": 1,
+    "timeout_seconds": 1800.0,
+    "memory_default": "2g",
+    "heap_override": null,
+    "memory_override": "512m",
+    "jvm_extra": null,
+    "runtime_override": null,
+    "binary_override": null
+  },
+  "source": "benchmarks\\pangenome\\data\\pangenome.fasta",
+  "sliced": true,
+  "input": {
+    "fasta": {
+      "path": "benchmarks\\specialized\\runs\\native-smoke-5m-split\\input.fasta",
+      "size_bytes": 5071579,
+      "sha256": "d96882c14e6906dc0d9cc752f6bca47d9536332bfe54877a7eb1aa08adaf3fb4",
+      "records": 2,
+      "bases": 5000000
+    },
+    "sequence": {
+      "path": "benchmarks\\specialized\\runs\\native-smoke-5m-split\\input.seq",
+      "size_bytes": 5000000,
+      "bases": 5000000,
+      "sha256": "4c2c6a21dcfa7fda3fb695ae8d3a1bf211fd7ecb2aace83dd17d61d0a10e7d81",
+      "non_acgt_bases_masked": 0,
+      "base_counts": {
+        "A": 1234147,
+        "C": 1268507,
+        "G": 1267232,
+        "T": 1230114
+      }
+    },
+    "normalization": "headers removed, letters uppercased, non-ACGT replaced with A; both tools receive this sequence and are verified against it"
+  },
+  "profiles": [
+    "hypergrass-bounded-native"
+  ],
+  "execution_order": [
+    "hypergrass-bounded-native-r0"
+  ],
+  "results": [
+    {
+      "profile": "hypergrass-bounded-native",
+      "kind": "hypergrass",
+      "level": "bounded-256m-native",
+      "config": {
+        "options": [
+          "--pangenome",
+          "--bounded",
+          "--single-thread",
+          "--anchor-single-page",
+          "--seed-step",
+          "8",
+          "--block-mib",
+          "32",
+          "--anchor-mib",
+          "9",
+          "--split-tail-block"
+        ],
+        "jvm": [
+          "-Dhypergrass.matchMin=104",
+          "-Dhypergrass.rangeModel=count"
+        ],
+        "heap": "192m",
+        "memory": "512m",
+        "runtime": "native",
+        "binary": "bin/native/hypergrass"
+      },
+      "planned_observations": 1,
+      "status": "success",
+      "roundtrip_ok": true,
+      "deterministic": true,
+      "artifact_bytes": 1149288,
+      "artifact_sha256": "3e44e207027a852738375b7b98ff8b8152ed5fde7c45cb3e7c686782bfd43ff2",
+      "bits_per_base": 1.8388608,
+      "wall_seconds": 41.49127425699771,
+      "wall_seconds_min": 41.49127425699771,
+      "wall_seconds_max": 41.49127425699771,
+      "cpu_seconds": 40.874968,
+      "peak_rss_bytes": 155148288,
+      "peak_rss_median_bytes": 155148288,
+      "cgroup_memory_peak_bytes": 173920256,
+      "cgroup_oom_kills": 0,
+      "decompress": {
+        "wall_seconds": 38.070738967999205,
+        "cpu_seconds": 37.865582,
+        "peak_rss_bytes": 129101824,
+        "cgroup_memory_peak_bytes": 139407360
+      },
+      "error": null,
+      "observations": [
+        {
+          "profile": "hypergrass-bounded-native-r0",
+          "base_profile": "hypergrass-bounded-native",
+          "repeat": 0,
+          "kind": "hypergrass",
+          "level": "bounded-256m-native",
+          "input_bytes": 5000000,
+          "input_sha256": "4c2c6a21dcfa7fda3fb695ae8d3a1bf211fd7ecb2aace83dd17d61d0a10e7d81",
+          "input_bases": 5000000,
+          "status": "success",
+          "roundtrip_ok": true,
+          "artifact_bytes": 1149288,
+          "bits_per_base": 1.8388608,
+          "wall_seconds": 41.49127425699771,
+          "cpu_seconds": 40.874968,
+          "peak_rss_bytes": 155148288,
+          "error": null,
+          "returncode": 0,
+          "memory_method": "os.wait4 ru_maxrss: child, including descendants it reaped; converted to bytes",
+          "cgroup_memory_peak_bytes": 173920256,
+          "cgroup_oom_kills": 0,
+          "cgroup_memory_method": "cgroup v2 memory.peak/memory.events",
+          "stderr_tail": "",
+          "stderr_bytes": 0,
+          "container_name": "hgs-native-smoke-5m-split-hypergrass-bounded-native-r0-compress",
+          "memory_limit": "512m",
+          "decompress": {
+            "status": "success",
+            "returncode": 0,
+            "wall_seconds": 38.070738967999205,
+            "cpu_seconds": 37.865582,
+            "peak_rss_bytes": 129101824,
+            "memory_method": "os.wait4 ru_maxrss: child, including descendants it reaped; converted to bytes",
+            "cgroup_memory_peak_bytes": 139407360,
+            "cgroup_oom_kills": 0,
+            "cgroup_memory_method": "cgroup v2 memory.peak/memory.events",
+            "error": null,
+            "stderr_tail": "",
+            "stderr_bytes": 0,
+            "container_name": "hgs-native-smoke-5m-split-hypergrass-bounded-native-r0-decompre",
+            "memory_limit": "512m"
+          },
+          "verification": {
+            "verdict": "pass",
+            "problems": [],
+            "original": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\native-smoke-5m-split\\input.seq",
+            "restored": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\native-smoke-5m-split\\ops\\hypergrass-bounded-native-r0\\restored.seq",
+            "archive": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\native-smoke-5m-split\\ops\\hypergrass-bounded-native-r0\\archive.hgs",
+            "original_bytes": 5000000,
+            "restored_bytes": 5000000,
+            "archive_bytes": 1149288,
+            "bytes_compared": 5000000,
+            "byte_identical": true,
+            "first_mismatch_offset": null,
+            "original_sha256": "4c2c6a21dcfa7fda3fb695ae8d3a1bf211fd7ecb2aace83dd17d61d0a10e7d81",
+            "restored_sha256": "4c2c6a21dcfa7fda3fb695ae8d3a1bf211fd7ecb2aace83dd17d61d0a10e7d81",
+            "archive_sha256": "3e44e207027a852738375b7b98ff8b8152ed5fde7c45cb3e7c686782bfd43ff2",
+            "expected_sha256": "4c2c6a21dcfa7fda3fb695ae8d3a1bf211fd7ecb2aace83dd17d61d0a10e7d81",
+            "chunk_bytes": 8388608,
+            "seconds": 0.061,
+            "comparison": "streaming byte comparison independent of the codec"
+          },
+          "restored_sha256": "4c2c6a21dcfa7fda3fb695ae8d3a1bf211fd7ecb2aace83dd17d61d0a10e7d81"
+        }
+      ],
+      "input_bytes": 5000000,
+      "input_sha256": "4c2c6a21dcfa7fda3fb695ae8d3a1bf211fd7ecb2aace83dd17d61d0a10e7d81",
+      "input_bases": 5000000
+    }
+  ],
+  "status": "success",
+  "native_binaries": {
+    "bin/native/hypergrass": {
+      "bytes": 13698160,
+      "sha256": "508f4d53d5d81563f408dd59f8ffdbb79ae60fd86ab4ff1eb14dfdbc3530b657"
+    }
+  },
+  "failures": 0,
+  "finished_utc": "2026-11-03T11:07:13.549239+00:00"
+}

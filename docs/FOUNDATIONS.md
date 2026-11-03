@@ -104,17 +104,18 @@ about 7.1 and 3.6 bytes per anchor base.
 |---|---:|---:|---:|:---:|
 | stride 4, 160 MiB heap (published bounded) | 3,997,232 B | 160m | 274.4 / 216.4 MiB | yes |
 | stride 8, 160 MiB heap | 3,965,049 B | 160m | 275.1 / 216.4 MiB | yes |
-| stride 8, 32 MiB blocks | 3,824,166 B | 256m | 339.1 / 302.7 MiB | yes |
-| stride 8, 32 MiB blocks, paged CM | 3,849,995 B | 256m | 339.5 / 292.3 MiB | yes |
+| stride 8, 32 MiB blocks | 3,824,166 B | 232m | 375.4 / 286.6 MiB | yes |
 
 Stride 8 is **0.80% smaller** at 16 MiB blocks and **1.85% smaller than
 JARVIS3** at 32 MiB blocks. The direction is not obvious a priori: a sparser
 index can *improve* size by removing short, expensive candidate matches while
 still finding every long one. It does **not** make the 16 MiB profile fit a
 256 MiB cap: peak RSS is unchanged within noise because the index is only part
-of the live set. The RSS column above is the swap-enabled high-water measurement;
-under the strict no-swap cap the final run OOM-killed both 16 MiB profiles 3/3
-at 256 MiB. The 32 MiB archive passes the size gate but needs 303 MiB to restore.
+of the live set. The 16 MiB RSS rows above are earlier swap-enabled
+observations; under the strict no-swap cap the final run OOM-killed both 16 MiB
+profiles 3/3 at 256 MiB. The 32 MiB archive passes the size gate but needs at
+least 225-232 MiB of decoder heap and peaks at 375.4 / 286.6 MiB at the smallest
+completing heap; 240 MiB peaks at 391.0 / 298.5 MiB.
 
 **Cost, stated honestly.** `MATCH_ACCEPT_MIN` is 22 bp, but `s = 8` only
 guarantees islands of 23 bp. A 22-bp exact island can be missed. The measured
@@ -165,7 +166,8 @@ does increase RSS.
 **Mechanism.** The bounded encoder streams the input twice, holds one block at
 a time, carries a 256 KiB gap history across block boundaries, and builds the
 large seed index only after the vote buffer is dead. The decoder streams one
-block at a time.
+block at a time. A native image is a deployment mechanism that removes JVM
+compiler and metadata overhead without changing the codec or archive bytes.
 
 **Measured effect.** The first single observation of the published bounded
 profile restored the 120.1 Mbp input at 253 MiB compress / 221 MiB restore,
@@ -177,18 +179,32 @@ bytes. The spread for byte-identical output is about 22 MiB (252.7 MiB in the
 single swap-enabled sample versus 269.4–274.4 MiB in later runs), so only the
 worst case counts; the earlier pass depended on swap headroom. A 144 MiB heap
 lowers the peak to 258.3 MiB but still misses the cap and triples wall time;
-128 MiB exhausts the heap. No bounded profile completes in a no-swap 256 MiB
-container. The 32 MiB block profile that beats JARVIS3 needs 339.1 / 302.7 MiB
-when allowed to run, and is OOM-killed 3/3 under a strict 320 MiB cap at
-332.7–332.9 MiB. A 2.08 GiB scale probe passes because 55 copies of one sequence
-never saturate the bank.
+128 MiB exhausts the heap. No JVM bounded profile completes in a no-swap 256 MiB
+container. The 32 MiB block profile that beats JARVIS3 needs at least 225-232
+MiB of decoder heap; at 232 MiB it peaks at 375.4 / 286.6 MiB, and at 240 MiB
+at 391.0 / 298.5 MiB. Under a strict 256 MiB cap it is OOM-killed at 5.9 s,
+before its natural peak. NMT attributes the gap to JVM native memory: at a
+240 MiB heap the encoder exits with 262.6 MiB committed but peaks at 389.3 MiB
+RSS, including a 109.0 MiB `malloc` transient and a 56.0 MiB compiler arena.
 
-**Known failure.** The bounded profile fails the 256 MiB gate on 0/7 natural
+The invariant is about the codec's live set, not the runtime. A GraalVM 25
+native image of the same sources removes that tax: with a 192 MiB heap,
+`--seed-step 8`, 32 MiB blocks, and `--split-tail-block`, it completed 3/3 under
+the same strict 256 MiB no-swap cap, peaking at **240.1 MiB compress / 225.5 MiB
+restore** on **3,864,464 B**. That is 1.42% above the unbounded archive (inside
+the 2% gate) and 0.82% below JARVIS3, with every round trip byte-exact. The
+cgroup compress peak leaves only 4.9 MiB of headroom, so the native mode is
+still an envelope boundary rather than a comfortable default. A 2.08 GiB scale
+probe passes because 55 copies of one sequence never saturate the bank.
+
+**Known failure.** The JVM bounded profile fails the 256 MiB gate on 0/7 natural
 collections: six exceed the 2% size gate, four exceed 256 MiB RSS, and
-*P. aeruginosa* exhausts the heap before producing an archive. The mechanism is
-the saturated seed index, not the input size: at stride 4 the 9.43 Mbp anchor
-index is 67 MB, leaving too little heap for factorization. Halving the index
-with stride 8 is the direct response, and is why that knob exists.
+*P. aeruginosa* exhausts the heap before producing an archive. The native image
+was not run across that panel, so no general native claim follows. The JVM
+mechanism is the saturated seed index, not the input size: at stride 4 the
+9.43 Mbp anchor index is 67 MB, leaving too little heap for factorization.
+Halving the index with stride 8 is the direct response, and is why that knob
+exists.
 
 **Falsification.** Any input where peak RSS grows with input bytes at fixed
 anchor saturation; any round trip that OOMs at the documented heap; any archive
@@ -252,7 +268,7 @@ cap buys reference coverage at the cost of index memory.
    the heap. Record that the 22-bp gap in the recall guarantee was accepted.
 5. **Block size.** Choose the largest block from the measured envelope, then
    preflight a round trip at the target heap. Do not extrapolate: 16 MiB blocks
-   fit a 160 MiB heap, 24 MiB fails at 176 MiB, and 32 MiB needs a 256 MiB heap
+   fit a 160 MiB heap, 24 MiB fails at 176 MiB, and 32 MiB needs 225-232 MiB
    for decode. The envelope is a lookup table, not a formula.
 6. **Anchor paging.** Enable `--anchor-cm-pages` only when header wall is the
    bottleneck and +0.5% size is acceptable. It is not part of the published

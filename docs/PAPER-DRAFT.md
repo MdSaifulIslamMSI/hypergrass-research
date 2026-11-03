@@ -29,10 +29,14 @@ sequence the tuned profile reaches 3,810,409 bytes, 2.21% below JARVIS3 level 7
 specialized DNA compressor is real but narrow. On six additional natural
 collections spanning five phyla, the tuned profile was smaller than JARVIS3
 level 7 on all six, by a median of 13.8% (range 4.7–29.4%), while the published
-GraSS pipeline was 7.3–11.7x larger. The 256 MiB bounded variant does not
-generalize: it stays under the RSS cap on one of the six collections, reaches
-271–273 MiB on four, and exhausts its heap on *P. aeruginosa*; its archives are
-6.6–19.8% larger than the unbounded profile. The contribution is a working
+GraSS pipeline was 7.3–11.7x larger. The JVM 256 MiB bounded variant does not generalize: it stays under the RSS
+cap on one of the six collections, reaches 271–273 MiB on four, and exhausts
+its heap on *P. aeruginosa*; its archives are 6.6–19.8% larger than the
+unbounded profile. An opt-in GraalVM native image of the same sources, with
+split-tail blocking, completes 3/3 under a strict 256 MiB no-swap cap on the
+*E. coli* anchor at 3,864,464 bytes (1.42% above unbounded, 0.82% below
+JARVIS3) in a 54.8 s median compress and 25.8 s restore; that mode was not run
+across the cross-taxon panel. The contribution is a working
 system plus a reproducible measurement harness with byte-exact verification and
 explicit deviations; the results do not establish universal superiority over
 specialized compressors.
@@ -135,9 +139,11 @@ The 4-bit counters saturate at 15 votes, which costs 2,218 bytes against exact
 8-bit counts; the unbounded path keeps the exact form. Stride 8 at 16 MiB blocks
 reduces the archive to 3,965,049 bytes, remains 1.76% larger than JARVIS3, and
 is OOM-killed 3/3 by the same hard cap (269.3–269.4 MiB). Stride 8 at 32 MiB
-blocks reaches 3,824,166 bytes (1.85% below JARVIS3) but needs 339.1 / 302.7 MiB
-when allowed to run, and is OOM-killed 3/3 at 332.7–332.9 MiB under a strict
-320 MiB cap, so it is not a 256 MiB mode either. The anchor
+blocks reaches 3,824,166 bytes (1.85% below JARVIS3) but needs at least 225-232
+MiB of decoder heap; at 232 MiB it peaks at 375.4 / 286.6 MiB, and at 240 MiB
+at 391.0 / 298.5 MiB. It is OOM-killed at 5.9 s under a strict 256 MiB cap (and
+was OOM-killed 3/3 at 332.7-332.9 MiB under an earlier 320 MiB cap), so it is
+not a 256 MiB JVM mode either. The anchor
 header has a separate speed trade: on the 40.5 MB test, one context-mixing
 anchor page takes 11.70 s, 64 KiB context-mixing pages (`--anchor-cm-pages`)
 take 8.85 s for +0.46% archive, and 2-bit pages take 6.85 s for +2.33%.
@@ -154,9 +160,21 @@ block is factorized. On the 122.9 Mbp *E. coli* medium stratum a 160 MiB heap
 raises `OutOfMemoryError` in the factorizer; the 120.5 Mbp high stratum
 completes the same profile at 272.2 MiB peak RSS, byte-exact but over the
 256 MiB cap. A 2.08 GiB scale probe built from 55 copies of one sequence passes
-because the bank never saturates. The 256 MiB claim is therefore conditional on
-pangenome novelty: at 120 MB of diverse input the 9 MiB anchor and the 256 MiB
-RSS cap cannot both hold, and either the anchor or the heap has to give.
+because the bank never saturates. The JVM 256 MiB claim is therefore conditional
+on pangenome novelty: at 120 MB of diverse input the 9 MiB anchor and the
+256 MiB RSS cap cannot both hold in the JVM, and either the anchor or the heap
+has to give.
+
+A native image changes the runtime term without changing the anchor term. The
+opt-in GraalVM 25 static-musl build (`build-native.ps1`) compiles the same
+sources and keeps the archive format; `--split-tail-block` and the streaming
+reconstruct path remove a 56 MiB tail block and a third block-sized output
+array. With a 192 MiB heap, stride 8, 32 MiB blocks, and a strict 256 MiB
+no-swap cgroup cap, the profile completed 3/3 at 3,864,464 bytes (1.42% above
+the unbounded archive, 0.82% below JARVIS3), 54.8 s median compress at
+240.1 MiB, 25.8 s restore at 225.5 MiB, every round trip byte-exact. The cgroup
+compress peak leaves only 4.9 MiB of headroom. The native mode has not been run
+on the six-collection panel, so the general claim remains open.
 
 ## 3. Evaluation protocol
 
@@ -331,7 +349,7 @@ same input, **2.21% smaller**, and restored it exactly in 82.4 s. The cost is
 compression time and memory: 887.3 s versus 95.4 s and 999 MiB versus 286 MiB.
 The scale result therefore shows a narrow size win over a specialized DNA
 compressor at this scale, paid for with 9.3x the compression time, not the
-earlier 20.3% deficit. On the *E. coli* anchor, the 256 MiB bounded variant
+earlier 20.3% deficit. On the *E. coli* anchor, the JVM 256 MiB bounded variant
 does **not** meet the memory gate once measured repeatedly: 16 MiB blocks, a
 160 MiB heap, packed 4-bit vote counters, and a 256 KiB cross-block gap history
 produce 3,997,232 bytes (+4.90%), but all three repeats were OOM-killed at the
@@ -339,10 +357,19 @@ produce 3,997,232 bytes (+4.90%), but all three repeats were OOM-killed at the
 sample had swap headroom and is not a gate pass. It also misses the 2% size gate
 by 110,615 bytes. Stride 8 at 16 MiB blocks gives 3,965,049 bytes and was also
 OOM-killed 3/3 at 269.3–269.4 MiB; 32 MiB blocks reach 3,824,166 bytes (1.85%
-below JARVIS3) but need 339.1 / 302.7 MiB when allowed to run and were
-OOM-killed 3/3 under a strict 320 MiB cap at 332.7–332.9 MiB. No bounded profile
-completes in a strict no-swap 256 MiB container, so there is no ≤256 MiB
-configuration that beats JARVIS3.
+below JARVIS3) but need at least 225-232 MiB of decoder heap; at 232 MiB they
+peak at 375.4 / 286.6 MiB, and at 240 MiB at 391.0 / 298.5 MiB. They are
+OOM-killed at 5.9 s under a strict 256 MiB cap (and were OOM-killed 3/3 at
+332.7–332.9 MiB under an earlier 320 MiB cap). No JVM bounded profile completes
+in a strict no-swap 256 MiB container.
+
+The native image supplies the missing mode. Interleaved three-repeat against
+JARVIS3, with the candidate under a strict 256 MiB no-swap cap, produced
+**3,864,464 bytes** (1.42% above the unbounded archive, 0.82% below JARVIS3) in
+a **54.8 s median compress at 240.1 MiB** and a **25.8 s restore at 225.5 MiB**.
+All three round trips were byte-exact; the gate passes status, both RSS checks,
+the 1.014 size ratio against 3,810,409 bytes, and the 0.940 wall ratio against
+the JARVIS3 median. The cgroup compress margin is 4.9 MiB.
 
 The published GraSS pipeline, the ancestor of HyperGraSS, was also run
 unmodified on the identical sequence. It produced 24,777,592 bytes (1.650
@@ -402,14 +429,20 @@ capability with workload-dependent value, not an automatic speedup.
   alignment-free approximation. The two best ablation configurations were
   repeated with byte-identical archives, while wall times varied by up to 2.5x
   across runs.
-- The 256 MiB bounded mode is not a general mode. It misses the 2% size gate on
-  all seven natural collections (including the *E. coli* anchor), exceeds the
+- The JVM 256 MiB bounded mode is not a general mode. It misses the 2% size gate
+  on all seven natural collections (including the *E. coli* anchor), exceeds the
   RSS cap on four, and exhausts its heap on *P. aeruginosa* and the *E. coli*
   medium stratum. The heap limit is anchor saturation, not input size: a
   saturated 9 MiB bank carries a 67 MB seed index, so the 160 MiB heap sits on
   the OOM boundary, and the 120 MB high stratum completes at 272 MiB RSS. The
   absolute overhead is roughly constant, so the percentage penalty grows as the
   unbounded archive shrinks.
+- The native 256 MiB mode is measured only on the *E. coli* anchor and only on
+  one host. It passes 3/3 with 240.1 / 225.5 MiB worst RSS and 4.9 MiB of cgroup
+  compress headroom, but it has not been run on the cross-taxon panel or on the
+  large scale probe. The binary is a gitignored x86-64 Linux static-musl build
+  made with GraalVM 25 while the default JVM build targets `--release 27`; the
+  report records the binary size and SHA-256 for each run.
 - The diversity gradient holds up to 24 strains per stratum and uses the same
   64 MiB profile as the natural collections. The strata differ in total size
   with genome size, and three species with three strata each support an

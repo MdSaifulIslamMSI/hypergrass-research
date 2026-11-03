@@ -177,6 +177,23 @@ PROFILES = (
         "memory": "320m",
     },
     {
+        "id": "hypergrass-bounded-native",
+        "kind": "hypergrass",
+        "level": "bounded-256m-native",
+        "options": [
+            "--pangenome", "--bounded", "--single-thread", "--anchor-single-page",
+            "--seed-step", "8", "--block-mib", "32", "--anchor-mib", "9",
+            "--split-tail-block",
+        ],
+        "jvm": [
+            "-Dhypergrass.matchMin=104", "-Dhypergrass.rangeModel=count",
+        ],
+        "runtime": "native",
+        "binary": "bin/native/hypergrass",
+        "heap": "192m",
+        "memory": "256m",
+    },
+    {
         "id": "grass",
         "kind": "grass",
         "level": "default-e2",
@@ -335,7 +352,7 @@ def summarize_profile(profile: dict, observations: list[dict], expected: int) ->
         "level": profile["level"],
         "config": {
             key: profile[key]
-            for key in ("options", "jvm", "heap", "memory")
+            for key in ("options", "jvm", "heap", "memory", "runtime", "binary")
             if key in profile
         },
         "planned_observations": expected,
@@ -488,6 +505,8 @@ def evaluate_gate(
     size_ratio: float,
     wall_ratio: float,
     candidates: list[str] | None = None,
+    size_baseline_bytes: int | None = None,
+    wall_baseline_seconds: float | None = None,
 ) -> dict:
     """Evaluate the published bounded-mode gates against one baseline profile.
 
@@ -496,6 +515,11 @@ def evaluate_gate(
     the profile ineligible, so a lucky sample cannot pass the gate. ``candidates``
     restricts the gate to the bounded profiles under test; otherwise every other
     selected profile is treated as a candidate.
+
+    ``size_baseline_bytes`` overrides the archive size used for the size ratio.
+    ``wall_baseline_seconds`` pins the wall baseline to a previously published
+    median, so a faster or slower session cannot silently change the gate. The
+    default baseline for both is the comparison profile measured in this run.
     """
     by_id = {summary["profile"]: summary for summary in summaries}
     baseline = by_id.get(baseline_id)
@@ -506,6 +530,8 @@ def evaluate_gate(
             "rss_mib": rss_mib,
             "size_ratio": size_ratio,
             "wall_ratio": wall_ratio,
+            "size_baseline_bytes": size_baseline_bytes,
+            "wall_baseline_seconds": wall_baseline_seconds,
         },
         "checks": [],
         "passed": False,
@@ -558,7 +584,10 @@ def evaluate_gate(
                 "passed": value is not None and value / 1048576 <= rss_mib,
             })
         size = summary.get("artifact_bytes")
-        base_size = baseline.get("artifact_bytes")
+        base_size = (
+            size_baseline_bytes if size_baseline_bytes is not None
+            else baseline.get("artifact_bytes")
+        )
         size_value = (size / base_size) if size and base_size else None
         gate["checks"].append({
             "profile": profile,
@@ -568,7 +597,10 @@ def evaluate_gate(
             "passed": size_value is not None and size_value <= size_ratio,
         })
         wall = summary.get("wall_seconds")
-        base_wall = baseline.get("wall_seconds")
+        base_wall = (
+            wall_baseline_seconds if wall_baseline_seconds is not None
+            else baseline.get("wall_seconds")
+        )
         wall_value = (wall / base_wall) if wall and base_wall else None
         gate["checks"].append({
             "profile": profile,
@@ -606,6 +638,32 @@ def print_gate(gate: dict) -> None:
         )
 
 
+def apply_overrides(
+    profiles: list[dict],
+    heap: str | None = None,
+    memory: str | None = None,
+    jvm_extra: str | None = None,
+    runtime: str | None = None,
+    binary: str | None = None,
+) -> list[dict]:
+    """Copy profiles and apply sweep overrides without mutating PROFILES."""
+    selected = [dict(profile) for profile in profiles]
+    extra = jvm_extra.split() if jvm_extra else []
+    for profile in selected:
+        if heap and profile["kind"] == "hypergrass":
+            profile["heap"] = heap
+        if memory and profile["kind"] == "hypergrass":
+            profile["memory"] = memory
+        if runtime and profile["kind"] == "hypergrass":
+            profile["runtime"] = runtime
+        if binary and profile["kind"] == "hypergrass":
+            profile["binary"] = binary
+        if extra and profile["kind"] == "hypergrass" \
+                and profile.get("runtime") != "native":
+            profile["jvm"] = [*profile.get("jvm", []), *extra]
+    return selected
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--run-id", default=None)
@@ -614,6 +672,26 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--profiles", default=",".join(p["id"] for p in PROFILES))
     parser.add_argument("--timeout", type=float, default=7200.0)
     parser.add_argument("--memory", default="2g")
+    parser.add_argument(
+        "--heap-override", default=None,
+        help="override -Xmx for selected hypergrass profiles (sweep probe)",
+    )
+    parser.add_argument(
+        "--memory-override", default=None,
+        help="override the container memory cap for selected hypergrass profiles",
+    )
+    parser.add_argument(
+        "--jvm-extra", default=None,
+        help="extra JVM flags for hypergrass profiles, e.g. NativeMemoryTracking",
+    )
+    parser.add_argument(
+        "--runtime-override", choices=("jvm", "native"), default=None,
+        help="run hypergrass profiles on the JVM or a native-image binary",
+    )
+    parser.add_argument(
+        "--binary-override", default=None,
+        help="project-relative native binary for --runtime-override native",
+    )
     parser.add_argument("--runs-dir", default=str(RUNS))
     parser.add_argument(
         "--repeats", type=int, default=3,
@@ -629,6 +707,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--gate-rss-mib", type=float, default=256.0)
     parser.add_argument("--gate-size-ratio", type=float, default=1.02)
+    parser.add_argument("--gate-size-baseline-bytes", type=int, default=None)
+    parser.add_argument("--gate-wall-baseline-seconds", type=float, default=None)
     parser.add_argument("--gate-wall-ratio", type=float, default=2.0)
     args = parser.parse_args(argv)
     if args.repeats < 1:
@@ -640,7 +720,14 @@ def main(argv: list[str] | None = None) -> int:
 
     image = pangenome_run.image_id(PROJECT)
     wanted = set(args.profiles.split(","))
-    base_profiles = [p for p in PROFILES if p["id"] in wanted]
+    base_profiles = apply_overrides(
+        [p for p in PROFILES if p["id"] in wanted],
+        heap=args.heap_override,
+        memory=args.memory_override,
+        jvm_extra=args.jvm_extra,
+        runtime=args.runtime_override,
+        binary=args.binary_override,
+    )
     missing = wanted - {p["id"] for p in base_profiles}
     if missing:
         raise SystemExit(f"unknown profiles: {', '.join(sorted(missing))}")
@@ -696,6 +783,11 @@ def main(argv: list[str] | None = None) -> int:
             "repeats": args.repeats,
             "timeout_seconds": args.timeout,
             "memory_default": args.memory,
+            "heap_override": args.heap_override,
+            "memory_override": args.memory_override,
+            "jvm_extra": args.jvm_extra,
+            "runtime_override": args.runtime_override,
+            "binary_override": args.binary_override,
         },
         "source": str(source.relative_to(PROJECT)),
         "sliced": bool(args.slice_bases),
@@ -718,6 +810,25 @@ def main(argv: list[str] | None = None) -> int:
         "results": [],
         "status": "running",
     }
+    native_binaries = {}
+    for profile in base_profiles:
+        if profile.get("runtime") != "native":
+            continue
+        relative = profile.get("binary")
+        if not relative:
+            raise SystemExit(
+                f"{profile['id']}: --runtime-override native needs "
+                "--binary-override"
+            )
+        binary = (PROJECT / relative).resolve()
+        if not binary.is_file():
+            raise SystemExit(f"missing native binary: {binary}")
+        native_binaries[relative] = {
+            "bytes": binary.stat().st_size,
+            "sha256": pangenome_run.sha256_file(binary),
+        }
+    if native_binaries:
+        report["native_binaries"] = native_binaries
     if "grass" in wanted:
         report["vendor"] = {
             "grass": {
@@ -855,23 +966,44 @@ def main(argv: list[str] | None = None) -> int:
                 op_dir = run_dir / "ops" / profile["id"]
                 artifact = op_dir / "archive.hgs"
                 restored = op_dir / "restored.seq"
-                java = ["java", f"-Xmx{profile.get('heap', '4g')}",
+                if profile.get("runtime") == "native":
+                    relative = profile.get("binary")
+                    if not relative:
+                        raise SystemExit(
+                            f"{profile['id']}: --runtime-override native needs "
+                            "--binary-override"
+                        )
+                    binary = (PROJECT / relative).resolve()
+                    if not binary.is_file():
+                        raise SystemExit(f"missing native binary: {binary}")
+                    command = [
+                        pangenome_run.to_container(PROJECT, binary),
+                        f"-Xmx{profile.get('heap', '4g')}",
+                        *[
+                            flag for flag in profile.get("jvm", [])
+                            if flag.startswith("-D")
+                        ],
+                    ]
+                else:
+                    command = [
+                        "java", f"-Xmx{profile.get('heap', '4g')}",
                         "-XX:ActiveProcessorCount=1", *profile.get("jvm", []),
-                        "-cp", "/work/bin", "hypergrass.HyperGraSS"]
+                        "-cp", "/work/bin", "hypergrass.HyperGraSS",
+                    ]
                 compress = pangenome_run.run_operation(
                     PROJECT, image, run_dir, f"{profile['id']}/compress",
-                    java + ["compress", *profile["options"],
-                            pangenome_run.to_container(PROJECT, run_dir / "input.seq"),
-                            pangenome_run.to_container(PROJECT, artifact)],
+                    command + ["compress", *profile["options"],
+                               pangenome_run.to_container(PROJECT, run_dir / "input.seq"),
+                               pangenome_run.to_container(PROJECT, artifact)],
                     run_dir, args.timeout, memory,
                 )
                 entry.update(compress)
                 if compress["status"] == "success" and artifact.exists():
                     decompress = pangenome_run.run_operation(
                         PROJECT, image, run_dir, f"{profile['id']}/decompress",
-                        java + ["decompress",
-                                pangenome_run.to_container(PROJECT, artifact),
-                                pangenome_run.to_container(PROJECT, restored)],
+                        command + ["decompress",
+                                   pangenome_run.to_container(PROJECT, artifact),
+                                   pangenome_run.to_container(PROJECT, restored)],
                         run_dir, args.timeout, memory,
                     )
                     entry["decompress"] = decompress
@@ -1037,6 +1169,8 @@ def main(argv: list[str] | None = None) -> int:
             args.gate_size_ratio,
             args.gate_wall_ratio,
             candidates=gate_candidates,
+            size_baseline_bytes=args.gate_size_baseline_bytes,
+            wall_baseline_seconds=args.gate_wall_baseline_seconds,
         )
         print_gate(report["gate"])
 
