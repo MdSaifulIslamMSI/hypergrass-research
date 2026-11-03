@@ -57,6 +57,19 @@ public final class CanonicalSyncmerEngine {
     private static final boolean STATS = Boolean.getBoolean("hypergrass.stats");
     /** Diagnostic: measure the global variant matrix (instances vs distinct sites). */
     private static final boolean MATRIX_STATS = Boolean.getBoolean("hypergrass.matrixStats");
+    /**
+     * Diagnostic override for codec ablation: 0 selects the smallest representation
+     * automatically, 1 forces QCRM, 2 forces BC-LZG, 3 forces AC-HMC. It is not part
+     * of the archive format and has no effect unless explicitly requested.
+     */
+    private static final int FORCED_DNA_MODE =
+            Math.max(0, Math.min(3, Integer.getInteger("hypergrass.dnaMode", 0)));
+
+    /** Returns the active diagnostic codec force, or 0 when automatic selection is in effect. */
+    static int forcedDnaMode() {
+        return FORCED_DNA_MODE;
+    }
+
     private static long[] matrixVariants = new long[1 << 20];
     private static int matrixCount;
     private static int matrixBlocks;
@@ -1083,6 +1096,9 @@ public final class CanonicalSyncmerEngine {
         if (targetLen == 0) {
             return new byte[] {0}; // mode 0: empty
         }
+        if (FORCED_DNA_MODE == 1) {
+            return encodeMode1Qcrm(target, targetLen, leanMode);
+        }
         if (bank == null || bank.length < MIN_MATCH_LEN) {
             return encodeMode1Qcrm(target, targetLen, leanMode);
         }
@@ -1090,7 +1106,8 @@ public final class CanonicalSyncmerEngine {
         ParsedAlignment aln = alignTargetToAnchor(
                 target, targetLen, bank.bases, bank.length, bank.primarySeedLen, bank.index, true);
 
-        if (aln.numMatches == 0 || aln.matchedBasesTotal * 5 < targetLen) {
+        if (aln.numMatches == 0
+                || (FORCED_DNA_MODE == 0 && aln.matchedBasesTotal * 5 < targetLen)) {
             return encodeMode1Qcrm(target, targetLen, leanMode);
         }
         if (STATS) {
@@ -1110,6 +1127,9 @@ public final class CanonicalSyncmerEngine {
         // Encode shared prefix (literals + strands) once or compare Mode 2 vs Mode 3
         byte[] encodedLits = encodeResiduals(aln.literals, aln.totalLiterals, leanMode);
         byte[] mode2 = buildMode2Bytes(aln, encodedLits);
+        if (FORCED_DNA_MODE == 2) {
+            return mode2;
+        }
         byte[] best = mode2;
         byte[] bestGapRaw = null;
 
@@ -1120,6 +1140,15 @@ public final class CanonicalSyncmerEngine {
             Mode3Encoding mode3 = buildMode3AcHmcBytes(
                     aln, encodedLits, bank.primarySeedLen, bank.globalDonors, null, regional,
                     histBuf, histLen);
+            if (FORCED_DNA_MODE == 3) {
+                if (mode3 != null) {
+                    if (gapHistory != null && mode3.gapRaw != null) {
+                        gapHistory.append(mode3.gapRaw, mode3.gapRaw.length);
+                    }
+                    return mode3.bytes;
+                }
+                return best;
+            }
             if (mode3 != null && mode3.bytes.length < best.length) {
                 best = mode3.bytes;
                 bestGapRaw = mode3.gapRaw;

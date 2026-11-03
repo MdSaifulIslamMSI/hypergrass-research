@@ -630,7 +630,9 @@ public final class HyperGraSS {
         // substantial cross-record/self deduplication (bank covers > 25% of totalDna), encode the
         // entire genome in one unified QuantumContextRepeatMixer (QCRM) superblock so high-order
         // Markov, Spaced-Seed, Sparse-Hash, and Bidirectional Repeat models never reset at 512 KB boundaries!
-        if (!opts.leanMode && raw.length <= 32 * 1024 * 1024) {
+        if (!opts.leanMode && raw.length <= 32 * 1024 * 1024
+                && CanonicalSyncmerEngine.forcedDnaMode() == 0
+                && !Boolean.getBoolean("hypergrass.noCompact")) {
             if (numBlocks == 1 && chunks[0].getRecordSpans().length <= 1 && chunks[0].dnaLen < 65_536) {
                 FactorizedChunk fullChunk = chunks[0];
                 byte[] singlePayload = encodeChunkPayload(fullChunk, null, false);

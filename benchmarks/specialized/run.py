@@ -193,6 +193,127 @@ PROFILES = (
         "heap": "192m",
         "memory": "256m",
     },
+    # Codec-ablation profiles. These force one payload model at a time so the
+    # four methods can be compared on identical input; the default path still
+    # chooses the smallest representation automatically.
+    {
+        "id": "hypergrass-qcrm",
+        "kind": "hypergrass",
+        "level": "ablation-qcrm",
+        "options": ["--lean"],
+        "jvm": ["-Dhypergrass.dnaMode=1"],
+        "heap": "1g",
+        "memory": "1g",
+    },
+    {
+        "id": "hypergrass-auto",
+        "kind": "hypergrass",
+        "level": "ablation-auto",
+        "options": [
+            "--pangenome", "--single-thread", "--anchor-single-page",
+            "--block-mib", "64", "--anchor-mib", "9",
+        ],
+        "jvm": [
+            "-Dhypergrass.matchMin=104", "-Dhypergrass.rangeModel=count",
+            "-Dhypergrass.noCompact=true",
+        ],
+        "heap": "1536m",
+        "memory": "2g",
+    },
+    {
+        "id": "hypergrass-bclzg",
+        "kind": "hypergrass",
+        "level": "ablation-bclzg",
+        "options": [
+            "--pangenome", "--single-thread", "--anchor-single-page",
+            "--block-mib", "64", "--anchor-mib", "9",
+        ],
+        "jvm": [
+            "-Dhypergrass.matchMin=104", "-Dhypergrass.rangeModel=count",
+            "-Dhypergrass.dnaMode=2",
+        ],
+        "heap": "1536m",
+        "memory": "2g",
+    },
+    {
+        "id": "hypergrass-achmc",
+        "kind": "hypergrass",
+        "level": "ablation-achmc",
+        "options": [
+            "--pangenome", "--single-thread", "--anchor-single-page",
+            "--block-mib", "64", "--anchor-mib", "9",
+        ],
+        "jvm": [
+            "-Dhypergrass.matchMin=104", "-Dhypergrass.rangeModel=count",
+            "-Dhypergrass.dnaMode=3",
+        ],
+        "heap": "1536m",
+        "memory": "2g",
+    },
+    {
+        "id": "hypergrass-anchor-cm",
+        "kind": "hypergrass",
+        "level": "ablation-anchor-cm",
+        "options": [
+            "--pangenome", "--single-thread", "--anchor-cm-pages",
+            "--block-mib", "64", "--anchor-mib", "9",
+        ],
+        "jvm": [
+            "-Dhypergrass.matchMin=104", "-Dhypergrass.rangeModel=count",
+            "-Dhypergrass.noCompact=true",
+        ],
+        "heap": "1536m",
+        "memory": "2g",
+    },
+    {
+        "id": "hypergrass-aux-no-lz",
+        "kind": "hypergrass",
+        "level": "ablation-aux-no-lz",
+        "options": [
+            "--pangenome", "--single-thread", "--anchor-single-page",
+            "--block-mib", "64", "--anchor-mib", "9",
+        ],
+        "jvm": [
+            "-Dhypergrass.matchMin=104", "-Dhypergrass.rangeModel=count",
+            "-Dhypergrass.lzAux=false",
+            "-Dhypergrass.noCompact=true",
+        ],
+        "heap": "1536m",
+        "memory": "2g",
+    },
+    {
+        "id": "hypergrass-aux-no-plane",
+        "kind": "hypergrass",
+        "level": "ablation-aux-no-plane",
+        "options": [
+            "--pangenome", "--single-thread", "--anchor-single-page",
+            "--block-mib", "64", "--anchor-mib", "9",
+        ],
+        "jvm": [
+            "-Dhypergrass.matchMin=104", "-Dhypergrass.rangeModel=count",
+            "-Dhypergrass.planeAux=false",
+            "-Dhypergrass.noCompact=true",
+        ],
+        "heap": "1536m",
+        "memory": "2g",
+    },
+    {
+        "id": "hypergrass-aux-basic",
+        "kind": "hypergrass",
+        "level": "ablation-aux-basic",
+        "options": [
+            "--pangenome", "--single-thread", "--anchor-single-page",
+            "--block-mib", "64", "--anchor-mib", "9",
+        ],
+        "jvm": [
+            "-Dhypergrass.matchMin=104", "-Dhypergrass.rangeModel=count",
+            "-Dhypergrass.planeAux=false", "-Dhypergrass.lzAux=false",
+            "-Dhypergrass.rangeAux=false",
+            "-Dhypergrass.noCompact=true",
+        ],
+        "heap": "1536m",
+        "memory": "2g",
+    },
     {
         "id": "grass",
         "kind": "grass",
