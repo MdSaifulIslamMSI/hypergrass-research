@@ -12,8 +12,9 @@ import unittest
 from unittest import mock
 
 if __package__:
-    from . import process_metrics
+    from . import container_run, process_metrics
 else:
+    import container_run
     import process_metrics
 
 
@@ -355,6 +356,103 @@ class ProcessMetricsTests(unittest.TestCase):
                 self.assertEqual(result["returncode"], 0)
                 self.assertIsNone(result[metric])
                 self.assertIn(function, result[error_key])
+
+
+class EvidenceTests(unittest.TestCase):
+    """Failure classification and cgroup evidence never fabricate a zero."""
+
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory(prefix="evidence-")
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+
+    def test_tail_text_reports_full_size_and_bounded_tail(self):
+        self.assertEqual(process_metrics.tail_text(self.root / "missing"), ("", 0))
+        small = self.root / "small"
+        small.write_bytes(b"hello")
+        self.assertEqual(process_metrics.tail_text(small), ("hello", 5))
+        large = self.root / "large"
+        large.write_bytes(b"a" * 100 + b"tail")
+        self.assertEqual(process_metrics.tail_text(large, max_bytes=4), ("tail", 104))
+        binary = self.root / "binary"
+        binary.write_bytes(b"ok\xff")
+        self.assertEqual(process_metrics.tail_text(binary), ("ok\ufffd", 3))
+
+    def test_classify_exit_requires_evidence_for_oom(self):
+        cases = (
+            (0, "", None, "success"),
+            (1, "", None, "nonzero"),
+            (1, "java.lang.OutOfMemoryError: Java heap space", None, "oom-heap"),
+            (137, "", None, "killed"),
+            (137, "", 0, "killed"),
+            (137, "", 1, "oom-killed"),
+            (1, "", 1, "oom-killed"),
+            (-9, "", None, "killed"),
+            (9, "", None, "killed"),
+            (1, "", 0, "nonzero"),
+            (None, "", None, "nonzero"),
+        )
+        for returncode, stderr, kills, expected in cases:
+            with self.subTest(returncode=returncode, stderr=stderr, kills=kills):
+                self.assertEqual(
+                    process_metrics.classify_exit(returncode, stderr, kills),
+                    expected,
+                )
+
+    def test_failure_messages_name_the_evidence(self):
+        self.assertIn(
+            "OOM kill", container_run.failure_message("oom-killed", -9)
+        )
+        self.assertIn(
+            "OutOfMemoryError", container_run.failure_message("oom-heap", 1)
+        )
+        self.assertIn(
+            "without cgroup OOM evidence",
+            container_run.failure_message("killed", 137),
+        )
+        self.assertIn(
+            "status 7", container_run.failure_message("nonzero", 7)
+        )
+
+    def test_read_cgroup_memory_v2(self):
+        (self.root / "memory.peak").write_text("123456\n", encoding="ascii")
+        (self.root / "memory.events").write_text(
+            "low 0\nhigh 1\nmax 2\noom 3\noom_kill 4\n", encoding="ascii"
+        )
+        self.assertEqual(process_metrics.read_cgroup_memory(self.root), {
+            "cgroup_memory_peak_bytes": 123456,
+            "cgroup_oom_kills": 4,
+            "cgroup_memory_method": "cgroup v2 memory.peak/memory.events",
+        })
+
+    def test_read_cgroup_memory_v2_without_events_keeps_peak(self):
+        (self.root / "memory.peak").write_text("99", encoding="ascii")
+        result = process_metrics.read_cgroup_memory(self.root)
+        self.assertEqual(result["cgroup_memory_peak_bytes"], 99)
+        self.assertIsNone(result["cgroup_oom_kills"])
+        (self.root / "memory.peak").write_text("not a number", encoding="ascii")
+        result = process_metrics.read_cgroup_memory(self.root)
+        self.assertIsNone(result["cgroup_memory_peak_bytes"])
+
+    def test_read_cgroup_memory_v1_reports_peak_but_not_failcnt_as_kills(self):
+        memory = self.root / "memory"
+        memory.mkdir()
+        (memory / "memory.max_usage_in_bytes").write_text("777\n", encoding="ascii")
+        (memory / "memory.failcnt").write_text("12\n", encoding="ascii")
+        result = process_metrics.read_cgroup_memory(self.root)
+        self.assertEqual(result["cgroup_memory_peak_bytes"], 777)
+        self.assertIsNone(result["cgroup_oom_kills"])
+        self.assertIn("v1", result["cgroup_memory_method"])
+
+    def test_read_cgroup_memory_absent_is_unknown(self):
+        empty = self.root / "empty"
+        empty.mkdir()
+        result = process_metrics.read_cgroup_memory(empty)
+        self.assertEqual(result, {
+            "cgroup_memory_peak_bytes": None,
+            "cgroup_oom_kills": None,
+            "cgroup_memory_method": None,
+        })
 
 
 if __name__ == "__main__":

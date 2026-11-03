@@ -1,9 +1,10 @@
 """Run one benchmark operation inside the locked corpus container.
 
-The caller writes a JSON spec and invokes this file with ``python3 -B``. The
-child is spawned directly (never through a shell), its stdout/stderr go to
-disk, and Linux child rusage is recorded after reaping. One wrapper process
-executes exactly one child so ``RUSAGE_CHILDREN`` describes that child alone.
+The caller writes a JSON spec and invokes this file with ``python3 -B``. One
+wrapper process executes exactly one child, so ``wait4`` rusage describes that
+child alone. The wrapper also records the container cgroup's memory high-water
+mark and OOM counter, tails the child's stderr, and classifies failures instead
+of reporting every nonzero exit as a generic error.
 
 Spec keys (all paths are container paths):
     argv              list of arguments, required, nonempty
@@ -17,13 +18,38 @@ Spec keys (all paths are container paths):
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
-import resource
-import subprocess
 import sys
-import time
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from process_metrics import (  # noqa: E402
+    classify_exit,
+    read_cgroup_memory,
+    run_process,
+    tail_text,
+)
+
+
+def write_json(path: Path, value: dict) -> None:
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_text(json.dumps(value, indent=2) + "\n", encoding="utf-8")
+    os.replace(temporary, path)
+
+
+def failure_message(status: str, returncode: int | None) -> str:
+    """Explain a classified failure instead of leaving ``error`` null."""
+    if status == "oom-killed":
+        return f"Container cgroup recorded an OOM kill (exit {returncode})."
+    if status == "oom-heap":
+        return f"JVM reported OutOfMemoryError (exit {returncode})."
+    if status == "killed":
+        return (
+            f"Child was killed (exit {returncode}) without cgroup OOM evidence."
+        )
+    return f"Child exited with status {returncode}."
 
 
 def main(argv: list[str]) -> int:
@@ -35,60 +61,43 @@ def main(argv: list[str]) -> int:
     cwd = Path(spec["cwd"])
     timeout = float(spec["timeout_seconds"])
     metrics_path = Path(spec["metrics_path"])
-    metrics_path.parent.mkdir(parents=True, exist_ok=True)
 
     stdout_log = Path(spec["stdout_log"])
     stderr_log = Path(spec["stderr_log"])
     stdout_artifact = spec.get("stdout_artifact")
-    for path in (stdout_log, stderr_log):
-        path.parent.mkdir(parents=True, exist_ok=True)
+    if stdout_artifact:
+        stdout_path = Path(stdout_artifact)
+        stdout_log.parent.mkdir(parents=True, exist_ok=True)
+        stdout_log.write_bytes(b"")
+    else:
+        stdout_path = stdout_log
 
-    result = {
-        "argv": command,
-        "cwd": str(cwd),
-        "status": "error",
-        "returncode": None,
-        "wall_seconds": 0.0,
-        "cpu_seconds": None,
-        "peak_rss_bytes": None,
-        "error": None,
-    }
-    started = time.perf_counter()
-    try:
-        with stderr_log.open("wb") as stderr:
-            if stdout_artifact:
-                artifact = Path(stdout_artifact)
-                artifact.parent.mkdir(parents=True, exist_ok=True)
-                stdout_stream = artifact.open("wb")
-                stdout_log.write_bytes(b"")
-            else:
-                stdout_stream = stdout_log.open("wb")
-            try:
-                completed = subprocess.run(
-                    command,
-                    cwd=cwd,
-                    stdin=subprocess.DEVNULL,
-                    stdout=stdout_stream,
-                    stderr=stderr,
-                    timeout=timeout,
-                )
-                result["returncode"] = completed.returncode
-                result["status"] = "success" if completed.returncode == 0 else "nonzero"
-            finally:
-                stdout_stream.close()
-    except subprocess.TimeoutExpired:
-        result["status"] = "timeout"
-        result["error"] = f"exceeded {timeout:g}s"
-    except OSError as error:
-        result["error"] = str(error)
-    finally:
-        result["wall_seconds"] = time.perf_counter() - started
-        usage = resource.getrusage(resource.RUSAGE_CHILDREN)
-        result["cpu_seconds"] = usage.ru_utime + usage.ru_stime
-        # Linux reports ru_maxrss in KiB.
-        result["peak_rss_bytes"] = int(usage.ru_maxrss) * 1024
+    started = datetime.now(timezone.utc).isoformat()
+    result = run_process(command, cwd, stdout_path, stderr_log, timeout)
+    result["argv"] = command
+    result["cwd"] = str(cwd)
+    result["started_utc"] = started
+    result["finished_utc"] = datetime.now(timezone.utc).isoformat()
 
-    metrics_path.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+    stderr_tail, stderr_bytes = tail_text(stderr_log)
+    result["stderr_tail"] = stderr_tail
+    result["stderr_bytes"] = stderr_bytes
+    result.update(read_cgroup_memory())
+
+    if result["status"] == "error" and result.get("returncode") is not None:
+        result["status"] = classify_exit(
+            result["returncode"],
+            stderr_tail,
+            result.get("cgroup_oom_kills"),
+        )
+    if (
+        result["status"] != "success"
+        and not result.get("error")
+        and result.get("returncode") is not None
+    ):
+        result["error"] = failure_message(result["status"], result["returncode"])
+
+    write_json(metrics_path, result)
     print(json.dumps(result, sort_keys=True))
     return 0 if result["status"] == "success" else 1
 

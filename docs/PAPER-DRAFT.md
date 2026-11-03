@@ -1,4 +1,4 @@
-# HyperGraSS: Lossless Genomic and Pangenomic Compression with Canonical Syncmers and Context Mixing
+# HyperGraSS: Lossless Genomic and Pangenomic Compression with a Stride-Sampled 16-mer Seed Index and Context Mixing
 
 **Working paper draft — not peer reviewed.** This document describes the
 implementation and the measurement protocol. Numeric results are in
@@ -7,9 +7,9 @@ repository; they are not repeated as independent claims here.
 
 ## Abstract
 
-HyperGraSS is a pure-Java 21 lossless compressor for FASTA, multi-FASTA, raw
+HyperGraSS is a pure-Java 27 lossless compressor for FASTA, multi-FASTA, raw
 DNA, and RNA sequence data. It factorizes input into six orthogonal channels,
-encodes the DNA stream with a canonical syncmer referential model and an
+encodes the DNA stream with a stride-sampled 16-mer referential model and an
 integer-only context-mixing range coder, and stores a page-indexed footer that
 supports record and subsequence queries without decompressing the whole
 archive. A bounded-memory streaming mode is intended for inputs larger than the
@@ -48,7 +48,7 @@ without expanding the entire cohort.
 HyperGraSS addresses these requirements with four mechanisms:
 
 1. a six-channel factorization that separates DNA from metadata;
-2. a canonical syncmer anchor bank that aligns records in both orientations
+2. a stride-sampled 16-mer anchor bank that aligns records in both orientations
    and stores substitutions by anchor coordinate;
 3. an integer-only context-mixing coder for residual and non-referential
    sequence; and
@@ -78,17 +78,20 @@ Channels 1–5 are serialized with a raw/Deflate adaptive wrapper. The decoder
 replays them in order, so headers, wrapping, case, and exceptions are restored
 exactly. The format is specified in [`HGS-FORMAT.md`](HGS-FORMAT.md).
 
-### 2.2 Canonical syncmer anchor bank
+### 2.2 Stride-sampled 16-mer anchor bank
 
-`CanonicalSyncmerEngine` selects canonical 16-mers on both strands, builds a
-bounded anchor bank (default at most 4 Mbp), and partitions the bank into
+`CanonicalSyncmerEngine` indexes every 16-mer at a fixed stride (default 4) on
+both strands, storing the forward and reverse-complement orientations with a
+strand bit. The stride guarantees that any exact island of at least
+`16 + stride - 1` bases contains an indexed seed (19 bp at the default). It
+builds a bounded anchor bank (default at most 4 Mbp), and partitions the bank into
 65,536-base pages. A target block is aligned to the bank; matches, strands,
 literal runs, and SNPs are encoded as geometry plus residuals. The anchor bank
 is stored once per archive and can be shared by all blocks. Global donor
 catalogs let a block reuse variants observed in other clades.
 
 The encoder chooses among four DNA payload modes: empty, pure context-mixer,
-syncmer matches with SNP residuals, and anchor-coordinate haplotype matrices.
+seed matches with SNP residuals, and anchor-coordinate haplotype matrices.
 It falls back to the pure context mixer when referential coverage is low, and
 otherwise compares the serialized mode 2 and mode 3 payloads rather than
 choosing by a label.
@@ -123,12 +126,18 @@ released. The bounded encoder packs the four consensus counters per anchor
 position into 4 bits and carries a 256 KiB gap history across block boundaries
 (aux mode 7), which lets it run at a 160 MiB heap. On the 120.1 Mbp pangenome
 with 16 MiB blocks it produces 3,997,232 bytes, 4.90% above the 64 MiB-block
-profile, and peaks at 252.7 MiB compressing (a 3.3 MiB margin) and 221.2 MiB
-restoring, so it meets the 256 MiB RSS and 2x speed gates but misses the 2%
-size gate by 110,615 bytes. The 4-bit counters saturate at 15 votes, which costs 2,218
-bytes against exact 8-bit counts; the unbounded path keeps the exact form.
-32 MiB blocks at a 224 MiB heap complete but peak at 272 MiB RSS, and 64 MiB
-blocks exhaust a 192 MiB heap before the first block completes. The anchor
+profile. Its first run peaked at 252.7 MiB compressing and 221.2 MiB restoring
+and appeared to meet the 256 MiB RSS gate. That pass did not survive repetition:
+in the final three-repeat run every stride-4 attempt was OOM-killed at the
+256 MiB cgroup cap (cgroup `oom_kill=1` each; wrapper RSS 269.3–269.4 MiB). It
+therefore misses the RSS gate as well as the 2% size gate (110,615 bytes over).
+The 4-bit counters saturate at 15 votes, which costs 2,218 bytes against exact
+8-bit counts; the unbounded path keeps the exact form. Stride 8 at 16 MiB blocks
+reduces the archive to 3,965,049 bytes, remains 1.76% larger than JARVIS3, and
+is OOM-killed 3/3 by the same hard cap (269.3–269.4 MiB). Stride 8 at 32 MiB
+blocks reaches 3,824,166 bytes (1.85% below JARVIS3) but needs 339.1 / 302.7 MiB
+when allowed to run, and is OOM-killed 3/3 at 332.7–332.9 MiB under a strict
+320 MiB cap, so it is not a 256 MiB mode either. The anchor
 header has a separate speed trade: on the 40.5 MB test, one context-mixing
 anchor page takes 11.70 s, 64 KiB context-mixing pages (`--anchor-cm-pages`)
 take 8.85 s for +0.46% archive, and 2-bit pages take 6.85 s for +2.33%.
@@ -136,7 +145,7 @@ Parallel context-mixing pages were slower because each page allocates its own
 model, so that mode stays serial. At the 160 MiB bounded heap on a 120.1 Mbp
 input, the paged mode cut compress wall from 144-158 s to 112-123 s and
 decompress wall from 66-71 s to 40-53 s for +0.49% archive, with the same
-272 MiB peak RSS in both modes.
+272 MiB peak RSS in both modes (over the 256 MiB cap).
 
 The bound is set by anchor saturation, not input size. The bank costs about
 1 byte per base and its seed index 7.1 bytes per base (`SEED_STEP=4`, both
@@ -323,11 +332,17 @@ compression time and memory: 887.3 s versus 95.4 s and 999 MiB versus 286 MiB.
 The scale result therefore shows a narrow size win over a specialized DNA
 compressor at this scale, paid for with 9.3x the compression time, not the
 earlier 20.3% deficit. On the *E. coli* anchor, the 256 MiB bounded variant
-meets the memory and speed gates: 16 MiB blocks, a 160 MiB heap, packed 4-bit
-vote counters, and a 256 KiB cross-block gap history produce 3,997,232 bytes
-(+4.90%) at 252.7 MiB compress RSS and 221.2 MiB restore RSS. It still misses
-the 2% size gate by 110,615 bytes; 32 MiB blocks reach 272 MiB RSS and 64 MiB
-blocks exhaust the heap, so 16 MiB is the largest block the RSS cap allows.
+does **not** meet the memory gate once measured repeatedly: 16 MiB blocks, a
+160 MiB heap, packed 4-bit vote counters, and a 256 KiB cross-block gap history
+produce 3,997,232 bytes (+4.90%), but all three repeats were OOM-killed at the
+256 MiB cgroup cap (wrapper RSS 269.3–269.4 MiB). The earlier 252.7 MiB single
+sample had swap headroom and is not a gate pass. It also misses the 2% size gate
+by 110,615 bytes. Stride 8 at 16 MiB blocks gives 3,965,049 bytes and was also
+OOM-killed 3/3 at 269.3–269.4 MiB; 32 MiB blocks reach 3,824,166 bytes (1.85%
+below JARVIS3) but need 339.1 / 302.7 MiB when allowed to run and were
+OOM-killed 3/3 under a strict 320 MiB cap at 332.7–332.9 MiB. No bounded profile
+completes in a strict no-swap 256 MiB container, so there is no ≤256 MiB
+configuration that beats JARVIS3.
 
 The published GraSS pipeline, the ancestor of HyperGraSS, was also run
 unmodified on the identical sequence. It produced 24,777,592 bytes (1.650

@@ -35,6 +35,99 @@ import time
 
 
 _CLEANUP_SECONDS = 2.0
+_CGROUP_ROOT = Path("/sys/fs/cgroup")
+
+
+def tail_text(path: Path, max_bytes: int = 4096) -> tuple[str, int]:
+    """Return the last ``max_bytes`` of a file decoded with replacement.
+
+    The byte count is the full file size, not the returned tail size.
+    Missing files return an empty tail and a zero size.
+    """
+    try:
+        with Path(path).open("rb") as stream:
+            stream.seek(0, 2)
+            size = stream.tell()
+            stream.seek(max(0, size - max_bytes))
+            payload = stream.read()
+    except OSError:
+        return "", 0
+    return payload.decode("utf-8", "replace"), size
+
+
+def classify_exit(
+    returncode: int | None,
+    stderr_text: str = "",
+    cgroup_oom_kills: int | None = None,
+) -> str:
+    """Classify a failed child without guessing from the exit code alone.
+
+    ``oom-heap`` requires the JVM's own message, so a normal nonzero exit cannot
+    be mislabelled. ``oom-killed`` requires the kernel's cgroup counter; a raw
+    SIGKILL or exit 137 without that evidence is reported as ``killed``.
+    """
+    if returncode == 0:
+        return "success"
+    if stderr_text and "OutOfMemoryError" in stderr_text:
+        return "oom-heap"
+    if cgroup_oom_kills is not None and cgroup_oom_kills > 0:
+        return "oom-killed"
+    if returncode in (-9, 9, 137):
+        return "killed"
+    return "nonzero"
+
+
+def read_cgroup_memory(root: Path | None = None) -> dict:
+    """Read the container's cgroup memory high-water mark and OOM count.
+
+    cgroup v2 exposes ``memory.peak`` and ``memory.events``; cgroup v1 exposes
+    ``memory.max_usage_in_bytes`` and ``memory.failcnt`` under ``memory/``.
+    A host or an unreadable cgroup yields explicit nulls, never zeroes.
+    """
+    base = Path(root) if root is not None else _CGROUP_ROOT
+    result = {
+        "cgroup_memory_peak_bytes": None,
+        "cgroup_oom_kills": None,
+        "cgroup_memory_method": None,
+    }
+    peak_path = base / "memory.peak"
+    if peak_path.exists():
+        try:
+            peak = int(peak_path.read_text(encoding="ascii").strip())
+        except (OSError, ValueError):
+            peak = None
+        kills = None
+        events_path = base / "memory.events"
+        try:
+            for line in events_path.read_text(encoding="ascii").splitlines():
+                fields = line.split()
+                if len(fields) == 2 and fields[0] == "oom_kill":
+                    kills = int(fields[1])
+                    break
+        except (OSError, ValueError):
+            pass
+        result.update(
+            cgroup_memory_peak_bytes=peak,
+            cgroup_oom_kills=kills,
+            cgroup_memory_method="cgroup v2 memory.peak/memory.events",
+        )
+        return result
+
+    v1 = base / "memory"
+    peak_path = v1 / "memory.max_usage_in_bytes"
+    if peak_path.exists():
+        try:
+            peak = int(peak_path.read_text(encoding="ascii").strip())
+        except (OSError, ValueError):
+            peak = None
+        # v1's failcnt counts limit hits, not OOM kills, so it is not used as
+        # kill evidence. Report the peak and leave the kill count unknown.
+        result.update(
+            cgroup_memory_peak_bytes=peak,
+            cgroup_oom_kills=None,
+            cgroup_memory_method="cgroup v1 memory.max_usage_in_bytes",
+        )
+    return result
 
 
 def run_process(

@@ -145,10 +145,15 @@ It exceeds 256 MiB peak RSS on four of the six that complete. The six new
 collections are tabulated below; the *E. coli* anchor is the seventh and is
 reported in [`SPECIALIZED.md`](SPECIALIZED.md).
 The absolute overhead is roughly constant at +22 kB to +251 kB, so the
-percentage penalty is worst where the unbounded archive is smallest. Only
-*E. coli* (252.7 MiB) and *C. trachomatis* (205 MiB) stay under the memory cap,
-and both still miss the size gate. Archive sizes and round trips are stable
-across sessions, so this is a systemic result, not host noise.
+percentage penalty is worst where the unbounded archive is smallest. These
+bounded rows are single observations. Only *E. coli* (252.7 MiB) and
+*C. trachomatis* (205 MiB) appeared under the memory cap, and both still miss
+the size gate. The final three-repeat *E. coli* run OOM-killed every bounded
+attempt at the 256 MiB cap (269.3–269.4 MiB wrapper RSS), so that apparent pass
+is withdrawn; *C. trachomatis* remains a single sample, not a repeated gate
+pass. Archive sizes and round trips are stable across sessions; the RSS
+verdicts are not, which is why the specialized harness now gates on the worst
+of interleaved repeats.
 
 | Run | HGS archive | Bounded archive | Δ bytes | Growth | Bounded peak RSS | Wall ratio | Verdict |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | :---: |

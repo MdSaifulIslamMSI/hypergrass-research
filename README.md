@@ -1,6 +1,6 @@
 # HyperGraSS
 
-**Next-Generation Lossless Genomic & Pangenomic Sequence Compression Engine (Pure Java 21, Zero External Dependencies)**
+**Next-Generation Lossless Genomic & Pangenomic Sequence Compression Engine (Pure Java 27, Zero External Dependencies)**
 
 HyperGraSS extends the **GraSS** pipeline (*Roy, Maity & Mukhopadhyay, Briefings in Functional Genomics, 2025, `elae050`*) by replacing ad-hoc ternary prefix/digram substitution and monolithic `libbsc` shells with a unified architecture grounded in biological sequence symmetry, information theory, and self-indexed pangenomic graph structures:
 
@@ -42,6 +42,7 @@ hypergrass/
 ├── docs/HGS-FORMAT.md                # Byte-level `.hgs` version-1 container specification
 ├── docs/BENCHMARKS.md                # Measured corpus and scale results (generated from JSON)
 ├── docs/ABLATION.md                  # Anchor-bank/block-size ablation results
+├── docs/FOUNDATIONS.md               # Invariant/mechanism/evidence/falsification and knob policy
 ├── docs/END-TO-END.md                # Query-heavy end-to-end workload results
 └── README.md
 ```
@@ -64,14 +65,14 @@ java -cp bin hypergrass.HyperGraSS --version
 java -cp bin hypergrass.HyperGraSS --version
 ```
 
-The build uses only `javac` and JDK 21. `pom.xml` is an optional Maven packaging
+The build uses only `javac` and JDK 27. `pom.xml` is an optional Maven packaging
 path; CI uses the scripts. The test gate runs the lossless edge-case,
 donor-index, anchor-codec, byte-accounting, and donor-cost suites. It does not
 run cross-version tests that require a saved prior build.
 
 ---
 
-## Quick Start (JDK 21+)
+## Quick Start (JDK 27+)
 
 ### 1. Compile
 
@@ -250,7 +251,9 @@ Measured headlines, stated without rounding up:
 | Same 120.1 Mbp sequence, JARVIS3 l7 | 3,896,361 B, 0.260 bits/base, 95.4 s, 286 MiB peak RSS |
 | Same sequence, GraSS (public implementation, `-e2`) | 24,777,592 B, 1.650 bits/base, 4.85x, 224.5 s, 1,255 MiB compress RSS |
 | Same sequence, bounded 256 MiB attempt | 4,131,860 B, 272.5 MiB, 149.5 s; missed size and RSS gates |
-| Same sequence, bounded 256 MiB tuned | 3,997,232 B, 252.7 MiB, 149.5 s; misses only the 2% size gate (+4.90%) |
+| Same sequence, bounded tuned (stride 4, 16 MiB blocks) | 3,997,232 B, 57.1 s; OOM-killed 3/3 at the 256 MiB cap (269.4 MiB wrapper RSS); misses size and RSS gates (+4.90%) |
+| Same sequence, bounded stride 8 (16 MiB blocks) | 3,965,049 B, 51.2 s; OOM-killed 3/3 (269.4 MiB); 1.76% larger than JARVIS3, misses both gates |
+| Same sequence, bounded stride 8 (32 MiB blocks) | **3,824,166 B, 1.85% below JARVIS3**, 47.6 s; needs 339.1 / 302.7 MiB, OOM-killed 3/3 under a 320 MiB cap |
 | 121.8 MB pangenome, `--lean` (`-Xmx8m`) | 28,910,764 B, 4.21x, 52 MiB peak RSS |
 | Verification | every round trip byte-exact; 3/3 record queries exact per HyperGraSS profile |
 
@@ -264,10 +267,19 @@ in those runs and answered exact record queries. xz decompressed faster on the
 original pangenome; restore time was mixed on the independent sets. The profile
 remains opt-in: nine pangenomes from five phyla, one host, and one run each are
 a sample rather than a guarantee for every input. The bounded-memory mode is not
-a general 256 MiB mode. On the *E. coli* anchor it peaks at 252.7 MiB
-compressing and 221.2 MiB restoring but gives back 4.90% in size. Across the
-six cross-taxon collections it misses the 2% size gate on all six, exceeds
-256 MiB RSS on four, and runs out of heap on *P. aeruginosa*.
+a general 256 MiB mode. On the *E. coli* anchor its first single run peaked at
+252.7 MiB compressing and 221.2 MiB restoring, but that pass had swap headroom.
+The final three-repeat run OOM-killed every bounded attempt at the cgroup cap:
+stride 4 and stride 8 with 16 MiB blocks died at 256 MiB (269.3–269.4 MiB
+wrapper RSS). It also gives back 4.90% in size. Stride 8 at 16 MiB blocks
+recovers 0.80% but remains 1.76% larger than JARVIS3 and is OOM-killed 3/3. The
+only profile that beats JARVIS3 (3,824,166 B, 1.85% below) uses 32 MiB blocks,
+needs 339.1 / 302.7 MiB when allowed to run, and is OOM-killed 3/3 under a
+320 MiB cap. No bounded profile completes in a strict no-swap 256 MiB container,
+so there is no ≤256 MiB mode that beats JARVIS3. Across the six cross-taxon
+collections the bounded mode misses the
+2% size gate on all six, exceeds 256 MiB RSS on four, and runs out of heap on
+*P. aeruginosa*.
 
 **The margin over the best specialized tool is real but narrow.** On the
 identical 120.1 Mbp sequence, the tuned HyperGraSS archive is **2.21% smaller

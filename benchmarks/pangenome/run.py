@@ -16,20 +16,24 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import contextlib
 from datetime import datetime, timezone
 import hashlib
 import json
 import os
 from pathlib import Path
+import platform
 import subprocess
 import sys
+import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "corpus"))
 from process_metrics import run_process  # noqa: E402
 
-IMAGE_TAG = "hypergrass-corpus:locked"
-SCHEMA_VERSION = 1
+IMAGE_TAG = "hypergrass-corpus:jdk27"
+SCHEMA_VERSION = 2
 READ_CHUNK = 1024 * 1024
+LOCK_NAME = ".harness-container.lock"
 
 PROFILES = (
     {"id": "hypergrass", "kind": "hgs", "heap": "1g", "options": []},
@@ -58,6 +62,92 @@ def to_container(project: Path, path: Path) -> str:
     return "/work/" + path.resolve().relative_to(project.resolve()).as_posix()
 
 
+def _capture(argv: list[str], cwd: Path) -> str | None:
+    try:
+        completed = subprocess.run(
+            argv, cwd=cwd, capture_output=True, text=True, timeout=30,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if completed.returncode != 0:
+        return None
+    return completed.stdout.strip()
+
+
+def provenance(project: Path) -> dict:
+    """Record the code, tool, and host state that produced a report."""
+    status = _capture(["git", "status", "--porcelain"], project)
+    return {
+        "git_commit": _capture(["git", "rev-parse", "HEAD"], project),
+        "git_dirty": bool(status) if status is not None else None,
+        "git_status": (status or "")[:4000],
+        "docker_version": _capture(
+            ["docker", "version", "--format", "{{.Server.Version}}"], project,
+        ),
+        "python": sys.version.split()[0],
+        "platform": platform.platform(),
+    }
+
+
+@contextlib.contextmanager
+def container_lock(project: Path, timeout_seconds: float = 900.0):
+    """Hold a cross-process lock for the duration of one container operation.
+
+    The lock is advisory and released by the operating system if the harness
+    dies, so it cannot become a permanent stale lock. Its purpose is to enforce
+    the one-HyperGraSS-container-at-a-time rule across concurrent harnesses.
+    """
+    path = project / LOCK_NAME
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.touch(exist_ok=True)
+    handle = path.open("r+b")
+    try:
+        if path.stat().st_size == 0:
+            handle.write(b"0")
+            handle.flush()
+        handle.seek(0)
+        deadline = time.monotonic() + timeout_seconds
+        while True:
+            try:
+                if os.name == "nt":
+                    import msvcrt
+
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+                else:
+                    import fcntl
+
+                    fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except OSError:
+                if time.monotonic() >= deadline:
+                    raise TimeoutError(
+                        f"another container operation holds {path}"
+                    ) from None
+                time.sleep(0.5)
+        try:
+            yield
+        finally:
+            if os.name == "nt":
+                import msvcrt
+
+                handle.seek(0)
+                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                import fcntl
+
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+    finally:
+        handle.close()
+
+
+def _container_name(run_dir: Path, name: str) -> str:
+    raw = f"hgs-{run_dir.name}-{name}-{os.getpid()}".lower()
+    clean = "".join(
+        char if (char.isalnum() or char in "-_.") else "-" for char in raw
+    )
+    return clean[:63]
+
+
 def image_id(project: Path) -> str:
     lock = json.loads((project / "benchmarks/corpus/image.lock.json").read_text(encoding="utf-8"))
     value = lock.get("image_id", "")
@@ -66,10 +156,17 @@ def image_id(project: Path) -> str:
     return value
 
 
-def docker_prefix(project: Path, image: str, memory: str) -> list[str]:
-    return [
+def docker_prefix(
+    project: Path, image: str, memory: str, name: str | None = None,
+) -> list[str]:
+    flags = [
         "docker", "run", "--rm", "--pull=never", "--platform", "linux/amd64",
-        "--network=none", "--cpus", "2", "--memory", memory,
+        "--network=none", "--cpus", "2",
+        "--memory", memory, "--memory-swap", memory,
+    ]
+    if name:
+        flags += ["--name", name]
+    return flags + [
         "--mount", f"type=bind,source={project},target=/work",
         "--workdir", "/work", "--entrypoint", "python3", image,
         "-B", "/work/benchmarks/corpus/container_run.py",
@@ -101,25 +198,57 @@ def run_operation(
         spec["stdout_artifact"] = to_container(project, stdout_artifact)
     spec_path = op_dir / "spec.json"
     write_json(spec_path, spec)
-    docker = docker_prefix(project, image, memory) + [to_container(project, spec_path)]
-    host = run_process(
-        docker,
-        cwd=project,
-        stdout_path=op_dir / "docker.stdout.log",
-        stderr_path=op_dir / "docker.stderr.log",
-        timeout_seconds=timeout + 120.0,
-    )
+    container = _container_name(run_dir, name)
+    docker = docker_prefix(
+        project, image, memory, container,
+    ) + [to_container(project, spec_path)]
+    with container_lock(project):
+        try:
+            host = run_process(
+                docker,
+                cwd=project,
+                stdout_path=op_dir / "docker.stdout.log",
+                stderr_path=op_dir / "docker.stderr.log",
+                timeout_seconds=timeout + 120.0,
+            )
+        finally:
+            # --rm covers a normal exit; this covers a harness timeout, a killed
+            # Docker client, or any path that leaves the container behind.
+            try:
+                subprocess.run(
+                    ["docker", "rm", "-f", container],
+                    capture_output=True, text=True, timeout=60,
+                )
+            except (OSError, subprocess.TimeoutExpired):
+                pass
     metrics_path = op_dir / "metrics.json"
     metrics = json.loads(metrics_path.read_text(encoding="utf-8")) if metrics_path.exists() else None
     if metrics is None:
-        return {"status": "error", "error": host.get("error") or "no metrics"}
+        return {
+            "status": host.get("status") or "error",
+            "returncode": host.get("returncode"),
+            "wall_seconds": host.get("wall_seconds"),
+            "cpu_seconds": host.get("cpu_seconds"),
+            "peak_rss_bytes": host.get("peak_rss_bytes"),
+            "error": host.get("error") or "no metrics",
+            "container_name": container,
+            "memory_limit": memory,
+        }
     return {
         "status": metrics["status"],
         "returncode": metrics["returncode"],
         "wall_seconds": metrics["wall_seconds"],
         "cpu_seconds": metrics["cpu_seconds"],
         "peak_rss_bytes": metrics["peak_rss_bytes"],
+        "memory_method": metrics.get("memory_method"),
+        "cgroup_memory_peak_bytes": metrics.get("cgroup_memory_peak_bytes"),
+        "cgroup_oom_kills": metrics.get("cgroup_oom_kills"),
+        "cgroup_memory_method": metrics.get("cgroup_memory_method"),
         "error": metrics.get("error"),
+        "stderr_tail": metrics.get("stderr_tail"),
+        "stderr_bytes": metrics.get("stderr_bytes"),
+        "container_name": container,
+        "memory_limit": memory,
     }
 
 
@@ -328,6 +457,8 @@ def main(argv: list[str] | None = None) -> int:
         "run_id": run_id,
         "started_utc": datetime.now(timezone.utc).isoformat(),
         "image_id": image,
+        "image_tag": IMAGE_TAG,
+        "provenance": provenance(project),
         "manifest": manifest,
         "fasta": str(fasta.relative_to(project)),
         "profiles": [p["id"] for p in profiles],

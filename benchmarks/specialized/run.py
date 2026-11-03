@@ -29,6 +29,7 @@ import importlib.util
 import json
 from pathlib import Path
 import shutil
+import statistics
 import subprocess
 import sys
 
@@ -110,6 +111,70 @@ PROFILES = (
         ],
         "heap": "160m",
         "memory": "256m",
+    },
+    {
+        "id": "hypergrass-bounded-256m-stride8",
+        "kind": "hypergrass",
+        "level": "bounded-256m-stride8",
+        "options": [
+            "--pangenome", "--bounded", "--single-thread", "--anchor-single-page",
+            "--seed-step", "8", "--block-mib", "16", "--anchor-mib", "9",
+        ],
+        "jvm": [
+            "-Dhypergrass.matchMin=104", "-Dhypergrass.rangeModel=count",
+            "-XX:+UseSerialGC", "-XX:ReservedCodeCacheSize=32m",
+            "-XX:MaxMetaspaceSize=64m", "-XX:CICompilerCount=2", "-Xss512k",
+        ],
+        "heap": "160m",
+        "memory": "256m",
+    },
+    {
+        "id": "hypergrass-bounded-144m-stride8",
+        "kind": "hypergrass",
+        "level": "bounded-144m-stride8",
+        "options": [
+            "--pangenome", "--bounded", "--single-thread", "--anchor-single-page",
+            "--seed-step", "8", "--block-mib", "16", "--anchor-mib", "9",
+        ],
+        "jvm": [
+            "-Dhypergrass.matchMin=104", "-Dhypergrass.rangeModel=count",
+            "-XX:+UseSerialGC", "-XX:ReservedCodeCacheSize=32m",
+            "-XX:MaxMetaspaceSize=64m", "-XX:CICompilerCount=2", "-Xss512k",
+        ],
+        "heap": "144m",
+        "memory": "256m",
+    },
+    {
+        "id": "hypergrass-bounded-wide",
+        "kind": "hypergrass",
+        "level": "bounded-wide",
+        "options": [
+            "--pangenome", "--bounded", "--single-thread", "--anchor-single-page",
+            "--seed-step", "8", "--block-mib", "32", "--anchor-mib", "9",
+        ],
+        "jvm": [
+            "-Dhypergrass.matchMin=104", "-Dhypergrass.rangeModel=count",
+            "-XX:+UseSerialGC", "-XX:ReservedCodeCacheSize=32m",
+            "-XX:MaxMetaspaceSize=64m", "-XX:CICompilerCount=2", "-Xss512k",
+        ],
+        "heap": "256m",
+        "memory": "320m",
+    },
+    {
+        "id": "hypergrass-bounded-wide-cm",
+        "kind": "hypergrass",
+        "level": "bounded-wide-cm",
+        "options": [
+            "--pangenome", "--bounded", "--single-thread", "--anchor-cm-pages",
+            "--seed-step", "8", "--block-mib", "32", "--anchor-mib", "9",
+        ],
+        "jvm": [
+            "-Dhypergrass.matchMin=104", "-Dhypergrass.rangeModel=count",
+            "-XX:+UseSerialGC", "-XX:ReservedCodeCacheSize=32m",
+            "-XX:MaxMetaspaceSize=64m", "-XX:CICompilerCount=2", "-Xss512k",
+        ],
+        "heap": "256m",
+        "memory": "320m",
     },
     {
         "id": "grass",
@@ -232,6 +297,315 @@ def parse_input(path: Path) -> tuple[int, int]:
     return records, bases
 
 
+def _median(values: list[float]) -> float | None:
+    usable = [value for value in values if value is not None]
+    return statistics.median(usable) if usable else None
+
+
+def roundtrip_failure(entry: dict) -> str:
+    """Explain why a successful compression did not restore its input."""
+    decompress = entry.get("decompress") or {}
+    verdict = (entry.get("verification") or {}).get("verdict")
+    if decompress.get("status") not in (None, "success"):
+        return (
+            decompress.get("error")
+            or f"restore failed with status {decompress['status']}"
+        )
+    if verdict and verdict != "pass":
+        problems = (entry.get("verification") or {}).get("problems") or []
+        return "independent verification failed: " + (
+            "; ".join(str(problem) for problem in problems)
+            if problems else "no problems recorded"
+        )
+    if not entry.get("decompress"):
+        return "restore was not attempted"
+    return "restore did not reproduce the input"
+
+
+def summarize_profile(profile: dict, observations: list[dict], expected: int) -> dict:
+    """Collapse repeated observations into one auditable profile summary.
+
+    Size must be identical across repeats; otherwise the archive is not a
+    deterministic function of the input. Wall time uses the median, while RSS
+    uses the worst case, which is the value a memory gate must respect.
+    """
+    summary = {
+        "profile": profile["id"],
+        "kind": profile["kind"],
+        "level": profile["level"],
+        "config": {
+            key: profile[key]
+            for key in ("options", "jvm", "heap", "memory")
+            if key in profile
+        },
+        "planned_observations": expected,
+        "status": "failed",
+        "roundtrip_ok": False,
+        "deterministic": False,
+        "artifact_bytes": None,
+        "artifact_sha256": None,
+        "bits_per_base": None,
+        "wall_seconds": None,
+        "wall_seconds_min": None,
+        "wall_seconds_max": None,
+        "cpu_seconds": None,
+        "peak_rss_bytes": None,
+        "peak_rss_median_bytes": None,
+        "cgroup_memory_peak_bytes": None,
+        "cgroup_oom_kills": None,
+        "decompress": None,
+        "error": None,
+        "observations": observations,
+    }
+    if observations:
+        summary["input_bytes"] = observations[0].get("input_bytes")
+        summary["input_sha256"] = observations[0].get("input_sha256")
+        summary["input_bases"] = observations[0].get("input_bases")
+    ok = [
+        entry for entry in observations
+        if entry.get("status") == "success" and entry.get("roundtrip_ok")
+    ]
+    if not ok:
+        summary["error"] = next(
+            (entry.get("error") for entry in observations if entry.get("error")),
+            "no successful observation",
+        )
+        summary["attempts"] = len(observations)
+        summary["failed_observations"] = sum(
+            1 for entry in observations
+            if entry.get("status") != "success" or not entry.get("roundtrip_ok")
+        )
+        attempt_walls = [entry.get("wall_seconds") for entry in observations]
+        usable_walls = [value for value in attempt_walls if value is not None]
+        summary["attempt_wall_seconds_median"] = _median(attempt_walls)
+        summary["attempt_wall_seconds_max"] = (
+            max(usable_walls) if usable_walls else None
+        )
+        attempt_rss = [entry.get("peak_rss_bytes") for entry in observations]
+        usable_rss = [value for value in attempt_rss if value is not None]
+        summary["attempt_peak_rss_bytes"] = (
+            max(usable_rss) if usable_rss else None
+        )
+        cgroup_peaks = [
+            entry["cgroup_memory_peak_bytes"] for entry in observations
+            if entry.get("cgroup_memory_peak_bytes") is not None
+        ]
+        oom_kills = [
+            entry["cgroup_oom_kills"] for entry in observations
+            if entry.get("cgroup_oom_kills") is not None
+        ]
+        summary["cgroup_memory_peak_bytes"] = (
+            max(cgroup_peaks) if cgroup_peaks else None
+        )
+        summary["cgroup_oom_kills"] = max(oom_kills) if oom_kills else None
+        summary["oom_killed_observations"] = sum(
+            1 for entry in observations
+            if (entry.get("cgroup_oom_kills") or 0) > 0
+        )
+        return summary
+
+    sizes = {
+        entry["artifact_bytes"] for entry in ok
+        if entry.get("artifact_bytes") is not None
+    }
+    shas = {
+        (entry.get("verification") or {}).get("archive_sha256") for entry in ok
+    }
+    shas.discard(None)
+    summary["deterministic"] = len(sizes) == 1 and len(shas) <= 1
+    summary["roundtrip_ok"] = len(ok) == len(observations)
+    summary["status"] = (
+        "success"
+        if summary["roundtrip_ok"] and summary["deterministic"]
+        else "partial"
+    )
+    summary["error"] = next(
+        (entry.get("error") for entry in observations if entry.get("error")),
+        None,
+    )
+    summary["artifact_bytes"] = next(iter(sizes)) if len(sizes) == 1 else None
+    summary["artifact_sha256"] = next(iter(shas)) if len(shas) == 1 else None
+    if summary["artifact_bytes"] is not None and summary.get("input_bases"):
+        summary["bits_per_base"] = (
+            summary["artifact_bytes"] * 8 / summary["input_bases"]
+        )
+
+    walls = [entry.get("wall_seconds") for entry in ok]
+    cpus = [entry.get("cpu_seconds") for entry in ok]
+    rss = [entry.get("peak_rss_bytes") for entry in ok]
+    summary["wall_seconds"] = _median(walls)
+    usable_walls = [value for value in walls if value is not None]
+    summary["wall_seconds_min"] = min(usable_walls) if usable_walls else None
+    summary["wall_seconds_max"] = max(usable_walls) if usable_walls else None
+    summary["cpu_seconds"] = _median(cpus)
+    usable_rss = [value for value in rss if value is not None]
+    summary["peak_rss_bytes"] = max(usable_rss) if usable_rss else None
+    summary["peak_rss_median_bytes"] = _median(usable_rss)
+    cgroup_peaks = [
+        entry["cgroup_memory_peak_bytes"] for entry in ok
+        if entry.get("cgroup_memory_peak_bytes") is not None
+    ]
+    oom_kills = [
+        entry["cgroup_oom_kills"] for entry in ok
+        if entry.get("cgroup_oom_kills") is not None
+    ]
+    summary["cgroup_memory_peak_bytes"] = (
+        max(cgroup_peaks) if cgroup_peaks else None
+    )
+    summary["cgroup_oom_kills"] = max(oom_kills) if oom_kills else None
+
+    restores = [
+        entry["decompress"] for entry in ok if entry.get("decompress")
+    ]
+    if restores:
+        restore_rss = [
+            value.get("peak_rss_bytes") for value in restores
+            if value.get("peak_rss_bytes") is not None
+        ]
+        summary["decompress"] = {
+            "wall_seconds": _median([
+                value.get("wall_seconds") for value in restores
+            ]),
+            "cpu_seconds": _median([
+                value.get("cpu_seconds") for value in restores
+            ]),
+            "peak_rss_bytes": max(restore_rss) if restore_rss else None,
+            "cgroup_memory_peak_bytes": max(
+                [
+                    value["cgroup_memory_peak_bytes"] for value in restores
+                    if value.get("cgroup_memory_peak_bytes") is not None
+                ],
+                default=None,
+            ),
+        }
+    return summary
+
+
+def evaluate_gate(
+    summaries: list[dict],
+    baseline_id: str,
+    rss_mib: float,
+    size_ratio: float,
+    wall_ratio: float,
+    candidates: list[str] | None = None,
+) -> dict:
+    """Evaluate the published bounded-mode gates against one baseline profile.
+
+    RSS is the worst observed peak (compress and restore independently). Size
+    and wall use the aggregated archive and median wall. Any failed repeat makes
+    the profile ineligible, so a lucky sample cannot pass the gate. ``candidates``
+    restricts the gate to the bounded profiles under test; otherwise every other
+    selected profile is treated as a candidate.
+    """
+    by_id = {summary["profile"]: summary for summary in summaries}
+    baseline = by_id.get(baseline_id)
+    gate = {
+        "baseline": baseline_id,
+        "candidates": candidates,
+        "thresholds": {
+            "rss_mib": rss_mib,
+            "size_ratio": size_ratio,
+            "wall_ratio": wall_ratio,
+        },
+        "checks": [],
+        "passed": False,
+        "error": None,
+    }
+    if baseline is None:
+        gate["error"] = f"baseline profile not selected: {baseline_id}"
+        return gate
+    if baseline.get("status") != "success":
+        gate["error"] = f"baseline profile {baseline_id} did not succeed"
+        return gate
+    if candidates is None:
+        selected = [
+            summary for summary in summaries
+            if summary["profile"] != baseline_id
+        ]
+    else:
+        unknown = sorted(set(candidates) - set(by_id))
+        if unknown:
+            gate["error"] = f"gate profiles not selected: {', '.join(unknown)}"
+            return gate
+        if not candidates:
+            gate["error"] = "no gate candidate profiles"
+            return gate
+        wanted = set(candidates)
+        selected = [
+            summary for summary in summaries
+            if summary["profile"] in wanted
+        ]
+
+    for summary in selected:
+        profile = summary["profile"]
+        gate["checks"].append({
+            "profile": profile,
+            "check": "status",
+            "passed": summary.get("status") == "success",
+            "detail": summary.get("status"),
+        })
+        compress_rss = summary.get("peak_rss_bytes")
+        restore_rss = (summary.get("decompress") or {}).get("peak_rss_bytes")
+        for label, value in (
+            ("compress_rss", compress_rss),
+            ("restore_rss", restore_rss),
+        ):
+            gate["checks"].append({
+                "profile": profile,
+                "check": label,
+                "value_mib": None if value is None else value / 1048576,
+                "limit_mib": rss_mib,
+                "passed": value is not None and value / 1048576 <= rss_mib,
+            })
+        size = summary.get("artifact_bytes")
+        base_size = baseline.get("artifact_bytes")
+        size_value = (size / base_size) if size and base_size else None
+        gate["checks"].append({
+            "profile": profile,
+            "check": "size_ratio",
+            "value": size_value,
+            "limit": size_ratio,
+            "passed": size_value is not None and size_value <= size_ratio,
+        })
+        wall = summary.get("wall_seconds")
+        base_wall = baseline.get("wall_seconds")
+        wall_value = (wall / base_wall) if wall and base_wall else None
+        gate["checks"].append({
+            "profile": profile,
+            "check": "wall_ratio",
+            "value": wall_value,
+            "limit": wall_ratio,
+            "passed": wall_value is not None and wall_value <= wall_ratio,
+        })
+    gate["passed"] = bool(gate["checks"]) and all(
+        check["passed"] for check in gate["checks"]
+    )
+    return gate
+
+
+def print_gate(gate: dict) -> None:
+    if gate.get("error"):
+        print(f"  gate: FAIL ({gate['error']})", flush=True)
+        return
+    verdict = "PASS" if gate["passed"] else "FAIL"
+    print(f"  gate vs {gate['baseline']}: {verdict}", flush=True)
+    for check in gate["checks"]:
+        if check["check"] == "status":
+            value = check.get("detail")
+            limit = "success"
+        elif check["check"].endswith("_rss"):
+            value = f"{check['value_mib']:.1f} MiB" if check["value_mib"] is not None else "n/a"
+            limit = f"{check['limit_mib']:.1f} MiB"
+        else:
+            value = f"{check['value']:.3f}" if check["value"] is not None else "n/a"
+            limit = f"{check['limit']:.3f}"
+        print(
+            f"    {check['profile']:<38} {check['check']:<14} "
+            f"{value:>12} / {limit:<10} {'ok' if check['passed'] else 'FAIL'}",
+            flush=True,
+        )
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--run-id", default=None)
@@ -241,7 +615,24 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--timeout", type=float, default=7200.0)
     parser.add_argument("--memory", default="2g")
     parser.add_argument("--runs-dir", default=str(RUNS))
+    parser.add_argument(
+        "--repeats", type=int, default=3,
+        help="interleaved observations per profile (default 3)",
+    )
+    parser.add_argument(
+        "--gate-baseline", default=None,
+        help="profile id to gate against, e.g. jarvis3-l7",
+    )
+    parser.add_argument(
+        "--gate-profiles", default=None,
+        help="comma-separated candidate profiles; default: every bounded-* profile",
+    )
+    parser.add_argument("--gate-rss-mib", type=float, default=256.0)
+    parser.add_argument("--gate-size-ratio", type=float, default=1.02)
+    parser.add_argument("--gate-wall-ratio", type=float, default=2.0)
     args = parser.parse_args(argv)
+    if args.repeats < 1:
+        raise SystemExit("--repeats must be at least 1")
 
     source = Path(args.source).resolve()
     if not source.exists():
@@ -249,12 +640,30 @@ def main(argv: list[str] | None = None) -> int:
 
     image = pangenome_run.image_id(PROJECT)
     wanted = set(args.profiles.split(","))
-    profiles = [p for p in PROFILES if p["id"] in wanted]
-    missing = wanted - {p["id"] for p in profiles}
+    base_profiles = [p for p in PROFILES if p["id"] in wanted]
+    missing = wanted - {p["id"] for p in base_profiles}
     if missing:
         raise SystemExit(f"unknown profiles: {', '.join(sorted(missing))}")
-    if not profiles:
+    if not base_profiles:
         raise SystemExit("no profiles selected")
+    if args.gate_baseline and args.gate_baseline not in {
+        p["id"] for p in base_profiles
+    }:
+        raise SystemExit(
+            f"gate baseline {args.gate_baseline} is not in the selected profiles"
+        )
+
+    # Expand repeats before the execution loop so profiles are interleaved:
+    # r0/A, r0/B, r1/A, r1/B ... This spreads host drift across all profiles
+    # instead of letting one profile absorb a slow or noisy period.
+    profiles = []
+    for repeat in range(args.repeats):
+        for base in base_profiles:
+            expanded = dict(base)
+            expanded["base_profile"] = base["id"]
+            expanded["repeat"] = repeat
+            expanded["id"] = f"{base['id']}-r{repeat}"
+            profiles.append(expanded)
 
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     run_id = args.run_id or f"specialized-{stamp}"
@@ -276,11 +685,18 @@ def main(argv: list[str] | None = None) -> int:
     fasta_digest = pangenome_run.sha256_file(fasta_path)
     sequence = sequence_only(fasta_path, run_dir / "input.seq")
     report = {
-        "schema_version": 1,
+        "schema_version": 2,
         "kind": "specialized-scale-test",
         "run_id": run_id,
         "started_utc": datetime.now(timezone.utc).isoformat(),
         "image_id": image,
+        "image_tag": pangenome_run.IMAGE_TAG,
+        "provenance": pangenome_run.provenance(PROJECT),
+        "harness": {
+            "repeats": args.repeats,
+            "timeout_seconds": args.timeout,
+            "memory_default": args.memory,
+        },
         "source": str(source.relative_to(PROJECT)),
         "sliced": bool(args.slice_bases),
         "input": {
@@ -297,7 +713,8 @@ def main(argv: list[str] | None = None) -> int:
                 "both tools receive this sequence and are verified against it"
             ),
         },
-        "profiles": [p["id"] for p in profiles],
+        "profiles": [p["id"] for p in base_profiles],
+        "execution_order": [p["id"] for p in profiles],
         "results": [],
         "status": "running",
     }
@@ -306,7 +723,7 @@ def main(argv: list[str] | None = None) -> int:
             "grass": {
                 "repo": "https://github.com/AnshuOishik/GraSS",
                 "commit": GRASS_COMMIT,
-                "jvm": "OpenJDK 21",
+                "jvm": "OpenJDK 27",
             },
             "libbsc": {
                 "repo": "https://github.com/IlyaGrebnov/libbsc",
@@ -337,6 +754,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  {profile['id']} ...", flush=True)
         entry = {
             "profile": profile["id"],
+            "base_profile": profile["base_profile"],
+            "repeat": profile["repeat"],
             "kind": profile["kind"],
             "level": profile["level"],
             "input_bytes": sequence["size_bytes"],
@@ -509,7 +928,7 @@ def main(argv: list[str] | None = None) -> int:
         except Exception as error:
             entry["error"] = f"{type(error).__name__}: {error}"
 
-        if entry.get("artifact_bytes") is None:
+        if entry["status"] == "success" and entry.get("artifact_bytes") is None:
             if profile["kind"] == "jarvis3":
                 artifact = run_dir / "ops" / profile["id"] / "archive.jc"
             elif profile["kind"] == "geco3":
@@ -535,6 +954,12 @@ def main(argv: list[str] | None = None) -> int:
                 entry["roundtrip_ok"] = bool(entry["roundtrip_ok"]) and (
                     verification.get("verdict") == "pass"
                 )
+        if (
+            entry["status"] == "success"
+            and not entry["roundtrip_ok"]
+            and not entry.get("error")
+        ):
+            entry["error"] = roundtrip_failure(entry)
         if entry["status"] != "success" or not entry["roundtrip_ok"]:
             failures += 1
             print(f"    FAILED: status={entry['status']} roundtrip={entry['roundtrip_ok']} "
@@ -550,12 +975,81 @@ def main(argv: list[str] | None = None) -> int:
         report["results"].append(entry)
         pangenome_run.write_json(run_dir / "report.json", report)
 
+    raw_observations = report["results"]
+    report["results"] = [
+        summarize_profile(
+            base,
+            [
+                entry for entry in raw_observations
+                if entry.get("base_profile") == base["id"]
+            ],
+            args.repeats,
+        )
+        for base in base_profiles
+    ]
+    failures = sum(
+        1 for summary in report["results"]
+        if summary["status"] != "success"
+    )
+    print("  summary:", flush=True)
+    for summary in report["results"]:
+        failed = summary["wall_seconds"] is None
+        wall = (
+            summary.get("attempt_wall_seconds_median")
+            if failed else summary["wall_seconds"]
+        )
+        rss = (
+            summary.get("attempt_peak_rss_bytes")
+            if failed else summary["peak_rss_bytes"]
+        )
+        label = "attempt" if failed else "median"
+        oom = (
+            f"  oom {summary.get('oom_killed_observations', 0)}/"
+            f"{summary.get('attempts', 0)}"
+            if failed else ""
+        )
+        print(
+            f"    {summary['profile']:<38} {summary['status']:<8} "
+            f"{summary['artifact_bytes'] if summary['artifact_bytes'] else '-':>10} B  "
+            f"{label} {wall if wall is not None else 0:6.1f}s  "
+            f"worst {rss / 1048576 if rss is not None else 0:5.1f} MiB  "
+            f"cgroup {summary['cgroup_memory_peak_bytes'] / 1048576 if summary['cgroup_memory_peak_bytes'] else 0:5.1f} MiB"
+            f"{oom}",
+            flush=True,
+        )
+
+    if args.gate_baseline:
+        if args.gate_profiles:
+            gate_candidates = [
+                item.strip()
+                for item in args.gate_profiles.split(",")
+                if item.strip()
+            ]
+        else:
+            gate_candidates = [
+                summary["profile"] for summary in report["results"]
+                if str(summary.get("level", "")).startswith("bounded")
+            ]
+        report["gate"] = evaluate_gate(
+            report["results"],
+            args.gate_baseline,
+            args.gate_rss_mib,
+            args.gate_size_ratio,
+            args.gate_wall_ratio,
+            candidates=gate_candidates,
+        )
+        print_gate(report["gate"])
+
     report["status"] = "success" if failures == 0 else "partial"
     report["failures"] = failures
     report["finished_utc"] = datetime.now(timezone.utc).isoformat()
     pangenome_run.write_json(run_dir / "report.json", report)
     print(f"report: {run_dir / 'report.json'}")
-    return 0 if failures == 0 else 2
+    if failures:
+        return 2
+    if args.gate_baseline and not report["gate"]["passed"]:
+        return 3
+    return 0
 
 
 if __name__ == "__main__":

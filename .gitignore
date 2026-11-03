@@ -46,6 +46,9 @@ benchmarks/specialized/vendor/GraSS/
 benchmarks/specialized/vendor/libbsc/
 benchmarks/specialized/vendor/bin/
 
+# Advisory lock held while a harness container is running
+.harness-container.lock
+
 # Editor and OS noise
 .idea/
 .vscode/

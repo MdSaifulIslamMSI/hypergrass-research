@@ -20,8 +20,15 @@ so the effect of the HyperGraSS redesign is measured rather than assumed.
 - The normalization is deliberately conservative for HyperGraSS: the
   specialized tools receive slightly less information (no headers and no rare
   ambiguity symbols) than the multi-FASTA archive.
-- Same locked Linux image (`d6ca62a74e37`), 2 CPUs, 2 GiB container limit,
-  fresh process per operation.
+- The original table below was measured on the frozen JDK 21 image
+  (`d6ca62a74e37`) and used one observation per profile. The JDK 27 replication
+  uses `hypergrass-corpus:jdk27` (`sha256:580e58b6…01a4ae`), the same 2 CPUs and
+  2 GiB container limit. Its four-profile table is also one observation per
+  profile; the later repeat harness interleaves observations and reports median
+  wall with worst-case RSS. A single sample is never treated as a gate pass.
+- Bounded-mode gates, fixed before the run: at most 256 MiB peak RSS for
+  compress and restore, at most 2% archive growth, and at most 2x wall time
+  against the tuned unbounded profile.
 - Baseline profiles: JARVIS3 level 7, GeCo3 levels 3 and 6, and `xz -9`.
   GeCo3 level 9 and JARVIS3 level 26 are excluded at this scale: in the frozen
   corpus their 4.6 MB *E. coli* cells reached about 2.14 GB RSS and the 180 s
@@ -37,6 +44,9 @@ so the effect of the HyperGraSS redesign is measured rather than assumed.
   comparison: it encodes 64 KiB context-mixing anchor pages instead of one
   whole-anchor page. The tuned profile above keeps `--anchor-single-page` so
   the 256 MiB gate and these archives stay comparable.
+- The JDK 27 replication adds `--seed-step 8` variants: 16 MiB blocks at a
+  160 MiB heap, and 32 MiB blocks at a 256 MiB heap. Stride 8 halves the seed
+  index but is opt-in; the published default remains stride 4.
 - GraSS (public implementation, commit
   `6d93700f5a2de8841f7cf2c20064413c80df2c4a`) runs unmodified on the same flat
   sequence through its headerless raw path. Its `bsc` backend is built from
@@ -46,13 +56,12 @@ so the effect of the HyperGraSS redesign is measured rather than assumed.
   because the default heap in this 2 GiB container is 512 MiB and the input is
   one 120M-character line. Its native archive is `FinalBsc.bsc`, a
   BSC-compressed tar of `F1.SSG` and `F2.SSG`.
-- Bounded-mode gates, fixed before the run: at most 256 MiB peak RSS for
-  compress and restore, at most 2% archive growth, and at most 2x wall time
-  against the tuned unbounded profile.
 - Each decompressed sequence is verified in a separate process by SHA-256 and
   a streaming byte comparison against the original, independent of the codec.
 
 <!-- SPECIALIZED-TABLES:START -->
+First run, JDK 21 image, one observation per profile:
+
 | Profile | Archive | Bits/base | Compress | Decompress | Peak RSS (c / d) | Exact |
 | --- | ---: | ---: | ---: | ---: | ---: | :---: |
 | JARVIS3 l7 | 3,896,361 B | 0.260 | 95.4 s | 84.2 s | 286 / 286 MiB | yes |
@@ -64,6 +73,33 @@ so the effect of the HyperGraSS redesign is measured rather than assumed.
 | HyperGraSS bounded, first attempt (16 MiB blocks, 192 MiB heap) | 4,131,860 B | 0.275 | 149.5 s | 73.4 s | 273 / 237 MiB | yes |
 | HyperGraSS bounded, tuned (16 MiB blocks, 160 MiB heap, shared gap) | 3,997,232 B | 0.266 | 149.5 s | 67.6 s | **253 / 221 MiB** | yes |
 <!-- SPECIALIZED-TABLES:END -->
+
+**Correction.** The 253 MiB bounded entry is one observation, not a robust gate
+pass. Repeated runs of the byte-identical archive reached 274.4 MiB; see
+*Repeatability and the 256 MiB gate* below.
+
+### JDK 27 replication
+
+The migration was checked by rebuilding the identical archives, not by assuming
+that a newer JVM is neutral. The two byte identities were reproduced from a
+fresh build: campy-high bounded stride 4 is `1,125,629 B` with SHA-256
+`14DD7E94…E1C5D6`, and the 120.1 Mbp stride-8 bounded archive is `3,965,049 B`
+with SHA-256 `9A61A029…4F33207E`. Both match the pre-migration archives.
+
+The rows below come from two sessions, with one observation per profile.
+Percentages are against JARVIS3 l7; RSS is the peak of that observation.
+
+| Profile | Archive | vs JARVIS3 | Compress | Restore | Peak RSS (c / d) | Exact |
+| --- | ---: | ---: | ---: | ---: | ---: | :---: |
+| JARVIS3 l7 | 3,896,361 B | — | 62.4 s | 63.9 s | 286.0 / 285.6 MiB | yes |
+| Bounded stride 8, 16 MiB blocks, 160 MiB heap | 3,965,049 B | +1.76% | 47.5 s | 20.7 s | 274.9 / 214.6 MiB | yes |
+| Bounded stride 8, 32 MiB blocks, 256 MiB heap | 3,824,166 B | **−1.85%** | 47.6 s | 23.5 s | 339.1 / 302.7 MiB | yes |
+| Bounded stride 8, 32 MiB blocks, paged CM | 3,849,995 B | −1.19% | 39.3 s | 14.0 s | 339.5 / 292.3 MiB | yes |
+| Control: bounded stride 4, 16 MiB blocks, 160 MiB heap | 3,997,232 B | +2.59% | 57.1 s | 24.6 s | 274.4 / 216.4 MiB | yes |
+
+The archive bytes are stable across runs; wall time on this host is not (the
+same stride-8 restore took 20.7 s in one session and 66.5 s in another). Only
+size and exactness are compared across sessions.
 
 ## Findings
 
@@ -97,18 +133,23 @@ GraSS paper's single-genome results; it measures the published pipeline out of
 the box on a pangenome, with the same input and container as the other
 profiles.
 
-The tuned bounded profile meets two of its three gates. At 16 MiB blocks, a
-160 MiB heap, and a 256 KiB gap history shared across blocks it produces
-**3,997,232 B (0.266 bits/base)** and peaks at **252.7 MiB** while compressing
-and **221.2 MiB** while restoring, both under the 256 MiB cap; the
-compress-side margin is only 3.3 MiB, so this is a thin pass rather than a
-comfortable one. Compression
-takes 149.5 s, 5.9x faster than the unbounded profile and well inside the 2x
-speed gate. The archive is still **4.90% larger** than the unbounded one
-(+186,823 B), so the 2% size gate fails by 110,615 B. The first bounded
-attempt (4,131,860 B) and the intermediate 8-bit-vote build (3,995,014 B)
-both restore byte-exactly as well; they are kept as committed evidence for the
-failure and the ablation.
+The tuned bounded profile fails two of its three gates once RSS is measured
+more than once. At 16 MiB blocks, a 160 MiB heap, and a 256 KiB gap history
+shared across blocks it produces **3,997,232 B (0.266 bits/base)**. Its first
+run peaked at **252.7 MiB** compress / **221.2 MiB** restore, which looked like
+a 3.3 MiB pass. A repeat of the byte-identical archive on JDK 27 peaked at
+**274.4 MiB**; the stride-8 archive measured **274.9–275.1 MiB** in three
+earlier runs. The final three-repeat run with `--memory-swap=memory` was
+OOM-killed 3/3 at the 256 MiB cap (269.3–269.4 MiB wrapper RSS). Peak RSS on
+this host moves by about **22 MiB for identical archive bytes**, so a single
+observation cannot establish a 256 MiB pass; the final evidence is a kill, not
+a measured overage. Compression is 57.1 s
+in the same-session control and 149.5 s in the original run, both well inside
+the 2x speed gate. The archive is still **4.90% larger** than the unbounded one
+(+186,823 B), so the 2% size gate fails by 110,615 B. The first bounded attempt
+(4,131,860 B) and the intermediate 8-bit-vote build (3,995,014 B) both restore
+byte-exactly as well; they are kept as committed evidence for the failure and
+the ablation.
 
 Two changes produced the improvement. First, the gap channel now shares a
 256 KiB LZ history across block boundaries (aux mode 7): over the first seven
@@ -133,14 +174,33 @@ seam cost across diff/geom/strands/lits/cnt is structural: eight block
 boundaries force the factorizer to emit more gap entries and shorten the match
 history the LZ coder can see. A predictor ensemble does not remove that cost.
 
-Larger blocks fix the ratio but not the memory. On the same host and input,
-32 MiB blocks at a 224 MiB heap complete but peak at 272 MiB RSS, over the
-cap, and 64 MiB blocks at a 192 MiB heap exhaust the heap before the first
-block completes. 16 MiB is the largest block size that meets the RSS gate. The
-remaining 110,615 B to the 2% target would need a longer cross-block gap
-history or a better seam model; the plausible levers are estimated at tens of
-KB, so the gate is probably unreachable at this block size, but it is not
-proven impossible.
+Larger blocks fix the ratio but not the memory. Stride 8 at 16 MiB blocks
+produces **3,965,049 B**, 0.80% smaller than the stride-4 bounded archive and
+**1.76% larger than JARVIS3**. That still misses the 2% size gate: it is
+154,640 B (4.06%) larger than the unbounded archive, 78,432 B beyond the
+allowance. It does not fix RSS either: the
+160 MiB heap peaked at 274.9–275.1 MiB. Lowering the heap to 144 MiB brings
+the same archive to **258.3 MiB**, still 2.3 MiB over the cap, and stretches
+compression to 134 s; 128 MiB exhausts the heap in
+`FastaStreamFactorizer.factorize`. No tested heap between 128 and 160 MiB meets
+both gates.
+
+Stride 8 at **32 MiB blocks** reaches **3,824,166 B**, which is **1.85% below
+JARVIS3** and only 0.36% above the unbounded archive, so it passes the size
+gate for the first time. It needs a 256 MiB heap and peaks at **339.1 MiB
+compress / 302.7 MiB restore**, 83 and 47 MiB over the cap. The paged-CM
+variant is 3,849,995 B (1.19% below JARVIS3) at 339.5 / 292.3 MiB. The size gate
+is therefore reachable; the RSS cap is the binding constraint, and the 16 MiB
+profile that overruns least does not beat JARVIS3.
+
+The consequence is simple: **no bounded profile completes in a strict 256 MiB
+container, and no profile that beats JARVIS3 fits 256 MiB.** If the cap is
+relaxed just enough for the 16 MiB profile to finish, its smallest archive is
+3,965,049 B (stride 8), still 68,688 B (1.76%) larger than JARVIS3. The only
+profile that beats JARVIS3 is 3,824,166 B at 32 MiB blocks, which needs
+339.1 / 302.7 MiB. The published 110,615 B size gap is therefore not the only
+failure; the sub-cap profile is behind the specialized baseline even after the
+full stride-8 recovery.
 
 This does **not** overturn the frozen-corpus result. On single genomes, JARVIS3
 and GeCo3 are close to HyperGraSS, and on some cells they are better. What it
@@ -154,6 +214,51 @@ decompression, so it is not a competitor for the slice-query workload in
 [`END-TO-END.md`](END-TO-END.md); it is a better choice for store-once,
 restore-rarely archives, which is the workload where HyperGraSS's size claim
 was strongest.
+
+### Repeatability and the 256 MiB gate
+
+The original harness recorded one observation per profile. That is enough to
+compare deterministic archive bytes, but not enough to certify a memory gate:
+byte-identical stride-4 archives measured 252.7 MiB in the first run and
+274.4 MiB in a later one, and byte-identical stride-8 archives measured
+274.9–275.1 MiB in three runs. The spread is host noise, not a code change.
+
+The hardened harness also sets `--memory-swap` equal to `--memory`, removing
+the swap headroom that earlier runs inherited from Docker's default 2x swap.
+The final three-repeat run (`specialized-jdk27-repeats-1`) settles the question:
+every bounded attempt was **OOM-killed**, with the cgroup reporting
+`oom_kill=1` and a peak equal to its hard cap. JARVIS3 completed 3/3 at the same
+3,896,361 bytes. The earlier 253 MiB "pass" therefore depended on swap and on a
+single sample. A bounded mode that cannot finish in its own 256 MiB container
+does not meet the gate.
+
+| Profile (3 interleaved repeats) | Result | Archive | Attempt wall | Worst RSS | cgroup peak | OOM |
+|---|---|---:|---:|---:|---:|---:|
+| JARVIS3 l7 | success 3/3 | 3,896,361 B | 84.2 s median | 285.9 MiB | 294.9 MiB | 0/3 |
+| Bounded stride 4, 16 MiB blocks, 160m heap | **OOM 3/3** | — (partial output only) | 116.3 s median | 269.4 MiB | 256.0 MiB | 3/3 |
+| Bounded stride 8, 16 MiB blocks, 160m heap | **OOM 3/3** | — (partial output only) | 110.5 s median | 269.4 MiB | 256.0 MiB | 3/3 |
+| Bounded stride 8, 32 MiB blocks, 256m heap | **OOM 3/3** | — (partial output only) | 16.9 s median | 332.7 MiB | 320.0 MiB | 3/3 |
+| Bounded stride 8 + CM pages, 32 MiB blocks, 256m heap | **OOM 3/3** | — (partial output only) | 10.9 s median | 332.9 MiB | 320.0 MiB | 3/3 |
+
+The gate reports 20 failed checks across the four candidates (status,
+compress RSS, restore RSS, size ratio, and wall ratio for each) and exits 3.
+The partial archives written before a kill are truncated and are not reported as
+sizes; only completed round trips contribute archive bytes.
+
+The harness now expands each profile into interleaved repeats
+(`r0/A, r0/B, r1/A, r1/B, …`), reports median wall and worst-case RSS, and
+keeps the per-repeat observations in the report. Memory comes from two
+independent sources: `ru_maxrss` for the child and the container cgroup's
+high-water mark (`memory.peak`, or v1 `memory.max_usage_in_bytes`). A JVM
+`OutOfMemoryError` is classified separately from a cgroup OOM kill; a raw
+SIGKILL or exit 137 without a cgroup `oom_kill` counter is reported as
+`killed`, not `oom-killed`, and an unreadable counter is reported as unknown
+rather than zero. Reports record the
+git commit and dirty state, image tag and digest, Docker version, Python
+version, platform, repeats, and timeouts; writes are atomic and the run
+directory is never reused. A cross-process lock enforces one HyperGraSS
+container at a time. The gate is evaluated on the aggregated profile and exits
+3 when a bounded candidate misses it, so a single lucky sample cannot pass.
 
 ## Cross-taxon extension
 
@@ -176,7 +281,8 @@ mode. The protocol, diversity strata, and complete tables are in
 
 ## Limits
 
-- One pangenome, one run, one host.
+- One pangenome and one host. Archive bytes are deterministic and were
+  reproduced from a fresh JDK 27 build; wall time is not stable across sessions.
 - The sequence-only normalization removes headers, wrapping, case, and rare
   ambiguity symbols. The HyperGraSS archive includes those bytes. The
   asymmetry favors the specialized tools.
@@ -193,11 +299,22 @@ mode. The protocol, diversity strata, and complete tables are in
   embeds the F1/F2 modification times, so the archive bytes and size vary by a
   few bytes between runs; two 2 MB reruns produced identical F1/F2 streams and
   archives differing by 4 bytes. The 24,777,592 B figure is this run's size.
-- The bounded profile misses one of its three gates. It meets the 256 MiB RSS
-  cap (252.7 MiB compress, 221.2 MiB restore) and the 2x speed gate, but its
-  archive is 4.90% larger than the unbounded one, 110,615 B over the 2% target.
-  The residual is measured, not inferred: it is the 16 MiB factorization
-  granularity, which the RSS cap cannot raise.
+- The bounded profile misses two of its three gates. Its archive is 4.90%
+  larger than the unbounded one at stride 4 (110,615 B over the 2% target;
+  4.06% and 78,432 B over at stride 8), and its 256 MiB RSS gate fails in the
+  final three-repeat run: all three stride-4 attempts and all three stride-8
+  attempts were OOM-killed at the 256 MiB cgroup cap. The earlier 252.7 MiB
+  figure was a single-sample pass with swap headroom; later repeats of the same
+  bytes measured 269.4 MiB before the hard cap killed them. The 144 MiB heap
+  still peaks at 258.3 MiB and triples wall time, and 128 MiB exhausts the heap.
+- The 32 MiB stride-8 profile passes the size gate in a swap-enabled run
+  (0.36% growth, 1.85% below JARVIS3) but needs a 256 MiB heap. Under the strict
+  320 MiB cap it was OOM-killed 3/3 (332.7 MiB wrapper RSS, cgroup at cap); the
+  paged-CM variant was OOM-killed 3/3 at 332.9 MiB. Neither is a 256 MiB mode,
+  and no profile that meets 256 MiB beats JARVIS3.
+- Peak RSS has a measured ~22 MiB spread for byte-identical output. Gate
+  verdicts are therefore based on the worst observation across interleaved
+  repeats, with cgroup and `ru_maxrss` evidence, not on a single run.
 - The bounded profile's memory is set by anchor saturation, not input size. At
   the 9 MiB cap the seed index alone is 67 MB, so the 160 MB heap sits on the
   OOM boundary: the 123 MB *E. coli* medium stratum fails in the factorizer,
@@ -237,11 +354,26 @@ python -B benchmarks/specialized/run.py \
   --run-id hypergrass-lz-4 \
   --profiles hypergrass-bounded-256m-tuned \
   --timeout 3600
+# JDK 27: three interleaved observations per profile. The gate compares the
+# bounded candidates with JARVIS3 (rss cap is absolute; size/wall are ratios).
+python -B benchmarks/specialized/run.py \
+  --run-id specialized-jdk27-repeats-1 \
+  --profiles jarvis3-l7,hypergrass-bounded-256m-tuned,hypergrass-bounded-256m-stride8,hypergrass-bounded-wide,hypergrass-bounded-wide-cm \
+  --repeats 3 --timeout 3600 \
+  --gate-baseline jarvis3-l7 \
+  --gate-profiles hypergrass-bounded-256m-tuned,hypergrass-bounded-256m-stride8,hypergrass-bounded-wide,hypergrass-bounded-wide-cm
 python -B benchmarks/specialized/summarize.py --run hypergrass-lz-1
 python -B benchmarks/specialized/summarize.py --run hypergrass-lz-2
 python -B benchmarks/specialized/summarize.py --run hypergrass-lz-4
 python -B benchmarks/specialized/summarize.py --run grass-1
 ```
+
+The gate's ratio baseline is explicit. The published *bounded versus
+unbounded* gate uses `hypergrass-pangenome` as the baseline and compares the
+2% size growth with 3,810,409 B; the command above instead asks whether a
+bounded candidate is within 2% of JARVIS3 while staying under 256 MiB. Both
+questions matter, and the report records which baseline was used. A failed
+profile exits 2; a failed gate exits 3.
 
 The GraSS run uses the native `bsc` binary built by `fetch_vendor.ps1`; the
 harness copies it into each operation directory because GraSS invokes
