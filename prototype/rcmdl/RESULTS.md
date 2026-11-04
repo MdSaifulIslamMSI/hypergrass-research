@@ -128,10 +128,16 @@ memory: 8 *E. coli* genomes is 40 Mb, roughly 200 MB in the prototype.
 
 ## Comparison at the same panel
 
-Full 24-target leave-one-out table. AGC 3.2.5 is run at its best swept setting
+Full 24-target leave-one-out table. AGC 3.2.5 is run at a single swept setting
 (`-s 200000`); both codecs charge only the target and use the same 23-genome panel. Every
 AGC archive was decoded and the target compared byte-for-byte (`verified=True` in
 `work/agc-loo-masked/results.json`).
+
+*Caveat on the AGC number.* The setting was selected by a 5-configuration sweep on target
+`00`, not by a per-target oracle. The *S. aureus* full sweep shows that AGC's best segment
+size varies by target and that a single setting can overstate the margin substantially. A
+full 13-configuration E. coli sweep is the next control; until it completes, 4.71x should be
+read as "against one target-00-selected AGC setting", not as an upper bound on AGC.
 
 | Metric | RC-MDL | AGC 3.2.5 | AGC / RC-MDL |
 |---|---:|---:|---:|
@@ -222,27 +228,58 @@ hash-sampled 16-mer containment sketch (above): start at the most central genome
 repeatedly add the genome best covered by the already-placed set. It is the best of the three
 and cuts the gap from 6.5% to 4.3%, but does not close it.
 
-Ordering helps for two reasons. The first genome is the cheapest self-contained one
-(1,110,848 B for 06, vs 1,192,494 for 00), and the early panel is built from central genomes:
-the first ten marginals are 68–171 KB, whereas file order pays 349 KB for genome 01 and
-190 KB for 02. It also puts 13/14/15 adjacent at the end, where 13 and 15 cost only 2,756 and
-7,650 B. But 14 costs 228,020 B. That is the **twin penalty**, and it is structural: in
-leave-one-out each twin sees the other (2,032 and 2,266 B), but a progressive order must
-encode one of them before its near-duplicate exists. No permutation avoids paying one twin
-against a panel that lacks its twin.
+Four further order strategies were measured to test whether the residual gap is an ordering
+problem:
 
-A lower bound makes the residual gap concrete. A progressive marginal can never be cheaper
-than the same genome's LOO marginal (the prefix panel is a subset of the 23-genome LOO
-panel), so the collection cannot beat
+| Strategy | Total bytes | bits/base | vs Prim | vs HyperGraSS |
+|---|---:|---:|---:|---:|
+| Containment/Prim | **3,972,975** | 0.26463 | — | +4.27% |
+| Cluster-aware Prim | 3,982,813 | 0.26528 | +0.25% | +4.52% |
+| Greedy measured marginal | 3,990,249 | 0.26578 | +0.43% | +4.72% |
+| 20 fixed anchors | 4,115,368 | 0.27411 | +3.58% | +8.00% |
+| 16 fixed anchors | 4,921,615 | 0.32781 | +23.9% | +29.2% |
+| 12 fixed anchors | 5,494,235 | 0.36595 | +38.3% | +44.2% |
+| 8 fixed anchors | 5,818,621 | 0.38756 | +46.5% | +52.7% |
+| 4 fixed anchors | 6,621,279 | 0.44102 | +66.7% | +73.8% |
+
+**Cluster-aware Prim.** The order places the three near-identical *E. coli* genomes
+`13,14,15` consecutively at the end. The first member then costs 228,344 B, while the other
+two cost 3,289 B and 5,237 B. In plain Prim the order is `14,13,15`; `14` pays 228,020 B and
+`13` pays 2,756 B. Moving the cluster therefore saves only 1,556 B on the twins and loses
+11,394 B by moving `16` and `18`; the net is +9,838 B. **The twin penalty is not removable by
+permutation.** Some member of the cluster must be introduced before its near-duplicates
+exist, and that first introduction costs about 228 KB regardless of which member is chosen.
+
+**Greedy measured marginal.** At each step the harness re-compressed every remaining genome
+against the current panel and chose the smallest measured marginal (eight candidates per step
+after the first). It chose `06` first, then `19`, and reached 3,990,249 B — 17,274 B worse
+than Prim. Myopic one-step minimisation is not a better global order; the greedy path spends
+more on intermediate panels.
+
+**Fixed anchors.** The first *N* genomes are coded progressively, then every remaining genome
+is coded against only those *N* anchors. This tests whether a small representative backbone
+plus independent residuals can beat a growing panel. It cannot: every anchor count is worse,
+and the cost falls monotonically as the anchor set grows back toward the full progressive
+panel. The panel's later members carry information that a fixed representative set does not.
+
+The same cluster-aware reorder was tested on *S. aureus*: plain Prim gives
+**1,233,433 B / 0.13889 bits/base**, cluster-aware Prim 1,237,522 B / 0.13935, so the reorder
+is again 0.33% worse. AGC's full 25-genome archive is 2,145,694 B, so RC-MDL is 1.74x smaller
+in the collection setting even before applying the cluster-aware order. (This is a collection
+total, not a leave-one-out marginal.) The *E. coli* and *S. aureus* results agree: ordering
+has been exhausted as a lever.
+
+The lower bound from the LOO totals still applies. A progressive marginal cannot be cheaper
+than the same genome's leave-one-out marginal, so the collection cannot beat
 
     cheapest first genome (1,110,848 B) + sum of LOO marginals (1,780,761 B) = 2,891,609 B.
 
-HyperGraSS is 31.8% above that bound; Prim is 37.4% above it, naive 40.3%, cluster-first
-41.2%. The roughly six-point difference between HyperGraSS and Prim is the value of coding
-shared variation jointly: HyperGraSS stores the near-duplicate cluster once, while a
-progressive RC-MDL archive stores one full twin and then an edit script. Closing the last
-4.3% needs a collection representation (a graph or joint alignment), not a better
-permutation of independent per-genome archives.
+HyperGraSS is 31.8% above that bound; Prim is 37.4%, greedy 38.0%, cluster-aware Prim 37.7%.
+The 5.6-point difference between HyperGraSS and Prim is about 162 KB. Ordering has now been
+tested four ways and does not recover it. The remaining gap is in the representation: a
+progressive RC-MDL archive still codes each genome as an independent target, while
+HyperGraSS codes shared variation across the collection jointly. Closing it needs a joint
+collection model (graph, consensus, or multi-genome alignment), not another permutation.
 
 For scale: AGC's full 24-genome archive at its best setting is 8,540,341 B. Prim is 2.15x
 smaller than AGC, and 4.3% larger than HyperGraSS.
@@ -318,6 +355,33 @@ tens of thousands of SNPs. This is the expected behavior of a relative-LZ codec,
 tuning artifact. It also warns against quoting a single "bits/base" for a species: the
 panel's clonality is part of the result.
 
+AGC is more sensitive to tuning on this panel than the earlier target-00-selected comparison
+suggested. A full 13-configuration sweep on every target gives:
+
+| AGC 3.2.5 configuration | Total marginal B | bits/base | vs RC-MDL | Targets AGC wins |
+|---|---:|---:|---:|---:|
+| best single config (`-s 100000`) | 292,170 | 0.02210 | **2.38x larger** | 0/24 |
+| per-target oracle | **96,580** | 0.00731 | **0.79x** (AGC 21.5% smaller) | 23/24 |
+
+These sweep totals are archive-size deltas from AGC `create`/`append`. Unlike the *S. aureus*
+sweep, the MTB best-single and oracle archives were not re-decoded after the sweep was
+stopped, so the two totals still need a final round-trip confirmation. The RC-MDL side is
+24/24 byte-exact.
+
+The earlier 1,390,893 B / 11.3x figure came from the target-00-selected `-s 200000` setting;
+that setting totals 1,390,783 B across the full sweep, so the old comparison overstated the
+margin because it missed better per-corpus settings. The best single setting is `seg100k`,
+which wins no individual target but has the lowest total. The per-target oracle picks a different config
+for nearly every target (`seg1m` 12, `seg500k` 6, `seg1m-min15` 3, `k25-seg200k` 2, default 1)
+and is 21.5% smaller than RC-MDL overall. RC-MDL wins only target `12` against the oracle.
+
+This is the opposite sign from *S. aureus*, where the oracle still leaves AGC 6.05x larger.
+The MTB panel is extremely clonal and the absolute sizes are tiny (122,998 B total, roughly
+5 KB per genome), so a 26,418 B absolute difference produces a large ratio. The honest
+statement is narrower than the old headline: **RC-MDL beats a single deployable AGC setting
+by 2.38x on MTB, but AGC's per-target oracle is smaller.** The margin is corpus-dependent,
+not a species-wide constant.
+
 ### *Staphylococcus aureus*
 
 Fetched: 25 complete RefSeq chromosomes, 71,043,355 bases (manifest in
@@ -335,9 +399,12 @@ Fetched: 25 complete RefSeq chromosomes, 71,043,355 bases (manifest in
 | Literal bases | 0.312% |
 | Mismatch bases | 136,181 (0.192% of matched bases) |
 | Round-trip | 25/25 byte-exact |
-| AGC 3.2.5 LOO marginal | 3,539,729 B / 0.3986 bits/base |
-| AGC / RC-MDL | **13.24x larger** |
-| Targets where AGC is smaller | 0 / 25 |
+| AGC 3.2.5 LOO marginal (`-a`) | 3,539,729 B / 0.3986 bits/base |
+| AGC / RC-MDL (`-a`) | **13.24x larger** |
+| AGC / RC-MDL (best single swept config) | **11.14x larger** |
+| AGC / RC-MDL (per-target oracle) | **6.05x larger** |
+| Targets where AGC (`-a`) is smaller | 0 / 25 |
+| Targets where AGC (oracle) is smaller | 5 / 25 |
 
 The self-contained rate is flat across the three species (1.892–1.948 bits/base); the
 reference-conditioned rate is not (0.00931–0.1186). That is the expected signature of a
@@ -352,25 +419,94 @@ The *S. aureus* LOO distribution is strongly skewed. Twenty-one of 25 targets ar
 interrupted run exactly (same archive bytes, bits/base, and target SHA-256); the remaining
 four were completed in this run.
 
-AGC was swept on targets 0, 10, and 24 across the same 13 configurations used for *E. coli*
-and *M. tuberculosis*. Its adaptive default (`-a`) had the smallest total marginal on the
-three-target sample (541,013 B), so the full table uses it. The segment-size settings that
-won on the other two species are worse here, which is itself a caution: "AGC at its best"
-must be swept per corpus. For context, AGC's full 25-genome archive is 2,145,694 B
-(0.2416 bits/base); that is a collection total, not a leave-one-out marginal, and is not
-directly comparable to the 267,412 B LOO total.
+AGC's comparison is unusually sensitive to its segment-size setting on this panel. A
+13-configuration sweep was therefore run on **every** target, not just a sample:
 
-The margin over AGC is larger than for *E. coli* (4.7x) or *M. tuberculosis* (11.3x)
-because this panel contains several near-identical chromosomes. RC-MDL represents a target
-as a small set of long panel copies plus its private differences; AGC's block model still
-pays a larger marginal for each appended genome. The ratio is a property of this panel, not
-a species-wide constant.
+| AGC 3.2.5 configuration | Total marginal B | bits/base | vs RC-MDL | Targets AGC wins |
+|---|---:|---:|---:|---:|
+| adaptive default (`-a`) | 3,539,729 | 0.3986 | 13.24x | 0/25 |
+| best single config (`-s 50000`) | 2,979,078 | 0.33547 | **11.14x** | 1/25 |
+| per-target oracle | **1,617,085** | 0.18210 | **6.05x** | 5/25 |
+
+The per-target oracle picks the best of the 13 configurations independently for each target.
+That is not a deployable single setting; it is a lower bound on AGC's size and therefore a
+conservative bound on the RC-MDL margin. The winning configuration varies: `seg50k` wins 8
+targets, `seg1m` 7, `seg500k` 4, `seg1m-min15` 2, and four other configs one each. The
+largest per-target spread between AGC's best and worst configuration is 633,338 B (target
+`07`). The earlier 13.24x figure was against `-a`; it overstates the margin because `-a`
+happens to be poor on this panel's many small near-duplicate targets. The honest range is
+**6.05x–11.14x**, with 6.05x as the conservative headline.
+
+Against the oracle, RC-MDL still wins 20/25 targets and 1,362,452 B in aggregate; AGC wins
+only five small targets (`01`, `02`, `03`, `04`, `16`) by 12,779 B combined. Against the best
+single configuration, RC-MDL wins 24/25; only target `01` is smaller under AGC (4,879 B vs
+2,212 B). Both the best-single and oracle archives were re-run and decoded byte-exactly
+(25/25 each), so the table is not based on marginal arithmetic alone.
+
+The 6.05x oracle margin is in the same range as the single-config margins for *E. coli* and
+*M. tuberculosis*; the larger 11–13x figures are what this panel's near-identical chromosomes
+add when AGC is held to one setting. RC-MDL represents a target as a small set of long panel
+copies plus its private differences; AGC's block model pays a larger marginal for each
+appended genome, but its per-target tuning can recover much of the gap on small targets. The
+ratio is a property of this panel, not a species-wide constant.
+
+For context, AGC's full 25-genome archive is 2,145,694 B (0.2416 bits/base); that is a
+collection total, not a leave-one-out marginal, and is not directly comparable to the
+267,412 B LOO total. RC-MDL's collection total is 1,233,433 B, so it is 1.74x smaller than
+AGC's collection archive as well.
+
+### Leave-cluster-out robustness
+
+The regular leave-one-out experiment gives every target the other 23 or 24 genomes, including
+near-identical siblings. That is a legitimate "panel already present" scenario, but it
+overstates performance on an unseen lineage. The leave-cluster-out control removes the
+target's entire Jaccard cluster from the panel, so no near-duplicate can explain the target.
+The target itself is still compressed and round-tripped byte-exactly.
+
+| Species | Jaccard | Clusters / largest | RC regular B | RC cluster B (bpb) | AGC regular B | AGC cluster B (bpb) | Cluster ratio | RC wins |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| *E. coli* | 0.98 | 22 / 3 | 1,780,761 | **2,331,696** (0.15531) | 8,384,117 | 9,203,994 (0.61305) | **3.95x** | 24/24 |
+| *M. tuberculosis* | 0.99 | 13 / 6 | 122,998 | **153,182** (0.01159) | 1,390,893 | 1,188,909 (0.08995) | **7.76x** | 16/24 |
+| *S. aureus* | 0.98 | 14 / 8 | 267,412 | **741,650** (0.08352) | 3,539,729 | 4,132,771 (0.46538) | **5.57x** | 23/25 |
+
+*AGC caveat for this table.* The cluster AGC runs used AGC's adaptive default (`-a`), which
+the full *S. aureus* and *M. tuberculosis* sweeps show is not its best setting. These ratios
+are therefore upper bounds on the AGC margin; tuned best-single cluster runs are the next
+control. The regular *E. coli* AGC number still uses a target-00-selected setting (full sweep
+incomplete); the regular *M. tuberculosis* number now has a full sweep (best single 292,170 B,
+oracle 96,580 B), so its `-a` cluster row is especially conservative and the 1,390,893 B
+regular cell above is the old target-00-selected value, kept only for continuity with the
+cluster run.
+
+The ratios are lower than the regular-LOO headline because RC-MDL's cost rises when siblings
+are removed: 1.31x on *E. coli*, 1.25x on *M. tuberculosis*, and 2.77x on *S. aureus*. That
+is the expected signature of a relative-LZ codec, and it quantifies exactly how much of the
+regular result came from near-duplicates. AGC's cost changes by 1.10x, 0.85x, and 1.17x
+respectively; on MTB it actually improves with the smaller, more diverse panel. Against AGC
+`-a`, RC-MDL remains **3.95–7.76x smaller in aggregate**, and it wins every *E. coli* target
+and all but two *S. aureus* targets. The MTB cluster ratio is the least transferable: the
+regular MTB oracle already shows AGC can be smaller when tuned per target.
+
+Per-target losses are small in absolute terms. On *S. aureus*, AGC wins only `01` and `04`, by
+5,358 B combined; RC-MDL's aggregate winning margin is 3,391,121 B. On MTB, AGC wins eight
+small targets by 16,830 B combined, against an aggregate RC-MDL margin of 1,035,727 B. The
+leave-cluster-out headline for *S. aureus* is **5.57x against AGC `-a`**; the regular 13.24x
+combines near-duplicate panel composition with an AGC setting that is poor on this panel.
+Against the regular per-target oracle the margin is 6.05x, so the panel effect and the tuning
+effect are both real and should not be conflated.
+
+MTB uses a 0.99 threshold because 0.98 merges 20 of 24 genomes into one cluster, leaving a
+four-genome panel. That would test "codec on a tiny panel", not "codec on an unseen lineage".
+At 0.99, the largest cluster is six genomes and the other twelve clusters are one to three
+members.
 
 ## Limits and threats to validity
 
 - **Near-duplicate panel members.** The *S. aureus* panel is the extreme case: targets 10
-  and 24 contribute 57% of the LOO total, and several genomes are near-identical. Report
-  medians and per-genome ranges, and repeat on a less clonal panel.
+  and 24 contribute 57% of the regular LOO total, and several genomes are near-identical.
+  The leave-cluster-out control quantifies the effect (2.77x cost increase; 5.57x margin over
+  AGC `-a`). The regular 13.24x is not a species-wide constant, and part of the gap is AGC
+  tuning: the regular per-target oracle gives 6.05x.
 - **Three species, one panel each.** *E. coli*, *M. tuberculosis*, and *S. aureus* are
   measured, but each is a single RefSeq panel. The absolute bits/base is panel-dependent;
   a second panel per species and a less clonal *S. aureus* panel are the next controls.
@@ -385,11 +521,17 @@ a species-wide constant.
 
 ## Next experiments
 
-1. Progressive collection total versus HyperGraSS's 3,810,409 B (valid decode order).
-2. AGC sensitivity: the setting is selected on three representative targets per species;
-   verify it on every target, and report the best-per-target oracle as an upper bound on AGC.
-3. Ablations: k, stride, `--no-approx`, mismatch cap, panel size scaling (1, 2, 4, 8, 16, 23).
-4. Panel robustness: a second panel per species and a less clonal *S. aureus* panel, to
+1. **Joint collection model.** Prim is 4.3% larger than HyperGraSS, and four ordering
+   strategies (greedy, cluster-aware, fixed anchors) do not close the ~162 KB residual.
+   Prototype a graph/consensus collection representation that codes shared variation jointly.
+2. **Finish AGC sensitivity.** The full 13-config *S. aureus* sweep is done (best single
+   11.14x, oracle 6.05x); the full *M. tuberculosis* sweep is also done (best single 2.38x,
+   oracle 0.79x, i.e., AGC's oracle is 21.5% smaller). The *E. coli* sweep is incomplete
+   (6/24 targets), so its 4.71x still uses a target-00-selected setting. Re-tune the cluster
+   AGC controls at each species' best-single settings before quoting final robustness ratios.
+3. **Panel robustness:** a second panel per species and a less clonal *S. aureus* panel, to
    separate codec behavior from panel composition.
-5. If the margin holds: indel-aware extension (banded affine alignment) and a
-   panel-conditioned literal model.
+4. **Residual model:** indel-aware extension (banded affine alignment) and a
+   panel-conditioned literal model, aimed at the gap-position cost identified in the
+   headroom analysis.
+5. **Production gaps:** random access and a packed/sampled panel index.

@@ -49,6 +49,13 @@ def main() -> None:
     parser.add_argument("--order", choices=["name", "size-asc", "size-desc"], default="name")
     parser.add_argument("--order-file", type=Path)
     parser.add_argument("--limit", type=int, default=0)
+    parser.add_argument(
+        "--fixed-anchors",
+        type=int,
+        default=0,
+        help="code the first N genomes progressively, then every other genome "
+        "against those N anchors only (0 = full progressive collection)",
+    )
     parser.add_argument("--k", type=int, default=16)
     parser.add_argument("--step", type=int, default=8)
     parser.add_argument("--no-approx", action="store_true")
@@ -92,8 +99,12 @@ def main() -> None:
         if args.no_approx:
             compress.append("--no-approx")
         if i > 0:
+            if args.fixed_anchors > 0 and i >= args.fixed_anchors:
+                panel = genomes[: args.fixed_anchors]
+            else:
+                panel = genomes[:i]
             list_path.write_text(
-                "\n".join(p.name for p in genomes[:i]) + "\n", encoding="utf-8"
+                "\n".join(p.name for p in panel) + "\n", encoding="utf-8"
             )
             compress += ["--panel", str(args.genomes), "--panel-list", str(list_path)]
         stats, wall = invoke(compress)
@@ -150,6 +161,7 @@ def main() -> None:
     summary = {
         "genomes": len(records),
         "order": args.order_file.name if args.order_file else args.order,
+        "fixed_anchors": args.fixed_anchors,
         "k": args.k,
         "step": args.step,
         "target_bases": sum(r["target_bytes"] for r in records),

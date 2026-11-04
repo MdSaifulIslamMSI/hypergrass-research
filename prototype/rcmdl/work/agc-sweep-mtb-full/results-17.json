@@ -1,0 +1,191 @@
+[
+  {
+    "config": "default",
+    "opts": [
+      "-a"
+    ],
+    "base_bytes": 1228919,
+    "full_bytes": 1232825,
+    "marginal_bytes": 3906,
+    "bpb": 0.007095052082150749,
+    "create_seconds": 2.657291199982865,
+    "append_seconds": 0.5210809999844059
+  },
+  {
+    "config": "fallback",
+    "opts": [
+      "-a",
+      "-f",
+      "0.05"
+    ],
+    "base_bytes": 1214643,
+    "full_bytes": 1218549,
+    "marginal_bytes": 3906,
+    "bpb": 0.007095052082150749,
+    "create_seconds": 2.6300045999814756,
+    "append_seconds": 0.4779751999885775
+  },
+  {
+    "config": "min15",
+    "opts": [
+      "-a",
+      "-l",
+      "15"
+    ],
+    "base_bytes": 1229654,
+    "full_bytes": 1233587,
+    "marginal_bytes": 3933,
+    "bpb": 0.0071440962209674596,
+    "create_seconds": 1.6324272999772802,
+    "append_seconds": 0.3491249999788124
+  },
+  {
+    "config": "min15-fallback",
+    "opts": [
+      "-a",
+      "-l",
+      "15",
+      "-f",
+      "0.05"
+    ],
+    "base_bytes": 1215378,
+    "full_bytes": 1219311,
+    "marginal_bytes": 3933,
+    "bpb": 0.0071440962209674596,
+    "create_seconds": 2.5241514000226744,
+    "append_seconds": 0.6222614999860525
+  },
+  {
+    "config": "seg50k",
+    "opts": [
+      "-a",
+      "-s",
+      "50000"
+    ],
+    "base_bytes": 1381345,
+    "full_bytes": 1437600,
+    "marginal_bytes": 56255,
+    "bpb": 0.1021843714494087,
+    "create_seconds": 2.535720699990634,
+    "append_seconds": 0.4404445000109263
+  },
+  {
+    "config": "seg100k",
+    "opts": [
+      "-a",
+      "-s",
+      "100000"
+    ],
+    "base_bytes": 1396448,
+    "full_bytes": 1427966,
+    "marginal_bytes": 31518,
+    "bpb": 0.057250858045373096,
+    "create_seconds": 1.5499949999793898,
+    "append_seconds": 0.420100800023647
+  },
+  {
+    "config": "seg200k",
+    "opts": [
+      "-a",
+      "-s",
+      "200000"
+    ],
+    "base_bytes": 1387249,
+    "full_bytes": 1495648,
+    "marginal_bytes": 108399,
+    "bpb": 0.1969013186515768,
+    "create_seconds": 1.9917079000151716,
+    "append_seconds": 0.731121599994367
+  },
+  {
+    "config": "seg500k",
+    "opts": [
+      "-a",
+      "-s",
+      "500000"
+    ],
+    "base_bytes": 1346396,
+    "full_bytes": 1349676,
+    "marginal_bytes": 3280,
+    "bpb": 0.0059579546414373925,
+    "create_seconds": 3.05514630000107,
+    "append_seconds": 0.5612068999907933
+  },
+  {
+    "config": "seg1m",
+    "opts": [
+      "-a",
+      "-s",
+      "1000000"
+    ],
+    "base_bytes": 1471957,
+    "full_bytes": 1475112,
+    "marginal_bytes": 3155,
+    "bpb": 0.005730898443211883,
+    "create_seconds": 2.254574499995215,
+    "append_seconds": 0.6970728999876883
+  },
+  {
+    "config": "seg1m-min15",
+    "opts": [
+      "-a",
+      "-s",
+      "1000000",
+      "-l",
+      "15"
+    ],
+    "base_bytes": 1478059,
+    "full_bytes": 1481301,
+    "marginal_bytes": 3242,
+    "bpb": 0.005888929557176838,
+    "create_seconds": 2.961191099981079,
+    "append_seconds": 1.045480900007533
+  },
+  {
+    "config": "k25-seg200k",
+    "opts": [
+      "-a",
+      "-k",
+      "25",
+      "-s",
+      "200000"
+    ],
+    "base_bytes": 1386820,
+    "full_bytes": 1496627,
+    "marginal_bytes": 109807,
+    "bpb": 0.19945887966838896,
+    "create_seconds": 2.1611464000015985,
+    "append_seconds": 0.47136380002484657
+  },
+  {
+    "config": "plain-seg200k",
+    "opts": [
+      "-s",
+      "200000"
+    ],
+    "base_bytes": 1387249,
+    "full_bytes": 1495648,
+    "marginal_bytes": 108399,
+    "bpb": 0.1969013186515768,
+    "create_seconds": 1.8888603000086732,
+    "append_seconds": 0.3641058999928646
+  },
+  {
+    "config": "seg200k-min15-fallback",
+    "opts": [
+      "-a",
+      "-s",
+      "200000",
+      "-l",
+      "15",
+      "-f",
+      "0.05"
+    ],
+    "base_bytes": 1312041,
+    "full_bytes": 1421815,
+    "marginal_bytes": 109774,
+    "bpb": 0.19939893683205742,
+    "create_seconds": 3.4700545000087004,
+    "append_seconds": 0.6554369000077713
+  }
+]

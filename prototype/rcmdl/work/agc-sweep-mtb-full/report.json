@@ -1,0 +1,232 @@
+{
+  "targets": 24,
+  "target_bases": 105745015,
+  "rc_bytes": 122998,
+  "best_single": {
+    "config": "seg100k",
+    "bytes": 292170,
+    "bpb": 0.022103736994126863,
+    "ratio": 2.3754044781215953
+  },
+  "oracle": {
+    "bytes": 96580,
+    "bpb": 0.007306632846947915,
+    "ratio": 0.7852160197726792
+  },
+  "config_totals": {
+    "seg100k": 292170,
+    "seg1m": 384994,
+    "seg1m-min15": 391248,
+    "default": 443669,
+    "min15": 446925,
+    "fallback": 517362,
+    "min15-fallback": 520536,
+    "seg500k": 766757,
+    "seg50k": 1024001,
+    "k25-seg200k": 1359004,
+    "seg200k": 1390783,
+    "plain-seg200k": 1390783,
+    "seg200k-min15-fallback": 1506569
+  },
+  "config_wins": {
+    "seg1m": 12,
+    "seg500k": 6,
+    "seg1m-min15": 3,
+    "k25-seg200k": 2,
+    "default": 1
+  },
+  "targets_detail": [
+    {
+      "target": "00.seq",
+      "target_bytes": 4417521,
+      "rc_bytes": 4012,
+      "best_config": "seg1m-min15",
+      "best_bytes": 1667,
+      "ratio": 0.41550348953140576
+    },
+    {
+      "target": "01.seq",
+      "target_bytes": 4383271,
+      "rc_bytes": 5051,
+      "best_config": "seg500k",
+      "best_bytes": 2787,
+      "ratio": 0.5517719263512176
+    },
+    {
+      "target": "02.seq",
+      "target_bytes": 4433908,
+      "rc_bytes": 6282,
+      "best_config": "seg1m",
+      "best_bytes": 2916,
+      "ratio": 0.46418338108882523
+    },
+    {
+      "target": "03.seq",
+      "target_bytes": 4367416,
+      "rc_bytes": 1635,
+      "best_config": "seg500k",
+      "best_bytes": 243,
+      "ratio": 0.14862385321100918
+    },
+    {
+      "target": "04.seq",
+      "target_bytes": 4410859,
+      "rc_bytes": 5346,
+      "best_config": "seg1m",
+      "best_bytes": 4615,
+      "ratio": 0.863262252151141
+    },
+    {
+      "target": "05.seq",
+      "target_bytes": 4393623,
+      "rc_bytes": 5604,
+      "best_config": "seg1m",
+      "best_bytes": 3560,
+      "ratio": 0.635260528194147
+    },
+    {
+      "target": "06.seq",
+      "target_bytes": 4431121,
+      "rc_bytes": 5871,
+      "best_config": "seg500k",
+      "best_bytes": 2886,
+      "ratio": 0.4915687276443536
+    },
+    {
+      "target": "07.seq",
+      "target_bytes": 4395921,
+      "rc_bytes": 5504,
+      "best_config": "seg1m",
+      "best_bytes": 3263,
+      "ratio": 0.5928415697674418
+    },
+    {
+      "target": "08.seq",
+      "target_bytes": 4367401,
+      "rc_bytes": 2218,
+      "best_config": "seg1m",
+      "best_bytes": 224,
+      "ratio": 0.10099188458070334
+    },
+    {
+      "target": "09.seq",
+      "target_bytes": 4423131,
+      "rc_bytes": 2582,
+      "best_config": "k25-seg200k",
+      "best_bytes": 368,
+      "ratio": 0.14252517428350117
+    },
+    {
+      "target": "10.seq",
+      "target_bytes": 4416232,
+      "rc_bytes": 3196,
+      "best_config": "seg1m",
+      "best_bytes": 794,
+      "ratio": 0.24843554443053817
+    },
+    {
+      "target": "11.seq",
+      "target_bytes": 4409659,
+      "rc_bytes": 8302,
+      "best_config": "seg500k",
+      "best_bytes": 7850,
+      "ratio": 0.9455552878824379
+    },
+    {
+      "target": "12.seq",
+      "target_bytes": 4420355,
+      "rc_bytes": 6026,
+      "best_config": "default",
+      "best_bytes": 33514,
+      "ratio": 5.561566544971789
+    },
+    {
+      "target": "13.seq",
+      "target_bytes": 4425030,
+      "rc_bytes": 8388,
+      "best_config": "seg1m",
+      "best_bytes": 7064,
+      "ratio": 0.8421554601812112
+    },
+    {
+      "target": "14.seq",
+      "target_bytes": 4393390,
+      "rc_bytes": 5618,
+      "best_config": "seg1m",
+      "best_bytes": 2505,
+      "ratio": 0.4458882164471342
+    },
+    {
+      "target": "15.seq",
+      "target_bytes": 4408959,
+      "rc_bytes": 5596,
+      "best_config": "seg1m-min15",
+      "best_bytes": 4789,
+      "ratio": 0.8557898498927805
+    },
+    {
+      "target": "16.seq",
+      "target_bytes": 4414576,
+      "rc_bytes": 3843,
+      "best_config": "k25-seg200k",
+      "best_bytes": 1072,
+      "ratio": 0.2789487379651314
+    },
+    {
+      "target": "17.seq",
+      "target_bytes": 4404191,
+      "rc_bytes": 6748,
+      "best_config": "seg1m",
+      "best_bytes": 3155,
+      "ratio": 0.4675459395376408
+    },
+    {
+      "target": "18.seq",
+      "target_bytes": 4363898,
+      "rc_bytes": 4867,
+      "best_config": "seg1m-min15",
+      "best_bytes": 1693,
+      "ratio": 0.3478528867885761
+    },
+    {
+      "target": "19.seq",
+      "target_bytes": 4421179,
+      "rc_bytes": 3163,
+      "best_config": "seg1m",
+      "best_bytes": 512,
+      "ratio": 0.16187164084729688
+    },
+    {
+      "target": "20.seq",
+      "target_bytes": 4421090,
+      "rc_bytes": 6552,
+      "best_config": "seg500k",
+      "best_bytes": 3062,
+      "ratio": 0.46733821733821734
+    },
+    {
+      "target": "21.seq",
+      "target_bytes": 4401414,
+      "rc_bytes": 4696,
+      "best_config": "seg1m",
+      "best_bytes": 2473,
+      "ratio": 0.526618398637138
+    },
+    {
+      "target": "22.seq",
+      "target_bytes": 4426364,
+      "rc_bytes": 6659,
+      "best_config": "seg500k",
+      "best_bytes": 3142,
+      "ratio": 0.47184261901186364
+    },
+    {
+      "target": "23.seq",
+      "target_bytes": 4394506,
+      "rc_bytes": 5239,
+      "best_config": "seg1m",
+      "best_bytes": 2426,
+      "ratio": 0.46306547050963925
+    }
+  ]
+}

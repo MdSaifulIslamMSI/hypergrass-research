@@ -1,0 +1,191 @@
+[
+  {
+    "config": "default",
+    "opts": [
+      "-a"
+    ],
+    "base_bytes": 1227985,
+    "full_bytes": 1248857,
+    "marginal_bytes": 20872,
+    "bpb": 0.037855621937108015,
+    "create_seconds": 1.8428650999849197,
+    "append_seconds": 0.3914247999782674
+  },
+  {
+    "config": "fallback",
+    "opts": [
+      "-a",
+      "-f",
+      "0.05"
+    ],
+    "base_bytes": 1213715,
+    "full_bytes": 1234588,
+    "marginal_bytes": 20873,
+    "bpb": 0.03785743564072708,
+    "create_seconds": 1.8840559000091162,
+    "append_seconds": 0.43006210000021383
+  },
+  {
+    "config": "min15",
+    "opts": [
+      "-a",
+      "-l",
+      "15"
+    ],
+    "base_bytes": 1228719,
+    "full_bytes": 1249724,
+    "marginal_bytes": 21005,
+    "bpb": 0.03809684451844355,
+    "create_seconds": 1.6742258000012953,
+    "append_seconds": 0.48100820000399835
+  },
+  {
+    "config": "min15-fallback",
+    "opts": [
+      "-a",
+      "-l",
+      "15",
+      "-f",
+      "0.05"
+    ],
+    "base_bytes": 1214448,
+    "full_bytes": 1235449,
+    "marginal_bytes": 21001,
+    "bpb": 0.038089589703967294,
+    "create_seconds": 1.8783925000170711,
+    "append_seconds": 0.42222940002102405
+  },
+  {
+    "config": "seg50k",
+    "opts": [
+      "-a",
+      "-s",
+      "50000"
+    ],
+    "base_bytes": 1380359,
+    "full_bytes": 1425644,
+    "marginal_bytes": 45285,
+    "bpb": 0.08213356838932237,
+    "create_seconds": 1.7946031000174116,
+    "append_seconds": 0.4138560999999754
+  },
+  {
+    "config": "seg100k",
+    "opts": [
+      "-a",
+      "-s",
+      "100000"
+    ],
+    "base_bytes": 1395743,
+    "full_bytes": 1405568,
+    "marginal_bytes": 9825,
+    "bpb": 0.01781963805730578,
+    "create_seconds": 1.7925845000136178,
+    "append_seconds": 0.3614603000169154
+  },
+  {
+    "config": "seg200k",
+    "opts": [
+      "-a",
+      "-s",
+      "200000"
+    ],
+    "base_bytes": 1386542,
+    "full_bytes": 1446300,
+    "marginal_bytes": 59758,
+    "bpb": 0.10838330086803855,
+    "create_seconds": 1.98532370000612,
+    "append_seconds": 0.45237809998798184
+  },
+  {
+    "config": "seg500k",
+    "opts": [
+      "-a",
+      "-s",
+      "500000"
+    ],
+    "base_bytes": 1344807,
+    "full_bytes": 1460391,
+    "marginal_bytes": 115584,
+    "bpb": 0.20963511910591667,
+    "create_seconds": 1.856112099980237,
+    "append_seconds": 0.5465131000091787
+  },
+  {
+    "config": "seg1m",
+    "opts": [
+      "-a",
+      "-s",
+      "1000000"
+    ],
+    "base_bytes": 1474908,
+    "full_bytes": 1479523,
+    "marginal_bytes": 4615,
+    "bpb": 0.00837024220198129,
+    "create_seconds": 2.245058300002711,
+    "append_seconds": 0.8490480000036769
+  },
+  {
+    "config": "seg1m-min15",
+    "opts": [
+      "-a",
+      "-s",
+      "1000000",
+      "-l",
+      "15"
+    ],
+    "base_bytes": 1479456,
+    "full_bytes": 1484237,
+    "marginal_bytes": 4781,
+    "bpb": 0.008671317002745947,
+    "create_seconds": 1.9855289999977686,
+    "append_seconds": 0.6990782000066247
+  },
+  {
+    "config": "k25-seg200k",
+    "opts": [
+      "-a",
+      "-k",
+      "25",
+      "-s",
+      "200000"
+    ],
+    "base_bytes": 1386169,
+    "full_bytes": 1440506,
+    "marginal_bytes": 54337,
+    "bpb": 0.09855121354909152,
+    "create_seconds": 1.907499499997357,
+    "append_seconds": 0.41975030000321567
+  },
+  {
+    "config": "plain-seg200k",
+    "opts": [
+      "-s",
+      "200000"
+    ],
+    "base_bytes": 1386542,
+    "full_bytes": 1446300,
+    "marginal_bytes": 59758,
+    "bpb": 0.10838330086803855,
+    "create_seconds": 1.8296907000185456,
+    "append_seconds": 0.29568760000984184
+  },
+  {
+    "config": "seg200k-min15-fallback",
+    "opts": [
+      "-a",
+      "-s",
+      "200000",
+      "-l",
+      "15",
+      "-f",
+      "0.05"
+    ],
+    "base_bytes": 1311268,
+    "full_bytes": 1371814,
+    "marginal_bytes": 60546,
+    "bpb": 0.10981249931986115,
+    "create_seconds": 2.413391699985368,
+    "append_seconds": 0.547679799987236
+  }
+]

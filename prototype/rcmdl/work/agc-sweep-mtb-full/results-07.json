@@ -1,0 +1,191 @@
+[
+  {
+    "config": "default",
+    "opts": [
+      "-a"
+    ],
+    "base_bytes": 1229599,
+    "full_bytes": 1232941,
+    "marginal_bytes": 3342,
+    "bpb": 0.006081995010835032,
+    "create_seconds": 2.0513549000024796,
+    "append_seconds": 0.381803399999626
+  },
+  {
+    "config": "fallback",
+    "opts": [
+      "-a",
+      "-f",
+      "0.05"
+    ],
+    "base_bytes": 1215320,
+    "full_bytes": 1218665,
+    "marginal_bytes": 3345,
+    "bpb": 0.006087454611383358,
+    "create_seconds": 1.9019796999928076,
+    "append_seconds": 0.3970790000166744
+  },
+  {
+    "config": "min15",
+    "opts": [
+      "-a",
+      "-l",
+      "15"
+    ],
+    "base_bytes": 1230260,
+    "full_bytes": 1233665,
+    "marginal_bytes": 3405,
+    "bpb": 0.006196646622349876,
+    "create_seconds": 2.549675300018862,
+    "append_seconds": 0.44280910000088625
+  },
+  {
+    "config": "min15-fallback",
+    "opts": [
+      "-a",
+      "-l",
+      "15",
+      "-f",
+      "0.05"
+    ],
+    "base_bytes": 1215984,
+    "full_bytes": 1219392,
+    "marginal_bytes": 3408,
+    "bpb": 0.006202106222898201,
+    "create_seconds": 2.3641219999990426,
+    "append_seconds": 0.4347336000064388
+  },
+  {
+    "config": "seg50k",
+    "opts": [
+      "-a",
+      "-s",
+      "50000"
+    ],
+    "base_bytes": 1380050,
+    "full_bytes": 1426215,
+    "marginal_bytes": 46165,
+    "bpb": 0.0840141531044881,
+    "create_seconds": 1.7469229999987874,
+    "append_seconds": 0.38393330000690185
+  },
+  {
+    "config": "seg100k",
+    "opts": [
+      "-a",
+      "-s",
+      "100000"
+    ],
+    "base_bytes": 1397289,
+    "full_bytes": 1427178,
+    "marginal_bytes": 29889,
+    "bpb": 0.05439400026297076,
+    "create_seconds": 2.640541500004474,
+    "append_seconds": 0.6390998999995645
+  },
+  {
+    "config": "seg200k",
+    "opts": [
+      "-a",
+      "-s",
+      "200000"
+    ],
+    "base_bytes": 1387991,
+    "full_bytes": 1494813,
+    "marginal_bytes": 106822,
+    "bpb": 0.1944018165910891,
+    "create_seconds": 2.164954799984116,
+    "append_seconds": 0.6885545999975875
+  },
+  {
+    "config": "seg500k",
+    "opts": [
+      "-a",
+      "-s",
+      "500000"
+    ],
+    "base_bytes": 1347293,
+    "full_bytes": 1350574,
+    "marginal_bytes": 3281,
+    "bpb": 0.005970983133019072,
+    "create_seconds": 2.2840581000200473,
+    "append_seconds": 0.4674208000069484
+  },
+  {
+    "config": "seg1m",
+    "opts": [
+      "-a",
+      "-s",
+      "1000000"
+    ],
+    "base_bytes": 1472931,
+    "full_bytes": 1476194,
+    "marginal_bytes": 3263,
+    "bpb": 0.0059382255297291174,
+    "create_seconds": 2.2509943999757525,
+    "append_seconds": 0.9124200000078417
+  },
+  {
+    "config": "seg1m-min15",
+    "opts": [
+      "-a",
+      "-s",
+      "1000000",
+      "-l",
+      "15"
+    ],
+    "base_bytes": 1482975,
+    "full_bytes": 1486373,
+    "marginal_bytes": 3398,
+    "bpb": 0.006183907554403782,
+    "create_seconds": 2.213405499991495,
+    "append_seconds": 1.1038332000025548
+  },
+  {
+    "config": "k25-seg200k",
+    "opts": [
+      "-a",
+      "-k",
+      "25",
+      "-s",
+      "200000"
+    ],
+    "base_bytes": 1387533,
+    "full_bytes": 1494899,
+    "marginal_bytes": 107366,
+    "bpb": 0.19539182415718553,
+    "create_seconds": 3.4500730000145268,
+    "append_seconds": 0.6998765000025742
+  },
+  {
+    "config": "plain-seg200k",
+    "opts": [
+      "-s",
+      "200000"
+    ],
+    "base_bytes": 1387991,
+    "full_bytes": 1494813,
+    "marginal_bytes": 106822,
+    "bpb": 0.1944018165910891,
+    "create_seconds": 2.6665236999979243,
+    "append_seconds": 0.3582729999907315
+  },
+  {
+    "config": "seg200k-min15-fallback",
+    "opts": [
+      "-a",
+      "-s",
+      "200000",
+      "-l",
+      "15",
+      "-f",
+      "0.05"
+    ],
+    "base_bytes": 1312594,
+    "full_bytes": 1421318,
+    "marginal_bytes": 108724,
+    "bpb": 0.19786320333872773,
+    "create_seconds": 2.517523699993035,
+    "append_seconds": 0.5184016000130214
+  }
+]

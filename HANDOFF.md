@@ -26,21 +26,39 @@ evidence (result JSON, report JSON, summaries) is included.
 |---|---|---|
 | RC-MDL LOO, *E. coli* (24 genomes, 120,108,223 bases) | **1,780,761 B / 0.1186 bits/base** | 24/24 byte-exact |
 | AGC 3.2.5 LOO, same panel (`-s 200000`) | 8,384,117 B / 0.5584 bits/base | 24/24 byte-exact |
-| RC-MDL vs AGC, *E. coli* | **4.71x smaller** | median 4.09x; AGC wins only targets 13, 14 |
+| RC-MDL vs AGC, *E. coli* (target-00-selected setting) | **4.71x smaller** | median 4.09x; AGC wins only targets 13, 14; full sweep incomplete |
 | RC-MDL LOO, *M. tuberculosis* (24 genomes, 105,745,015 bases) | **122,998 B / 0.009305 bits/base** | 24/24 byte-exact |
-| AGC 3.2.5 LOO, *M. tuberculosis* | 1,390,893 B | 11.3x larger than RC-MDL |
+| AGC 3.2.5 LOO, *M. tuberculosis* (full 13-config sweep) | 292,170 B best single / 96,580 B oracle | 2.38x larger / **0.79x** (AGC oracle 21.5% smaller) |
 | Self-contained single genome (*E. coli* 00) | HyperGraSS 1,136,083 B vs RC-MDL 1,192,494 B | HyperGraSS wins by 4.7% |
 | Progressive collection (24 *E. coli*) | HyperGraSS 3,810,409 B vs RC-MDL Prim **3,972,975 B** | HyperGraSS wins by 4.3% |
 | Panel-size ablation (target 00) | 1/2/4/8/16/23 genomes → 249,491 / 185,439 / 146,758 / 102,931 / 87,254 / 73,194 B | all byte-exact |
 | *S. aureus* LOO (25 genomes, 71,043,355 bases) | **267,412 B / 0.03011 bits/base** | 25/25 byte-exact |
-| AGC 3.2.5 LOO, same *S. aureus* panel (`-a`) | 3,539,729 B / 0.3986 bits/base | 13.24x larger than RC-MDL |
+| AGC 3.2.5 LOO, same *S. aureus* panel | 3,539,729 B (`-a`) / 2,979,078 B (best single) / 1,617,085 B (oracle) | 13.24x / 11.14x / **6.05x** larger than RC-MDL |
+| Leave-cluster-out, *E. coli* (cluster `13,14,15` excluded) | **2,331,696 B / 0.15531 bits/base** vs AGC 9,203,994 B (`-a`) | **3.95x**; RC wins 24/24 |
+| Leave-cluster-out, *M. tuberculosis* (13 clusters, largest 6) | **153,182 B / 0.01159 bits/base** vs AGC 1,188,909 B (`-a`) | **7.76x**; RC wins 16/24; tuned rerun pending |
+| Leave-cluster-out, *S. aureus* (14 clusters, largest 8) | **741,650 B / 0.08352 bits/base** vs AGC 4,132,771 B (`-a`) | **5.57x**; RC wins 23/25 |
+| Collection order: cluster-aware Prim (24 *E. coli*) | 3,982,813 B | +0.25% vs Prim; still +4.5% vs HyperGraSS |
+| Collection order: greedy measured marginal | 3,990,249 B | +0.43% vs Prim |
+| Collection order: fixed anchors 4/8/12/16/20 | 6,621,279 / 5,818,621 / 5,494,235 / 4,921,615 / 4,115,368 B | all worse than Prim |
+| Collection, *S. aureus* (25 genomes) | RC-MDL Prim **1,233,433 B** vs AGC full archive 2,145,694 B | 1.74x smaller |
 
 The central claim is the reference-conditioned one: when the rest of the panel is already
 present, RC-MDL costs 0.12 bits/base on *E. coli*, 0.0093 bits/base on *M. tuberculosis*,
-and 0.030 bits/base on *S. aureus* — 4.7x, 11.3x, and 13.24x smaller than AGC.
-HyperGraSS still wins the self-contained single-genome and collection settings. See
-`prototype/rcmdl/RESULTS.md` for the full tables, caveats, and the lower-bound analysis of
-the collection gap.
+and 0.030 bits/base on *S. aureus*. The margin over AGC depends on tuning and panel:
+
+- *E. coli*: 4.7x against one target-00-selected setting; the full 13-config sweep is
+  incomplete, so this is not yet a best-single or oracle comparison.
+- *M. tuberculosis*: 2.38x against AGC's best single setting, but AGC's per-target oracle
+  is **21.5% smaller**, so the advantage is not universal.
+- *S. aureus*: 11.14x against AGC's best single setting and 6.05x against its per-target
+  oracle.
+
+The leave-cluster-out controls use AGC `-a` on the AGC side, so the **3.95–7.76x** range is
+an upper bound on the margin until tuned cluster reruns are done. HyperGraSS still wins the
+self-contained single-genome and collection settings. Ordering experiments (greedy,
+cluster-aware, fixed anchors) do not close the 4.3% collection gap; the residual is
+representation-level and needs a joint collection model. See `prototype/rcmdl/RESULTS.md`
+for the full tables, caveats, and the lower-bound analysis.
 
 ## Restore from the release asset
 

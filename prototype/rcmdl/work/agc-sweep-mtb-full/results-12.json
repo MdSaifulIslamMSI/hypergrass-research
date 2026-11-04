@@ -1,0 +1,191 @@
+[
+  {
+    "config": "default",
+    "opts": [
+      "-a"
+    ],
+    "base_bytes": 1199340,
+    "full_bytes": 1232854,
+    "marginal_bytes": 33514,
+    "bpb": 0.0606538833941127,
+    "create_seconds": 1.9644218000175897,
+    "append_seconds": 0.3644342999905348
+  },
+  {
+    "config": "fallback",
+    "opts": [
+      "-a",
+      "-f",
+      "0.05"
+    ],
+    "base_bytes": 1185060,
+    "full_bytes": 1218577,
+    "marginal_bytes": 33517,
+    "bpb": 0.06065931281615072,
+    "create_seconds": 1.7291360000090208,
+    "append_seconds": 0.4177376000152435
+  },
+  {
+    "config": "min15",
+    "opts": [
+      "-a",
+      "-l",
+      "15"
+    ],
+    "base_bytes": 1200010,
+    "full_bytes": 1233563,
+    "marginal_bytes": 33553,
+    "bpb": 0.06072446588060701,
+    "create_seconds": 1.922700100025395,
+    "append_seconds": 0.5634938000002876
+  },
+  {
+    "config": "min15-fallback",
+    "opts": [
+      "-a",
+      "-l",
+      "15",
+      "-f",
+      "0.05"
+    ],
+    "base_bytes": 1185733,
+    "full_bytes": 1219285,
+    "marginal_bytes": 33552,
+    "bpb": 0.060722656073261,
+    "create_seconds": 2.5822319999861065,
+    "append_seconds": 0.5112390000140294
+  },
+  {
+    "config": "seg50k",
+    "opts": [
+      "-a",
+      "-s",
+      "50000"
+    ],
+    "base_bytes": 1320067,
+    "full_bytes": 1398180,
+    "marginal_bytes": 78113,
+    "bpb": 0.14136948121872428,
+    "create_seconds": 2.7268540000077337,
+    "append_seconds": 0.3678953000053298
+  },
+  {
+    "config": "seg100k",
+    "opts": [
+      "-a",
+      "-s",
+      "100000"
+    ],
+    "base_bytes": 1347749,
+    "full_bytes": 1400491,
+    "marginal_bytes": 52742,
+    "bpb": 0.09545285904315486,
+    "create_seconds": 1.9390006999892648,
+    "append_seconds": 0.595058999984758
+  },
+  {
+    "config": "seg200k",
+    "opts": [
+      "-a",
+      "-s",
+      "200000"
+    ],
+    "base_bytes": 1292425,
+    "full_bytes": 1440412,
+    "marginal_bytes": 147987,
+    "bpb": 0.2678279597136885,
+    "create_seconds": 2.5208213000150863,
+    "append_seconds": 0.5152646999922581
+  },
+  {
+    "config": "seg500k",
+    "opts": [
+      "-a",
+      "-s",
+      "500000"
+    ],
+    "base_bytes": 1152727,
+    "full_bytes": 1349471,
+    "marginal_bytes": 196744,
+    "bpb": 0.35606873648300136,
+    "create_seconds": 1.642173600004753,
+    "append_seconds": 0.5304267999890726
+  },
+  {
+    "config": "seg1m",
+    "opts": [
+      "-a",
+      "-s",
+      "1000000"
+    ],
+    "base_bytes": 1150510,
+    "full_bytes": 1472016,
+    "marginal_bytes": 321506,
+    "bpb": 0.5818639205856536,
+    "create_seconds": 2.2118630000040866,
+    "append_seconds": 1.0832594000094105
+  },
+  {
+    "config": "seg1m-min15",
+    "opts": [
+      "-a",
+      "-s",
+      "1000000",
+      "-l",
+      "15"
+    ],
+    "base_bytes": 1152026,
+    "full_bytes": 1478484,
+    "marginal_bytes": 326458,
+    "bpb": 0.5908260865630853,
+    "create_seconds": 2.1174692999920808,
+    "append_seconds": 0.6766306000063196
+  },
+  {
+    "config": "k25-seg200k",
+    "opts": [
+      "-a",
+      "-k",
+      "25",
+      "-s",
+      "200000"
+    ],
+    "base_bytes": 1291619,
+    "full_bytes": 1439680,
+    "marginal_bytes": 148061,
+    "bpb": 0.26796188545729305,
+    "create_seconds": 1.8421266000077594,
+    "append_seconds": 0.39970600002561696
+  },
+  {
+    "config": "plain-seg200k",
+    "opts": [
+      "-s",
+      "200000"
+    ],
+    "base_bytes": 1292425,
+    "full_bytes": 1440412,
+    "marginal_bytes": 147987,
+    "bpb": 0.2678279597136885,
+    "create_seconds": 3.026008400018327,
+    "append_seconds": 0.2629795999964699
+  },
+  {
+    "config": "seg200k-min15-fallback",
+    "opts": [
+      "-a",
+      "-s",
+      "200000",
+      "-l",
+      "15",
+      "-f",
+      "0.05"
+    ],
+    "base_bytes": 1216874,
+    "full_bytes": 1365850,
+    "marginal_bytes": 148976,
+    "bpb": 0.2696178591788904,
+    "create_seconds": 2.8938032999867573,
+    "append_seconds": 0.44135629999800585
+  }
+]

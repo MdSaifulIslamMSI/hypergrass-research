@@ -1,0 +1,191 @@
+[
+  {
+    "config": "default",
+    "opts": [
+      "-a"
+    ],
+    "base_bytes": 1230255,
+    "full_bytes": 1232846,
+    "marginal_bytes": 2591,
+    "bpb": 0.004709390312533299,
+    "create_seconds": 1.9027023000235204,
+    "append_seconds": 0.41742499999236315
+  },
+  {
+    "config": "fallback",
+    "opts": [
+      "-a",
+      "-f",
+      "0.05"
+    ],
+    "base_bytes": 1215976,
+    "full_bytes": 1218570,
+    "marginal_bytes": 2594,
+    "bpb": 0.004714843099464059,
+    "create_seconds": 1.8066416000074241,
+    "append_seconds": 0.40181869998923503
+  },
+  {
+    "config": "min15",
+    "opts": [
+      "-a",
+      "-l",
+      "15"
+    ],
+    "base_bytes": 1231015,
+    "full_bytes": 1233562,
+    "marginal_bytes": 2547,
+    "bpb": 0.004629416104215482,
+    "create_seconds": 1.557436000002781,
+    "append_seconds": 0.4483425999933388
+  },
+  {
+    "config": "min15-fallback",
+    "opts": [
+      "-a",
+      "-l",
+      "15",
+      "-f",
+      "0.05"
+    ],
+    "base_bytes": 1216736,
+    "full_bytes": 1219288,
+    "marginal_bytes": 2552,
+    "bpb": 0.004638504082433415,
+    "create_seconds": 1.914925899996888,
+    "append_seconds": 0.4137897999898996
+  },
+  {
+    "config": "seg50k",
+    "opts": [
+      "-a",
+      "-s",
+      "50000"
+    ],
+    "base_bytes": 1382226,
+    "full_bytes": 1399458,
+    "marginal_bytes": 17232,
+    "bpb": 0.03132080813028707,
+    "create_seconds": 2.307558500004234,
+    "append_seconds": 0.5993670000170823
+  },
+  {
+    "config": "seg100k",
+    "opts": [
+      "-a",
+      "-s",
+      "100000"
+    ],
+    "base_bytes": 1397357,
+    "full_bytes": 1400519,
+    "marginal_bytes": 3162,
+    "bpb": 0.00574723742502134,
+    "create_seconds": 1.8177037999848835,
+    "append_seconds": 0.4238420999899972
+  },
+  {
+    "config": "seg200k",
+    "opts": [
+      "-a",
+      "-s",
+      "200000"
+    ],
+    "base_bytes": 1388606,
+    "full_bytes": 1391613,
+    "marginal_bytes": 3007,
+    "bpb": 0.005465510100265391,
+    "create_seconds": 2.569529100001091,
+    "append_seconds": 0.39420300000347197
+  },
+  {
+    "config": "seg500k",
+    "opts": [
+      "-a",
+      "-s",
+      "500000"
+    ],
+    "base_bytes": 1347057,
+    "full_bytes": 1349538,
+    "marginal_bytes": 2481,
+    "bpb": 0.004509454791738755,
+    "create_seconds": 1.9139104000059888,
+    "append_seconds": 0.47055089997593313
+  },
+  {
+    "config": "seg1m",
+    "opts": [
+      "-a",
+      "-s",
+      "1000000"
+    ],
+    "base_bytes": 1472598,
+    "full_bytes": 1475071,
+    "marginal_bytes": 2473,
+    "bpb": 0.004494914026590061,
+    "create_seconds": 2.0433699000277556,
+    "append_seconds": 1.3246644999890123
+  },
+  {
+    "config": "seg1m-min15",
+    "opts": [
+      "-a",
+      "-s",
+      "1000000",
+      "-l",
+      "15"
+    ],
+    "base_bytes": 1478794,
+    "full_bytes": 1481275,
+    "marginal_bytes": 2481,
+    "bpb": 0.004509454791738755,
+    "create_seconds": 2.365892600006191,
+    "append_seconds": 1.1179795000061858
+  },
+  {
+    "config": "k25-seg200k",
+    "opts": [
+      "-a",
+      "-k",
+      "25",
+      "-s",
+      "200000"
+    ],
+    "base_bytes": 1388268,
+    "full_bytes": 1390865,
+    "marginal_bytes": 2597,
+    "bpb": 0.00472029588639482,
+    "create_seconds": 1.9230430999887176,
+    "append_seconds": 0.3811862999864388
+  },
+  {
+    "config": "plain-seg200k",
+    "opts": [
+      "-s",
+      "200000"
+    ],
+    "base_bytes": 1388606,
+    "full_bytes": 1391613,
+    "marginal_bytes": 3007,
+    "bpb": 0.005465510100265391,
+    "create_seconds": 1.745024400006514,
+    "append_seconds": 0.17704739997861907
+  },
+  {
+    "config": "seg200k-min15-fallback",
+    "opts": [
+      "-a",
+      "-s",
+      "200000",
+      "-l",
+      "15",
+      "-f",
+      "0.05"
+    ],
+    "base_bytes": 1313372,
+    "full_bytes": 1316080,
+    "marginal_bytes": 2708,
+    "bpb": 0.00492204900283295,
+    "create_seconds": 2.866443300008541,
+    "append_seconds": 0.644493900006637
+  }
+]

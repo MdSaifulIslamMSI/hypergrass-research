@@ -1,0 +1,191 @@
+[
+  {
+    "config": "default",
+    "opts": [
+      "-a"
+    ],
+    "base_bytes": 1210547,
+    "full_bytes": 1277126,
+    "marginal_bytes": 66579,
+    "bpb": 0.12078743414464231,
+    "create_seconds": 2.065746400010539,
+    "append_seconds": 0.395785300002899
+  },
+  {
+    "config": "fallback",
+    "opts": [
+      "-a",
+      "-f",
+      "0.05"
+    ],
+    "base_bytes": 1210547,
+    "full_bytes": 1277126,
+    "marginal_bytes": 66579,
+    "bpb": 0.12078743414464231,
+    "create_seconds": 1.7842705999792088,
+    "append_seconds": 0.42510629998287186
+  },
+  {
+    "config": "min15",
+    "opts": [
+      "-a",
+      "-l",
+      "15"
+    ],
+    "base_bytes": 1211147,
+    "full_bytes": 1277848,
+    "marginal_bytes": 66701,
+    "bpb": 0.12100876620078083,
+    "create_seconds": 1.5954337999864947,
+    "append_seconds": 0.6759911999979522
+  },
+  {
+    "config": "min15-fallback",
+    "opts": [
+      "-a",
+      "-l",
+      "15",
+      "-f",
+      "0.05"
+    ],
+    "base_bytes": 1211147,
+    "full_bytes": 1277848,
+    "marginal_bytes": 66701,
+    "bpb": 0.12100876620078083,
+    "create_seconds": 2.650147599983029,
+    "append_seconds": 0.450867500010645
+  },
+  {
+    "config": "seg50k",
+    "opts": [
+      "-a",
+      "-s",
+      "50000"
+    ],
+    "base_bytes": 1377170,
+    "full_bytes": 1436520,
+    "marginal_bytes": 59350,
+    "bpb": 0.10767260271984441,
+    "create_seconds": 2.5385808999999426,
+    "append_seconds": 0.45284990000072867
+  },
+  {
+    "config": "seg100k",
+    "opts": [
+      "-a",
+      "-s",
+      "100000"
+    ],
+    "base_bytes": 1392524,
+    "full_bytes": 1400496,
+    "marginal_bytes": 7972,
+    "bpb": 0.0144627799306251,
+    "create_seconds": 1.5219024999823887,
+    "append_seconds": 0.48746289999689907
+  },
+  {
+    "config": "seg200k",
+    "opts": [
+      "-a",
+      "-s",
+      "200000"
+    ],
+    "base_bytes": 1382985,
+    "full_bytes": 1440780,
+    "marginal_bytes": 57795,
+    "bpb": 0.10485152610266904,
+    "create_seconds": 2.4454037999967113,
+    "append_seconds": 0.7487986999913119
+  },
+  {
+    "config": "seg500k",
+    "opts": [
+      "-a",
+      "-s",
+      "500000"
+    ],
+    "base_bytes": 1342087,
+    "full_bytes": 1349937,
+    "marginal_bytes": 7850,
+    "bpb": 0.014241447874486583,
+    "create_seconds": 2.5468702999933157,
+    "append_seconds": 0.6535335000080522
+  },
+  {
+    "config": "seg1m",
+    "opts": [
+      "-a",
+      "-s",
+      "1000000"
+    ],
+    "base_bytes": 1468022,
+    "full_bytes": 1475920,
+    "marginal_bytes": 7898,
+    "bpb": 0.014328529339196818,
+    "create_seconds": 2.1768179000064265,
+    "append_seconds": 0.7403904999955557
+  },
+  {
+    "config": "seg1m-min15",
+    "opts": [
+      "-a",
+      "-s",
+      "1000000",
+      "-l",
+      "15"
+    ],
+    "base_bytes": 1479201,
+    "full_bytes": 1487309,
+    "marginal_bytes": 8108,
+    "bpb": 0.014709510747304103,
+    "create_seconds": 2.8761988000187557,
+    "append_seconds": 1.0178621000086423
+  },
+  {
+    "config": "k25-seg200k",
+    "opts": [
+      "-a",
+      "-k",
+      "25",
+      "-s",
+      "200000"
+    ],
+    "base_bytes": 1382798,
+    "full_bytes": 1440258,
+    "marginal_bytes": 57460,
+    "bpb": 0.10424377004687886,
+    "create_seconds": 2.410424999980023,
+    "append_seconds": 0.4300245999766048
+  },
+  {
+    "config": "plain-seg200k",
+    "opts": [
+      "-s",
+      "200000"
+    ],
+    "base_bytes": 1382985,
+    "full_bytes": 1440780,
+    "marginal_bytes": 57795,
+    "bpb": 0.10485152610266904,
+    "create_seconds": 1.747129399998812,
+    "append_seconds": 0.2069750000082422
+  },
+  {
+    "config": "seg200k-min15-fallback",
+    "opts": [
+      "-a",
+      "-s",
+      "200000",
+      "-l",
+      "15",
+      "-f",
+      "0.05"
+    ],
+    "base_bytes": 1307895,
+    "full_bytes": 1366484,
+    "marginal_bytes": 58589,
+    "bpb": 0.10629199866475088,
+    "create_seconds": 3.1212291999836452,
+    "append_seconds": 0.6102476000087336
+  }
+]

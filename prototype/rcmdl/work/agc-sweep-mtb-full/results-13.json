@@ -1,0 +1,191 @@
+[
+  {
+    "config": "default",
+    "opts": [
+      "-a"
+    ],
+    "base_bytes": 1225352,
+    "full_bytes": 1260437,
+    "marginal_bytes": 35085,
+    "bpb": 0.06343000676830805,
+    "create_seconds": 1.6818749000085518,
+    "append_seconds": 0.36848529998678714
+  },
+  {
+    "config": "fallback",
+    "opts": [
+      "-a",
+      "-f",
+      "0.05"
+    ],
+    "base_bytes": 1211085,
+    "full_bytes": 1246167,
+    "marginal_bytes": 35082,
+    "bpb": 0.0634245830823937,
+    "create_seconds": 1.8403880999831017,
+    "append_seconds": 0.4625889999733772
+  },
+  {
+    "config": "min15",
+    "opts": [
+      "-a",
+      "-l",
+      "15"
+    ],
+    "base_bytes": 1226040,
+    "full_bytes": 1261169,
+    "marginal_bytes": 35129,
+    "bpb": 0.0635095541617185,
+    "create_seconds": 1.6794346999959089,
+    "append_seconds": 0.39011560002109036
+  },
+  {
+    "config": "min15-fallback",
+    "opts": [
+      "-a",
+      "-l",
+      "15",
+      "-f",
+      "0.05"
+    ],
+    "base_bytes": 1211774,
+    "full_bytes": 1246903,
+    "marginal_bytes": 35129,
+    "bpb": 0.0635095541617185,
+    "create_seconds": 2.9983306000067387,
+    "append_seconds": 0.6616956999932881
+  },
+  {
+    "config": "seg50k",
+    "opts": [
+      "-a",
+      "-s",
+      "50000"
+    ],
+    "base_bytes": 1377609,
+    "full_bytes": 1436881,
+    "marginal_bytes": 59272,
+    "bpb": 0.10715757050509205,
+    "create_seconds": 3.256544300005771,
+    "append_seconds": 0.639713100012159
+  },
+  {
+    "config": "seg100k",
+    "opts": [
+      "-a",
+      "-s",
+      "100000"
+    ],
+    "base_bytes": 1392967,
+    "full_bytes": 1400529,
+    "marginal_bytes": 7562,
+    "bpb": 0.01367130429476829,
+    "create_seconds": 2.1165519999922253,
+    "append_seconds": 0.34410449999268167
+  },
+  {
+    "config": "seg200k",
+    "opts": [
+      "-a",
+      "-s",
+      "200000"
+    ],
+    "base_bytes": 1383711,
+    "full_bytes": 1441084,
+    "marginal_bytes": 57373,
+    "bpb": 0.10372437732130932,
+    "create_seconds": 2.883464999991702,
+    "append_seconds": 0.6557767000049353
+  },
+  {
+    "config": "seg500k",
+    "opts": [
+      "-a",
+      "-s",
+      "500000"
+    ],
+    "base_bytes": 1342295,
+    "full_bytes": 1349475,
+    "marginal_bytes": 7180,
+    "bpb": 0.012980688288341221,
+    "create_seconds": 2.1685308999731205,
+    "append_seconds": 0.580098700011149
+  },
+  {
+    "config": "seg1m",
+    "opts": [
+      "-a",
+      "-s",
+      "1000000"
+    ],
+    "base_bytes": 1468081,
+    "full_bytes": 1475145,
+    "marginal_bytes": 7064,
+    "bpb": 0.012770972432986406,
+    "create_seconds": 2.1793580999947153,
+    "append_seconds": 0.7873296999896411
+  },
+  {
+    "config": "seg1m-min15",
+    "opts": [
+      "-a",
+      "-s",
+      "1000000",
+      "-l",
+      "15"
+    ],
+    "base_bytes": 1474105,
+    "full_bytes": 1481264,
+    "marginal_bytes": 7159,
+    "bpb": 0.012942722486940781,
+    "create_seconds": 2.0482818000018597,
+    "append_seconds": 0.9115754000085872
+  },
+  {
+    "config": "k25-seg200k",
+    "opts": [
+      "-a",
+      "-k",
+      "25",
+      "-s",
+      "200000"
+    ],
+    "base_bytes": 1383068,
+    "full_bytes": 1440712,
+    "marginal_bytes": 57644,
+    "bpb": 0.10421431694890548,
+    "create_seconds": 3.158537199982675,
+    "append_seconds": 0.757202699984191
+  },
+  {
+    "config": "plain-seg200k",
+    "opts": [
+      "-s",
+      "200000"
+    ],
+    "base_bytes": 1383711,
+    "full_bytes": 1441084,
+    "marginal_bytes": 57373,
+    "bpb": 0.10372437732130932,
+    "create_seconds": 3.361464000015985,
+    "append_seconds": 0.44107380000059493
+  },
+  {
+    "config": "seg200k-min15-fallback",
+    "opts": [
+      "-a",
+      "-s",
+      "200000",
+      "-l",
+      "15",
+      "-f",
+      "0.05"
+    ],
+    "base_bytes": 1308326,
+    "full_bytes": 1366773,
+    "marginal_bytes": 58447,
+    "bpb": 0.10566605687864616,
+    "create_seconds": 3.3076859999855515,
+    "append_seconds": 0.6901278000150342
+  }
+]
