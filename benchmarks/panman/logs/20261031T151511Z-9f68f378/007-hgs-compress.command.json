@@ -1,0 +1,18 @@
+{
+  "name": "hgs-compress",
+  "argv": [
+    "java",
+    "-cp",
+    ".validation/baseline-bin",
+    "hypergrass.HyperGraSS",
+    "compress",
+    "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.fa",
+    "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs"
+  ],
+  "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+  "timeout_seconds": 60.0,
+  "stdout_log": "logs\\20261031T151511Z-9f68f378\\007-hgs-compress.stdout.log",
+  "stderr_log": "logs\\20261031T151511Z-9f68f378\\007-hgs-compress.stderr.log",
+  "returncode": 0,
+  "wall_seconds": 0.9259008000371978
+}

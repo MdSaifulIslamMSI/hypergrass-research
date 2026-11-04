@@ -49,6 +49,12 @@ public final class HyperGraSS {
     private static final int FLAG_HAS_ANCHOR = 1;
     private static final int FLAG_LEAN_MODE = 2;
     private static final int FLAG_COMPACT_SINGLE = 4;
+    /** Compact single archive whose DNA channel uses the tuned single-genome QCRM profile. */
+    private static final int FLAG_COMPACT_TUNED = 16;
+    /** The tuned QCRM payload is split into independently coded segments for thread scaling. */
+    private static final int FLAG_QCRM_SEGMENTED = 32;
+    /** Version byte inside the tuned DNA payload; protects old archives from future retunes. */
+    private static final int TUNED_QCRM_FORMAT = 1;
     /** Blocks carry a mode-7 gap channel whose LZ dictionary spans block boundaries. */
     private static final int FLAG_SHARED_GAP = 8;
     private static final int GAP_HISTORY_BYTES = 256 * 1024;
@@ -58,6 +64,12 @@ public final class HyperGraSS {
     public static final class CompressOptions {
         public boolean leanMode = false;
         public boolean parallel = true;
+        /**
+         * Dedicated single-genome path: factorize once, skip the anchor-bank probe,
+         * and encode one unified QCRM superblock. Intended for a single genome or a
+         * small multi-chromosome assembly, not a multi-strain collection.
+         */
+        public boolean singleMode = false;
         public boolean optimize = false;
         public int blockSizeBytes = DEFAULT_BLOCK_BYTES;
         public int maxAnchorBases = CanonicalSyncmerEngine.DEFAULT_MAX_ANCHOR_BASES;
@@ -588,6 +600,15 @@ public final class HyperGraSS {
         crc.update(raw, 0, raw.length);
         int crcVal = (int) crc.getValue();
 
+        if (opts.singleMode && !opts.leanMode && raw.length > 0
+                && raw.length <= 128 * 1024 * 1024) {
+            FactorizedChunk unified = FastaStreamFactorizer.factorize(raw, 0, raw.length);
+            int segments = opts.parallel ? Math.max(1, opts.threads) : 1;
+            byte[] tunedPayload = encodeTunedSinglePayload(unified, segments);
+            int extraFlags = FLAG_COMPACT_TUNED | (segments > 1 ? FLAG_QCRM_SEGMENTED : 0);
+            return wrapCompactSingleArchive(raw.length, crcVal, tunedPayload, extraFlags);
+        }
+
         int effectiveBlockBytes = (!opts.leanMode
                 && opts.blockSizeBytes == DEFAULT_BLOCK_BYTES
                 && raw.length >= 16 * 1024 * 1024)
@@ -672,13 +693,65 @@ public final class HyperGraSS {
     }
 
     private static byte[] wrapCompactSingleArchive(int rawLen, int crcVal, byte[] singlePayload) {
+        return wrapCompactSingleArchive(rawLen, crcVal, singlePayload, 0);
+    }
+
+    private static byte[] wrapCompactSingleArchive(
+            int rawLen, int crcVal, byte[] singlePayload, int extraFlags) {
         ByteOut out = new ByteOut(13 + singlePayload.length);
         out.writeBytes(MAGIC);
-        out.writeByte(FLAG_COMPACT_SINGLE);
+        out.writeByte(FLAG_COMPACT_SINGLE | extraFlags);
         out.writeIntLE(rawLen);
         out.writeIntLE(crcVal);
         out.writeBytes(singlePayload);
         return out.toByteArray();
+    }
+
+    /**
+     * Builds the compact single-genome payload: metadata plus a QCRM-only DNA channel
+     * using the tuned profile. Mode selection is skipped deliberately, because the
+     * single-genome path factorizes once and QCRM wins on one assembly.
+     */
+    private static byte[] encodeTunedSinglePayload(FactorizedChunk chunk, int segments) {
+        ByteOut out = new ByteOut(256);
+        FastaStreamFactorizer.writeAuxMetadata(out, chunk);
+        out.writeByte(1); // DNA mode 1: QuantumContextRepeatMixer
+        out.writeByte(TUNED_QCRM_FORMAT);
+        byte[] rc = segments > 1
+                ? QuantumContextRepeatMixer.encodeSegments(
+                        chunk.dnaBases, chunk.dnaLen, segments, false,
+                        QuantumContextRepeatMixer.PROFILE_SINGLE)
+                : QuantumContextRepeatMixer.encode(
+                        chunk.dnaBases, chunk.dnaLen, false,
+                        QuantumContextRepeatMixer.PROFILE_SINGLE);
+        out.writeVarInt(rc.length);
+        out.writeBytes(rc);
+        return out.toByteArray();
+    }
+
+    /** Decodes the DNA channel of a compact single archive for both formats. */
+    private static byte[] decodeCompactDna(
+            ByteIn in, int dnaLen, boolean leanMode, int modeFlags) {
+        boolean tuned = (modeFlags & FLAG_COMPACT_TUNED) != 0;
+        if (!tuned) {
+            return CanonicalSyncmerEngine.decodeBlockDna(in, dnaLen, null, leanMode);
+        }
+        int mode = in.readByte();
+        if (mode != 1) {
+            throw new IllegalStateException("Unexpected tuned single DNA mode: " + mode);
+        }
+        int format = in.readByte();
+        if (format != TUNED_QCRM_FORMAT) {
+            throw new IllegalStateException("Unsupported tuned QCRM format: " + format);
+        }
+        int rcLen = in.readVarInt();
+        ByteIn rcSlice = new ByteIn(in.readBytes(rcLen));
+        boolean segmented = (modeFlags & FLAG_QCRM_SEGMENTED) != 0;
+        return segmented
+                ? QuantumContextRepeatMixer.decodeSegments(
+                        rcSlice, dnaLen, false, QuantumContextRepeatMixer.PROFILE_SINGLE)
+                : QuantumContextRepeatMixer.decode(
+                        rcSlice, dnaLen, false, QuantumContextRepeatMixer.PROFILE_SINGLE);
     }
 
     private static byte[] buildMultiBlockArchive(
@@ -944,7 +1017,7 @@ public final class HyperGraSS {
             int expectedRawLen = in.readIntLE();
             int expectedCrc = in.readIntLE();
             FactorizedChunk chunk = FastaStreamFactorizer.readAuxMetadata(in);
-            byte[] dna = CanonicalSyncmerEngine.decodeBlockDna(in, chunk.dnaLen, null, leanMode);
+            byte[] dna = decodeCompactDna(in, chunk.dnaLen, leanMode, modeFlags);
             byte[] raw = FastaStreamFactorizer.reconstructBytes(chunk, dna);
             verifyIntegrity(raw, expectedRawLen, expectedCrc);
             return raw;
@@ -1059,7 +1132,7 @@ public final class HyperGraSS {
                 byte[] all = Files.readAllBytes(archive);
                 ByteIn in = new ByteIn(all, 13, all.length - 13);
                 FactorizedChunk chunk = FastaStreamFactorizer.readAuxMetadata(in);
-                byte[] dna = CanonicalSyncmerEngine.decodeBlockDna(in, chunk.dnaLen, null, leanMode);
+                byte[] dna = decodeCompactDna(in, chunk.dnaLen, leanMode, modeFlags);
                 return FastaStreamFactorizer.extractRecordOrSlice(chunk, dna, recordIndex, qStart, qEnd);
             }
 
@@ -1471,6 +1544,8 @@ public final class HyperGraSS {
                 while (idx < args.length && args[idx].startsWith("--")) {
                     if ("--lean".equals(args[idx])) {
                         opts = CompressOptions.lean();
+                    } else if ("--single".equals(args[idx])) {
+                        opts.singleMode = true;
                     } else if ("--single-thread".equals(args[idx])) {
                         opts.parallel = false;
                     } else if ("--optimize".equals(args[idx])) {
@@ -1595,10 +1670,13 @@ public final class HyperGraSS {
 
     private static void printUsage() {
         System.out.println("HyperGraSS CLI (Java 21):");
-        System.out.println("  compress [--lean] [--single-thread] [--optimize] [--bounded] <input.fa> <output.hgs>");
+        System.out.println("  compress [--lean] [--single] [--single-thread] [--optimize] [--bounded] <input.fa> <output.hgs>");
+        System.out.println("    --single: one unified QCRM superblock, skip the anchor probe (one genome/assembly)");
+        System.out.println("              combine with --threads N to encode N independent QCRM segments");
         System.out.println("    --optimize: bounded extra size search for small archives; costs more CPU");
         System.out.println("    --bounded: two-pass bounded-memory compression for large anchored archives");
-        System.out.println("    --threads N: bounded encoder threads (default 1; N>1 drops the shared gap channel)");
+        System.out.println("    --threads N: worker threads (default 1); with --single it sets QCRM segment count");
+        System.out.println("                 and enables segmented parallel encode/decode");
         System.out.println("    --pangenome: scale-tuned 16 MiB anchor bank and 8 MiB blocks");
         System.out.println("    --anchor-mib N / --block-mib N: explicit tuning for large inputs");
         System.out.println("    --anchor-single-page: one anchor page (maximum compression, slower header)");

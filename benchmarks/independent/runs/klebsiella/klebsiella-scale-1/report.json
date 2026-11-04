@@ -1,0 +1,332 @@
+{
+  "schema_version": 1,
+  "kind": "independent-scale-test",
+  "run_id": "klebsiella-scale-1",
+  "dataset": "klebsiella",
+  "started_utc": "2026-11-01T11:14:14.707385+00:00",
+  "image_id": "sha256:d6ca62a74e3724172a5c49720e28ab2066eb31b3c965dadfb6220e112dbc3bb3",
+  "manifest": {
+    "schema_version": 1,
+    "source": "NCBI Nucleotide (RefSeq complete genomes: klebsiella)",
+    "query": "\"Klebsiella pneumoniae\"[Organism] AND \"complete genome\"[Title] AND refseq[Filter]",
+    "selection": "NCBI relevance order; distinct accessions; 3000000-7500000 bp; stop at target bases",
+    "target_bases": 120000000,
+    "total_bases": 122700601,
+    "fasta": {
+      "path": "pangenome.fasta",
+      "size_bytes": 124455339,
+      "sha256": "fa5d322d96e585dbc779665341c346f74eeedfc1fe888befe5e70e27da9390ae"
+    },
+    "records": [
+      {
+        "accession": "NZ_AP040891.1",
+        "length": 5187164,
+        "title": "Klebsiella pneumoniae strain a1-38 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP076518.1",
+        "length": 5322657,
+        "title": "Klebsiella pneumoniae strain K186 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP065034.1",
+        "length": 5088943,
+        "title": "Klebsiella pneumoniae strain 2016-1400 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_AP018747.1",
+        "length": 5256831,
+        "title": "Klebsiella pneumoniae strain KP33 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP195045.1",
+        "length": 5475955,
+        "title": "Klebsiella pneumoniae strain CYH1535 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP195040.1",
+        "length": 5464322,
+        "title": "Klebsiella pneumoniae strain CYH4028 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP104312.1",
+        "length": 5403764,
+        "title": "Klebsiella pneumoniae strain KP8132 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP058940.1",
+        "length": 5369690,
+        "title": "Klebsiella pneumoniae strain BA39649 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP168099.1",
+        "length": 5356995,
+        "title": "Klebsiella pneumoniae strain LA19 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP172747.1",
+        "length": 5383357,
+        "title": "Klebsiella pneumoniae strain FRC1 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP172751.1",
+        "length": 5368231,
+        "title": "Klebsiella pneumoniae strain DCC3 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP172753.1",
+        "length": 5238864,
+        "title": "Klebsiella pneumoniae strain DCC2 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP172750.1",
+        "length": 5194998,
+        "title": "Klebsiella pneumoniae strain FNC1 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP172778.1",
+        "length": 5424149,
+        "title": "Klebsiella pneumoniae strain BATC1 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP145341.1",
+        "length": 5414797,
+        "title": "Klebsiella pneumoniae strain 12Gaza2023 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP145367.1",
+        "length": 5059504,
+        "title": "Klebsiella pneumoniae strain 29Gaza2023 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP145330.1",
+        "length": 5412092,
+        "title": "Klebsiella pneumoniae strain 33Gaza2023 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP145336.1",
+        "length": 5418887,
+        "title": "Klebsiella pneumoniae strain 11Gaza2023 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP058581.1",
+        "length": 5314991,
+        "title": "Klebsiella pneumoniae strain ICU_OXA48-1 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP150854.1",
+        "length": 5413199,
+        "title": "Klebsiella pneumoniae strain KP-A1 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP145355.1",
+        "length": 5417553,
+        "title": "Klebsiella pneumoniae strain 23Gaza2023 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP145347.1",
+        "length": 5295041,
+        "title": "Klebsiella pneumoniae strain 18Gaza2023 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP145324.1",
+        "length": 5418617,
+        "title": "Klebsiella pneumoniae strain 17Gaza2023 chromosome, complete genome"
+      }
+    ]
+  },
+  "fasta": "benchmarks\\independent\\data\\klebsiella\\pangenome.fasta",
+  "profiles": [
+    "hypergrass",
+    "hypergrass-pangenome",
+    "gzip-9",
+    "xz-9"
+  ],
+  "results": [
+    {
+      "profile": "hypergrass",
+      "profile_kind": "hgs",
+      "started_utc": "2026-11-01T11:14:14.712299+00:00",
+      "input_bytes": 124455339,
+      "input_sha256": "fa5d322d96e585dbc779665341c346f74eeedfc1fe888befe5e70e27da9390ae",
+      "status": "success",
+      "compress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 64.95441620399993,
+        "cpu_seconds": 119.18114800000001,
+        "peak_rss_bytes": 1202569216,
+        "error": null
+      },
+      "artifact_bytes": 8571498,
+      "artifact_sha256": "9b5d3b93cac18522675f89f252491f2e0a7d14c4e9148338e101723641cc5ba0",
+      "ratio": 14.51967194065728,
+      "bits_per_byte": 0.550976635883817,
+      "wall_seconds": 64.95441620399993,
+      "cpu_seconds": 119.18114800000001,
+      "peak_rss_bytes": 1202569216,
+      "decompress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 47.611192922999976,
+        "cpu_seconds": 79.16295500000001,
+        "peak_rss_bytes": 538226688,
+        "error": null
+      },
+      "restored_bytes": 124455339,
+      "restored_sha256": "fa5d322d96e585dbc779665341c346f74eeedfc1fe888befe5e70e27da9390ae",
+      "roundtrip_ok": true,
+      "queries": [
+        {
+          "record": 0,
+          "offset": 1000,
+          "length": 512,
+          "status": "success",
+          "exact": true
+        },
+        {
+          "record": 11,
+          "offset": 1000,
+          "length": 512,
+          "status": "success",
+          "exact": true
+        },
+        {
+          "record": 22,
+          "offset": 1000,
+          "length": 512,
+          "status": "success",
+          "exact": true
+        }
+      ]
+    },
+    {
+      "profile": "hypergrass-pangenome",
+      "profile_kind": "hgs",
+      "started_utc": "2026-11-01T11:16:20.489219+00:00",
+      "input_bytes": 124455339,
+      "input_sha256": "fa5d322d96e585dbc779665341c346f74eeedfc1fe888befe5e70e27da9390ae",
+      "status": "success",
+      "compress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 10.63670261599998,
+        "cpu_seconds": 16.042969,
+        "peak_rss_bytes": 956223488,
+        "error": null
+      },
+      "artifact_bytes": 3464423,
+      "artifact_sha256": "5d7322eed8a63e24da4a029f47f454dba615d7b301eac490a46fb8f2cdfbe3fb",
+      "ratio": 35.92382887424544,
+      "bits_per_byte": 0.2226934113288623,
+      "wall_seconds": 10.63670261599998,
+      "cpu_seconds": 16.042969,
+      "peak_rss_bytes": 956223488,
+      "decompress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 9.890035972999954,
+        "cpu_seconds": 5.58769,
+        "peak_rss_bytes": 416317440,
+        "error": null
+      },
+      "restored_bytes": 124455339,
+      "restored_sha256": "fa5d322d96e585dbc779665341c346f74eeedfc1fe888befe5e70e27da9390ae",
+      "roundtrip_ok": true,
+      "queries": [
+        {
+          "record": 0,
+          "offset": 1000,
+          "length": 512,
+          "status": "success",
+          "exact": true
+        },
+        {
+          "record": 11,
+          "offset": 1000,
+          "length": 512,
+          "status": "success",
+          "exact": true
+        },
+        {
+          "record": 22,
+          "offset": 1000,
+          "length": 512,
+          "status": "success",
+          "exact": true
+        }
+      ]
+    },
+    {
+      "profile": "gzip-9",
+      "profile_kind": "gzip",
+      "started_utc": "2026-11-01T11:16:48.560973+00:00",
+      "input_bytes": 124455339,
+      "input_sha256": "fa5d322d96e585dbc779665341c346f74eeedfc1fe888befe5e70e27da9390ae",
+      "status": "success",
+      "compress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 201.13982078900005,
+        "cpu_seconds": 195.770868,
+        "peak_rss_bytes": 9986048,
+        "error": null
+      },
+      "artifact_bytes": 36388919,
+      "artifact_sha256": "ff9a4a06df5b5a77cace245cde17529cb18f93ed808ab736f9dce6042f35b899",
+      "ratio": 3.4201438905068877,
+      "bits_per_byte": 2.3390828737367384,
+      "wall_seconds": 201.13982078900005,
+      "cpu_seconds": 195.770868,
+      "peak_rss_bytes": 9986048,
+      "decompress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 4.836699551000038,
+        "cpu_seconds": 1.298287,
+        "peak_rss_bytes": 10125312,
+        "error": null
+      },
+      "restored_bytes": 124455339,
+      "restored_sha256": "fa5d322d96e585dbc779665341c346f74eeedfc1fe888befe5e70e27da9390ae",
+      "roundtrip_ok": true
+    },
+    {
+      "profile": "xz-9",
+      "profile_kind": "xz",
+      "started_utc": "2026-11-01T11:20:18.408162+00:00",
+      "input_bytes": 124455339,
+      "input_sha256": "fa5d322d96e585dbc779665341c346f74eeedfc1fe888befe5e70e27da9390ae",
+      "status": "success",
+      "compress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 521.3424050540001,
+        "cpu_seconds": 521.5906530000001,
+        "peak_rss_bytes": 771620864,
+        "error": null
+      },
+      "artifact_bytes": 6438744,
+      "artifact_sha256": "98add44b6c810fb8b0dd8809445db522e1f3b5ff02703b9f196aeb7b9c720b9e",
+      "ratio": 19.329132979972492,
+      "bits_per_byte": 0.413883023531839,
+      "wall_seconds": 521.3424050540001,
+      "cpu_seconds": 521.5906530000001,
+      "peak_rss_bytes": 771620864,
+      "decompress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 11.381560370999978,
+        "cpu_seconds": 2.0574019999999997,
+        "peak_rss_bytes": 198705152,
+        "error": null
+      },
+      "restored_bytes": 124455339,
+      "restored_sha256": "fa5d322d96e585dbc779665341c346f74eeedfc1fe888befe5e70e27da9390ae",
+      "roundtrip_ok": true
+    }
+  ],
+  "status": "success",
+  "failures": 0,
+  "finished_utc": "2026-11-01T11:29:15.813311+00:00"
+}

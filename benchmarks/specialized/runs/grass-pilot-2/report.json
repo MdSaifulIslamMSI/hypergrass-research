@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "kind": "specialized-scale-test",
+  "run_id": "grass-pilot-2",
+  "started_utc": "2026-11-02T14:06:59.144966+00:00",
+  "image_id": "sha256:d6ca62a74e3724172a5c49720e28ab2066eb31b3c965dadfb6220e112dbc3bb3",
+  "source": "benchmarks\\pangenome\\data\\pangenome.fasta",
+  "sliced": true,
+  "input": {
+    "fasta": {
+      "path": "benchmarks\\specialized\\runs\\grass-pilot-2\\input.fasta",
+      "size_bytes": 2028644,
+      "sha256": "e8d7be9d33d4a1e431a2cf266e52e81fd572c97928d12094c648462f4201da79",
+      "records": 1,
+      "bases": 2000000
+    },
+    "sequence": {
+      "path": "benchmarks\\specialized\\runs\\grass-pilot-2\\input.seq",
+      "size_bytes": 2000000,
+      "bases": 2000000,
+      "sha256": "5e0eea5e07993158e3a5809f780beda3cccbf6e76ecd98e6ae3174ae789ad921",
+      "non_acgt_bases_masked": 0,
+      "base_counts": {
+        "A": 489585,
+        "C": 492777,
+        "G": 526833,
+        "T": 490805
+      }
+    },
+    "normalization": "headers removed, letters uppercased, non-ACGT replaced with A; both tools receive this sequence and are verified against it"
+  },
+  "profiles": [
+    "grass"
+  ],
+  "results": [
+    {
+      "profile": "grass",
+      "kind": "grass",
+      "level": "default-e2",
+      "input_bytes": 2000000,
+      "input_sha256": "5e0eea5e07993158e3a5809f780beda3cccbf6e76ecd98e6ae3174ae789ad921",
+      "input_bases": 2000000,
+      "status": "success",
+      "roundtrip_ok": true,
+      "artifact_bytes": 493330,
+      "bits_per_base": 1.97332,
+      "wall_seconds": 4.626084577000256,
+      "cpu_seconds": 4.506859,
+      "peak_rss_bytes": 154599424,
+      "error": null,
+      "returncode": 0,
+      "decompress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 3.3221995500002777,
+        "cpu_seconds": 2.5660879999999997,
+        "peak_rss_bytes": 82079744,
+        "error": null
+      },
+      "verification": {
+        "verdict": "pass",
+        "problems": [],
+        "original": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\grass-pilot-2\\input.seq",
+        "restored": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\grass-pilot-2\\ops\\grass\\decompress\\Final.SSG",
+        "archive": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\grass-pilot-2\\ops\\grass\\compress\\FinalBsc.bsc",
+        "original_bytes": 2000000,
+        "restored_bytes": 2000000,
+        "archive_bytes": 493330,
+        "bytes_compared": 2000000,
+        "byte_identical": true,
+        "first_mismatch_offset": null,
+        "original_sha256": "5e0eea5e07993158e3a5809f780beda3cccbf6e76ecd98e6ae3174ae789ad921",
+        "restored_sha256": "5e0eea5e07993158e3a5809f780beda3cccbf6e76ecd98e6ae3174ae789ad921",
+        "archive_sha256": "30815d593d43feecfc38745aa542b600af2515939b2f7ea48dfa4ca50165d77e",
+        "expected_sha256": "5e0eea5e07993158e3a5809f780beda3cccbf6e76ecd98e6ae3174ae789ad921",
+        "chunk_bytes": 8388608,
+        "seconds": 0.08,
+        "comparison": "streaming byte comparison independent of the codec"
+      },
+      "restored_sha256": "5e0eea5e07993158e3a5809f780beda3cccbf6e76ecd98e6ae3174ae789ad921"
+    }
+  ],
+  "status": "success",
+  "vendor": {
+    "grass": {
+      "repo": "https://github.com/AnshuOishik/GraSS",
+      "commit": "6d93700f5a2de8841f7cf2c20064413c80df2c4a",
+      "jvm": "OpenJDK 21"
+    },
+    "libbsc": {
+      "repo": "https://github.com/IlyaGrebnov/libbsc",
+      "commit": "1dc676540cb40a41562af6f2db04bd1adce97f90",
+      "bsc_version": "3.4.0",
+      "note": "GraSS invokes ./bsc e FinalTar.tar FinalBsc.bsc -e2"
+    }
+  },
+  "failures": 0,
+  "finished_utc": "2026-11-02T14:07:12.129082+00:00"
+}

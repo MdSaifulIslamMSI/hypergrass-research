@@ -1,0 +1,20 @@
+{
+  "name": "hgs-query-12-14923",
+  "argv": [
+    "java",
+    "-cp",
+    "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\bin",
+    "hypergrass.HyperGraSS",
+    "query",
+    "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+    "12",
+    "14923",
+    "15051"
+  ],
+  "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+  "timeout_seconds": 60.0,
+  "stdout_log": "logs\\20261031T151717Z-49eb66e4\\046-hgs-query-12-14923.stdout.log",
+  "stderr_log": "logs\\20261031T151717Z-49eb66e4\\046-hgs-query-12-14923.stderr.log",
+  "returncode": 0,
+  "wall_seconds": 0.5925301999668591
+}

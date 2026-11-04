@@ -1,0 +1,13 @@
+{
+  "name": "docker-version",
+  "argv": [
+    "docker",
+    "version"
+  ],
+  "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+  "timeout_seconds": 60.0,
+  "stdout_log": "logs\\20261031T151717Z-49eb66e4\\002-docker-version.stdout.log",
+  "stderr_log": "logs\\20261031T151717Z-49eb66e4\\002-docker-version.stderr.log",
+  "returncode": 0,
+  "wall_seconds": 0.2113707999815233
+}

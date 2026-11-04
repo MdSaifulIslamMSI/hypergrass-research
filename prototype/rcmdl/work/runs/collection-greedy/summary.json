@@ -1,0 +1,12 @@
+{
+  "genomes": 24,
+  "order": "name",
+  "k": 16,
+  "step": 8,
+  "target_bases": 120108223,
+  "archive_bytes": 4081636,
+  "bpb": 0.2718638839573873,
+  "first_genome_bytes": 1262894,
+  "marginal_bytes": 2818742,
+  "verified": true
+}

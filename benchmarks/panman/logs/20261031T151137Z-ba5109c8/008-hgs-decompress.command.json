@@ -1,0 +1,18 @@
+{
+  "name": "hgs-decompress",
+  "argv": [
+    "java",
+    "-cp",
+    "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\bin",
+    "hypergrass.HyperGraSS",
+    "decompress",
+    "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.hgs",
+    "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\panman\\data\\sars_20.restored.fa"
+  ],
+  "cwd": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass",
+  "timeout_seconds": 60.0,
+  "stdout_log": "logs\\20261031T151137Z-ba5109c8\\008-hgs-decompress.stdout.log",
+  "stderr_log": "logs\\20261031T151137Z-ba5109c8\\008-hgs-decompress.stderr.log",
+  "returncode": 0,
+  "wall_seconds": 0.6894814999541268
+}

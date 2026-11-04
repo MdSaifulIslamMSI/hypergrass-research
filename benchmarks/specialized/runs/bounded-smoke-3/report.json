@@ -1,0 +1,133 @@
+{
+  "schema_version": 1,
+  "kind": "specialized-scale-test",
+  "run_id": "bounded-smoke-3",
+  "started_utc": "2026-11-02T13:09:11.703581+00:00",
+  "image_id": "sha256:d6ca62a74e3724172a5c49720e28ab2066eb31b3c965dadfb6220e112dbc3bb3",
+  "source": "benchmarks\\pangenome\\data\\pangenome.fasta",
+  "sliced": true,
+  "input": {
+    "fasta": {
+      "path": "benchmarks\\specialized\\runs\\bounded-smoke-3\\input.fasta",
+      "size_bytes": 35500539,
+      "sha256": "efd829f584d6de6d9bac3e77f3c4e89ab027f0e48649d64ac36a73cb1b30d45b",
+      "records": 7,
+      "bases": 35000000
+    },
+    "sequence": {
+      "path": "benchmarks\\specialized\\runs\\bounded-smoke-3\\input.seq",
+      "size_bytes": 35000000,
+      "bases": 35000000,
+      "sha256": "f6e8d1da90a9fc9d0c8d2376c79a520f1f39257b07161f9f0bb22171d2de9f9d",
+      "non_acgt_bases_masked": 2357,
+      "base_counts": {
+        "A": 8628278,
+        "C": 8873277,
+        "G": 8874618,
+        "T": 8621470
+      }
+    },
+    "normalization": "headers removed, letters uppercased, non-ACGT replaced with A; both tools receive this sequence and are verified against it"
+  },
+  "profiles": [
+    "hypergrass-bounded-256m-tuned",
+    "hypergrass-bounded-256m-b32"
+  ],
+  "results": [
+    {
+      "profile": "hypergrass-bounded-256m-tuned",
+      "kind": "hypergrass",
+      "level": "bounded-256m",
+      "input_bytes": 35000000,
+      "input_sha256": "f6e8d1da90a9fc9d0c8d2376c79a520f1f39257b07161f9f0bb22171d2de9f9d",
+      "input_bases": 35000000,
+      "status": "success",
+      "roundtrip_ok": true,
+      "artifact_bytes": 1999715,
+      "bits_per_base": 0.4570777142857143,
+      "wall_seconds": 23.274487773000033,
+      "cpu_seconds": 24.308858,
+      "peak_rss_bytes": 265781248,
+      "error": null,
+      "returncode": 0,
+      "decompress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 14.77829391900002,
+        "cpu_seconds": 15.822592,
+        "peak_rss_bytes": 245919744,
+        "error": null
+      },
+      "verification": {
+        "verdict": "pass",
+        "problems": [],
+        "original": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\bounded-smoke-3\\input.seq",
+        "restored": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\bounded-smoke-3\\ops\\hypergrass-bounded-256m-tuned\\restored.seq",
+        "archive": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\bounded-smoke-3\\ops\\hypergrass-bounded-256m-tuned\\archive.hgs",
+        "original_bytes": 35000000,
+        "restored_bytes": 35000000,
+        "archive_bytes": 1999715,
+        "bytes_compared": 35000000,
+        "byte_identical": true,
+        "first_mismatch_offset": null,
+        "original_sha256": "f6e8d1da90a9fc9d0c8d2376c79a520f1f39257b07161f9f0bb22171d2de9f9d",
+        "restored_sha256": "f6e8d1da90a9fc9d0c8d2376c79a520f1f39257b07161f9f0bb22171d2de9f9d",
+        "archive_sha256": "625b1629a81543fa8ed7e8e3762b4d8f9339c4cd26a6e8dcf8c066bb9b728671",
+        "expected_sha256": "f6e8d1da90a9fc9d0c8d2376c79a520f1f39257b07161f9f0bb22171d2de9f9d",
+        "chunk_bytes": 8388608,
+        "seconds": 0.152,
+        "comparison": "streaming byte comparison independent of the codec"
+      },
+      "restored_sha256": "f6e8d1da90a9fc9d0c8d2376c79a520f1f39257b07161f9f0bb22171d2de9f9d"
+    },
+    {
+      "profile": "hypergrass-bounded-256m-b32",
+      "kind": "hypergrass",
+      "level": "bounded-256m",
+      "input_bytes": 35000000,
+      "input_sha256": "f6e8d1da90a9fc9d0c8d2376c79a520f1f39257b07161f9f0bb22171d2de9f9d",
+      "input_bases": 35000000,
+      "status": "success",
+      "roundtrip_ok": true,
+      "artifact_bytes": 1996145,
+      "bits_per_base": 0.45626171428571427,
+      "wall_seconds": 21.598134467000023,
+      "cpu_seconds": 22.145034,
+      "peak_rss_bytes": 285351936,
+      "error": null,
+      "returncode": 0,
+      "decompress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 14.212571606999973,
+        "cpu_seconds": 15.096151999999998,
+        "peak_rss_bytes": 261660672,
+        "error": null
+      },
+      "verification": {
+        "verdict": "pass",
+        "problems": [],
+        "original": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\bounded-smoke-3\\input.seq",
+        "restored": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\bounded-smoke-3\\ops\\hypergrass-bounded-256m-b32\\restored.seq",
+        "archive": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\bounded-smoke-3\\ops\\hypergrass-bounded-256m-b32\\archive.hgs",
+        "original_bytes": 35000000,
+        "restored_bytes": 35000000,
+        "archive_bytes": 1996145,
+        "bytes_compared": 35000000,
+        "byte_identical": true,
+        "first_mismatch_offset": null,
+        "original_sha256": "f6e8d1da90a9fc9d0c8d2376c79a520f1f39257b07161f9f0bb22171d2de9f9d",
+        "restored_sha256": "f6e8d1da90a9fc9d0c8d2376c79a520f1f39257b07161f9f0bb22171d2de9f9d",
+        "archive_sha256": "c9997a2df231eddf65e565ded0fd5da8722fe23e946d16c14a5c29bec04547c9",
+        "expected_sha256": "f6e8d1da90a9fc9d0c8d2376c79a520f1f39257b07161f9f0bb22171d2de9f9d",
+        "chunk_bytes": 8388608,
+        "seconds": 0.124,
+        "comparison": "streaming byte comparison independent of the codec"
+      },
+      "restored_sha256": "f6e8d1da90a9fc9d0c8d2376c79a520f1f39257b07161f9f0bb22171d2de9f9d"
+    }
+  ],
+  "status": "success",
+  "failures": 0,
+  "finished_utc": "2026-11-02T13:10:30.333797+00:00"
+}

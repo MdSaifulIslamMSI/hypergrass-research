@@ -44,6 +44,7 @@ hypergrass/
 ├── docs/ABLATION.md                  # Anchor-bank/block-size ablation results
 ├── docs/FOUNDATIONS.md               # Invariant/mechanism/evidence/falsification and knob policy
 ├── docs/END-TO-END.md                # Query-heavy end-to-end workload results
+├── docs/RESEARCH_SINGLE_GENOME.md    # Algorithm research: self-contained vs reference/pangenome compression
 └── README.md
 ```
 
@@ -92,6 +93,12 @@ java -cp bin hypergrass.HyperGraSS compress --optimize input.fna archive_optimiz
 
 # Scale-tuned pangenome profile: 16 MiB anchor bank and 8 MiB blocks
 java -cp bin hypergrass.HyperGraSS compress --pangenome input.fna archive_pangenome.hgs
+
+# Single genome / one assembly: one QCRM superblock, no anchor probe
+java -cp bin hypergrass.HyperGraSS compress --single ecoli.fna ecoli.hgs
+
+# Same, split into N independently coded QCRM segments for parallel encode/decode
+java -cp bin hypergrass.HyperGraSS compress --single --threads 4 ecoli.fna ecoli-4t.hgs
 
 # Bounded-memory streaming mode; the measured scale result is in docs/BENCHMARKS.md
 java -Xmx8m -cp bin hypergrass.HyperGraSS compress --lean input.fna archive_lean.hgs
@@ -251,6 +258,16 @@ Measured headlines, stated without rounding up:
 | Cross-taxon panel, published GraSS | 7.3–11.7x larger than HyperGraSS on the two collections measured |
 | Cross-taxon panel, 256 MiB bounded mode | 0/6 pass the size gate; 4/6 exceed 256 MiB RSS; 1 exhausts the heap |
 | Within-species gradient (3 species × 3 strata) | HyperGraSS smaller than JARVIS3 on **8/9**; *E. coli* medium is the first loss (−0.16%), byte-exact |
+| Single genome, *E. coli* K-12 (4.6 Mb), `--single` | **1,084,172 B, 1.869 bits/base**, 17.3 s, 88 MiB peak RSS; **5.03% smaller than GraSS**, 3.2x lower RSS |
+| Single genome, *B. subtilis* 168 (4.2 Mb), `--single` | **994,834 B, 1.888 bits/base**, 14.6 s, 87 MiB peak RSS; **3.80% smaller than GraSS**, 2.8x lower RSS |
+| Single genome, *P. aeruginosa* NY4383 (7.3 Mb), `--single` | **1,529,536 B, 1.673 bits/base**, 20.5 s, 95 MiB peak RSS; **9.52% smaller than GraSS**, 3.1x lower RSS |
+| Single genome, human chr1 first 100 Mb (0.3% Ns), `--single` | **20,626,877 B, 1.650 bits/base**, 355.0 s, 396 MiB peak RSS; **7.35% smaller than GraSS**, 2.25x lower RSS; 2.58x slower |
+| Single genome, human chr1 first 100 Mb, `--single --threads 2` | **20,635,964 B, 1.651 bits/base**, 70.1 s, 586 MiB peak RSS; 0.044% above serial but **5.07x faster**; 1.96x faster than GraSS with a 7.31% smaller archive |
+| Single genome, human chr1 first 100 Mb, `--single --threads 4 / 8` | 20,649,693 / 20,677,028 B, 1.652 / 1.654 bits/base, 124.9 / 225.9 s; both slower than `--threads 2` on a 2-CPU container |
+| Single genome, human chr1 first 100 Mb, default (no flag) | 21,056,843 B, 1.684 bits/base, 152.9 s, 967 MiB peak RSS; 2.08% larger but 2.32x faster than `--single`; 5.42% smaller than GraSS |
+| Single genome, human chr1 first 100 Mb, `--lean` | 22,788,010 B, 1.823 bits/base, **40.5 s, 94 MiB peak RSS**; 2.35% larger than GraSS but **3.40x faster at 9.5x lower RSS** |
+| Single genome, human chr14 first 100 Mb (16.3% Ns), `--single` | **17,084,921 B, 1.367 bits/base**, 115.6 s, 380 MiB peak RSS; **7.84% smaller than GraSS**, 2.5x lower RSS; 1.41x slower |
+| Single genomes, `--single --threads 2` | 0.39–1.23% larger than serial `--single`; 1.3–1.9x faster on the bacterial genomes, byte-exact |
 | Same 120.1 Mbp sequence, tuned + LZ gap coder | **3,810,409 B, 0.254 bits/base, 31.52x**, 887.3 s, 999 MiB peak RSS |
 | Same 120.1 Mbp sequence, JARVIS3 l7 | 3,896,361 B, 0.260 bits/base, 95.4 s, 286 MiB peak RSS |
 | Same sequence, GraSS (public implementation, `-e2`) | 24,777,592 B, 1.650 bits/base, 4.85x, 224.5 s, 1,255 MiB compress RSS |
@@ -261,6 +278,25 @@ Measured headlines, stated without rounding up:
 | Same sequence, bounded native (GraalVM 25, 192 MiB heap) | **3,864,464 B**, 1.42% above unbounded and 0.82% below JARVIS3; 54.8 s / 240.1 MiB compress, 25.8 s / 225.5 MiB restore, **3/3 under a strict 256 MiB cap** |
 | 121.8 MB pangenome, `--lean` (`-Xmx8m`) | 28,910,764 B, 4.21x, 52 MiB peak RSS |
 | Verification | every round trip byte-exact; 3/3 record queries exact per HyperGraSS profile |
+
+On a single assembly the opt-in `--single` profile is the intended choice: it
+beat GraSS by 3.80–9.52% on four genomes from 1.36 Mb to 7.32 Mb, used 2.2–3.2x
+less peak RSS, and stayed byte-exact on every repeat. Serial compression is
+about twice GraSS's time; `--threads 2` recovers most of that on the bacterial
+genomes for 0.39–1.23% more bytes. On 100 Mb human slices the ratio and memory
+margins hold (**7.35% and 7.84% smaller**, 2.25x and 2.5x lower RSS), but serial
+compression is 2.58x and 1.41x GraSS's time; the tuned path is not a serial
+speed win on repeat-rich sequence of that size. The un-flagged default is the
+speed-oriented choice at 100 Mb: it used 47 blocks with a 4.19 Mbp anchor bank,
+produced an archive 2.08% larger than `--single` but 2.32x faster, and stayed
+5.42% below GraSS. `--single --threads 2` is the practical 100 Mb choice: 0.044%
+more bytes than serial for 5.07x the speed, and 1.96x faster than GraSS with a
+7.31% smaller archive. More segments oversubscribe the 2-CPU container:
+`--threads 4` and `--threads 8` took 124.9 s and 225.9 s for +0.111% and
++0.243% bytes. `--lean` is the speed/memory extreme: 40.5 s and 94 MiB, at
+2.35% above GraSS but 3.40x faster. The pangenome profile is not a substitute for a single
+record: on the 100 Mb chr1 slice it is 10.22% larger and 2.10x slower than
+`--single`, and 2.12% larger than GraSS.
 
 So the **default** archive is narrowly smallest on the completed small/medium
 sequence-only cells, but **xz -9 is 9.8% smaller than the default on the

@@ -1,0 +1,150 @@
+{
+  "schema_version": 2,
+  "kind": "specialized-scale-test",
+  "run_id": "heap-sweep-248",
+  "started_utc": "2026-11-03T10:17:40.294378+00:00",
+  "image_id": "sha256:580e58b6ee16d43f4dd99a2871b1c920548b7c6e9b0c695a01f521c17701a4ae",
+  "image_tag": "hypergrass-corpus:jdk27",
+  "provenance": {
+    "git_commit": "961f235992d38dc46725bb3b81e4d535aa07a987",
+    "git_dirty": true,
+    "git_status": "M benchmarks/specialized/run.py\n M benchmarks/specialized/test_run.py",
+    "docker_version": "29.6.2",
+    "python": "3.12.10",
+    "platform": "Windows-11-10.0.28120-SP0"
+  },
+  "harness": {
+    "repeats": 1,
+    "timeout_seconds": 1800.0,
+    "memory_default": "2g",
+    "heap_override": "248m",
+    "memory_override": "256m",
+    "jvm_extra": null
+  },
+  "source": "benchmarks\\pangenome\\data\\pangenome.fasta",
+  "sliced": false,
+  "input": {
+    "fasta": {
+      "path": "benchmarks\\pangenome\\data\\pangenome.fasta",
+      "size_bytes": 121825884,
+      "sha256": "f03f0dd10c541b99ddf63d18053e3a9c6009910a81700ba18f15e24dcb7d2285",
+      "records": 24,
+      "bases": 120108223
+    },
+    "sequence": {
+      "path": "benchmarks\\specialized\\runs\\heap-sweep-248\\input.seq",
+      "size_bytes": 120108223,
+      "bases": 120108223,
+      "sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb",
+      "non_acgt_bases_masked": 2357,
+      "base_counts": {
+        "A": 29610181,
+        "C": 30430258,
+        "G": 30463227,
+        "T": 29602200
+      }
+    },
+    "normalization": "headers removed, letters uppercased, non-ACGT replaced with A; both tools receive this sequence and are verified against it"
+  },
+  "profiles": [
+    "hypergrass-bounded-wide"
+  ],
+  "execution_order": [
+    "hypergrass-bounded-wide-r0"
+  ],
+  "results": [
+    {
+      "profile": "hypergrass-bounded-wide",
+      "kind": "hypergrass",
+      "level": "bounded-wide",
+      "config": {
+        "options": [
+          "--pangenome",
+          "--bounded",
+          "--single-thread",
+          "--anchor-single-page",
+          "--seed-step",
+          "8",
+          "--block-mib",
+          "32",
+          "--anchor-mib",
+          "9"
+        ],
+        "jvm": [
+          "-Dhypergrass.matchMin=104",
+          "-Dhypergrass.rangeModel=count",
+          "-XX:+UseSerialGC",
+          "-XX:ReservedCodeCacheSize=32m",
+          "-XX:MaxMetaspaceSize=64m",
+          "-XX:CICompilerCount=2",
+          "-Xss512k"
+        ],
+        "heap": "248m",
+        "memory": "256m"
+      },
+      "planned_observations": 1,
+      "status": "failed",
+      "roundtrip_ok": false,
+      "deterministic": false,
+      "artifact_bytes": null,
+      "artifact_sha256": null,
+      "bits_per_base": null,
+      "wall_seconds": null,
+      "wall_seconds_min": null,
+      "wall_seconds_max": null,
+      "cpu_seconds": null,
+      "peak_rss_bytes": null,
+      "peak_rss_median_bytes": null,
+      "cgroup_memory_peak_bytes": 268435456,
+      "cgroup_oom_kills": 1,
+      "decompress": null,
+      "error": "Container cgroup recorded an OOM kill (exit -9).",
+      "observations": [
+        {
+          "profile": "hypergrass-bounded-wide-r0",
+          "base_profile": "hypergrass-bounded-wide",
+          "repeat": 0,
+          "kind": "hypergrass",
+          "level": "bounded-wide",
+          "input_bytes": 120108223,
+          "input_sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb",
+          "input_bases": 120108223,
+          "status": "oom-killed",
+          "roundtrip_ok": false,
+          "artifact_bytes": null,
+          "bits_per_base": null,
+          "wall_seconds": 5.83452796399979,
+          "cpu_seconds": 3.8969139999999998,
+          "peak_rss_bytes": 259956736,
+          "error": "Container cgroup recorded an OOM kill (exit -9).",
+          "returncode": -9,
+          "memory_method": "os.wait4 ru_maxrss: child, including descendants it reaped; converted to bytes",
+          "cgroup_memory_peak_bytes": 268435456,
+          "cgroup_oom_kills": 1,
+          "cgroup_memory_method": "cgroup v2 memory.peak/memory.events",
+          "stderr_tail": "",
+          "stderr_bytes": 0,
+          "container_name": "hgs-heap-sweep-248-hypergrass-bounded-wide-r0-compress-17000",
+          "memory_limit": "256m"
+        }
+      ],
+      "input_bytes": 120108223,
+      "input_sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb",
+      "input_bases": 120108223,
+      "attempts": 1,
+      "failed_observations": 1,
+      "attempt_wall_seconds_median": 5.83452796399979,
+      "attempt_wall_seconds_max": 5.83452796399979,
+      "attempt_peak_rss_bytes": 259956736,
+      "oom_killed_observations": 1
+    }
+  ],
+  "status": "partial",
+  "baseline": {
+    "profile": "xz-9",
+    "archive_bytes": 8394900,
+    "source": "benchmarks\\pangenome\\runs\\pangenome-scale-2\\report.json"
+  },
+  "failures": 1,
+  "finished_utc": "2026-11-03T10:17:47.472654+00:00"
+}

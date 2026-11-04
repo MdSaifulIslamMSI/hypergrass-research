@@ -1,0 +1,138 @@
+{
+  "schema_version": 1,
+  "kind": "specialized-scale-test",
+  "run_id": "specialized-jdk27-3",
+  "started_utc": "2026-11-03T08:14:58.565934+00:00",
+  "image_id": "sha256:580e58b6ee16d43f4dd99a2871b1c920548b7c6e9b0c695a01f521c17701a4ae",
+  "source": "benchmarks\\pangenome\\data\\pangenome.fasta",
+  "sliced": false,
+  "input": {
+    "fasta": {
+      "path": "benchmarks\\pangenome\\data\\pangenome.fasta",
+      "size_bytes": 121825884,
+      "sha256": "f03f0dd10c541b99ddf63d18053e3a9c6009910a81700ba18f15e24dcb7d2285",
+      "records": 24,
+      "bases": 120108223
+    },
+    "sequence": {
+      "path": "benchmarks\\specialized\\runs\\specialized-jdk27-3\\input.seq",
+      "size_bytes": 120108223,
+      "bases": 120108223,
+      "sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb",
+      "non_acgt_bases_masked": 2357,
+      "base_counts": {
+        "A": 29610181,
+        "C": 30430258,
+        "G": 30463227,
+        "T": 29602200
+      }
+    },
+    "normalization": "headers removed, letters uppercased, non-ACGT replaced with A; both tools receive this sequence and are verified against it"
+  },
+  "profiles": [
+    "hypergrass-bounded-256m-tuned",
+    "hypergrass-bounded-256m-stride8"
+  ],
+  "results": [
+    {
+      "profile": "hypergrass-bounded-256m-tuned",
+      "kind": "hypergrass",
+      "level": "bounded-256m",
+      "input_bytes": 120108223,
+      "input_sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb",
+      "input_bases": 120108223,
+      "status": "success",
+      "roundtrip_ok": true,
+      "artifact_bytes": 3997232,
+      "bits_per_base": 0.26624202074823805,
+      "wall_seconds": 57.07225585800006,
+      "cpu_seconds": 57.397263,
+      "peak_rss_bytes": 287744000,
+      "error": null,
+      "returncode": 0,
+      "decompress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 24.639637617001426,
+        "cpu_seconds": 26.177138000000003,
+        "peak_rss_bytes": 226873344,
+        "error": null
+      },
+      "verification": {
+        "verdict": "pass",
+        "problems": [],
+        "original": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\specialized-jdk27-3\\input.seq",
+        "restored": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\specialized-jdk27-3\\ops\\hypergrass-bounded-256m-tuned\\restored.seq",
+        "archive": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\specialized-jdk27-3\\ops\\hypergrass-bounded-256m-tuned\\archive.hgs",
+        "original_bytes": 120108223,
+        "restored_bytes": 120108223,
+        "archive_bytes": 3997232,
+        "bytes_compared": 120108223,
+        "byte_identical": true,
+        "first_mismatch_offset": null,
+        "original_sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb",
+        "restored_sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb",
+        "archive_sha256": "81f2fa98eed455de5bdd3f985e27dad287237e19174bbf082b91fb45965c097a",
+        "expected_sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb",
+        "chunk_bytes": 8388608,
+        "seconds": 0.477,
+        "comparison": "streaming byte comparison independent of the codec"
+      },
+      "restored_sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb"
+    },
+    {
+      "profile": "hypergrass-bounded-256m-stride8",
+      "kind": "hypergrass",
+      "level": "bounded-256m-stride8",
+      "input_bytes": 120108223,
+      "input_sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb",
+      "input_bases": 120108223,
+      "status": "success",
+      "roundtrip_ok": true,
+      "artifact_bytes": 3965049,
+      "bits_per_base": 0.26409842063852695,
+      "wall_seconds": 51.170003495000856,
+      "cpu_seconds": 53.706107,
+      "peak_rss_bytes": 288460800,
+      "error": null,
+      "returncode": 0,
+      "decompress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 22.919856020000225,
+        "cpu_seconds": 24.619384999999998,
+        "peak_rss_bytes": 226885632,
+        "error": null
+      },
+      "verification": {
+        "verdict": "pass",
+        "problems": [],
+        "original": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\specialized-jdk27-3\\input.seq",
+        "restored": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\specialized-jdk27-3\\ops\\hypergrass-bounded-256m-stride8\\restored.seq",
+        "archive": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\specialized-jdk27-3\\ops\\hypergrass-bounded-256m-stride8\\archive.hgs",
+        "original_bytes": 120108223,
+        "restored_bytes": 120108223,
+        "archive_bytes": 3965049,
+        "bytes_compared": 120108223,
+        "byte_identical": true,
+        "first_mismatch_offset": null,
+        "original_sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb",
+        "restored_sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb",
+        "archive_sha256": "9a61a02953c2c94bb45da5ae247293ed1c7443c76ea4e37b9463b93e4f33207e",
+        "expected_sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb",
+        "chunk_bytes": 8388608,
+        "seconds": 0.38,
+        "comparison": "streaming byte comparison independent of the codec"
+      },
+      "restored_sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb"
+    }
+  ],
+  "status": "success",
+  "baseline": {
+    "profile": "xz-9",
+    "archive_bytes": 8394900,
+    "source": "benchmarks\\pangenome\\runs\\pangenome-scale-2\\report.json"
+  },
+  "failures": 0,
+  "finished_utc": "2026-11-03T08:17:40.186870+00:00"
+}

@@ -1,0 +1,158 @@
+{
+  "schema_version": 1,
+  "query": "\"Mycobacterium tuberculosis\"[Organism] AND \"complete genome\"[Title] AND refseq[Filter]",
+  "selection": "NCBI relevance order; distinct accessions; length 4000000-4900000; stop at target bases",
+  "target_bases": 105000000,
+  "total_bases": 105745015,
+  "fasta": {
+    "path": "panel.fasta",
+    "size_bytes": 107257786,
+    "sha256": "4a62d9cf8563b01fe926d5a779dc5c44cfb3c04fd6e5ea4d07939056f905618f"
+  },
+  "records": [
+    {
+      "uid": "3400562344",
+      "accession": "NZ_CP154696.1",
+      "length": 4417521,
+      "title": "Mycobacterium tuberculosis strain CT2018-00088 chromosome, complete genome"
+    },
+    {
+      "uid": "3400562338",
+      "accession": "NZ_CP154659.1",
+      "length": 4383271,
+      "title": "Mycobacterium tuberculosis strain TDR156 chromosome, complete genome"
+    },
+    {
+      "uid": "3400562332",
+      "accession": "NZ_CP154693.1",
+      "length": 4433908,
+      "title": "Mycobacterium tuberculosis strain CT2018-00091 chromosome, complete genome"
+    },
+    {
+      "uid": "3400562324",
+      "accession": "NZ_CP154668.1",
+      "length": 4367416,
+      "title": "Mycobacterium tuberculosis strain TDR74 chromosome, complete genome"
+    },
+    {
+      "uid": "3400562102",
+      "accession": "NZ_CP154680.1",
+      "length": 4410859,
+      "title": "Mycobacterium tuberculosis str. Erdman = ATCC 35801 strain Erdman chromosome, complete genome"
+    },
+    {
+      "uid": "3400561897",
+      "accession": "NZ_CP154692.1",
+      "length": 4393623,
+      "title": "Mycobacterium tuberculosis strain CT2018-00092 chromosome, complete genome"
+    },
+    {
+      "uid": "3400561880",
+      "accession": "NZ_CP154657.1",
+      "length": 4431121,
+      "title": "Mycobacterium tuberculosis strain TDR188 chromosome, complete genome"
+    },
+    {
+      "uid": "3400561832",
+      "accession": "NZ_CP154658.1",
+      "length": 4395921,
+      "title": "Mycobacterium tuberculosis strain TDR180 chromosome, complete genome"
+    },
+    {
+      "uid": "3400559692",
+      "accession": "NZ_CP154660.1",
+      "length": 4367401,
+      "title": "Mycobacterium tuberculosis strain TDR152 chromosome, complete genome"
+    },
+    {
+      "uid": "3400559676",
+      "accession": "NZ_CP102448.1",
+      "length": 4423131,
+      "title": "Mycobacterium tuberculosis strain DS-5538 chromosome, complete genome"
+    },
+    {
+      "uid": "3400559670",
+      "accession": "NZ_CP102236.1",
+      "length": 4416232,
+      "title": "Mycobacterium tuberculosis strain DS-20227 chromosome, complete genome"
+    },
+    {
+      "uid": "3400559552",
+      "accession": "NZ_CP154683.1",
+      "length": 4409659,
+      "title": "Mycobacterium tuberculosis strain CT2018-00101 chromosome, complete genome"
+    },
+    {
+      "uid": "3400557085",
+      "accession": "NZ_CP154690.1",
+      "length": 4420355,
+      "title": "Mycobacterium tuberculosis strain CT2018-00094 chromosome, complete genome"
+    },
+    {
+      "uid": "3400557066",
+      "accession": "NZ_CP154676.1",
+      "length": 4425030,
+      "title": "Mycobacterium tuberculosis strain TDR5 chromosome, complete genome"
+    },
+    {
+      "uid": "3400556972",
+      "accession": "NZ_CP102444.1",
+      "length": 4393390,
+      "title": "Mycobacterium tuberculosis strain DS-18122 chromosome, complete genome"
+    },
+    {
+      "uid": "3400556655",
+      "accession": "NZ_CP154665.1",
+      "length": 4408959,
+      "title": "Mycobacterium tuberculosis strain TDR89 chromosome, complete genome"
+    },
+    {
+      "uid": "3400556406",
+      "accession": "NZ_CP154679.1",
+      "length": 4414576,
+      "title": "Mycobacterium tuberculosis strain HN878 chromosome, complete genome"
+    },
+    {
+      "uid": "3400556159",
+      "accession": "NZ_CP102445.1",
+      "length": 4404191,
+      "title": "Mycobacterium tuberculosis strain DS 32449 chromosome, complete genome"
+    },
+    {
+      "uid": "3400554547",
+      "accession": "NZ_CP154656.1",
+      "length": 4363898,
+      "title": "Mycobacterium tuberculosis strain TDR193 chromosome, complete genome"
+    },
+    {
+      "uid": "3400554143",
+      "accession": "NZ_CP102239.1",
+      "length": 4421179,
+      "title": "Mycobacterium tuberculosis strain DS-30890 chromosome, complete genome"
+    },
+    {
+      "uid": "3400536369",
+      "accession": "NZ_CP154688.1",
+      "length": 4421090,
+      "title": "Mycobacterium tuberculosis strain CT2018-00096 chromosome, complete genome"
+    },
+    {
+      "uid": "3400536362",
+      "accession": "NZ_CP102446.1",
+      "length": 4401414,
+      "title": "Mycobacterium tuberculosis strain DS-25946 chromosome, complete genome"
+    },
+    {
+      "uid": "3400536285",
+      "accession": "NZ_CP154689.1",
+      "length": 4426364,
+      "title": "Mycobacterium tuberculosis strain CT2018-00095 chromosome, complete genome"
+    },
+    {
+      "uid": "3400536278",
+      "accession": "NZ_CP102443.1",
+      "length": 4394506,
+      "title": "Mycobacterium tuberculosis strain DS-27464 chromosome, complete genome"
+    }
+  ]
+}

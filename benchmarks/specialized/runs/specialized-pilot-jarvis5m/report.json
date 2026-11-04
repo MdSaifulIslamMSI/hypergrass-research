@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "kind": "specialized-scale-test",
+  "run_id": "specialized-pilot-jarvis5m",
+  "started_utc": "2026-11-01T11:32:01.661167+00:00",
+  "image_id": "sha256:d6ca62a74e3724172a5c49720e28ab2066eb31b3c965dadfb6220e112dbc3bb3",
+  "source": "benchmarks\\pangenome\\data\\pangenome.fasta",
+  "sliced": true,
+  "input": {
+    "fasta": {
+      "path": "benchmarks\\specialized\\runs\\specialized-pilot-jarvis5m\\input.fasta",
+      "size_bytes": 5071579,
+      "sha256": "d96882c14e6906dc0d9cc752f6bca47d9536332bfe54877a7eb1aa08adaf3fb4",
+      "records": 2,
+      "bases": 5000000
+    },
+    "sequence": {
+      "path": "benchmarks\\specialized\\runs\\specialized-pilot-jarvis5m\\input.seq",
+      "size_bytes": 5000000,
+      "bases": 5000000,
+      "sha256": "4c2c6a21dcfa7fda3fb695ae8d3a1bf211fd7ecb2aace83dd17d61d0a10e7d81",
+      "non_acgt_bases_masked": 0,
+      "base_counts": {
+        "A": 1234147,
+        "C": 1268507,
+        "G": 1267232,
+        "T": 1230114
+      }
+    },
+    "normalization": "headers removed, letters uppercased, non-ACGT replaced with A; both tools receive this sequence and are verified against it"
+  },
+  "profiles": [
+    "jarvis3-l7"
+  ],
+  "results": [
+    {
+      "profile": "jarvis3-l7",
+      "kind": "jarvis3",
+      "level": "7",
+      "input_bytes": 5000000,
+      "input_sha256": "4c2c6a21dcfa7fda3fb695ae8d3a1bf211fd7ecb2aace83dd17d61d0a10e7d81",
+      "input_bases": 5000000,
+      "status": "success",
+      "roundtrip_ok": true,
+      "artifact_bytes": 1212505,
+      "bits_per_base": 1.940008,
+      "wall_seconds": 6.879050745000086,
+      "cpu_seconds": 3.745495,
+      "peak_rss_bytes": 270794752,
+      "error": null,
+      "returncode": 0,
+      "decompress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 8.136926712000104,
+        "cpu_seconds": 4.3388409999999995,
+        "peak_rss_bytes": 270925824,
+        "error": null
+      }
+    }
+  ],
+  "status": "success",
+  "failures": 0,
+  "finished_utc": "2026-11-01T11:32:20.834475+00:00"
+}

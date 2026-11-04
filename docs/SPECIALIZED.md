@@ -162,8 +162,185 @@ Removing the LZ77 aux coder changes nothing on this slice, the plane coder is
 worth 816 B, and all optional aux coders together are worth 8,619 B. Every
 HyperGraSS variant except pure QCRM is 37.5–38.1% smaller than GraSS here.
 
-## Findings
+### Single-genome fast path (`--single`)
 
+The pangenome profiles spend time on work that cannot pay off for one assembly:
+the anchor-bank probe, the block directory, and experts for cross-strain
+variation. `--single` factorizes the input once and encodes a single QCRM
+superblock. It is opt-in; every archive above still uses the default path and
+keeps its published bytes. The tuned compact path applies to inputs up to
+128 MiB; larger inputs fall back to the blocked path.
+
+Tuning was measured on the exact 4,641,652-base *E. coli* K-12 sequence with the
+direct QCRM harness. Each variant is the second of two observations in one
+interleaved session, so compare rows within this table rather than across
+sessions.
+
+| QCRM variant | QCRM payload | Δ vs published | Encode | Decode |
+| --- | ---: | ---: | ---: | ---: |
+| Published (dense orders 0–10, sparse 12/15) | 1,086,677 B | — | 7.95 s | 8.03 s |
+| Dense orders capped at 7 | 1,084,392 B | −2,285 B | 6.16 s | 6.13 s |
+| **Dense ≤7 + no sparse hash tables** | **1,084,133 B** | **−2,544 B** | **4.19 s** | **4.22 s** |
+| Dense ≤7 + no sparse + 4 heads + no verify | 1,084,864 B | −1,813 B | 3.99 s | 4.03 s |
+| Dense ≤6 + all prunes | 1,085,534 B | −1,143 B | 4.42 s | 4.12 s |
+| Dense ≤7, repeat heads disabled (control) | 1,096,410 B | +9,733 B | 5.21 s | 5.07 s |
+
+These are QCRM payload bytes. The compact container adds 39 bytes of header and
+metadata, so the tuned *E. coli* archive is 1,084,172 B.
+
+Two structural results. High-order dense tables (orders 9–10) are worse than
+useless on a single genome: dropping them saves 2,285 B and 23% of the time.
+The two sparse hash experts (k=12, k=15) cost roughly 45% of the remaining
+model time and 16 MiB per model while making the archive 2,544 B *larger*;
+removing both is the single largest win in the table. Repeat heads are not
+optional: disabling them costs 9,733 B. The chosen profile keeps six heads and
+exact verification; a variant with four heads and exact verification skipped
+measured about 0.2 s faster in a separate batch but gave back 731 B, so it was
+rejected.
+
+Allocation dominated the original profile. JFR showed `RepeatHead.predict`
+allocating a four-int array per base per active head — 71.7% of all allocation.
+Reusing one scratch array per head cut the harness's used heap from about
+226 MiB to 83 MiB without changing archive bytes. Dropping the sparse tables
+removes a further 16 MiB per model, so the serial tuned archive completes under
+a small heap and a segmented run stays proportional to the thread count.
+
+`--threads N` splits the DNA channel into N independently coded QCRM segments.
+Each segment resets the model, so bytes grow; the trade is explicit, measured
+on the same genome with three interleaved observations per point (medians):
+
+| Segments | Archive | Δ vs serial | Encode | Speedup | Peak RSS |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | **1,084,172 B** | — | 17.84 s | 1.00x | 90 MiB |
+| 2 | 1,090,807 B | +0.61% | 10.58 s | 1.69x | 117 MiB |
+| 4 | 1,097,843 B | +1.26% | 7.32 s | 2.44x | 161 MiB |
+| 6 | 1,102,073 B | +1.65% | 7.24 s | 2.46x | 206 MiB |
+| 8 | 1,104,694 B | +1.89% | 8.69 s | 2.05x | 247 MiB |
+
+Decode scales slightly better than encode on the same archives: 1.94x at two
+segments, 2.67x at four, 2.75x at six, and 2.44x at eight, with peak RSS
+tracking the encode column to within a few MiB. Wall times move with machine
+load, so only the ratios inside this table should be compared; the archive
+bytes are reproducible across sessions.
+
+This host is an Intel i3-1220P: two performance cores, eight efficiency cores,
+and a 28 W package. The encode curve flattens after four segments because the
+serial model work is no longer the bottleneck and the efficiency-core clock and
+package power take over; eight segments regresses. Under a strict two-CPU
+container quota the picture is cleaner: 20.5 s serial to 10.3 s at two
+segments, a 1.99x speedup at 99% efficiency, with every restore byte-exact
+(the t4/t8 container runs in that sweep oversubscribed the two-CPU quota and
+are not scaling evidence). The segment count is a property of the archive:
+decode uses the archived count, not the machine's processor count, so a
+restore is reproducible on any host.
+
+### End-to-end single-genome results
+
+Four genomes, three interleaved repeats per profile, run in the same 2-CPU
+container used for the pangenome comparisons. Every HyperGraSS profile produced
+the same archive size on all three repeats and restored byte-exactly (3/3).
+GraSS archives move by a few bytes because its tar container records mtimes;
+those runs are marked `partial`, and every GraSS restore was also exact.
+
+| Genome | Bases | Profile | Archive | bits/base | Compress | Peak RSS |
+| --- | ---: | --- | ---: | ---: | ---: | ---: |
+| *E. coli* K-12 | 4,641,652 | GraSS `-e2` | 1,141,608 B | 1.968 | 7.6 s | 278 MiB |
+| | | default auto-single | 1,086,715 B | 1.873 | 28.7 s | 204 MiB |
+| | | **`--single`** | **1,084,172 B** | **1.869** | 17.3 s | **88 MiB** |
+| | | `--single --threads 2` | 1,090,807 B | 1.880 | 8.9 s | 121 MiB |
+| *B. subtilis* 168 | 4,215,606 | GraSS `-e2` | 1,034,078 B | 1.962 | 6.8 s | 248 MiB |
+| | | default auto-single | 995,744 B | 1.890 | 28.6 s | 198 MiB |
+| | | **`--single`** | **994,834 B** | **1.888** | 14.6 s | **87 MiB** |
+| | | `--single --threads 2` | 998,693 B | 1.895 | 8.4 s | 113 MiB |
+| Yeast, 3 chromosomes | 1,360,022 | GraSS `-e2` | 333,798 B | 1.963 | 3.0 s | 178 MiB |
+| | | default auto-single | 315,396 B | 1.855 | 9.2 s | 133 MiB |
+| | | **`--single`** | **315,289 B** | **1.855** | 5.9 s | **80 MiB** |
+| | | `--single --threads 2` | 317,353 B | 1.867 | 5.9 s | 104 MiB |
+| *P. aeruginosa* NY4383 | 7,316,070 | GraSS `-e2` | 1,690,428 B | 1.848 | 9.9 s | 296 MiB |
+| | | default auto-single | 1,533,558 B | 1.677 | 41.4 s | 217 MiB |
+| | | **`--single`** | **1,529,536 B** | **1.673** | 20.5 s | **95 MiB** |
+| | | `--single --threads 2` | 1,548,347 B | 1.693 | 15.2 s | 129 MiB |
+
+GraSS values are medians over the three repeats; its archive varied by up to
+22 B between runs. HyperGraSS sizes were identical in every repeat. The
+*P. aeruginosa* row is the longest record (7,316,070 bases) extracted from
+`benchmarks/broad/data/pseudo/strata/high.fasta`.
+
+The un-flagged default path detects a low-redundancy single assembly and takes
+its compact branch, but still pays the anchor-bank probe; that is the
+`default auto-single` row. With no flag it is 1,086,715 B on *E. coli*.
+
+The `--single` profile is smaller than GraSS on all four genomes, by 5.03%,
+3.80%, 5.55%, and **9.52%** respectively; the margin is widest on the largest
+genome. It also shrinks the un-flagged default archive and beats its time on
+every input (2,543 B and 1.66x on *E. coli*; 910 B and 1.96x on *B. subtilis*;
+107 B and 1.56x on yeast; 4,022 B and 2.02x on *P. aeruginosa*).
+
+Serial `--single` compression is 1.97-2.28x slower than GraSS but needs 2.2-3.2x
+less peak RSS. Two segments bring the three bacterial genomes within 1.2-1.5x
+of GraSS time for 0.39-1.23% more bytes; the 1.36 Mb yeast genome is too small
+for the reset cost to pay off. Every archive stores its segment count, so a
+two-segment file restores reproducibly on a single-core host.
+
+### 100 Mbp single sequence
+
+The compact single-genome cap was raised from 64 MiB to 128 MiB so `--single`
+engages on a 100,000,000-base record. Two hg38 slices were measured: the first
+100,000,000 bases of chr1 (305,111 non-ACGT bases, 0.305%) and of chr14
+(16,315,569 non-ACGT bases, 16.3%, a gap-heavy centromeric slice). The harness
+masks non-ACGT bases to A in `input.seq`, so both tools receive the identical
+100,000,000-byte sequence. One repeat each; HyperGraSS used a 2 GiB heap and
+GraSS kept its 1.5 GiB heap, both in a 3 GiB container. Peak RSS columns are
+compress / restore.
+
+| Input | Profile | Archive | bits/base | Compress | Peak RSS (c / r) | Exact |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| chr1, 100 Mb | GraSS `-e2` | 22,264,066 B | 1.781 | 137.5 s | 893 / 1,553 MiB | 1/1 |
+| | default (no flag) | 21,056,843 B | 1.684 | 152.9 s | 967 / 278 MiB | 1/1 |
+| | **`--single`** | **20,626,877 B** | **1.650** | 355.0 s | **396 / 396 MiB** | 1/1 |
+| | `--single --threads 2` | 20,635,964 B | 1.651 | 70.1 s | 586 / 536 MiB | 1/1 |
+| | `--single --threads 4` | 20,649,693 B | 1.652 | 124.9 s | 617 / 575 MiB | 1/1 |
+| | `--single --threads 8` | 20,677,028 B | 1.654 | 225.9 s | 697 / 584 MiB | 1/1 |
+| | `--lean` | 22,788,010 B | 1.823 | 40.5 s | 94 / 94 MiB | 1/1 |
+| | `--pangenome` | 22,735,705 B | 1.819 | 744.2 s | 962 / 384 MiB | 1/1 |
+| chr14, 100 Mb | GraSS `-e2` | 18,538,762 B | 1.483 | 81.9 s | 960 / 1,524 MiB | 1/1 |
+| | **`--single`** | **17,084,921 B** | **1.367** | 115.6 s | **380 / 389 MiB** | 1/1 |
+
+`--single` is **7.35% smaller on chr1** and **7.84% smaller on chr14**, at
+2.25x and 2.5x lower compression RSS. The pangenome profile is the wrong tool
+for one record: on chr1 it is 10.22% larger and 2.10x slower than `--single`,
+and 2.12% larger than GraSS, because its 9.4 Mbp anchor page has no
+cross-genome redundancy to exploit. The un-flagged default is the
+speed-oriented choice at this size: it selected 47 blocks with a 4.19 Mbp
+anchor bank, not the compact single branch, and produced 21,056,843 B. That is
+2.08% larger than `--single` but 2.32x faster, and 5.42% smaller than GraSS at
+1.11x GraSS's time. Its compress RSS is 967 MiB (2.4x `--single`), but its
+restore RSS is 278 MiB. Two segments are nearly free at this size: 20,635,964 B
+is only 9,087 B (0.044%) above serial, while compress falls to 70.1 s (5.07x)
+and restore to 71.9 s (5.04x). That is 1.96x faster than GraSS compressing and
+1.46x faster restoring, with a 7.31% smaller archive and 1.52x lower compress
+RSS. More segments do not pay on a 2-CPU container: `--threads 4` grows to
+20,649,693 B (+0.111%) and is slower than `--threads 2` at 124.9 s compress /
+126.3 s restore, because four 25 Mb model resets outweigh the parallelism.
+`--threads 8` is worse again: 20,677,028 B (+0.243%), 225.9 s compress / 228.7 s
+restore, and 444 s of CPU time, 3.35x the CPU of two segments. Two segments is
+the sweet spot at this size and CPU budget.
+`--lean` is the speed and memory extreme: 40.5 s / 94
+MiB compressing and 36.2 s / 94 MiB restoring, at 22,788,010 B. It is 10.48%
+larger than `--single` but 8.77x faster with 4.21x lower compress RSS. Against
+GraSS it is 2.35% larger but 3.40x faster compressing and 2.91x faster
+restoring, at 9.5x lower compress RSS and 16.5x lower restore RSS. The serial
+speed trade is real at this
+size: `--single` is 2.58x slower on chr1 and 1.41x slower on chr14. chr1 is the harder
+case because 99.7% of its bases are real repeat-rich sequence, versus 83.7% for
+the chr14 slice; the per-base model cost on chr1 is roughly 3x the chr14 cost.
+The 100 Mb result is therefore a ratio and memory win, not a serial speed win.
+`--threads N` is the speed lever, since it splits the record into independently
+coded segments. At 100 Mb on this 2-CPU container, two segments is the sweet
+spot; more segments add model resets and oversubscribe the CPUs. It is measured
+on smaller genomes above as well.
+
+## Findings
 HyperGraSS wins this comparison, narrowly, and pays for it in compression
 time. On the identical 120.1 Mbp sequence the tuned profile produced
 **3,810,409 bytes (0.254 bits/base)**, **2.21% smaller than JARVIS3 level 7**

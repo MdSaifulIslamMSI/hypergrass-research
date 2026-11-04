@@ -57,3 +57,11 @@ __pycache__/
 *.pyc
 .DS_Store
 Thumbs.db
+
+# RC-MDL prototype bulk data and vendored binaries (regenerable; result JSONs
+# are force-added to git and preserved in the handoff release asset)
+prototype/rcmdl/work/
+prototype/rcmdl/bin/
+prototype/rcmdl/bin2/
+prototype/rcmdl/vendor/
+benchmarks/specialized/.tmp/

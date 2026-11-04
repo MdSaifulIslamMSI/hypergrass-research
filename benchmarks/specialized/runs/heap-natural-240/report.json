@@ -1,0 +1,186 @@
+{
+  "schema_version": 2,
+  "kind": "specialized-scale-test",
+  "run_id": "heap-natural-240",
+  "started_utc": "2026-11-03T10:20:36.774717+00:00",
+  "image_id": "sha256:580e58b6ee16d43f4dd99a2871b1c920548b7c6e9b0c695a01f521c17701a4ae",
+  "image_tag": "hypergrass-corpus:jdk27",
+  "provenance": {
+    "git_commit": "961f235992d38dc46725bb3b81e4d535aa07a987",
+    "git_dirty": true,
+    "git_status": "M benchmarks/specialized/run.py\n M benchmarks/specialized/test_run.py",
+    "docker_version": "29.6.2",
+    "python": "3.12.10",
+    "platform": "Windows-11-10.0.28120-SP0"
+  },
+  "harness": {
+    "repeats": 1,
+    "timeout_seconds": 1800.0,
+    "memory_default": "2g",
+    "heap_override": "240m",
+    "memory_override": "512m",
+    "jvm_extra": null
+  },
+  "source": "benchmarks\\pangenome\\data\\pangenome.fasta",
+  "sliced": false,
+  "input": {
+    "fasta": {
+      "path": "benchmarks\\pangenome\\data\\pangenome.fasta",
+      "size_bytes": 121825884,
+      "sha256": "f03f0dd10c541b99ddf63d18053e3a9c6009910a81700ba18f15e24dcb7d2285",
+      "records": 24,
+      "bases": 120108223
+    },
+    "sequence": {
+      "path": "benchmarks\\specialized\\runs\\heap-natural-240\\input.seq",
+      "size_bytes": 120108223,
+      "bases": 120108223,
+      "sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb",
+      "non_acgt_bases_masked": 2357,
+      "base_counts": {
+        "A": 29610181,
+        "C": 30430258,
+        "G": 30463227,
+        "T": 29602200
+      }
+    },
+    "normalization": "headers removed, letters uppercased, non-ACGT replaced with A; both tools receive this sequence and are verified against it"
+  },
+  "profiles": [
+    "hypergrass-bounded-wide"
+  ],
+  "execution_order": [
+    "hypergrass-bounded-wide-r0"
+  ],
+  "results": [
+    {
+      "profile": "hypergrass-bounded-wide",
+      "kind": "hypergrass",
+      "level": "bounded-wide",
+      "config": {
+        "options": [
+          "--pangenome",
+          "--bounded",
+          "--single-thread",
+          "--anchor-single-page",
+          "--seed-step",
+          "8",
+          "--block-mib",
+          "32",
+          "--anchor-mib",
+          "9"
+        ],
+        "jvm": [
+          "-Dhypergrass.matchMin=104",
+          "-Dhypergrass.rangeModel=count",
+          "-XX:+UseSerialGC",
+          "-XX:ReservedCodeCacheSize=32m",
+          "-XX:MaxMetaspaceSize=64m",
+          "-XX:CICompilerCount=2",
+          "-Xss512k"
+        ],
+        "heap": "240m",
+        "memory": "512m"
+      },
+      "planned_observations": 1,
+      "status": "success",
+      "roundtrip_ok": true,
+      "deterministic": true,
+      "artifact_bytes": 3824166,
+      "artifact_sha256": "c7400109056a52a610f78960eb19f36f8ab04a0ceb01e8b6384fa02125acd617",
+      "bits_per_base": 0.25471468344011716,
+      "wall_seconds": 53.542822579998756,
+      "wall_seconds_min": 53.542822579998756,
+      "wall_seconds_max": 53.542822579998756,
+      "cpu_seconds": 53.986264999999996,
+      "peak_rss_bytes": 409956352,
+      "peak_rss_median_bytes": 409956352,
+      "cgroup_memory_peak_bytes": 397897728,
+      "cgroup_oom_kills": 0,
+      "decompress": {
+        "wall_seconds": 29.912748455999463,
+        "cpu_seconds": 31.189699,
+        "peak_rss_bytes": 312967168,
+        "cgroup_memory_peak_bytes": 300142592
+      },
+      "error": null,
+      "observations": [
+        {
+          "profile": "hypergrass-bounded-wide-r0",
+          "base_profile": "hypergrass-bounded-wide",
+          "repeat": 0,
+          "kind": "hypergrass",
+          "level": "bounded-wide",
+          "input_bytes": 120108223,
+          "input_sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb",
+          "input_bases": 120108223,
+          "status": "success",
+          "roundtrip_ok": true,
+          "artifact_bytes": 3824166,
+          "bits_per_base": 0.25471468344011716,
+          "wall_seconds": 53.542822579998756,
+          "cpu_seconds": 53.986264999999996,
+          "peak_rss_bytes": 409956352,
+          "error": null,
+          "returncode": 0,
+          "memory_method": "os.wait4 ru_maxrss: child, including descendants it reaped; converted to bytes",
+          "cgroup_memory_peak_bytes": 397897728,
+          "cgroup_oom_kills": 0,
+          "cgroup_memory_method": "cgroup v2 memory.peak/memory.events",
+          "stderr_tail": "",
+          "stderr_bytes": 0,
+          "container_name": "hgs-heap-natural-240-hypergrass-bounded-wide-r0-compress-2828",
+          "memory_limit": "512m",
+          "decompress": {
+            "status": "success",
+            "returncode": 0,
+            "wall_seconds": 29.912748455999463,
+            "cpu_seconds": 31.189699,
+            "peak_rss_bytes": 312967168,
+            "memory_method": "os.wait4 ru_maxrss: child, including descendants it reaped; converted to bytes",
+            "cgroup_memory_peak_bytes": 300142592,
+            "cgroup_oom_kills": 0,
+            "cgroup_memory_method": "cgroup v2 memory.peak/memory.events",
+            "error": null,
+            "stderr_tail": "",
+            "stderr_bytes": 0,
+            "container_name": "hgs-heap-natural-240-hypergrass-bounded-wide-r0-decompress-2828",
+            "memory_limit": "512m"
+          },
+          "verification": {
+            "verdict": "pass",
+            "problems": [],
+            "original": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\heap-natural-240\\input.seq",
+            "restored": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\heap-natural-240\\ops\\hypergrass-bounded-wide-r0\\restored.seq",
+            "archive": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\heap-natural-240\\ops\\hypergrass-bounded-wide-r0\\archive.hgs",
+            "original_bytes": 120108223,
+            "restored_bytes": 120108223,
+            "archive_bytes": 3824166,
+            "bytes_compared": 120108223,
+            "byte_identical": true,
+            "first_mismatch_offset": null,
+            "original_sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb",
+            "restored_sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb",
+            "archive_sha256": "c7400109056a52a610f78960eb19f36f8ab04a0ceb01e8b6384fa02125acd617",
+            "expected_sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb",
+            "chunk_bytes": 8388608,
+            "seconds": 0.632,
+            "comparison": "streaming byte comparison independent of the codec"
+          },
+          "restored_sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb"
+        }
+      ],
+      "input_bytes": 120108223,
+      "input_sha256": "51cb3ecb2e9f532833caa0b60345f37d0342474e9f4a239801486f9bc9219acb",
+      "input_bases": 120108223
+    }
+  ],
+  "status": "success",
+  "baseline": {
+    "profile": "xz-9",
+    "archive_bytes": 8394900,
+    "source": "benchmarks\\pangenome\\runs\\pangenome-scale-2\\report.json"
+  },
+  "failures": 0,
+  "finished_utc": "2026-11-03T10:22:08.895507+00:00"
+}

@@ -98,16 +98,22 @@ public final class ArchiveByteAccounting {
                 throw in.error("Invalid .hgs magic/version");
             }
             int flags = in.u8();
-            if ((flags & ~7) != 0) throw in.error("Unknown container flags: " + flags);
+            if ((flags & ~63) != 0) throw in.error("Unknown container flags: " + flags);
             boolean hasAnchor = (flags & 1) != 0;
+            boolean tuned = (flags & 16) != 0;
+            boolean segmented = (flags & 32) != 0;
             if ((flags & 4) != 0) {
                 if (hasAnchor) throw in.error("Compact archive cannot contain an anchor bank");
+                if ((flags & 8) != 0) throw in.error("Compact archive cannot set the shared gap flag");
+                if (segmented && !tuned) throw in.error("Segmented DNA channel requires the tuned flag");
                 if (in.intLE() < 0) throw in.error("Negative compact raw length");
                 in.intLE(); // CRC-32, not verified by accounting.
                 add("container.header", in.pos);
-                block(in, false);
+                block(in, false, tuned);
                 in.end();
             } else {
+                if (tuned) throw in.error("Tuned DNA channel requires a compact archive");
+                if (segmented) throw in.error("Segmented DNA channel requires a tuned compact archive");
                 add("container.header", in.pos);
                 if (bytes.length < 18) throw in.error("Truncated footer/trailer");
                 int trailerOffset = bytes.length - 12;
@@ -125,7 +131,7 @@ public final class ArchiveByteAccounting {
                 add("container.trailer", 12);
                 in = new Cursor(bytes, in.pos, (int) footerOffset);
                 if (hasAnchor) anchor(in);
-                while (in.pos < in.limit) block(in, hasAnchor);
+                while (in.pos < in.limit) block(in, hasAnchor, false);
                 in.end();
             }
             Report report = new Report(bytes.length, counts, modes);
@@ -184,7 +190,7 @@ public final class ArchiveByteAccounting {
             }
         }
 
-        private void block(Cursor in, boolean hasAnchor) {
+        private void block(Cursor in, boolean hasAnchor, boolean tuned) {
             int start = in.pos;
             int flags = in.u8();
             if ((flags & ~31) != 0) throw in.error("Unknown metadata flags: " + flags);
@@ -222,10 +228,10 @@ public final class ArchiveByteAccounting {
                 add("metadata.exception_gaps", in.pos - start);
                 aux(in, "metadata.exception_symbols");
             }
-            dna(in, dnaLength, hasAnchor);
+            dna(in, dnaLength, hasAnchor, tuned);
         }
 
-        private void dna(Cursor in, int dnaLength, boolean hasAnchor) {
+        private void dna(Cursor in, int dnaLength, boolean hasAnchor, boolean tuned) {
             int mode = in.u8();
             if (mode > 6) throw in.error("Unknown DNA mode: " + mode);
             if ((mode == 0) != (dnaLength == 0)) throw in.error("DNA mode does not match empty/nonempty length");
@@ -233,6 +239,11 @@ public final class ArchiveByteAccounting {
             modes.put(mode, modes.get(mode) + 1);
             if (mode == 0) return;
             if (mode == 1) {
+                if (tuned) {
+                    int format = in.u8();
+                    add("dna.framing", 1);
+                    if (format != 1) throw in.error("Unknown tuned DNA format: " + format);
+                }
                 int start = in.pos;
                 int length = in.positive("Mode 1 payload length");
                 add("dna.framing", in.pos - start);

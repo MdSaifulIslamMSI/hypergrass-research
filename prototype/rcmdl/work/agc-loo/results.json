@@ -1,0 +1,17 @@
+[
+  {
+    "mode": "loo",
+    "index": 0,
+    "target": "00.fa",
+    "target_bytes": 4916796,
+    "base_bytes": 8100273,
+    "full_bytes": 8417249,
+    "marginal_bytes": 316976,
+    "bpb": 0.5157439926326006,
+    "create_seconds": 14.905560300016077,
+    "append_seconds": 4.2342203999869525,
+    "sample": "00",
+    "verified": true,
+    "restored_bytes": 4856080
+  }
+]

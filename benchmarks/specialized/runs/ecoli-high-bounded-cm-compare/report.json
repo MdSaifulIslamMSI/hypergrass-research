@@ -1,0 +1,133 @@
+{
+  "schema_version": 1,
+  "kind": "specialized-scale-test",
+  "run_id": "ecoli-high-bounded-cm-compare",
+  "started_utc": "2026-11-03T07:06:52.795623+00:00",
+  "image_id": "sha256:d6ca62a74e3724172a5c49720e28ab2066eb31b3c965dadfb6220e112dbc3bb3",
+  "source": "benchmarks\\broad\\data\\ecoli\\strata\\high.fasta",
+  "sliced": false,
+  "input": {
+    "fasta": {
+      "path": "benchmarks\\broad\\data\\ecoli\\strata\\high.fasta",
+      "size_bytes": 122200634,
+      "sha256": "109aedf4c4593d7356465b57f4b1ad322e4e2cea766e78947ef659cc6e2e9b8e",
+      "records": 24,
+      "bases": 120477659
+    },
+    "sequence": {
+      "path": "benchmarks\\specialized\\runs\\ecoli-high-bounded-cm-compare\\input.seq",
+      "size_bytes": 120477659,
+      "bases": 120477659,
+      "sha256": "19cb7e185e355bc9e0baaea9d40f5a56a9d336a59501f6bb4da7ab21e4482d76",
+      "non_acgt_bases_masked": 0,
+      "base_counts": {
+        "A": 29709010,
+        "C": 30540542,
+        "G": 30521589,
+        "T": 29706518
+      }
+    },
+    "normalization": "headers removed, letters uppercased, non-ACGT replaced with A; both tools receive this sequence and are verified against it"
+  },
+  "profiles": [
+    "hypergrass-bounded-256m-tuned",
+    "hypergrass-bounded-256m-cm-pages"
+  ],
+  "results": [
+    {
+      "profile": "hypergrass-bounded-256m-tuned",
+      "kind": "hypergrass",
+      "level": "bounded-256m",
+      "input_bytes": 120477659,
+      "input_sha256": "19cb7e185e355bc9e0baaea9d40f5a56a9d336a59501f6bb4da7ab21e4482d76",
+      "input_bases": 120477659,
+      "status": "success",
+      "roundtrip_ok": true,
+      "artifact_bytes": 4636907,
+      "bits_per_base": 0.30790153384371455,
+      "wall_seconds": 158.3803501729999,
+      "cpu_seconds": 162.928622,
+      "peak_rss_bytes": 264142848,
+      "error": null,
+      "returncode": 0,
+      "decompress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 66.26068827899962,
+        "cpu_seconds": 71.124854,
+        "peak_rss_bytes": 231575552,
+        "error": null
+      },
+      "verification": {
+        "verdict": "pass",
+        "problems": [],
+        "original": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\ecoli-high-bounded-cm-compare\\input.seq",
+        "restored": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\ecoli-high-bounded-cm-compare\\ops\\hypergrass-bounded-256m-tuned\\restored.seq",
+        "archive": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\ecoli-high-bounded-cm-compare\\ops\\hypergrass-bounded-256m-tuned\\archive.hgs",
+        "original_bytes": 120477659,
+        "restored_bytes": 120477659,
+        "archive_bytes": 4636907,
+        "bytes_compared": 120477659,
+        "byte_identical": true,
+        "first_mismatch_offset": null,
+        "original_sha256": "19cb7e185e355bc9e0baaea9d40f5a56a9d336a59501f6bb4da7ab21e4482d76",
+        "restored_sha256": "19cb7e185e355bc9e0baaea9d40f5a56a9d336a59501f6bb4da7ab21e4482d76",
+        "archive_sha256": "90e5de8a97af3cb504b279da0ff6219be8f3cf30062fe1f0349448892a87d473",
+        "expected_sha256": "19cb7e185e355bc9e0baaea9d40f5a56a9d336a59501f6bb4da7ab21e4482d76",
+        "chunk_bytes": 8388608,
+        "seconds": 0.803,
+        "comparison": "streaming byte comparison independent of the codec"
+      },
+      "restored_sha256": "19cb7e185e355bc9e0baaea9d40f5a56a9d336a59501f6bb4da7ab21e4482d76"
+    },
+    {
+      "profile": "hypergrass-bounded-256m-cm-pages",
+      "kind": "hypergrass",
+      "level": "bounded-256m-cm-pages",
+      "input_bytes": 120477659,
+      "input_sha256": "19cb7e185e355bc9e0baaea9d40f5a56a9d336a59501f6bb4da7ab21e4482d76",
+      "input_bases": 120477659,
+      "status": "success",
+      "roundtrip_ok": true,
+      "artifact_bytes": 4659584,
+      "bits_per_base": 0.30940733999487824,
+      "wall_seconds": 112.29133924000053,
+      "cpu_seconds": 115.23306699999999,
+      "peak_rss_bytes": 285253632,
+      "error": null,
+      "returncode": 0,
+      "decompress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 40.34104791600021,
+        "cpu_seconds": 41.765043999999996,
+        "peak_rss_bytes": 225525760,
+        "error": null
+      },
+      "verification": {
+        "verdict": "pass",
+        "problems": [],
+        "original": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\ecoli-high-bounded-cm-compare\\input.seq",
+        "restored": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\ecoli-high-bounded-cm-compare\\ops\\hypergrass-bounded-256m-cm-pages\\restored.seq",
+        "archive": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\ecoli-high-bounded-cm-compare\\ops\\hypergrass-bounded-256m-cm-pages\\archive.hgs",
+        "original_bytes": 120477659,
+        "restored_bytes": 120477659,
+        "archive_bytes": 4659584,
+        "bytes_compared": 120477659,
+        "byte_identical": true,
+        "first_mismatch_offset": null,
+        "original_sha256": "19cb7e185e355bc9e0baaea9d40f5a56a9d336a59501f6bb4da7ab21e4482d76",
+        "restored_sha256": "19cb7e185e355bc9e0baaea9d40f5a56a9d336a59501f6bb4da7ab21e4482d76",
+        "archive_sha256": "3d7dc7943df780486be3446f6db8277de643552cafe6e5a5db75d5c0fae30a14",
+        "expected_sha256": "19cb7e185e355bc9e0baaea9d40f5a56a9d336a59501f6bb4da7ab21e4482d76",
+        "chunk_bytes": 8388608,
+        "seconds": 1.049,
+        "comparison": "streaming byte comparison independent of the codec"
+      },
+      "restored_sha256": "19cb7e185e355bc9e0baaea9d40f5a56a9d336a59501f6bb4da7ab21e4482d76"
+    }
+  ],
+  "status": "success",
+  "failures": 0,
+  "finished_utc": "2026-11-03T07:13:26.534498+00:00"
+}

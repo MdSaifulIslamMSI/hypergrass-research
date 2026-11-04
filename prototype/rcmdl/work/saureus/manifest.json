@@ -1,0 +1,164 @@
+{
+  "schema_version": 1,
+  "query": "\"Staphylococcus aureus\"[Organism] AND \"complete genome\"[Title] AND refseq[Filter]",
+  "selection": "NCBI relevance order; distinct accessions; length 2500000-3200000; stop at target bases",
+  "target_bases": 70000000,
+  "total_bases": 71043355,
+  "fasta": {
+    "path": "panel.fasta",
+    "size_bytes": 72060360,
+    "sha256": "9413289ee51e253b6adf6c389d04f20765ad1d5ac815b33d2552d9b7732adbd5"
+  },
+  "records": [
+    {
+      "uid": "2311194329",
+      "accession": "NZ_AP024736.1",
+      "length": 2845025,
+      "title": "Staphylococcus aureus strain 59709 chromosome, complete genome"
+    },
+    {
+      "uid": "2311181064",
+      "accession": "NZ_AP024742.1",
+      "length": 2859551,
+      "title": "Staphylococcus aureus strain 59736 chromosome, complete genome"
+    },
+    {
+      "uid": "2311176707",
+      "accession": "NZ_AP024728.1",
+      "length": 2810065,
+      "title": "Staphylococcus aureus strain 59553 chromosome, complete genome"
+    },
+    {
+      "uid": "2311176499",
+      "accession": "NZ_AP024738.1",
+      "length": 2850449,
+      "title": "Staphylococcus aureus strain 59731 chromosome, complete genome"
+    },
+    {
+      "uid": "2311176239",
+      "accession": "NZ_AP024730.1",
+      "length": 2850020,
+      "title": "Staphylococcus aureus strain 59574 chromosome, complete genome"
+    },
+    {
+      "uid": "2222925312",
+      "accession": "NZ_CP064365.1",
+      "length": 2755072,
+      "title": "Staphylococcus aureus strain PartF-Saureus-RM8376 chromosome, complete genome"
+    },
+    {
+      "uid": "2222918967",
+      "accession": "NZ_CP064389.1",
+      "length": 2964115,
+      "title": "Staphylococcus aureus strain PartE-Saureus-RM8376 chromosome, complete genome"
+    },
+    {
+      "uid": "983466147",
+      "accession": "NZ_CP012593.1",
+      "length": 2798705,
+      "title": "Staphylococcus aureus strain HOU1444-VR chromosome, complete genome"
+    },
+    {
+      "uid": "2927985137",
+      "accession": "NZ_CP183317.1",
+      "length": 2874399,
+      "title": "Staphylococcus aureus subsp. aureus USA300 strain LAC chromosome, complete genome"
+    },
+    {
+      "uid": "2914060712",
+      "accession": "NZ_CP181104.1",
+      "length": 2876431,
+      "title": "Staphylococcus aureus strain AG21-0613 chromosome, complete genome"
+    },
+    {
+      "uid": "2914060447",
+      "accession": "NZ_CP181097.1",
+      "length": 2704756,
+      "title": "Staphylococcus aureus strain AG21-0627 chromosome, complete genome"
+    },
+    {
+      "uid": "2914060369",
+      "accession": "NZ_CP181107.1",
+      "length": 2877682,
+      "title": "Staphylococcus aureus strain AG21-0612 chromosome, complete genome"
+    },
+    {
+      "uid": "2914060282",
+      "accession": "NZ_CP181150.1",
+      "length": 2795277,
+      "title": "Staphylococcus aureus strain AG21-0600 chromosome, complete genome"
+    },
+    {
+      "uid": "2914060273",
+      "accession": "NZ_CP181149.1",
+      "length": 2794402,
+      "title": "Staphylococcus aureus strain AG21-0598 chromosome, complete genome"
+    },
+    {
+      "uid": "2914060018",
+      "accession": "NZ_CP181153.1",
+      "length": 2900300,
+      "title": "Staphylococcus aureus strain AG21-0615 chromosome, complete genome"
+    },
+    {
+      "uid": "2914060012",
+      "accession": "NZ_CP181151.1",
+      "length": 2771363,
+      "title": "Staphylococcus aureus strain AG21-0618 chromosome, complete genome"
+    },
+    {
+      "uid": "2914059630",
+      "accession": "NZ_CP181152.1",
+      "length": 2822192,
+      "title": "Staphylococcus aureus strain AG21-0597 chromosome, complete genome"
+    },
+    {
+      "uid": "2914059623",
+      "accession": "NZ_CP181148.1",
+      "length": 2822180,
+      "title": "Staphylococcus aureus strain AG21-0596 chromosome, complete genome"
+    },
+    {
+      "uid": "2899126063",
+      "accession": "NZ_CP178874.1",
+      "length": 2879033,
+      "title": "Staphylococcus aureus strain IMAL058 chromosome, complete genome"
+    },
+    {
+      "uid": "2899109614",
+      "accession": "NZ_CP178880.1",
+      "length": 2879035,
+      "title": "Staphylococcus aureus strain IMAL014 chromosome, complete genome"
+    },
+    {
+      "uid": "2899109610",
+      "accession": "NZ_CP178877.1",
+      "length": 2879034,
+      "title": "Staphylococcus aureus strain IMAL031 chromosome, complete genome"
+    },
+    {
+      "uid": "2899109264",
+      "accession": "NZ_CP178871.1",
+      "length": 2879034,
+      "title": "Staphylococcus aureus strain IMAL065 chromosome, complete genome"
+    },
+    {
+      "uid": "2899103623",
+      "accession": "NZ_CP178883.1",
+      "length": 2879034,
+      "title": "Staphylococcus aureus strain NRS384 walKT389A chromosome, complete genome"
+    },
+    {
+      "uid": "2899103620",
+      "accession": "NZ_CP178868.1",
+      "length": 2879034,
+      "title": "Staphylococcus aureus strain IMAL070 chromosome, complete genome"
+    },
+    {
+      "uid": "2899103617",
+      "accession": "NZ_CP179215.1",
+      "length": 2797167,
+      "title": "Staphylococcus aureus strain YNSA7 chromosome, complete genome"
+    }
+  ]
+}

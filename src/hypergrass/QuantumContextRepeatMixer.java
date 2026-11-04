@@ -3,6 +3,8 @@ package hypergrass;
 import hypergrass.VarIntCodec.ByteIn;
 import hypergrass.VarIntCodec.ByteOut;
 import java.util.Arrays;
+import java.util.concurrent.ForkJoinPool;
+import java.util.stream.IntStream;
 
 /**
  * QuantumContextRepeatMixer (QCRM): 100% Deterministic Integer Fixed-Point Neural + Hierarchical
@@ -35,6 +37,20 @@ public final class QuantumContextRepeatMixer {
     private static final int PROB_BITS = 15;
     private static final int TOT = 1 << PROB_BITS; // 32768 range-coder scale
     private static final long TOP_VALUE = 1L << 24;
+
+    // Experimental tuning knobs. Defaults reproduce the published archive exactly;
+    // they exist so single-genome profiles can be ablated without editing code.
+    private static final int TUNE_DENSE_MAX = Integer.getInteger("hypergrass.qcrm.denseMax", -1);
+    private static final int TUNE_SPARSE_BITS = Integer.getInteger("hypergrass.qcrm.sparseBits", -1);
+    private static final int TUNE_HEAD_COUNT = Integer.getInteger("hypergrass.qcrm.heads", -1);
+    private static final int TUNE_REPEAT_BITS = Integer.getInteger("hypergrass.qcrm.repeatBits", -1);
+    private static final boolean TUNE_NO_REPEAT = Boolean.getBoolean("hypergrass.qcrm.noRepeat");
+    private static final boolean TUNE_NO_VERIFY = Boolean.getBoolean("hypergrass.qcrm.noVerifyRepeat");
+    private static final boolean TUNE_NO_WOBBLE = Boolean.getBoolean("hypergrass.qcrm.noWobble");
+    private static final boolean TUNE_NO_CODON5 = Boolean.getBoolean("hypergrass.qcrm.noCodon5");
+    private static final boolean TUNE_NO_SPARSE15 = Boolean.getBoolean("hypergrass.qcrm.noSparse15");
+    private static final boolean TUNE_NO_SPARSE12 = Boolean.getBoolean("hypergrass.qcrm.noSparse12");
+    private static final boolean TUNE_NO_SSE = Boolean.getBoolean("hypergrass.qcrm.noSse");
 
     private static final int P_BITS = 14;
     private static final int P_SCALE = 1 << P_BITS; // 16384 per-expert probability scale
@@ -103,13 +119,22 @@ public final class QuantumContextRepeatMixer {
 
     private QuantumContextRepeatMixer() {}
 
+    /** Published context-mixing profile. */
+    public static final int PROFILE_DEFAULT = 0;
+    /** Single-genome profile: fewer, stronger experts; tuned for one assembly. */
+    public static final int PROFILE_SINGLE = 1;
+
     /** Encodes 2-bit DNA/RNA sequence bases[0 .. len-1] into a compact QCRM byte array. */
     public static byte[] encode(byte[] bases, int len, boolean leanMode) {
+        return encode(bases, len, leanMode, PROFILE_DEFAULT);
+    }
+
+    public static byte[] encode(byte[] bases, int len, boolean leanMode, int profile) {
         if (len == 0) {
             return new byte[0];
         }
         ByteOut out = new ByteOut((len >>> 2) + 64);
-        QcrmModel model = new QcrmModel(leanMode, len);
+        QcrmModel model = new QcrmModel(leanMode, len, profile);
         RangeEncoder rc = new RangeEncoder(out);
         int[] freqs = new int[4];
 
@@ -129,11 +154,15 @@ public final class QuantumContextRepeatMixer {
 
     /** Decodes exactly len 2-bit bases from a QCRM compressed ByteIn stream. */
     public static byte[] decode(ByteIn in, int len, boolean leanMode) {
+        return decode(in, len, leanMode, PROFILE_DEFAULT);
+    }
+
+    public static byte[] decode(ByteIn in, int len, boolean leanMode, int profile) {
         if (len == 0) {
             return new byte[0];
         }
         byte[] out = new byte[len];
-        QcrmModel model = new QcrmModel(leanMode, len);
+        QcrmModel model = new QcrmModel(leanMode, len, profile);
         RangeDecoder rd = new RangeDecoder(in);
         int[] freqs = new int[4];
 
@@ -153,6 +182,107 @@ public final class QuantumContextRepeatMixer {
         return out;
     }
 
+    private static final int MIN_SEGMENT_BASES = 128 * 1024;
+
+    /**
+     * Encodes independent QCRM segments and returns a self-delimiting payload.
+     * Segments are decoded in parallel and concatenated in order, so the format
+     * trades a small model-reset cost for near-linear thread scaling.
+     */
+    public static byte[] encodeSegments(
+            byte[] bases, int len, int requestedSegments, boolean leanMode, int profile) {
+        int n = Math.max(1, Math.min(requestedSegments, len / MIN_SEGMENT_BASES));
+        if (n <= 1) {
+            byte[] single = encode(bases, len, leanMode, profile);
+            ByteOut out = new ByteOut(single.length + 16);
+            out.writeVarInt(1);
+            out.writeVarInt(len);
+            out.writeVarInt(single.length);
+            out.writeBytes(single);
+            return out.toByteArray();
+        }
+
+        int[] segLens = new int[n];
+        int[] segStarts = new int[n];
+        int cursor = 0;
+        for (int i = 0; i < n; i++) {
+            int segLen = len / n + (i < len % n ? 1 : 0);
+            segLens[i] = segLen;
+            segStarts[i] = cursor;
+            cursor += segLen;
+        }
+        byte[][] encoded = new byte[n][];
+        ForkJoinPool pool = new ForkJoinPool(n);
+        try {
+            pool.submit(() -> IntStream.range(0, n).parallel().forEach(i -> {
+                // The slice is copied so each worker owns a compact history buffer.
+                byte[] slice = Arrays.copyOfRange(bases, segStarts[i], segStarts[i] + segLens[i]);
+                encoded[i] = encode(slice, segLens[i], leanMode, profile);
+            })).join();
+        } finally {
+            pool.shutdown();
+        }
+
+        ByteOut out = new ByteOut(len / 2 + 64);
+        out.writeVarInt(n);
+        for (int i = 0; i < n; i++) {
+            out.writeVarInt(segLens[i]);
+        }
+        for (int i = 0; i < n; i++) {
+            out.writeVarInt(encoded[i].length);
+        }
+        for (int i = 0; i < n; i++) {
+            out.writeBytes(encoded[i]);
+        }
+        return out.toByteArray();
+    }
+
+    /** Decodes the payload produced by {@link #encodeSegments}. */
+    public static byte[] decodeSegments(ByteIn in, int len, boolean leanMode, int profile) {
+        int n = in.readVarInt();
+        if (n <= 0 || n > len / MIN_SEGMENT_BASES + 1) {
+            throw new IllegalStateException("Invalid QCRM segment count: " + n);
+        }
+        int[] segLens = new int[n];
+        int total = 0;
+        for (int i = 0; i < n; i++) {
+            segLens[i] = in.readVarInt();
+            total += segLens[i];
+        }
+        if (total != len) {
+            throw new IllegalStateException(
+                    "QCRM segment lengths sum to " + total + ", expected " + len);
+        }
+        int[] compLens = new int[n];
+        for (int i = 0; i < n; i++) {
+            compLens[i] = in.readVarInt();
+        }
+        ByteIn[] slices = new ByteIn[n];
+        for (int i = 0; i < n; i++) {
+            slices[i] = new ByteIn(in.readBytes(compLens[i]));
+        }
+
+        byte[][] decoded = new byte[n][];
+        // Use exactly the archived segment count: the archive itself decides the
+        // parallelism, so a container or JVM with a restricted processor count
+        // still restores at the same speed as the machine that wrote it.
+        ForkJoinPool pool = new ForkJoinPool(Math.min(n, 64));
+        try {
+            pool.submit(() -> IntStream.range(0, n).parallel().forEach(i ->
+                    decoded[i] = decode(slices[i], segLens[i], leanMode, profile))).join();
+        } finally {
+            pool.shutdown();
+        }
+
+        byte[] out = new byte[len];
+        int cursor = 0;
+        for (int i = 0; i < n; i++) {
+            System.arraycopy(decoded[i], 0, out, cursor, segLens[i]);
+            cursor += segLens[i];
+        }
+        return out;
+    }
+
     /**
      * Compact 2-way cache-associative sparse high-order context table packing
      * [32-bit verification tag | c3(8b) | c2(8b) | c1(8b) | c0(8b)] into each 64-bit long.
@@ -160,10 +290,15 @@ public final class QuantumContextRepeatMixer {
     private static final class SparseContextTable {
         private final long[] slots;
         private final int mask;
+        private final int[] recip;
+        private long cachedKey = Long.MIN_VALUE;
+        private int cachedIdx;
+        private int cachedTag;
 
-        SparseContextTable(int numSlotsPowerOf2) {
+        SparseContextTable(int numSlotsPowerOf2, int[] recip) {
             this.slots = new long[numSlotsPowerOf2];
             this.mask = numSlotsPowerOf2 - 1;
+            this.recip = recip;
         }
 
         int predict(long ctxKey, int[] priorP, int tau, int[] outP) {
@@ -171,6 +306,9 @@ public final class QuantumContextRepeatMixer {
             int idx0 = (int) mixed & mask;
             int tag = (int) (mixed >>> 32);
             if (tag == 0) tag = 1; // 0 means empty slot
+            cachedKey = ctxKey;
+            cachedIdx = idx0;
+            cachedTag = tag;
 
             long entry = slots[idx0];
             if ((int) (entry >>> 32) != tag) {
@@ -190,20 +328,27 @@ public final class QuantumContextRepeatMixer {
                 return 0;
             }
             long denom = 4L * sum + tau; // tau in quarter-count units
-            int p0 = Math.max(1, (int) (((long) c0 * 4L * P_SCALE + (long) tau * priorP[0] + (denom >> 1)) / denom));
-            int p1 = Math.max(1, (int) (((long) c1 * 4L * P_SCALE + (long) tau * priorP[1] + (denom >> 1)) / denom));
-            int p2 = Math.max(1, (int) (((long) c2 * 4L * P_SCALE + (long) tau * priorP[2] + (denom >> 1)) / denom));
+            int p0 = Math.max(1, divRound((long) c0 * 4L * P_SCALE + (long) tau * priorP[0], (int) denom, recip));
+            int p1 = Math.max(1, divRound((long) c1 * 4L * P_SCALE + (long) tau * priorP[1], (int) denom, recip));
+            int p2 = Math.max(1, divRound((long) c2 * 4L * P_SCALE + (long) tau * priorP[2], (int) denom, recip));
             int p3 = Math.max(1, P_SCALE - (p0 + p1 + p2));
             normalizeP(p0, p1, p2, p3, outP);
             return sum;
         }
 
         void update(long ctxKey, int sym, int inc) {
-            long mixed = mix64(ctxKey);
-            int idx0 = (int) mixed & mask;
+            int idx0;
+            int tag;
+            if (ctxKey == cachedKey) {
+                idx0 = cachedIdx;
+                tag = cachedTag;
+            } else {
+                long mixed = mix64(ctxKey);
+                idx0 = (int) mixed & mask;
+                tag = (int) (mixed >>> 32);
+                if (tag == 0) tag = 1;
+            }
             int idx1 = idx0 ^ 1;
-            int tag = (int) (mixed >>> 32);
-            if (tag == 0) tag = 1;
 
             long e0 = slots[idx0];
             int t0 = (int) (e0 >>> 32);
@@ -337,6 +482,8 @@ public final class QuantumContextRepeatMixer {
         int maxMisses = 6;
         int streak = 0;
         int totalMatched = 0;
+        // Reused scratch array; allocating this per base was the dominant GC source.
+        final int[] px = new int[4];
         // 4-state Kimura XOR counts: [0]=exact match, [1]=transv1, [2]=Kimura transition, [3]=transv2
         final int[] xorCnt = new int[4];
 
@@ -354,7 +501,7 @@ public final class QuantumContextRepeatMixer {
             this.xorCnt[3] = 2;
         }
 
-        boolean predict(byte[] history, int pos, int[] fallbackP, int[] outP) {
+        boolean predict(byte[] history, int pos, int[] fallbackP, int[] outP, int[] recip) {
             if (!active || cursor < 0 || cursor >= pos) {
                 active = false;
                 System.arraycopy(fallbackP, 0, outP, 0, 4);
@@ -367,11 +514,10 @@ public final class QuantumContextRepeatMixer {
             int c3 = xorCnt[3];
             int sum = cMatch + c1 + c2 + c3;
 
-            int[] px = new int[4];
-            px[0] = Math.max(1, (cMatch * P_SCALE + (sum >> 1)) / sum);
-            px[1] = Math.max(1, (c1 * P_SCALE + (sum >> 1)) / sum);
-            px[2] = Math.max(1, (c2 * P_SCALE + (sum >> 1)) / sum);
-            px[3] = Math.max(1, (c3 * P_SCALE + (sum >> 1)) / sum);
+            px[0] = Math.max(1, divRound((long) cMatch * P_SCALE, sum, recip));
+            px[1] = Math.max(1, divRound((long) c1 * P_SCALE, sum, recip));
+            px[2] = Math.max(1, divRound((long) c2 * P_SCALE, sum, recip));
+            px[3] = Math.max(1, divRound((long) c3 * P_SCALE, sum, recip));
 
             // Map XOR residual distribution back to nucleotide {A=0, C=1, G=2, T=3}: b = tpl ^ xor
             int p0 = px[0 ^ tpl];
@@ -417,6 +563,39 @@ public final class QuantumContextRepeatMixer {
             }
         }
     }
+    /**
+     * Exact replacement for {@code (num + denom/2) / denom} using a cached 32-bit
+     * reciprocal. The correction step makes the result bit-identical to integer
+     * division, so archive bytes do not change.
+     */
+    static int divRound(long num, int denom, int[] recip) {
+        long n = num + (denom >> 1);
+        int r = recip[denom];
+        if (r == 0) {
+            // 2^30 keeps the reciprocal inside a positive int even for denom = 1.
+            r = (int) ((1L << 30) / denom);
+            recip[denom] = r;
+        }
+        long q = (n * r) >>> 30;
+        // The reciprocal can undershoot by more than one for large numerators, so
+        // correct until the quotient is exact. Overshoot is impossible here.
+        while (n - q * denom >= denom) {
+            q++;
+        }
+        return (int) q;
+    }
+
+    /** Same exact division for denominators too large for the reciprocal table. */
+    static int divRound(long num, long denom) {
+        long r = (1L << 32) / denom;
+        long n = num + (denom >> 1);
+        long q = (n * r) >>> 32;
+        while (n - q * denom >= denom) {
+            q++;
+        }
+        return (int) q;
+    }
+
     static void normalizeP(int p0, int p1, int p2, int p3, int[] outP) {
         if (p0 < 1) p0 = 1;
         if (p1 < 1) p1 = 1;
@@ -445,6 +624,7 @@ public final class QuantumContextRepeatMixer {
         private static final long MASK_LEAN = (1L << (K_LEAN << 1)) - 1L;
 
         private final boolean leanMode;
+        private final boolean tuned;
         private final int[] denseOrders;
         private final int numDense;
         private final short[][] denseTables;
@@ -474,6 +654,7 @@ public final class QuantumContextRepeatMixer {
         private final int[] tmpTwoPos = new int[2];
 
         // Expert Indexing & State
+        private final int[] recip = new int[65569];
         private final int idxCodon1;
         private final int idxCodon3;
         private final int idxCodon5;
@@ -510,17 +691,28 @@ public final class QuantumContextRepeatMixer {
         private long fwdHist = 0L;
         private long rcHist = 0L;
 
-        QcrmModel(boolean leanMode, int seqLen) {
+        QcrmModel(boolean leanMode, int seqLen, int profile) {
             this.leanMode = leanMode;
+            this.tuned = profile == PROFILE_SINGLE;
+            int[] orders;
             if (leanMode) {
-                this.denseOrders = new int[] {0, 1, 2, 3, 4, 5, 6};
+                orders = new int[] {0, 1, 2, 3, 4, 5, 6};
             } else if (seqLen >= 300_000) {
-                this.denseOrders = new int[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+                orders = new int[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
             } else if (seqLen >= 32_768) {
-                this.denseOrders = new int[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+                orders = new int[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
             } else {
-                this.denseOrders = new int[] {0, 1, 2, 3, 4, 5, 6, 7, 8};
+                orders = new int[] {0, 1, 2, 3, 4, 5, 6, 7, 8};
             }
+            int maxOrder = tuned ? 7 : TUNE_DENSE_MAX;
+            if (maxOrder >= 2) {
+                int keep = 0;
+                while (keep < orders.length && orders[keep] <= maxOrder) {
+                    keep++;
+                }
+                orders = Arrays.copyOf(orders, keep);
+            }
+            this.denseOrders = orders;
 
             this.numDense = denseOrders.length;
             this.denseTables = new short[numDense][];
@@ -558,7 +750,7 @@ public final class QuantumContextRepeatMixer {
             this.idxCodon1 = nextIdx++;
             this.idxCodon3 = nextIdx++;
 
-            if (!leanMode) {
+            if (!leanMode && !TUNE_NO_CODON5) {
                 this.codon5Table = new short[3 * 1024 * 4];
                 this.idxCodon5 = nextIdx++;
             } else {
@@ -566,7 +758,7 @@ public final class QuantumContextRepeatMixer {
                 this.idxCodon5 = -1;
             }
 
-            if (!leanMode && seqLen >= 32_768) {
+            if (!leanMode && !TUNE_NO_WOBBLE && seqLen >= 32_768) {
                 this.wobbleSeedTable = new short[65536 * 4];
                 this.gappedSeedTable = new short[65536 * 4];
                 this.idxWobble = nextIdx++;
@@ -578,12 +770,21 @@ public final class QuantumContextRepeatMixer {
                 this.idxGapped = -1;
             }
 
-            if (!leanMode && seqLen >= 90_000) {
-                int slots = (seqLen >= 1_000_000) ? (1 << 20) : (1 << 18);
-                this.sparse12 = new SparseContextTable(slots);
-                this.sparse15 = new SparseContextTable(slots);
+            // The single-genome profile drops both sparse hash tables: on a single
+            // genome they cost more ratio than they return and roughly 45% of the model time.
+            if (!leanMode && !tuned && !TUNE_NO_SPARSE12 && seqLen >= 90_000) {
+                int slots = TUNE_SPARSE_BITS > 0
+                        ? (1 << TUNE_SPARSE_BITS)
+                        : ((seqLen >= 1_000_000) ? (1 << 20) : (1 << 18));
+                this.sparse12 = new SparseContextTable(slots, recip);
                 this.idxSparse12 = nextIdx++;
-                this.idxSparse15 = nextIdx++;
+                if (!TUNE_NO_SPARSE15) {
+                    this.sparse15 = new SparseContextTable(slots, recip);
+                    this.idxSparse15 = nextIdx++;
+                } else {
+                    this.sparse15 = null;
+                    this.idxSparse15 = -1;
+                }
             } else {
                 this.sparse12 = null;
                 this.sparse15 = null;
@@ -598,15 +799,20 @@ public final class QuantumContextRepeatMixer {
                 this.repLong = null;
                 this.heads = new RepeatHead[2];
             } else {
-                int fineBuckets = (seqLen >= 500_000) ? (1 << 19) : (1 << 16);
+                int fineBuckets = TUNE_REPEAT_BITS > 0
+                        ? (1 << TUNE_REPEAT_BITS)
+                        : ((seqLen >= 500_000) ? (1 << 19) : (1 << 16));
                 this.repFine = new RepeatSeedIndex(fineBuckets);
                 if (seqLen >= 25_000) {
-                    int longBuckets = (seqLen >= 500_000) ? (1 << 19) : (1 << 16);
+                    int longBuckets = TUNE_REPEAT_BITS > 0
+                            ? (1 << TUNE_REPEAT_BITS)
+                            : ((seqLen >= 500_000) ? (1 << 19) : (1 << 16));
                     this.repLong = new RepeatSeedIndex(longBuckets);
                 } else {
                     this.repLong = null;
                 }
-                this.heads = new RepeatHead[6];
+                this.heads = new RepeatHead[TUNE_HEAD_COUNT >= 4
+                        ? Math.min(6, TUNE_HEAD_COUNT) : 6];
             }
             for (int h = 0; h < heads.length; h++) {
                 heads[h] = new RepeatHead();
@@ -666,6 +872,9 @@ public final class QuantumContextRepeatMixer {
         }
 
         private void spawnRepeatCandidates(byte[] history, int pos) {
+            if (TUNE_NO_REPEAT) {
+                return;
+            }
             if (leanMode) {
                 if (pos >= K_LEAN) {
                     long kmer = fwdHist & MASK_LEAN;
@@ -693,13 +902,13 @@ public final class QuantumContextRepeatMixer {
                 for (int c = 0; c < 2; c++) {
                     int candPos = tmpTwoPos[c];
                     if (candPos > 0 && candPos < pos && !isCursorTracked(candPos, 1)
-                            && verifyExactMatchFwd(history, pos, candPos, K_LONG)) {
+                            && (TUNE_NO_VERIFY || verifyExactMatchFwd(history, pos, candPos, K_LONG))) {
                         allocateHeadSlot(0, 1, candPos, 1, 56, 8);
                     }
                 }
                 int revCur18 = repLong.lookupRev(kmer18);
                 if (revCur18 >= 0 && revCur18 + K_LONG < pos && !isCursorTracked(revCur18, -1)
-                        && verifyExactMatchRev(history, pos, revCur18, K_LONG)) {
+                        && (TUNE_NO_VERIFY || verifyExactMatchRev(history, pos, revCur18, K_LONG))) {
                     allocateHeadSlot(1, 0, revCur18, -1, 56, 8);
                 }
             }
@@ -711,14 +920,15 @@ public final class QuantumContextRepeatMixer {
                 for (int c = 0; c < 2; c++) {
                     int candPos = tmpTwoPos[c];
                     if (candPos > 0 && candPos < pos && !isCursorTracked(candPos, 1)
-                            && verifyExactMatchFwd(history, pos, candPos, K_FINE)) {
+                            && (TUNE_NO_VERIFY || verifyExactMatchFwd(history, pos, candPos, K_FINE))) {
                         allocateHeadSlot(2, 3, candPos, 1, 28, 6);
                     }
                 }
                 int revCur13 = repFine.lookupRev(kmer13);
                 if (revCur13 >= 0 && revCur13 + K_FINE < pos && !isCursorTracked(revCur13, -1)
-                        && verifyExactMatchRev(history, pos, revCur13, K_FINE)) {
-                    if (!heads[4].active || heads[4].streak == 0 && heads[4].misses >= 2) {
+                        && (TUNE_NO_VERIFY || verifyExactMatchRev(history, pos, revCur13, K_FINE))) {
+                    if (heads.length > 4
+                            && (!heads[4].active || heads[4].streak == 0 && heads[4].misses >= 2)) {
                         promoteVeteranIfStrong(heads[4]);
                         heads[4].activate(revCur13, -1, 28, 6);
                     }
@@ -857,23 +1067,38 @@ public final class QuantumContextRepeatMixer {
                 } else {
                     highOrderCountSum += sparse12.predict(fwdHist & MASK_12, pOrd2, 2, expertP[idxSparse12]);
                 }
-                if (pos < 15) {
-                    System.arraycopy(pOrd2, 0, expertP[idxSparse15], 0, 4);
-                } else {
-                    highOrderCountSum += sparse15.predict(fwdHist & MASK_15, pOrd2, 1, expertP[idxSparse15]);
+                if (idxSparse15 >= 0) {
+                    if (pos < 15) {
+                        System.arraycopy(pOrd2, 0, expertP[idxSparse15], 0, 4);
+                    } else {
+                        highOrderCountSum += sparse15.predict(fwdHist & MASK_15, pOrd2, 1, expertP[idxSparse15]);
+                    }
                 }
             }
 
             // 6. Bidirectional Kimura-XOR Repeat Heads
             boolean anyStrongRepeat = false;
             for (int h = 0; h < heads.length; h++) {
-                boolean active = heads[h].predict(history, pos, pOrd2, expertP[idxFirstHead + h]);
+                boolean active = heads[h].predict(history, pos, pOrd2, expertP[idxFirstHead + h], recip);
                 if (active && (heads[h].streak >= 2 || heads[h].totalMatched >= 6)) {
                     anyStrongRepeat = true;
                 }
             }
 
-            // Precompute integer log-probabilities LN_LUT[p] (Q12) for all experts
+            // 7. Fused pass: expert log-probabilities, Bayesian opinion pool, and neural logits.
+            // The previous code walked all experts three times; one walk is enough and the
+            // accumulation order is unchanged, so archive bytes stay identical.
+            long maxScore = bayesLogScore[0];
+            for (int m = 1; m < numExperts; m++) {
+                if (bayesLogScore[m] > maxScore) maxScore = bayesLogScore[m];
+            }
+            activeRegime = (anyStrongRepeat ? 4 : 0)
+                    | ((phase == 2) ? 2 : 0)
+                    | ((highOrderCountSum >= 4) ? 1 : 0);
+            int[] rw = neuralWeights[activeRegime];
+            long bSum0 = 0L, bSum1 = 0L, bSum2 = 0L, bSum3 = 0L;
+            long wTotal = 0L;
+            long z0 = 0L, z1 = 0L, z2 = 0L, z3 = 0L;
             for (int m = 0; m < numExperts; m++) {
                 int[] ep = expertP[m];
                 int[] lp = expertLnP[m];
@@ -881,46 +1106,29 @@ public final class QuantumContextRepeatMixer {
                 lp[1] = LN_LUT[ep[1]];
                 lp[2] = LN_LUT[ep[2]];
                 lp[3] = LN_LUT[ep[3]];
-            }
 
-            // 7. Sub-Mixer 1: Fast Decayed Bayesian Opinion Pool (pure integer EXP_NEG_LUT)
-            long maxScore = bayesLogScore[0];
-            for (int m = 1; m < numExperts; m++) {
-                if (bayesLogScore[m] > maxScore) maxScore = bayesLogScore[m];
-            }
-            long bSum0 = 0L, bSum1 = 0L, bSum2 = 0L, bSum3 = 0L;
-            long wTotal = 0L;
-            for (int m = 0; m < numExperts; m++) {
                 long diff = maxScore - bayesLogScore[m];
                 int lutIdx = (diff >= EXP_MAX_X) ? EXP_MAX_X : (int) diff;
                 long wm = EXP_NEG_LUT[lutIdx];
                 wTotal += wm;
-                int[] ep = expertP[m];
                 bSum0 += wm * ep[0];
                 bSum1 += wm * ep[1];
                 bSum2 += wm * ep[2];
                 bSum3 += wm * ep[3];
+
+                long nw = rw[m]; // Q12
+                z0 += nw * lp[0];
+                z1 += nw * lp[1];
+                z2 += nw * lp[2];
+                z3 += nw * lp[3];
             }
-            int bp0 = (int) ((bSum0 + (wTotal >> 1)) / wTotal);
-            int bp1 = (int) ((bSum1 + (wTotal >> 1)) / wTotal);
-            int bp2 = (int) ((bSum2 + (wTotal >> 1)) / wTotal);
-            int bp3 = (int) ((bSum3 + (wTotal >> 1)) / wTotal);
+            int bp0 = divRound(bSum0, wTotal);
+            int bp1 = divRound(bSum1, wTotal);
+            int bp2 = divRound(bSum2, wTotal);
+            int bp3 = divRound(bSum3, wTotal);
             normalizeP(bp0, bp1, bp2, bp3, bayesP);
 
             // 8. Sub-Mixer 2: 8-Regime Online Multinomial Logistic Neural Mixer (zero inactive dilution!)
-            activeRegime = (anyStrongRepeat ? 4 : 0)
-                    | ((phase == 2) ? 2 : 0)
-                    | ((highOrderCountSum >= 4) ? 1 : 0);
-            int[] rw = neuralWeights[activeRegime];
-            long z0 = 0L, z1 = 0L, z2 = 0L, z3 = 0L;
-            for (int m = 0; m < numExperts; m++) {
-                long wm = rw[m]; // Q12
-                int[] lp = expertLnP[m]; // Q12
-                z0 += wm * lp[0];
-                z1 += wm * lp[1];
-                z2 += wm * lp[2];
-                z3 += wm * lp[3];
-            }
             // Scale Q24 logits back to Q12
             z0 >>= 12;
             z1 >>= 12;
@@ -932,10 +1140,10 @@ public final class QuantumContextRepeatMixer {
             long e2 = EXP_NEG_LUT[(int) Math.min(EXP_MAX_X, zMax - z2)];
             long e3 = EXP_NEG_LUT[(int) Math.min(EXP_MAX_X, zMax - z3)];
             long eSum = e0 + e1 + e2 + e3;
-            int np0 = (int) ((e0 * P_SCALE + (eSum >> 1)) / eSum);
-            int np1 = (int) ((e1 * P_SCALE + (eSum >> 1)) / eSum);
-            int np2 = (int) ((e2 * P_SCALE + (eSum >> 1)) / eSum);
-            int np3 = (int) ((e3 * P_SCALE + (eSum >> 1)) / eSum);
+            int np0 = divRound(e0 * P_SCALE, eSum);
+            int np1 = divRound(e1 * P_SCALE, eSum);
+            int np2 = divRound(e2 * P_SCALE, eSum);
+            int np3 = divRound(e3 * P_SCALE, eSum);
             normalizeP(np0, np1, np2, np3, neuralP);
 
             // 9. Exact Meta-Combiner between Bayesian Pool and Regime Neural Mixer -> TOT (32768)
@@ -945,10 +1153,10 @@ public final class QuantumContextRepeatMixer {
             long wMeta = wb + wn;
 
             // Scale from P_SCALE (16384) to TOT (32768) = factor of 2
-            int f0 = Math.max(1, (int) (((wb * bayesP[0] + wn * neuralP[0]) * 2L + (wMeta >> 1)) / wMeta));
-            int f1 = Math.max(1, (int) (((wb * bayesP[1] + wn * neuralP[1]) * 2L + (wMeta >> 1)) / wMeta));
-            int f2 = Math.max(1, (int) (((wb * bayesP[2] + wn * neuralP[2]) * 2L + (wMeta >> 1)) / wMeta));
-            int f3 = Math.max(1, (int) (((wb * bayesP[3] + wn * neuralP[3]) * 2L + (wMeta >> 1)) / wMeta));
+            int f0 = Math.max(1, divRound((wb * bayesP[0] + wn * neuralP[0]) * 2L, wMeta));
+            int f1 = Math.max(1, divRound((wb * bayesP[1] + wn * neuralP[1]) * 2L, wMeta));
+            int f2 = Math.max(1, divRound((wb * bayesP[2] + wn * neuralP[2]) * 2L, wMeta));
+            int f3 = Math.max(1, divRound((wb * bayesP[3] + wn * neuralP[3]) * 2L, wMeta));
             int diff = TOT - (f0 + f1 + f2 + f3);
             if (diff != 0) {
                 if (f0 >= f1 && f0 >= f2 && f0 >= f3) f0 += diff;
@@ -958,7 +1166,7 @@ public final class QuantumContextRepeatMixer {
             }
 
             // 10. Secondary Symbol Estimation (SSE)
-            if (!leanMode && pos >= 2) {
+            if (!leanMode && !TUNE_NO_SSE && pos >= 2) {
                 int sBest = 0;
                 int fMax = f0;
                 if (f1 > fMax) { sBest = 1; fMax = f1; }
@@ -979,11 +1187,10 @@ public final class QuantumContextRepeatMixer {
 
                 if (scSum > 0) {
                     int w = Math.min(8, scSum >> 1); // blend weight up to 8/32 = 25%
-                    long sseDenom = (long) scSum;
-                    int sf0 = (int) (((long) sc0 * TOT + (sseDenom >> 1)) / sseDenom);
-                    int sf1 = (int) (((long) sc1 * TOT + (sseDenom >> 1)) / sseDenom);
-                    int sf2 = (int) (((long) sc2 * TOT + (sseDenom >> 1)) / sseDenom);
-                    int sf3 = (int) (((long) sc3 * TOT + (sseDenom >> 1)) / sseDenom);
+                    int sf0 = divRound((long) sc0 * TOT, scSum, recip);
+                    int sf1 = divRound((long) sc1 * TOT, scSum, recip);
+                    int sf2 = divRound((long) sc2 * TOT, scSum, recip);
+                    int sf3 = divRound((long) sc3 * TOT, scSum, recip);
 
                     f0 = Math.max(1, ((32 - w) * f0 + w * sf0 + 16) >> 5);
                     f1 = Math.max(1, ((32 - w) * f1 + w * sf1 + 16) >> 5);
@@ -1138,7 +1345,7 @@ public final class QuantumContextRepeatMixer {
                     long rcCtx12 = (rcHist >>> (62 - 24)) & MASK_12;
                     sparse12.update(rcCtx12, old12 ^ 3, 1);
                 }
-                if (pos >= 15) {
+                if (idxSparse15 >= 0 && pos >= 15) {
                     sparse15.update(prevFwdHist & MASK_15, sym, 2);
                     int old15 = (int) ((prevFwdHist >>> 28) & 3L);
                     long rcCtx15 = (rcHist >>> (62 - 30)) & MASK_15;
@@ -1165,7 +1372,7 @@ public final class QuantumContextRepeatMixer {
             return lo4 | (hi4 << 8);
         }
 
-        private static int predictFromShortTable(short[] tab, int baseIdx, int[] priorP, int tau, int[] outP) {
+        private int predictFromShortTable(short[] tab, int baseIdx, int[] priorP, int tau, int[] outP) {
             int c0 = tab[baseIdx];
             int c1 = tab[baseIdx + 1];
             int c2 = tab[baseIdx + 2];
@@ -1175,10 +1382,10 @@ public final class QuantumContextRepeatMixer {
                 System.arraycopy(priorP, 0, outP, 0, 4);
                 return 0;
             }
-            long denom = 4L * sum + tau; // tau in quarter-count units
-            int p0 = Math.max(1, (int) (((long) c0 * 4L * P_SCALE + (long) tau * priorP[0] + (denom >> 1)) / denom));
-            int p1 = Math.max(1, (int) (((long) c1 * 4L * P_SCALE + (long) tau * priorP[1] + (denom >> 1)) / denom));
-            int p2 = Math.max(1, (int) (((long) c2 * 4L * P_SCALE + (long) tau * priorP[2] + (denom >> 1)) / denom));
+            int denom = 4 * sum + tau; // tau in quarter-count units
+            int p0 = Math.max(1, divRound((long) c0 * 4L * P_SCALE + (long) tau * priorP[0], denom, recip));
+            int p1 = Math.max(1, divRound((long) c1 * 4L * P_SCALE + (long) tau * priorP[1], denom, recip));
+            int p2 = Math.max(1, divRound((long) c2 * 4L * P_SCALE + (long) tau * priorP[2], denom, recip));
             int p3 = Math.max(1, P_SCALE - (p0 + p1 + p2));
             normalizeP(p0, p1, p2, p3, outP);
             return sum;

@@ -75,6 +75,9 @@ public final class VerifyAllEdgeCases {
         // 7. Bounded file path: streamed archive assembly + parallel block window
         passed += verifyBoundedFilePaths(tmpDir);
 
+        // 8. Opt-in single-genome profile: serial and segmented compact archives
+        passed += verifySingleGenomeModes(tmpDir);
+
         System.out.println("\nALL " + passed + " VERIFICATION SUITES PASSED WITH 100% SHA-256 IDENTITY!");
     }
 
@@ -397,6 +400,86 @@ public final class VerifyAllEdgeCases {
         }
         System.out.printf("  [PASS] %-48s | Raw: %,8d B -> HGS: %,7d B | %d blocks, 1 vs 3 threads%n",
                 "Bounded streaming and parallel block paths", raw.length, seqArchive.length, seqBlocks);
+        return 1;
+    }
+
+    /**
+     * Exercises the opt-in single-genome container: the tuned flag, the optional
+     * segmented DNA channel, random-access queries, byte accounting, and the fact
+     * that the default compact format is untouched.
+     */
+    private static int verifySingleGenomeModes(Path tmpDir) throws Exception {
+        Random rng = new Random(20_261_104L);
+        int len = 600_000;
+        char[] fwd = new char[len];
+        for (int i = 0; i < len; i++) {
+            fwd[i] = "ACGT".charAt(rng.nextInt(4));
+        }
+        // A duplicated reverse-complement block gives the repeat heads real work.
+        char[] rc = revComp(new String(fwd, 0, 40_000)).toCharArray();
+        StringBuilder fasta = new StringBuilder(len + 60_000);
+        fasta.append(">chr_single description\n");
+        for (int i = 0; i < len; i += 80) {
+            fasta.append(fwd, i, Math.min(80, len - i)).append('\n');
+        }
+        fasta.append(">rc_block\n");
+        for (int i = 0; i < rc.length; i += 80) {
+            fasta.append(rc, i, Math.min(80, rc.length - i)).append('\n');
+        }
+        byte[] raw = fasta.toString().getBytes(StandardCharsets.US_ASCII);
+        String expectedSlice = new String(fwd, 1000, 100);
+
+        for (int segments : new int[] {1, 2, 5}) {
+            HyperGraSS.CompressOptions opts = HyperGraSS.CompressOptions.defaults();
+            opts.singleMode = true;
+            opts.threads = segments;
+            byte[] archive = HyperGraSS.compressBytes(raw, opts);
+            if ((archive[4] & 16) == 0) {
+                throw new AssertionError("Single-genome archive lacks the tuned flag");
+            }
+            boolean segmented = (archive[4] & 32) != 0;
+            if (segmented != (segments > 1)) {
+                throw new AssertionError("Segmented flag does not match thread count");
+            }
+            if (!Arrays.equals(raw, HyperGraSS.decompressBytes(archive))) {
+                throw new AssertionError("Single-genome round-trip mismatch at "
+                        + segments + " segment(s)");
+            }
+            ArchiveByteAccounting.Report account = ArchiveByteAccounting.report(archive);
+            if (account.totalBytes() != archive.length) {
+                throw new AssertionError("Single-genome byte accounting mismatch");
+            }
+            Path hgs = tmpDir.resolve("single-" + segments + ".hgs");
+            Path out = tmpDir.resolve("single-" + segments + ".out");
+            Files.write(hgs, archive);
+            HyperGraSS.decompressFile(hgs, out);
+            if (!Arrays.equals(raw, Files.readAllBytes(out))) {
+                throw new AssertionError("Single-genome file round-trip mismatch at "
+                        + segments + " segment(s)");
+            }
+            byte[] slice = HyperGraSS.query(hgs, 0, 1000, 1100);
+            if (!expectedSlice.equals(new String(slice, StandardCharsets.US_ASCII))) {
+                throw new AssertionError("Single-genome query mismatch at "
+                        + segments + " segment(s)");
+            }
+            HyperGraSS.ArchiveMetadata meta = HyperGraSS.inspect(hgs);
+            if (!meta.compactSingleBlock || meta.totalRawBytes != raw.length) {
+                throw new AssertionError("Single-genome inspection mismatch");
+            }
+        }
+
+        // The published compact path must remain byte-identical and decodable.
+        HyperGraSS.CompressOptions published = HyperGraSS.CompressOptions.defaults();
+        byte[] oldArchive = HyperGraSS.compressBytes(raw, published);
+        if ((oldArchive[4] & 16) != 0) {
+            throw new AssertionError("Default compact archive must not set the tuned flag");
+        }
+        if (!Arrays.equals(raw, HyperGraSS.decompressBytes(oldArchive))) {
+            throw new AssertionError("Default compact archive no longer round-trips");
+        }
+
+        System.out.printf("  [PASS] %-48s | Raw: %,8d B -> tuned: %,7d B | 1/2/5 segments%n",
+                "Single-genome tuned and segmented archives", raw.length, oldArchive.length);
         return 1;
     }
 

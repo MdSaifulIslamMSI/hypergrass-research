@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "kind": "anchor-bank-ablation",
+  "run_id": "anchor-ablation-32",
+  "started_utc": "2026-10-31T20:53:37.185864+00:00",
+  "image_id": "sha256:d6ca62a74e3724172a5c49720e28ab2066eb31b3c965dadfb6220e112dbc3bb3",
+  "input": {
+    "path": "benchmarks\\pangenome\\data\\pangenome.fasta",
+    "size_bytes": 121825884,
+    "sha256": "f03f0dd10c541b99ddf63d18053e3a9c6009910a81700ba18f15e24dcb7d2285",
+    "records": 24,
+    "bases": 120108223
+  },
+  "baseline": {
+    "profile": "xz-9",
+    "archive_bytes": 8394900,
+    "source": "benchmarks\\pangenome\\runs\\pangenome-scale-2\\report.json"
+  },
+  "configs": {
+    "banks_mb": [
+      32
+    ],
+    "blocks_mb": [
+      8
+    ]
+  },
+  "results": [
+    {
+      "bank_mb": 32,
+      "block_mb": 8,
+      "status": "success",
+      "wall_seconds": 55.81469330999971,
+      "cpu_seconds": 58.300887,
+      "peak_rss_bytes": 1252458496,
+      "error": null,
+      "archive_bytes": 4885851,
+      "compress_seconds": 29.63,
+      "decompress_seconds": 10.23,
+      "exact": true,
+      "records": 24,
+      "blocks": 12,
+      "anchor_bases": 9434480,
+      "anchor_pages": 144,
+      "delta_vs_xz_bytes": -3509049,
+      "delta_vs_xz_percent": -41.799771289711614,
+      "beats_xz": true
+    }
+  ],
+  "status": "success",
+  "finished_utc": "2026-10-31T20:54:35.487201+00:00"
+}

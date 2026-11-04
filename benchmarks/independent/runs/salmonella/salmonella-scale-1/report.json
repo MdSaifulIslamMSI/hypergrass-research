@@ -1,0 +1,342 @@
+{
+  "schema_version": 1,
+  "kind": "independent-scale-test",
+  "run_id": "salmonella-scale-1",
+  "dataset": "salmonella",
+  "started_utc": "2026-11-01T11:05:51.219856+00:00",
+  "image_id": "sha256:d6ca62a74e3724172a5c49720e28ab2066eb31b3c965dadfb6220e112dbc3bb3",
+  "manifest": {
+    "schema_version": 1,
+    "source": "NCBI Nucleotide (RefSeq complete genomes: salmonella)",
+    "query": "\"Salmonella enterica\"[Organism] AND \"complete genome\"[Title] AND refseq[Filter]",
+    "selection": "NCBI relevance order; distinct accessions; 3000000-7500000 bp; stop at target bases",
+    "target_bases": 120000000,
+    "total_bases": 120527038,
+    "fasta": {
+      "path": "pangenome.fasta",
+      "size_bytes": 122251418,
+      "sha256": "c54a499e6172f3474dba6c363c9f05ebc764d73976ed272d97ddd01a387f26a2"
+    },
+    "records": [
+      {
+        "accession": "NZ_CP051372.1",
+        "length": 4644025,
+        "title": "Salmonella enterica subsp. enterica serovar Newport strain CVM 24374 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP039503.1",
+        "length": 4882218,
+        "title": "Salmonella enterica subsp. enterica serovar Worthington strain 7101.67 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP104488.1",
+        "length": 4806677,
+        "title": "Salmonella enterica strain SalSpp_sample_10_No.2 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP104482.1",
+        "length": 4796592,
+        "title": "Salmonella enterica strain SalSpp_sample_08_No.4 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP104491.1",
+        "length": 4964371,
+        "title": "Salmonella enterica strain SalSpp_sample_05_No.1 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP104479.1",
+        "length": 4919686,
+        "title": "Salmonella enterica strain SalSpp_sample_09_No.5 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP104366.1",
+        "length": 4863704,
+        "title": "Salmonella enterica subsp. enterica serovar Typhimurium strain PNUSAS028809 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP102827.1",
+        "length": 4821996,
+        "title": "Salmonella enterica subsp. enterica serovar Indiana strain XZ14C1328 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_AP046299.1",
+        "length": 4793093,
+        "title": "Salmonella enterica subsp. enterica serovar Typhimurium strain ATCC 13311 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_AP051960.1",
+        "length": 4676754,
+        "title": "Salmonella enterica strain Sal_769 isolate Sal_769 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_AP051950.1",
+        "length": 4645424,
+        "title": "Salmonella enterica strain Sal_1645 isolate Sal_1645 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_AP051956.1",
+        "length": 4707105,
+        "title": "Salmonella enterica strain Sal_18 isolate Sal_18 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_AP051966.1",
+        "length": 4704527,
+        "title": "Salmonella enterica strain Sal_923 isolate Sal_923 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_AP051954.1",
+        "length": 4621037,
+        "title": "Salmonella enterica strain Sal_17 isolate Sal_17 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_AP051952.1",
+        "length": 4661091,
+        "title": "Salmonella enterica strain Sal_1647 isolate Sal_1647 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP071388.1",
+        "length": 4856956,
+        "title": "Salmonella enterica subsp. enterica serovar Agona strain 18-SA00377-0 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP081187.1",
+        "length": 4972233,
+        "title": "Salmonella enterica strain sg1722-1 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_AP023299.1",
+        "length": 4916924,
+        "title": "Salmonella enterica subsp. enterica serovar 4,[5],12:i:- strain L-4334 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_AP023290.1",
+        "length": 4957303,
+        "title": "Salmonella enterica subsp. enterica serovar 4,[5],12:i:- strain L-3844 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_AP023309.1",
+        "length": 4889480,
+        "title": "Salmonella enterica subsp. enterica serovar 4,[5],12:i:- strain L-4578 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_AP023311.1",
+        "length": 4915174,
+        "title": "Salmonella enterica subsp. enterica serovar 4,[5],12:i:- strain L-4596 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_AP023300.1",
+        "length": 4916896,
+        "title": "Salmonella enterica subsp. enterica serovar 4,[5],12:i:- strain L-4445 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP075138.1",
+        "length": 4881088,
+        "title": "Salmonella enterica strain CFSAN044875 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP075135.1",
+        "length": 4866315,
+        "title": "Salmonella enterica strain CFSAN044888 chromosome, complete genome"
+      },
+      {
+        "accession": "NZ_CP077704.1",
+        "length": 4846369,
+        "title": "Salmonella enterica subsp. enterica strain CFSAN058565 chromosome, complete genome"
+      }
+    ]
+  },
+  "fasta": "benchmarks\\independent\\data\\salmonella\\pangenome.fasta",
+  "profiles": [
+    "hypergrass",
+    "hypergrass-pangenome",
+    "gzip-9",
+    "xz-9"
+  ],
+  "results": [
+    {
+      "profile": "hypergrass",
+      "profile_kind": "hgs",
+      "started_utc": "2026-11-01T11:05:51.244869+00:00",
+      "input_bytes": 122251418,
+      "input_sha256": "c54a499e6172f3474dba6c363c9f05ebc764d73976ed272d97ddd01a387f26a2",
+      "status": "success",
+      "compress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 60.860747577,
+        "cpu_seconds": 114.30365499999999,
+        "peak_rss_bytes": 967024640,
+        "error": null
+      },
+      "artifact_bytes": 7317099,
+      "artifact_sha256": "f19e5d2c03ae57d79a0486abbdf76511595230ea01866173359210281b043b1d",
+      "ratio": 16.707634815382434,
+      "bits_per_byte": 0.4788230104619318,
+      "wall_seconds": 60.860747577,
+      "cpu_seconds": 114.30365499999999,
+      "peak_rss_bytes": 967024640,
+      "decompress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 47.096407153000015,
+        "cpu_seconds": 68.487623,
+        "peak_rss_bytes": 484876288,
+        "error": null
+      },
+      "restored_bytes": 122251418,
+      "restored_sha256": "c54a499e6172f3474dba6c363c9f05ebc764d73976ed272d97ddd01a387f26a2",
+      "roundtrip_ok": true,
+      "queries": [
+        {
+          "record": 0,
+          "offset": 1000,
+          "length": 512,
+          "status": "success",
+          "exact": true
+        },
+        {
+          "record": 12,
+          "offset": 1000,
+          "length": 512,
+          "status": "success",
+          "exact": true
+        },
+        {
+          "record": 24,
+          "offset": 1000,
+          "length": 512,
+          "status": "success",
+          "exact": true
+        }
+      ]
+    },
+    {
+      "profile": "hypergrass-pangenome",
+      "profile_kind": "hgs",
+      "started_utc": "2026-11-01T11:07:54.080508+00:00",
+      "input_bytes": 122251418,
+      "input_sha256": "c54a499e6172f3474dba6c363c9f05ebc764d73976ed272d97ddd01a387f26a2",
+      "status": "success",
+      "compress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 28.629289298999993,
+        "cpu_seconds": 25.032992,
+        "peak_rss_bytes": 767488000,
+        "error": null
+      },
+      "artifact_bytes": 3443600,
+      "artifact_sha256": "0fc8ea2022f8f1d421c324f5d8bd7cc1a81a87f932a0c51fdc2fea868742bd21",
+      "ratio": 35.50105064467418,
+      "bits_per_byte": 0.2253454434369015,
+      "wall_seconds": 28.629289298999993,
+      "cpu_seconds": 25.032992,
+      "peak_rss_bytes": 767488000,
+      "decompress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 9.537238252999998,
+        "cpu_seconds": 5.0754589999999995,
+        "peak_rss_bytes": 395440128,
+        "error": null
+      },
+      "restored_bytes": 122251418,
+      "restored_sha256": "c54a499e6172f3474dba6c363c9f05ebc764d73976ed272d97ddd01a387f26a2",
+      "roundtrip_ok": true,
+      "queries": [
+        {
+          "record": 0,
+          "offset": 1000,
+          "length": 512,
+          "status": "success",
+          "exact": true
+        },
+        {
+          "record": 12,
+          "offset": 1000,
+          "length": 512,
+          "status": "success",
+          "exact": true
+        },
+        {
+          "record": 24,
+          "offset": 1000,
+          "length": 512,
+          "status": "success",
+          "exact": true
+        }
+      ]
+    },
+    {
+      "profile": "gzip-9",
+      "profile_kind": "gzip",
+      "started_utc": "2026-11-01T11:08:42.664680+00:00",
+      "input_bytes": 122251418,
+      "input_sha256": "c54a499e6172f3474dba6c363c9f05ebc764d73976ed272d97ddd01a387f26a2",
+      "status": "success",
+      "compress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 97.558681681,
+        "cpu_seconds": 93.162481,
+        "peak_rss_bytes": 10047488,
+        "error": null
+      },
+      "artifact_bytes": 35969250,
+      "artifact_sha256": "fb3dd9b04cc30a13051ac9badce9106a4bd25d2b909ed91ac1341b20749703de",
+      "ratio": 3.3987758432550024,
+      "bits_per_byte": 2.3537886488973077,
+      "wall_seconds": 97.558681681,
+      "cpu_seconds": 93.162481,
+      "peak_rss_bytes": 10047488,
+      "decompress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 2.907199536999997,
+        "cpu_seconds": 0.485386,
+        "peak_rss_bytes": 10121216,
+        "error": null
+      },
+      "restored_bytes": 122251418,
+      "restored_sha256": "c54a499e6172f3474dba6c363c9f05ebc764d73976ed272d97ddd01a387f26a2",
+      "roundtrip_ok": true
+    },
+    {
+      "profile": "xz-9",
+      "profile_kind": "xz",
+      "started_utc": "2026-11-01T11:10:25.464828+00:00",
+      "input_bytes": 122251418,
+      "input_sha256": "c54a499e6172f3474dba6c363c9f05ebc764d73976ed272d97ddd01a387f26a2",
+      "status": "success",
+      "compress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 184.586012467,
+        "cpu_seconds": 185.747053,
+        "peak_rss_bytes": 769523712,
+        "error": null
+      },
+      "artifact_bytes": 6120260,
+      "artifact_sha256": "a2eeb54c99e41b8c47be6459058feb8fb079dd8ab820c431d12d27cd4dde4dba",
+      "ratio": 19.97487328969684,
+      "bits_per_byte": 0.400503166351821,
+      "wall_seconds": 184.586012467,
+      "cpu_seconds": 185.747053,
+      "peak_rss_bytes": 769523712,
+      "decompress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 6.87351325100002,
+        "cpu_seconds": 0.724957,
+        "peak_rss_bytes": 196214784,
+        "error": null
+      },
+      "restored_bytes": 122251418,
+      "restored_sha256": "c54a499e6172f3474dba6c363c9f05ebc764d73976ed272d97ddd01a387f26a2",
+      "roundtrip_ok": true
+    }
+  ],
+  "status": "success",
+  "failures": 0,
+  "finished_utc": "2026-11-01T11:13:38.989878+00:00"
+}

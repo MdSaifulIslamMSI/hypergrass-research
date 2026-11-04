@@ -1,0 +1,183 @@
+{
+  "schema_version": 2,
+  "kind": "specialized-scale-test",
+  "run_id": "jvm-pilot-5m",
+  "started_utc": "2026-11-03T10:46:12.694366+00:00",
+  "image_id": "sha256:580e58b6ee16d43f4dd99a2871b1c920548b7c6e9b0c695a01f521c17701a4ae",
+  "image_tag": "hypergrass-corpus:jdk27",
+  "provenance": {
+    "git_commit": "961f235992d38dc46725bb3b81e4d535aa07a987",
+    "git_dirty": true,
+    "git_status": "M README.md\n M benchmarks/specialized/run.py\n M benchmarks/specialized/test_run.py\n M docs/FOUNDATIONS.md\n M docs/PAPER-DRAFT.md\n M docs/SCALING.md\n M docs/SPECIALIZED.md\n?? docs/MEMORY-SWEEP.md",
+    "docker_version": "29.6.2",
+    "python": "3.12.10",
+    "platform": "Windows-11-10.0.28120-SP0"
+  },
+  "harness": {
+    "repeats": 1,
+    "timeout_seconds": 600.0,
+    "memory_default": "2g",
+    "heap_override": "232m",
+    "memory_override": "512m",
+    "jvm_extra": null,
+    "runtime_override": null,
+    "binary_override": null
+  },
+  "source": "benchmarks\\pangenome\\data\\pangenome.fasta",
+  "sliced": true,
+  "input": {
+    "fasta": {
+      "path": "benchmarks\\specialized\\runs\\jvm-pilot-5m\\input.fasta",
+      "size_bytes": 5071579,
+      "sha256": "d96882c14e6906dc0d9cc752f6bca47d9536332bfe54877a7eb1aa08adaf3fb4",
+      "records": 2,
+      "bases": 5000000
+    },
+    "sequence": {
+      "path": "benchmarks\\specialized\\runs\\jvm-pilot-5m\\input.seq",
+      "size_bytes": 5000000,
+      "bases": 5000000,
+      "sha256": "4c2c6a21dcfa7fda3fb695ae8d3a1bf211fd7ecb2aace83dd17d61d0a10e7d81",
+      "non_acgt_bases_masked": 0,
+      "base_counts": {
+        "A": 1234147,
+        "C": 1268507,
+        "G": 1267232,
+        "T": 1230114
+      }
+    },
+    "normalization": "headers removed, letters uppercased, non-ACGT replaced with A; both tools receive this sequence and are verified against it"
+  },
+  "profiles": [
+    "hypergrass-bounded-wide"
+  ],
+  "execution_order": [
+    "hypergrass-bounded-wide-r0"
+  ],
+  "results": [
+    {
+      "profile": "hypergrass-bounded-wide",
+      "kind": "hypergrass",
+      "level": "bounded-wide",
+      "config": {
+        "options": [
+          "--pangenome",
+          "--bounded",
+          "--single-thread",
+          "--anchor-single-page",
+          "--seed-step",
+          "8",
+          "--block-mib",
+          "32",
+          "--anchor-mib",
+          "9"
+        ],
+        "jvm": [
+          "-Dhypergrass.matchMin=104",
+          "-Dhypergrass.rangeModel=count",
+          "-XX:+UseSerialGC",
+          "-XX:ReservedCodeCacheSize=32m",
+          "-XX:MaxMetaspaceSize=64m",
+          "-XX:CICompilerCount=2",
+          "-Xss512k"
+        ],
+        "heap": "232m",
+        "memory": "512m"
+      },
+      "planned_observations": 1,
+      "status": "success",
+      "roundtrip_ok": true,
+      "deterministic": true,
+      "artifact_bytes": 1149288,
+      "artifact_sha256": "3e44e207027a852738375b7b98ff8b8152ed5fde7c45cb3e7c686782bfd43ff2",
+      "bits_per_base": 1.8388608,
+      "wall_seconds": 31.767348257000776,
+      "wall_seconds_min": 31.767348257000776,
+      "wall_seconds_max": 31.767348257000776,
+      "cpu_seconds": 34.639309,
+      "peak_rss_bytes": 239935488,
+      "peak_rss_median_bytes": 239935488,
+      "cgroup_memory_peak_bytes": 242470912,
+      "cgroup_oom_kills": 0,
+      "decompress": {
+        "wall_seconds": 30.418447144998936,
+        "cpu_seconds": 32.524417,
+        "peak_rss_bytes": 159186944,
+        "cgroup_memory_peak_bytes": 145960960
+      },
+      "error": null,
+      "observations": [
+        {
+          "profile": "hypergrass-bounded-wide-r0",
+          "base_profile": "hypergrass-bounded-wide",
+          "repeat": 0,
+          "kind": "hypergrass",
+          "level": "bounded-wide",
+          "input_bytes": 5000000,
+          "input_sha256": "4c2c6a21dcfa7fda3fb695ae8d3a1bf211fd7ecb2aace83dd17d61d0a10e7d81",
+          "input_bases": 5000000,
+          "status": "success",
+          "roundtrip_ok": true,
+          "artifact_bytes": 1149288,
+          "bits_per_base": 1.8388608,
+          "wall_seconds": 31.767348257000776,
+          "cpu_seconds": 34.639309,
+          "peak_rss_bytes": 239935488,
+          "error": null,
+          "returncode": 0,
+          "memory_method": "os.wait4 ru_maxrss: child, including descendants it reaped; converted to bytes",
+          "cgroup_memory_peak_bytes": 242470912,
+          "cgroup_oom_kills": 0,
+          "cgroup_memory_method": "cgroup v2 memory.peak/memory.events",
+          "stderr_tail": "",
+          "stderr_bytes": 0,
+          "container_name": "hgs-jvm-pilot-5m-hypergrass-bounded-wide-r0-compress-7832",
+          "memory_limit": "512m",
+          "decompress": {
+            "status": "success",
+            "returncode": 0,
+            "wall_seconds": 30.418447144998936,
+            "cpu_seconds": 32.524417,
+            "peak_rss_bytes": 159186944,
+            "memory_method": "os.wait4 ru_maxrss: child, including descendants it reaped; converted to bytes",
+            "cgroup_memory_peak_bytes": 145960960,
+            "cgroup_oom_kills": 0,
+            "cgroup_memory_method": "cgroup v2 memory.peak/memory.events",
+            "error": null,
+            "stderr_tail": "",
+            "stderr_bytes": 0,
+            "container_name": "hgs-jvm-pilot-5m-hypergrass-bounded-wide-r0-decompress-7832",
+            "memory_limit": "512m"
+          },
+          "verification": {
+            "verdict": "pass",
+            "problems": [],
+            "original": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\jvm-pilot-5m\\input.seq",
+            "restored": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\jvm-pilot-5m\\ops\\hypergrass-bounded-wide-r0\\restored.seq",
+            "archive": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\jvm-pilot-5m\\ops\\hypergrass-bounded-wide-r0\\archive.hgs",
+            "original_bytes": 5000000,
+            "restored_bytes": 5000000,
+            "archive_bytes": 1149288,
+            "bytes_compared": 5000000,
+            "byte_identical": true,
+            "first_mismatch_offset": null,
+            "original_sha256": "4c2c6a21dcfa7fda3fb695ae8d3a1bf211fd7ecb2aace83dd17d61d0a10e7d81",
+            "restored_sha256": "4c2c6a21dcfa7fda3fb695ae8d3a1bf211fd7ecb2aace83dd17d61d0a10e7d81",
+            "archive_sha256": "3e44e207027a852738375b7b98ff8b8152ed5fde7c45cb3e7c686782bfd43ff2",
+            "expected_sha256": "4c2c6a21dcfa7fda3fb695ae8d3a1bf211fd7ecb2aace83dd17d61d0a10e7d81",
+            "chunk_bytes": 8388608,
+            "seconds": 0.079,
+            "comparison": "streaming byte comparison independent of the codec"
+          },
+          "restored_sha256": "4c2c6a21dcfa7fda3fb695ae8d3a1bf211fd7ecb2aace83dd17d61d0a10e7d81"
+        }
+      ],
+      "input_bytes": 5000000,
+      "input_sha256": "4c2c6a21dcfa7fda3fb695ae8d3a1bf211fd7ecb2aace83dd17d61d0a10e7d81",
+      "input_bases": 5000000
+    }
+  ],
+  "status": "success",
+  "failures": 0,
+  "finished_utc": "2026-11-03T10:47:20.643973+00:00"
+}

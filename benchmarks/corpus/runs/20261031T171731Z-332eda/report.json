@@ -1,0 +1,1102 @@
+{
+  "deviations": [
+    "Frozen profile geco3-l9 is measured once per dataset, not three times: a 1,048,576-byte pilot exceeded 120 s and the protocol cap is 180 s. Repeating an operation that cannot finish adds no information.",
+    "geco3-l3 and geco3-l6 are supplementary profiles added after the l9 pilot to provide feasible GeCo3 baselines. They are marked origin=supplementary and are not part of the frozen protocol.",
+    "JARVIS3 and GeCo3 run only when every sequence byte is A/C/G/T, per the protocol. gzip, xz, and HyperGraSS run on all sequence inputs.",
+    "Every tool consumes the exact .seq bytes. FASTA metadata is not part of this comparison; complete-FASTA results are reported separately by the PanMAN benchmark."
+  ],
+  "environment": {
+    "data_protocol_sha256": "7a5e40edddd5dbe24b93ab31be67cf7cb77a7d8cd426a81877ed956e916431d4",
+    "datasets": 10,
+    "hypergrass_classes": [
+      {
+        "path": "ArchiveByteAccounting$Aux.class",
+        "sha256": "b71147bf4db6bb629558f20c00001334b3ea64c2d89e80d3352347a21843c6db",
+        "size_bytes": 1392
+      },
+      {
+        "path": "ArchiveByteAccounting$Cursor.class",
+        "sha256": "ab045e99dc5a7aed2fa447ebd4fcfc68704ef143a488d959e44dbab23b0a785d",
+        "size_bytes": 2207
+      },
+      {
+        "path": "ArchiveByteAccounting$Parser.class",
+        "sha256": "a5d5ebfc848d50601f25ddafecc4a59915feebaa24776f1b94c2cab6dcb8c88a",
+        "size_bytes": 7691
+      },
+      {
+        "path": "ArchiveByteAccounting$Report.class",
+        "sha256": "bf83cce0e84499b82769f851e73131374b7503a88183f05a3c220156e363698b",
+        "size_bytes": 2724
+      },
+      {
+        "path": "ArchiveByteAccounting.class",
+        "sha256": "326ba62ef9e4226198dceef65b0d3ea06d323f62257f89dad1471e15bc8fad54",
+        "size_bytes": 5129
+      },
+      {
+        "path": "BayesianMarkovRangeCoder$AdaptiveGenomicModel.class",
+        "sha256": "08ff739931d48e064fd85e5e07854bd13409dddb12f335d0ee6f0bb6208288a0",
+        "size_bytes": 4383
+      },
+      {
+        "path": "BayesianMarkovRangeCoder$RangeDecoder.class",
+        "sha256": "a330489bb305fb4d4b24707c1aabaa4000888d6d08697d71c1c61d9a9b04f186",
+        "size_bytes": 1218
+      },
+      {
+        "path": "BayesianMarkovRangeCoder$RangeEncoder.class",
+        "sha256": "746567a08557a63c643aede11f544c6cc371061cf9b22c13ea89e33622f6694b",
+        "size_bytes": 1285
+      },
+      {
+        "path": "BayesianMarkovRangeCoder.class",
+        "sha256": "55b54f9bd5a25089e0b8933255c4ad04e2edceedf75eef6ded1b632d4a74fdf4",
+        "size_bytes": 2237
+      },
+      {
+        "path": "BenchmarkSuite.class",
+        "sha256": "707599899b69322b2d2960cab682234f0b76e183b0efb8ef0d7b51eae8ed84d1",
+        "size_bytes": 17939
+      },
+      {
+        "path": "CanonicalSyncmerEngine$AnchorBank.class",
+        "sha256": "fcec2651ec87a345efcfa1c7f5ebc235831bbf93820d47d9205d0b3796c69933",
+        "size_bytes": 1151
+      },
+      {
+        "path": "CanonicalSyncmerEngine$DecodedAnchorCatalog.class",
+        "sha256": "7055fc220543d42c4e994bb656b7d8de89a6afa73104f8f163ad8db902c0056e",
+        "size_bytes": 472
+      },
+      {
+        "path": "CanonicalSyncmerEngine$MatchResult.class",
+        "sha256": "61d9bc7005412b046da468a3bc80d50fff428cd9d9c3334bce06ab987a3a0bc7",
+        "size_bytes": 519
+      },
+      {
+        "path": "CanonicalSyncmerEngine$ParsedAlignment.class",
+        "sha256": "919c4c80e0e56d47e7a7915c7ce1fb846a7d912f30d472540da33a85fae3c59c",
+        "size_bytes": 630
+      },
+      {
+        "path": "CanonicalSyncmerEngine$SeedHashTable.class",
+        "sha256": "9e4271566e36280f423185e4f7fe7ab1b7dc642eb0368bbeecc20811cf2c09d8",
+        "size_bytes": 1499
+      },
+      {
+        "path": "CanonicalSyncmerEngine.class",
+        "sha256": "e0490407e9918c9e01a8b6a2b527a594ed00fd3efc294bb4973b3f777e72b89f",
+        "size_bytes": 29831
+      },
+      {
+        "path": "CostAwareDonorSelector.class",
+        "sha256": "a7f12252a5fd8334bfa6bb8837379446b716a00496ca782192c47c72445e6412",
+        "size_bytes": 1403
+      },
+      {
+        "path": "FastaStreamFactorizer$BlockSlice.class",
+        "sha256": "fb7f261a9c421b01af147303d542c1f02603d3a3e8141045cf4778ff55e196b4",
+        "size_bytes": 578
+      },
+      {
+        "path": "FastaStreamFactorizer$FactorizedChunk.class",
+        "sha256": "ba93789f5304923677633e4d18cfe462a65f5461c9be98d2ba4fdf5f2eb1258f",
+        "size_bytes": 1638
+      },
+      {
+        "path": "FastaStreamFactorizer$RecordSpan.class",
+        "sha256": "9c588c1103e1f31b896a11b304cc4b46085181f3074dc4afc7c2c8ef413f3843",
+        "size_bytes": 571
+      },
+      {
+        "path": "FastaStreamFactorizer.class",
+        "sha256": "d04d8bb7aca9bb549de4c13eb4ab376b0756404cb3e0ee5ecf0cb6fce6b76c5e",
+        "size_bytes": 15233
+      },
+      {
+        "path": "HaplotypeDonorIndex.class",
+        "sha256": "42f198d4cf427df111c3e41ceb18a2e81c4280f1784dc3a99de1b7ed1b098169",
+        "size_bytes": 3229
+      },
+      {
+        "path": "HyperGraSS$ArchiveMetadata.class",
+        "sha256": "073f875651d17137c453b007ec7117ceaa7523254cbc1550823b8c07c92ffee9",
+        "size_bytes": 731
+      },
+      {
+        "path": "HyperGraSS$BlockDirEntry.class",
+        "sha256": "7eb0321a93db4c48d7efef653d8c9993faf3145de6d8edbc3c0b4e1345be14df",
+        "size_bytes": 468
+      },
+      {
+        "path": "HyperGraSS$CompressOptions.class",
+        "sha256": "ef9b7cd0212dc7204737994eb1e629f182afaca14cce4017c98af42cb5f4f4bb",
+        "size_bytes": 784
+      },
+      {
+        "path": "HyperGraSS$ParsedFooter.class",
+        "sha256": "9dc95cf35ea395b96aed58eed7c77c37e6e162b57dfba7b9b645e4fd49bc0acb",
+        "size_bytes": 740
+      },
+      {
+        "path": "HyperGraSS.class",
+        "sha256": "efb948b9fd2d2da34736339c673a67068a0747f1fe40554cfd45e8c2fb3395b6",
+        "size_bytes": 30034
+      },
+      {
+        "path": "QuantumContextRepeatMixer$QcrmModel.class",
+        "sha256": "3841c0f3dfb613f35048daa5f2d76cab59ee24c0b6893b5a527b1e1b2e7c2b81",
+        "size_bytes": 13127
+      },
+      {
+        "path": "QuantumContextRepeatMixer$RangeDecoder.class",
+        "sha256": "eb851e77df48d75cc3dcd1d757e9c3a1d70cff9c8fc40eb39c9f8283a72f08fd",
+        "size_bytes": 1221
+      },
+      {
+        "path": "QuantumContextRepeatMixer$RangeEncoder.class",
+        "sha256": "79248c848ddff6663cbb624bb943b41f7cda4da9ffd6dad0efbd0fbb6689411d",
+        "size_bytes": 1288
+      },
+      {
+        "path": "QuantumContextRepeatMixer$RepeatHead.class",
+        "sha256": "fd722686f96759fbc69cba4478c2e0020e1b9553102212bd129420e65c1c99c2",
+        "size_bytes": 1920
+      },
+      {
+        "path": "QuantumContextRepeatMixer$RepeatSeedIndex.class",
+        "sha256": "040f42c435b27a1ae078621c2b80181db0c6291c78fdf226fb39fc4f42b04974",
+        "size_bytes": 1623
+      },
+      {
+        "path": "QuantumContextRepeatMixer$SparseContextTable.class",
+        "sha256": "eef2eb239b9ac274b586c1f22bd00553756db4562058a49959dd10254036a3b1",
+        "size_bytes": 2201
+      },
+      {
+        "path": "QuantumContextRepeatMixer.class",
+        "sha256": "fd318f6a72dfc9faa0e63aee6d6f9874744d85e04d68f5c60f6f6adbada32c88",
+        "size_bytes": 3256
+      },
+      {
+        "path": "RealCorpusBench.class",
+        "sha256": "0b12f1ccf73cc79437000b51c3a97fb03cf8478c17e0360f8bc3e82f65745204",
+        "size_bytes": 5089
+      },
+      {
+        "path": "VarIntCodec$ByteIn.class",
+        "sha256": "994a39b038d3009262474309a5ea02c430e7f1c26bdd8210980d3a2b560512e3",
+        "size_bytes": 3069
+      },
+      {
+        "path": "VarIntCodec$ByteOut.class",
+        "sha256": "6efe6db16f3ebd2258b3585641e1e684fef233f8e1b3d5caf2d32b95a43fcf63",
+        "size_bytes": 2143
+      },
+      {
+        "path": "VarIntCodec.class",
+        "sha256": "a0e8fe2e0918fcfe6bf12c3be1e0d6e14410d9665998866277152f85de531d68",
+        "size_bytes": 3407
+      },
+      {
+        "path": "VerifyAllEdgeCases.class",
+        "sha256": "7eb1abd9d07f038de3a6bc7e95d891e489dbfb7a08d326f75e2dd31b3f4eaf07",
+        "size_bytes": 10115
+      },
+      {
+        "path": "VerifyAnchorCodecs$TestCase.class",
+        "sha256": "93868571cf36e490f0c60dce72f9ca17b4be183f077574fb4c6093fba53ac9e8",
+        "size_bytes": 1718
+      },
+      {
+        "path": "VerifyAnchorCodecs.class",
+        "sha256": "a4732c979b4c51a56daf555d0b8d1d56be83386eb5d17e34f29cd28de1ec6a71",
+        "size_bytes": 10019
+      },
+      {
+        "path": "VerifyArchiveAccounting.class",
+        "sha256": "0e543aa6713905c79d9802452a3bb05711efe57740306554d9ca9f0f19ef1e43",
+        "size_bytes": 21382
+      },
+      {
+        "path": "VerifyCostAwareEncoding$TestCase.class",
+        "sha256": "14a52694ced2193ef169bccc69779a8d596f6f597974589f89dedc63cf299e4f",
+        "size_bytes": 2380
+      },
+      {
+        "path": "VerifyCostAwareEncoding.class",
+        "sha256": "debc081f4e16d73df098f667cecb5b8290968e34b7b7c791d8fc0f0eb28e0a0e",
+        "size_bytes": 9318
+      },
+      {
+        "path": "VerifyDonorArchives$TestCase.class",
+        "sha256": "c065f21431a7b85ef159b9666b6447829309fd430db83500e4f58159ebadcc36",
+        "size_bytes": 1458
+      },
+      {
+        "path": "VerifyDonorArchives.class",
+        "sha256": "9db1e6ccdebda64b44f6d91bc4f28c765b4a082f339ab0038b84fd512ba724c1",
+        "size_bytes": 6541
+      },
+      {
+        "path": "VerifyDonorCosts$Oracle.class",
+        "sha256": "553de3c0137ec1880bbd065230e8f7b11701d04c3ad2955b0d9128d674d88ed5",
+        "size_bytes": 1486
+      },
+      {
+        "path": "VerifyDonorCosts$RawCandidate.class",
+        "sha256": "abdd97bb85e1e03906c453ca4fbd646358754f24dfbf68a9ee466a551d4d434f",
+        "size_bytes": 2353
+      },
+      {
+        "path": "VerifyDonorCosts.class",
+        "sha256": "b8365e3595c74a6e3b64e214d3571a36003faf2f3d87da6e74d3ca739c0d34f5",
+        "size_bytes": 20151
+      },
+      {
+        "path": "VerifyDonorIndex$PoolKind.class",
+        "sha256": "96ee66a29985d0139d1ffaebb22967a8c740de99da62a4022e78a966b5637f39",
+        "size_bytes": 1403
+      },
+      {
+        "path": "VerifyDonorIndex$Selection.class",
+        "sha256": "30aa5b9a73fa75377d030d4da144363882a9e342c731afa0b94e07bc4d9562c4",
+        "size_bytes": 1471
+      },
+      {
+        "path": "VerifyDonorIndex$TestPool.class",
+        "sha256": "cbb803be3a4c394c3a392b3d443e8f3b066dd666e04c555e0f8cd8f5a66b9035",
+        "size_bytes": 1862
+      },
+      {
+        "path": "VerifyDonorIndex$TimedBatch.class",
+        "sha256": "72b3621b45d918f461a128840f67153892b1bf7d25d37397d454a2e0139889bf",
+        "size_bytes": 1385
+      },
+      {
+        "path": "VerifyDonorIndex$Workload.class",
+        "sha256": "29dc9589e0dee873355e33ad00dfba540647456c8b3c14d0e58b239bb05b52d0",
+        "size_bytes": 1518
+      },
+      {
+        "path": "VerifyDonorIndex.class",
+        "sha256": "359c6fc1159d42e14ff88c9badae2c77e7aac5aa0596dd5619a46fed0304cff2",
+        "size_bytes": 17466
+      }
+    ],
+    "image_id": "sha256:d6ca62a74e3724172a5c49720e28ab2066eb31b3c965dadfb6220e112dbc3bb3",
+    "image_platform": "linux/amd64",
+    "image_versions": null,
+    "staged_classes": [
+      "classes\\hypergrass\\ArchiveByteAccounting$Aux.class",
+      "classes\\hypergrass\\ArchiveByteAccounting$Cursor.class",
+      "classes\\hypergrass\\ArchiveByteAccounting$Parser.class",
+      "classes\\hypergrass\\ArchiveByteAccounting$Report.class",
+      "classes\\hypergrass\\ArchiveByteAccounting.class",
+      "classes\\hypergrass\\BayesianMarkovRangeCoder$AdaptiveGenomicModel.class",
+      "classes\\hypergrass\\BayesianMarkovRangeCoder$RangeDecoder.class",
+      "classes\\hypergrass\\BayesianMarkovRangeCoder$RangeEncoder.class",
+      "classes\\hypergrass\\BayesianMarkovRangeCoder.class",
+      "classes\\hypergrass\\BenchmarkSuite.class",
+      "classes\\hypergrass\\CanonicalSyncmerEngine$AnchorBank.class",
+      "classes\\hypergrass\\CanonicalSyncmerEngine$DecodedAnchorCatalog.class",
+      "classes\\hypergrass\\CanonicalSyncmerEngine$MatchResult.class",
+      "classes\\hypergrass\\CanonicalSyncmerEngine$ParsedAlignment.class",
+      "classes\\hypergrass\\CanonicalSyncmerEngine$SeedHashTable.class",
+      "classes\\hypergrass\\CanonicalSyncmerEngine.class",
+      "classes\\hypergrass\\CostAwareDonorSelector.class",
+      "classes\\hypergrass\\FastaStreamFactorizer$BlockSlice.class",
+      "classes\\hypergrass\\FastaStreamFactorizer$FactorizedChunk.class",
+      "classes\\hypergrass\\FastaStreamFactorizer$RecordSpan.class",
+      "classes\\hypergrass\\FastaStreamFactorizer.class",
+      "classes\\hypergrass\\HaplotypeDonorIndex.class",
+      "classes\\hypergrass\\HyperGraSS$ArchiveMetadata.class",
+      "classes\\hypergrass\\HyperGraSS$BlockDirEntry.class",
+      "classes\\hypergrass\\HyperGraSS$CompressOptions.class",
+      "classes\\hypergrass\\HyperGraSS$ParsedFooter.class",
+      "classes\\hypergrass\\HyperGraSS.class",
+      "classes\\hypergrass\\QuantumContextRepeatMixer$QcrmModel.class",
+      "classes\\hypergrass\\QuantumContextRepeatMixer$RangeDecoder.class",
+      "classes\\hypergrass\\QuantumContextRepeatMixer$RangeEncoder.class",
+      "classes\\hypergrass\\QuantumContextRepeatMixer$RepeatHead.class",
+      "classes\\hypergrass\\QuantumContextRepeatMixer$RepeatSeedIndex.class",
+      "classes\\hypergrass\\QuantumContextRepeatMixer$SparseContextTable.class",
+      "classes\\hypergrass\\QuantumContextRepeatMixer.class",
+      "classes\\hypergrass\\RealCorpusBench.class",
+      "classes\\hypergrass\\VarIntCodec$ByteIn.class",
+      "classes\\hypergrass\\VarIntCodec$ByteOut.class",
+      "classes\\hypergrass\\VarIntCodec.class",
+      "classes\\hypergrass\\VerifyAllEdgeCases.class",
+      "classes\\hypergrass\\VerifyAnchorCodecs$TestCase.class",
+      "classes\\hypergrass\\VerifyAnchorCodecs.class",
+      "classes\\hypergrass\\VerifyArchiveAccounting.class",
+      "classes\\hypergrass\\VerifyCostAwareEncoding$TestCase.class",
+      "classes\\hypergrass\\VerifyCostAwareEncoding.class",
+      "classes\\hypergrass\\VerifyDonorArchives$TestCase.class",
+      "classes\\hypergrass\\VerifyDonorArchives.class",
+      "classes\\hypergrass\\VerifyDonorCosts$Oracle.class",
+      "classes\\hypergrass\\VerifyDonorCosts$RawCandidate.class",
+      "classes\\hypergrass\\VerifyDonorCosts.class",
+      "classes\\hypergrass\\VerifyDonorIndex$PoolKind.class",
+      "classes\\hypergrass\\VerifyDonorIndex$Selection.class",
+      "classes\\hypergrass\\VerifyDonorIndex$TestPool.class",
+      "classes\\hypergrass\\VerifyDonorIndex$TimedBatch.class",
+      "classes\\hypergrass\\VerifyDonorIndex$Workload.class",
+      "classes\\hypergrass\\VerifyDonorIndex.class"
+    ]
+  },
+  "failures": 0,
+  "finished_utc": "2026-10-31T17:17:43.972032+00:00",
+  "protocol": {
+    "contracts": {
+      "fasta": "Exact downloaded FASTA bytes, including all headers, order, wrapping and line endings.",
+      "sequence": "Exact deterministic concatenation of sequence lines in downloaded record order, with only FASTA headers and line endings removed. No case folding, ambiguity removal, gap removal or record dropping. Raw-only tools are applicable only when every resulting byte is A/C/G/T. This contract does not preserve FASTA metadata."
+    },
+    "datasets": [
+      {
+        "accessions": [
+          "NC_012920.1"
+        ],
+        "id": "human-mito",
+        "label": "Human mitochondrial reference"
+      },
+      {
+        "accessions": [
+          "NC_001709.1"
+        ],
+        "id": "fly-mito",
+        "label": "Fruit fly mitochondrial reference"
+      },
+      {
+        "accessions": [
+          "NC_001224.1"
+        ],
+        "id": "yeast-mito",
+        "label": "Budding yeast mitochondrial reference"
+      },
+      {
+        "accessions": [
+          "NC_000932.1"
+        ],
+        "id": "plant-plastid",
+        "label": "Arabidopsis chloroplast reference"
+      },
+      {
+        "accessions": [
+          "NC_001133.9"
+        ],
+        "id": "yeast-chr1",
+        "label": "Budding yeast chromosome I"
+      },
+      {
+        "accessions": [
+          "NC_000909.1"
+        ],
+        "id": "archaeal-reference",
+        "label": "Methanocaldococcus jannaschii reference"
+      },
+      {
+        "accessions": [
+          "NC_000913.3"
+        ],
+        "id": "ecoli-k12",
+        "label": "E. coli K-12 MG1655 laboratory reference"
+      },
+      {
+        "accessions": [
+          "NC_000964.3"
+        ],
+        "id": "bsubtilis-168",
+        "label": "Bacillus subtilis 168 laboratory reference"
+      },
+      {
+        "accessions": [
+          "NC_001133.9",
+          "NC_001134.8",
+          "NC_001135.5"
+        ],
+        "id": "yeast-three-chr",
+        "label": "Budding yeast chromosomes I, II and III; naturally distinct records"
+      },
+      {
+        "accessions": [
+          "NC_000913.3",
+          "NC_007779.1"
+        ],
+        "id": "ecoli-k12-pair",
+        "label": "Two E. coli K-12 laboratory references; MG1655 and W3110"
+      }
+    ],
+    "limitations": [
+      "Local measurement, not a third-party independent replication.",
+      "Ten inputs, including overlapping component records in the multi-record cases; not ten statistically independent genomes.",
+      "Small-to-medium references and two multi-record cases, not a population-scale pangenome corpus.",
+      "No raw FASTQ reads, large mammalian chromosomes, or gigabase collections.",
+      "Fixed representative tool profiles, not a parameter sweep or a claim about each tool's best possible configuration.",
+      "Sequence-only scores cannot be compared directly with complete FASTA scores.",
+      "Shared host, filesystem caches and JVM startup affect runtime; three samples do not establish statistical significance."
+    ],
+    "measurement": {
+      "cpu": "Per-child wait4 user+system seconds.",
+      "failures": "Retain errors, timeouts, missing tools and verification failures. No wins from incomplete or nonmatching comparisons.",
+      "memory": "Per-child Linux wait4 ru_maxrss converted from KiB to bytes; not heap size or Docker memory limit.",
+      "order": "Rotate tool order by dataset and repetition; new process per operation; no engine tuning after results.",
+      "repetitions": 3,
+      "wall": "Process startup through exit, inside the same Linux container. Docker startup, downloads, builds, staging and SHA verification excluded.",
+      "warmup_processes": 0
+    },
+    "resources": {
+      "docker_cpus": 2,
+      "docker_memory": "2g",
+      "java_active_processors": 1,
+      "java_max_heap": "1g",
+      "timeout_seconds_per_operation": 180
+    },
+    "schema_version": 1,
+    "selection": "Frozen before running any new compressor measurements. Public accession-version records not used for development in this workspace; selected for varied sizes and single/multiple records, not observed compressibility. This is a locally conducted held-out benchmark, not an independent third-party audit.",
+    "tool_profiles": [
+      "hypergrass",
+      "hypergrass-optimize",
+      "hypergrass-lean",
+      "gzip-9",
+      "xz-9",
+      "jarvis3-l7",
+      "jarvis3-l26",
+      "geco3-l9"
+    ]
+  },
+  "results": [
+    {
+      "artifact_bytes": 3673,
+      "artifact_sha256": "81faa9c67caeb7c78f6ee6582beb655330b48e7ad8ec0ad4df478ede224882bf",
+      "bits_per_base": 1.5055592560332018,
+      "compress": {
+        "argv": [
+          "java",
+          "-Xmx8m",
+          "-XX:ActiveProcessorCount=1",
+          "-cp",
+          "/work/runs/20261031T171731Z-332eda/classes",
+          "hypergrass.HyperGraSS",
+          "compress",
+          "--lean",
+          "/work/data/fly-mito.seq",
+          "/work/runs/20261031T171731Z-332eda/work/fly-mito/hypergrass-lean/rep-0/archive.hgs"
+        ],
+        "cpu_seconds": 0.353838,
+        "docker_returncode": 0,
+        "docker_status": "success",
+        "error": null,
+        "logs": {
+          "docker_stderr": "ops/fly-mito/hypergrass-lean/rep-0/compress/docker.stderr.log",
+          "docker_stdout": "ops/fly-mito/hypergrass-lean/rep-0/compress/docker.stdout.log",
+          "stderr": "ops/fly-mito/hypergrass-lean/rep-0/compress/stderr.log",
+          "stdout": "ops/fly-mito/hypergrass-lean/rep-0/compress/stdout.log"
+        },
+        "metrics": {
+          "argv": [
+            "java",
+            "-Xmx8m",
+            "-XX:ActiveProcessorCount=1",
+            "-cp",
+            "/work/runs/20261031T171731Z-332eda/classes",
+            "hypergrass.HyperGraSS",
+            "compress",
+            "--lean",
+            "/work/data/fly-mito.seq",
+            "/work/runs/20261031T171731Z-332eda/work/fly-mito/hypergrass-lean/rep-0/archive.hgs"
+          ],
+          "cpu_seconds": 0.353838,
+          "cwd": "/work/runs/20261031T171731Z-332eda/work/fly-mito/hypergrass-lean/rep-0",
+          "error": null,
+          "peak_rss_bytes": 46288896,
+          "returncode": 0,
+          "status": "success",
+          "wall_seconds": 0.6411200040000153
+        },
+        "metrics_present": true,
+        "operation": "fly-mito/hypergrass-lean/rep-0/compress",
+        "peak_rss_bytes": 46288896,
+        "status": "success",
+        "wall_seconds": 0.6411200040000153
+      },
+      "cpu_seconds": 0.353838,
+      "dataset": "fly-mito",
+      "decompress": {
+        "argv": [
+          "java",
+          "-Xmx8m",
+          "-XX:ActiveProcessorCount=1",
+          "-cp",
+          "/work/runs/20261031T171731Z-332eda/classes",
+          "hypergrass.HyperGraSS",
+          "decompress",
+          "/work/runs/20261031T171731Z-332eda/work/fly-mito/hypergrass-lean/rep-0/archive.hgs",
+          "/work/runs/20261031T171731Z-332eda/work/fly-mito/hypergrass-lean/rep-0/restored.seq"
+        ],
+        "cpu_seconds": 0.253394,
+        "docker_returncode": 0,
+        "docker_status": "success",
+        "error": null,
+        "logs": {
+          "docker_stderr": "ops/fly-mito/hypergrass-lean/rep-0/decompress/docker.stderr.log",
+          "docker_stdout": "ops/fly-mito/hypergrass-lean/rep-0/decompress/docker.stdout.log",
+          "stderr": "ops/fly-mito/hypergrass-lean/rep-0/decompress/stderr.log",
+          "stdout": "ops/fly-mito/hypergrass-lean/rep-0/decompress/stdout.log"
+        },
+        "metrics": {
+          "argv": [
+            "java",
+            "-Xmx8m",
+            "-XX:ActiveProcessorCount=1",
+            "-cp",
+            "/work/runs/20261031T171731Z-332eda/classes",
+            "hypergrass.HyperGraSS",
+            "decompress",
+            "/work/runs/20261031T171731Z-332eda/work/fly-mito/hypergrass-lean/rep-0/archive.hgs",
+            "/work/runs/20261031T171731Z-332eda/work/fly-mito/hypergrass-lean/rep-0/restored.seq"
+          ],
+          "cpu_seconds": 0.253394,
+          "cwd": "/work/runs/20261031T171731Z-332eda/work/fly-mito/hypergrass-lean/rep-0",
+          "error": null,
+          "peak_rss_bytes": 46907392,
+          "returncode": 0,
+          "status": "success",
+          "wall_seconds": 0.3863522800000396
+        },
+        "metrics_present": true,
+        "operation": "fly-mito/hypergrass-lean/rep-0/decompress",
+        "peak_rss_bytes": 46907392,
+        "status": "success",
+        "wall_seconds": 0.3863522800000396
+      },
+      "input_bytes": 19517,
+      "input_contract": "sequence",
+      "input_path": "data/fly-mito.seq",
+      "input_sha256": "db9a9ad5da4d2009907b51003f5c0b3595b18a08b910dd31856d8b4a78cd9567",
+      "peak_rss_bytes": 46288896,
+      "profile": "hypergrass-lean",
+      "profile_origin": "frozen",
+      "queries": [
+        {
+          "end": 128,
+          "exact_after_trailing_newline": true,
+          "expected_sha256": "d264375f5848a244ce57898cc9bb94fe25568316eafc7e6a79237bb8b31ff464",
+          "observed_sha256": "f8d2fd78185016753061e648869889f4a039403f0fabbc954c1362248e6b6c8a",
+          "start": 0,
+          "status": "success"
+        },
+        {
+          "end": 9822,
+          "exact_after_trailing_newline": true,
+          "expected_sha256": "67e957ef14aa4a6e0958d424289745960af35fbd6702fe6af00beceb50a300be",
+          "observed_sha256": "55badfa591e697c583e14e46b725404a0ea6e5a4a3ce180c0b975f2a36fa3dbe",
+          "start": 9694,
+          "status": "success"
+        },
+        {
+          "end": 19517,
+          "exact_after_trailing_newline": true,
+          "expected_sha256": "382f7401b93118bc49f12fdd8f09c606b22fc551cc20a58662118e257006e999",
+          "observed_sha256": "5903a87091d838b9fcca5625043ea2ddf85a8209f153dc7cd50a1c4a76eb6dd4",
+          "start": 19389,
+          "status": "success"
+        }
+      ],
+      "ratio": 5.313640076231963,
+      "repetition": 0,
+      "restored_bytes": 19517,
+      "restored_sha256": "db9a9ad5da4d2009907b51003f5c0b3595b18a08b910dd31856d8b4a78cd9567",
+      "roundtrip_ok": true,
+      "started_utc": "2026-10-31T17:17:31.855805+00:00",
+      "status": "success",
+      "wall_seconds": 0.6411200040000153
+    },
+    {
+      "artifact_bytes": 4702,
+      "artifact_sha256": "b26a29c8b8442fa6d49427624b52427c6c591e664a7140c257bc4f673c95e0fa",
+      "bits_per_base": 1.9273453911974177,
+      "compress": {
+        "argv": [
+          "gzip",
+          "-9",
+          "-c",
+          "/work/data/fly-mito.seq"
+        ],
+        "cpu_seconds": 0.012223,
+        "docker_returncode": 0,
+        "docker_status": "success",
+        "error": null,
+        "logs": {
+          "docker_stderr": "ops/fly-mito/gzip-9/rep-0/compress/docker.stderr.log",
+          "docker_stdout": "ops/fly-mito/gzip-9/rep-0/compress/docker.stdout.log",
+          "stderr": "ops/fly-mito/gzip-9/rep-0/compress/stderr.log",
+          "stdout": "ops/fly-mito/gzip-9/rep-0/compress/stdout.log"
+        },
+        "metrics": {
+          "argv": [
+            "gzip",
+            "-9",
+            "-c",
+            "/work/data/fly-mito.seq"
+          ],
+          "cpu_seconds": 0.012223,
+          "cwd": "/work/runs/20261031T171731Z-332eda/work/fly-mito/gzip-9/rep-0",
+          "error": null,
+          "peak_rss_bytes": 10088448,
+          "returncode": 0,
+          "status": "success",
+          "wall_seconds": 0.06819950200002722
+        },
+        "metrics_present": true,
+        "operation": "fly-mito/gzip-9/rep-0/compress",
+        "peak_rss_bytes": 10088448,
+        "status": "success",
+        "wall_seconds": 0.06819950200002722
+      },
+      "cpu_seconds": 0.012223,
+      "dataset": "fly-mito",
+      "decompress": {
+        "argv": [
+          "gzip",
+          "-dc",
+          "/work/runs/20261031T171731Z-332eda/work/fly-mito/gzip-9/rep-0/archive.gz"
+        ],
+        "cpu_seconds": 0.002528,
+        "docker_returncode": 0,
+        "docker_status": "success",
+        "error": null,
+        "logs": {
+          "docker_stderr": "ops/fly-mito/gzip-9/rep-0/decompress/docker.stderr.log",
+          "docker_stdout": "ops/fly-mito/gzip-9/rep-0/decompress/docker.stdout.log",
+          "stderr": "ops/fly-mito/gzip-9/rep-0/decompress/stderr.log",
+          "stdout": "ops/fly-mito/gzip-9/rep-0/decompress/stdout.log"
+        },
+        "metrics": {
+          "argv": [
+            "gzip",
+            "-dc",
+            "/work/runs/20261031T171731Z-332eda/work/fly-mito/gzip-9/rep-0/archive.gz"
+          ],
+          "cpu_seconds": 0.002528,
+          "cwd": "/work/runs/20261031T171731Z-332eda/work/fly-mito/gzip-9/rep-0",
+          "error": null,
+          "peak_rss_bytes": 10125312,
+          "returncode": 0,
+          "status": "success",
+          "wall_seconds": 0.039165123999964635
+        },
+        "metrics_present": true,
+        "operation": "fly-mito/gzip-9/rep-0/decompress",
+        "peak_rss_bytes": 10125312,
+        "status": "success",
+        "wall_seconds": 0.039165123999964635
+      },
+      "input_bytes": 19517,
+      "input_contract": "sequence",
+      "input_path": "data/fly-mito.seq",
+      "input_sha256": "db9a9ad5da4d2009907b51003f5c0b3595b18a08b910dd31856d8b4a78cd9567",
+      "peak_rss_bytes": 10088448,
+      "profile": "gzip-9",
+      "profile_origin": "frozen",
+      "queries": [],
+      "ratio": 4.150786899191833,
+      "repetition": 0,
+      "restored_bytes": 19517,
+      "restored_sha256": "db9a9ad5da4d2009907b51003f5c0b3595b18a08b910dd31856d8b4a78cd9567",
+      "roundtrip_ok": true,
+      "started_utc": "2026-10-31T17:17:37.525621+00:00",
+      "status": "success",
+      "wall_seconds": 0.06819950200002722
+    },
+    {
+      "artifact_bytes": 4460,
+      "artifact_sha256": "5d7db2bbaabb1dc2516a2fc00ae45a32ab200372eafd339bb4be4e7dce339c96",
+      "bits_per_base": 1.828149818107291,
+      "compress": {
+        "argv": [
+          "xz",
+          "-9",
+          "-c",
+          "/work/data/fly-mito.seq"
+        ],
+        "cpu_seconds": 0.011706999999999999,
+        "docker_returncode": 0,
+        "docker_status": "success",
+        "error": null,
+        "logs": {
+          "docker_stderr": "ops/fly-mito/xz-9/rep-0/compress/docker.stderr.log",
+          "docker_stdout": "ops/fly-mito/xz-9/rep-0/compress/docker.stdout.log",
+          "stderr": "ops/fly-mito/xz-9/rep-0/compress/stderr.log",
+          "stdout": "ops/fly-mito/xz-9/rep-0/compress/stdout.log"
+        },
+        "metrics": {
+          "argv": [
+            "xz",
+            "-9",
+            "-c",
+            "/work/data/fly-mito.seq"
+          ],
+          "cpu_seconds": 0.011706999999999999,
+          "cwd": "/work/runs/20261031T171731Z-332eda/work/fly-mito/xz-9/rep-0",
+          "error": null,
+          "peak_rss_bytes": 10223616,
+          "returncode": 0,
+          "status": "success",
+          "wall_seconds": 0.07310605700001815
+        },
+        "metrics_present": true,
+        "operation": "fly-mito/xz-9/rep-0/compress",
+        "peak_rss_bytes": 10223616,
+        "status": "success",
+        "wall_seconds": 0.07310605700001815
+      },
+      "cpu_seconds": 0.011706999999999999,
+      "dataset": "fly-mito",
+      "decompress": {
+        "argv": [
+          "xz",
+          "-dc",
+          "/work/runs/20261031T171731Z-332eda/work/fly-mito/xz-9/rep-0/archive.xz"
+        ],
+        "cpu_seconds": 0.002293,
+        "docker_returncode": 0,
+        "docker_status": "success",
+        "error": null,
+        "logs": {
+          "docker_stderr": "ops/fly-mito/xz-9/rep-0/decompress/docker.stderr.log",
+          "docker_stdout": "ops/fly-mito/xz-9/rep-0/decompress/docker.stdout.log",
+          "stderr": "ops/fly-mito/xz-9/rep-0/decompress/stderr.log",
+          "stdout": "ops/fly-mito/xz-9/rep-0/decompress/stdout.log"
+        },
+        "metrics": {
+          "argv": [
+            "xz",
+            "-dc",
+            "/work/runs/20261031T171731Z-332eda/work/fly-mito/xz-9/rep-0/archive.xz"
+          ],
+          "cpu_seconds": 0.002293,
+          "cwd": "/work/runs/20261031T171731Z-332eda/work/fly-mito/xz-9/rep-0",
+          "error": null,
+          "peak_rss_bytes": 10035200,
+          "returncode": 0,
+          "status": "success",
+          "wall_seconds": 0.04974153200004139
+        },
+        "metrics_present": true,
+        "operation": "fly-mito/xz-9/rep-0/decompress",
+        "peak_rss_bytes": 10035200,
+        "status": "success",
+        "wall_seconds": 0.04974153200004139
+      },
+      "input_bytes": 19517,
+      "input_contract": "sequence",
+      "input_path": "data/fly-mito.seq",
+      "input_sha256": "db9a9ad5da4d2009907b51003f5c0b3595b18a08b910dd31856d8b4a78cd9567",
+      "peak_rss_bytes": 10223616,
+      "profile": "xz-9",
+      "profile_origin": "frozen",
+      "queries": [],
+      "ratio": 4.376008968609866,
+      "repetition": 0,
+      "restored_bytes": 19517,
+      "restored_sha256": "db9a9ad5da4d2009907b51003f5c0b3595b18a08b910dd31856d8b4a78cd9567",
+      "roundtrip_ok": true,
+      "started_utc": "2026-10-31T17:17:39.104071+00:00",
+      "status": "success",
+      "wall_seconds": 0.07310605700001815
+    },
+    {
+      "artifact_bytes": 4310,
+      "artifact_sha256": "7fd292b4f5306d93d620cf5fcdff9fbfef15115aec2bd3fc1d6e12740891db59",
+      "bits_per_base": 1.766664958753907,
+      "compress": {
+        "argv": [
+          "JARVIS3",
+          "-l",
+          "7",
+          "-o",
+          "/work/runs/20261031T171731Z-332eda/work/fly-mito/jarvis3-l7/rep-0/archive.jc",
+          "/work/data/fly-mito.seq"
+        ],
+        "cpu_seconds": 0.054313,
+        "docker_returncode": 0,
+        "docker_status": "success",
+        "error": null,
+        "logs": {
+          "docker_stderr": "ops/fly-mito/jarvis3-l7/rep-0/compress/docker.stderr.log",
+          "docker_stdout": "ops/fly-mito/jarvis3-l7/rep-0/compress/docker.stdout.log",
+          "stderr": "ops/fly-mito/jarvis3-l7/rep-0/compress/stderr.log",
+          "stdout": "ops/fly-mito/jarvis3-l7/rep-0/compress/stdout.log"
+        },
+        "metrics": {
+          "argv": [
+            "JARVIS3",
+            "-l",
+            "7",
+            "-o",
+            "/work/runs/20261031T171731Z-332eda/work/fly-mito/jarvis3-l7/rep-0/archive.jc",
+            "/work/data/fly-mito.seq"
+          ],
+          "cpu_seconds": 0.054313,
+          "cwd": "/work/runs/20261031T171731Z-332eda/work/fly-mito/jarvis3-l7/rep-0",
+          "error": null,
+          "peak_rss_bytes": 36700160,
+          "returncode": 0,
+          "status": "success",
+          "wall_seconds": 0.15006208299996615
+        },
+        "metrics_present": true,
+        "operation": "fly-mito/jarvis3-l7/rep-0/compress",
+        "peak_rss_bytes": 36700160,
+        "status": "success",
+        "wall_seconds": 0.15006208299996615
+      },
+      "cpu_seconds": 0.054313,
+      "dataset": "fly-mito",
+      "decompress": {
+        "argv": [
+          "JARVIS3",
+          "-d",
+          "-o",
+          "/work/runs/20261031T171731Z-332eda/work/fly-mito/jarvis3-l7/rep-0/restored.seq",
+          "/work/runs/20261031T171731Z-332eda/work/fly-mito/jarvis3-l7/rep-0/archive.jc"
+        ],
+        "cpu_seconds": 0.036008,
+        "docker_returncode": 0,
+        "docker_status": "success",
+        "error": null,
+        "logs": {
+          "docker_stderr": "ops/fly-mito/jarvis3-l7/rep-0/decompress/docker.stderr.log",
+          "docker_stdout": "ops/fly-mito/jarvis3-l7/rep-0/decompress/docker.stdout.log",
+          "stderr": "ops/fly-mito/jarvis3-l7/rep-0/decompress/stderr.log",
+          "stdout": "ops/fly-mito/jarvis3-l7/rep-0/decompress/stdout.log"
+        },
+        "metrics": {
+          "argv": [
+            "JARVIS3",
+            "-d",
+            "-o",
+            "/work/runs/20261031T171731Z-332eda/work/fly-mito/jarvis3-l7/rep-0/restored.seq",
+            "/work/runs/20261031T171731Z-332eda/work/fly-mito/jarvis3-l7/rep-0/archive.jc"
+          ],
+          "cpu_seconds": 0.036008,
+          "cwd": "/work/runs/20261031T171731Z-332eda/work/fly-mito/jarvis3-l7/rep-0",
+          "error": null,
+          "peak_rss_bytes": 36700160,
+          "returncode": 0,
+          "status": "success",
+          "wall_seconds": 0.08577137300000004
+        },
+        "metrics_present": true,
+        "operation": "fly-mito/jarvis3-l7/rep-0/decompress",
+        "peak_rss_bytes": 36700160,
+        "status": "success",
+        "wall_seconds": 0.08577137300000004
+      },
+      "input_bytes": 19517,
+      "input_contract": "sequence",
+      "input_path": "data/fly-mito.seq",
+      "input_sha256": "db9a9ad5da4d2009907b51003f5c0b3595b18a08b910dd31856d8b4a78cd9567",
+      "peak_rss_bytes": 36700160,
+      "profile": "jarvis3-l7",
+      "profile_origin": "frozen",
+      "queries": [],
+      "ratio": 4.52830626450116,
+      "repetition": 0,
+      "restored_bytes": 19517,
+      "restored_sha256": "db9a9ad5da4d2009907b51003f5c0b3595b18a08b910dd31856d8b4a78cd9567",
+      "roundtrip_ok": true,
+      "started_utc": "2026-10-31T17:17:40.553555+00:00",
+      "status": "success",
+      "wall_seconds": 0.15006208299996615
+    },
+    {
+      "artifact_bytes": 3818,
+      "artifact_sha256": "960f1e517773df09c74be2e590311a91cda5cb4cc762fa84614048034c4702fa",
+      "bits_per_base": 1.5649946200748066,
+      "compress": {
+        "argv": [
+          "GeCo3",
+          "-l",
+          "3",
+          "/work/runs/20261031T171731Z-332eda/work/fly-mito/geco3-l3/rep-0/input.seq"
+        ],
+        "cpu_seconds": 0.08760199999999999,
+        "docker_returncode": 0,
+        "docker_status": "success",
+        "error": null,
+        "logs": {
+          "docker_stderr": "ops/fly-mito/geco3-l3/rep-0/compress/docker.stderr.log",
+          "docker_stdout": "ops/fly-mito/geco3-l3/rep-0/compress/docker.stdout.log",
+          "stderr": "ops/fly-mito/geco3-l3/rep-0/compress/stderr.log",
+          "stdout": "ops/fly-mito/geco3-l3/rep-0/compress/stdout.log"
+        },
+        "metrics": {
+          "argv": [
+            "GeCo3",
+            "-l",
+            "3",
+            "/work/runs/20261031T171731Z-332eda/work/fly-mito/geco3-l3/rep-0/input.seq"
+          ],
+          "cpu_seconds": 0.08760199999999999,
+          "cwd": "/work/runs/20261031T171731Z-332eda/work/fly-mito/geco3-l3/rep-0",
+          "error": null,
+          "peak_rss_bytes": 44695552,
+          "returncode": 0,
+          "status": "success",
+          "wall_seconds": 0.1963513939999757
+        },
+        "metrics_present": true,
+        "operation": "fly-mito/geco3-l3/rep-0/compress",
+        "peak_rss_bytes": 44695552,
+        "status": "success",
+        "wall_seconds": 0.1963513939999757
+      },
+      "cpu_seconds": 0.08760199999999999,
+      "dataset": "fly-mito",
+      "decompress": {
+        "argv": [
+          "GeDe3",
+          "/work/runs/20261031T171731Z-332eda/work/fly-mito/geco3-l3/rep-0/input.seq.co"
+        ],
+        "cpu_seconds": 0.070468,
+        "docker_returncode": 0,
+        "docker_status": "success",
+        "error": null,
+        "logs": {
+          "docker_stderr": "ops/fly-mito/geco3-l3/rep-0/decompress/docker.stderr.log",
+          "docker_stdout": "ops/fly-mito/geco3-l3/rep-0/decompress/docker.stdout.log",
+          "stderr": "ops/fly-mito/geco3-l3/rep-0/decompress/stderr.log",
+          "stdout": "ops/fly-mito/geco3-l3/rep-0/decompress/stdout.log"
+        },
+        "metrics": {
+          "argv": [
+            "GeDe3",
+            "/work/runs/20261031T171731Z-332eda/work/fly-mito/geco3-l3/rep-0/input.seq.co"
+          ],
+          "cpu_seconds": 0.070468,
+          "cwd": "/work/runs/20261031T171731Z-332eda/work/fly-mito/geco3-l3/rep-0",
+          "error": null,
+          "peak_rss_bytes": 44826624,
+          "returncode": 0,
+          "status": "success",
+          "wall_seconds": 0.14259187900000825
+        },
+        "metrics_present": true,
+        "operation": "fly-mito/geco3-l3/rep-0/decompress",
+        "peak_rss_bytes": 44826624,
+        "status": "success",
+        "wall_seconds": 0.14259187900000825
+      },
+      "input_bytes": 19517,
+      "input_contract": "sequence",
+      "input_path": "data/fly-mito.seq",
+      "input_sha256": "db9a9ad5da4d2009907b51003f5c0b3595b18a08b910dd31856d8b4a78cd9567",
+      "peak_rss_bytes": 44695552,
+      "profile": "geco3-l3",
+      "profile_origin": "supplementary",
+      "queries": [],
+      "ratio": 5.111838658983761,
+      "repetition": 0,
+      "restored_bytes": 19517,
+      "restored_sha256": "db9a9ad5da4d2009907b51003f5c0b3595b18a08b910dd31856d8b4a78cd9567",
+      "roundtrip_ok": true,
+      "started_utc": "2026-10-31T17:17:42.137819+00:00",
+      "status": "success",
+      "wall_seconds": 0.1963513939999757
+    }
+  ],
+  "run_id": "20261031T171731Z-332eda",
+  "schema_version": 1,
+  "started_utc": "2026-10-31T17:17:31.845138+00:00",
+  "status": "success",
+  "summary": [
+    {
+      "artifact_bytes": 3673,
+      "attempts": 1,
+      "bits_per_base": 1.5055592560332018,
+      "dataset": "fly-mito",
+      "input_bytes": 19517,
+      "median_cpu_seconds": 0.353838,
+      "median_peak_rss_bytes": 46288896,
+      "median_wall_seconds": 0.6411200040000153,
+      "nondeterministic_size": false,
+      "origin": "frozen",
+      "profile": "hypergrass-lean",
+      "ratio": 5.313640076231963,
+      "roundtrip_all_ok": true,
+      "status": "success",
+      "successful": 1
+    },
+    {
+      "artifact_bytes": 4702,
+      "attempts": 1,
+      "bits_per_base": 1.9273453911974177,
+      "dataset": "fly-mito",
+      "input_bytes": 19517,
+      "median_cpu_seconds": 0.012223,
+      "median_peak_rss_bytes": 10088448,
+      "median_wall_seconds": 0.06819950200002722,
+      "nondeterministic_size": false,
+      "origin": "frozen",
+      "profile": "gzip-9",
+      "ratio": 4.150786899191833,
+      "roundtrip_all_ok": true,
+      "status": "success",
+      "successful": 1
+    },
+    {
+      "artifact_bytes": 4460,
+      "attempts": 1,
+      "bits_per_base": 1.828149818107291,
+      "dataset": "fly-mito",
+      "input_bytes": 19517,
+      "median_cpu_seconds": 0.011706999999999999,
+      "median_peak_rss_bytes": 10223616,
+      "median_wall_seconds": 0.07310605700001815,
+      "nondeterministic_size": false,
+      "origin": "frozen",
+      "profile": "xz-9",
+      "ratio": 4.376008968609866,
+      "roundtrip_all_ok": true,
+      "status": "success",
+      "successful": 1
+    },
+    {
+      "artifact_bytes": 4310,
+      "attempts": 1,
+      "bits_per_base": 1.766664958753907,
+      "dataset": "fly-mito",
+      "input_bytes": 19517,
+      "median_cpu_seconds": 0.054313,
+      "median_peak_rss_bytes": 36700160,
+      "median_wall_seconds": 0.15006208299996615,
+      "nondeterministic_size": false,
+      "origin": "frozen",
+      "profile": "jarvis3-l7",
+      "ratio": 4.52830626450116,
+      "roundtrip_all_ok": true,
+      "status": "success",
+      "successful": 1
+    },
+    {
+      "artifact_bytes": 3818,
+      "attempts": 1,
+      "bits_per_base": 1.5649946200748066,
+      "dataset": "fly-mito",
+      "input_bytes": 19517,
+      "median_cpu_seconds": 0.08760199999999999,
+      "median_peak_rss_bytes": 44695552,
+      "median_wall_seconds": 0.1963513939999757,
+      "nondeterministic_size": false,
+      "origin": "supplementary",
+      "profile": "geco3-l3",
+      "ratio": 5.111838658983761,
+      "roundtrip_all_ok": true,
+      "status": "success",
+      "successful": 1
+    }
+  ]
+}

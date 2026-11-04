@@ -1,0 +1,56 @@
+[
+  {
+    "config": "default",
+    "opts": [
+      "-a"
+    ],
+    "base_bytes": 1603146,
+    "full_bytes": 1671860,
+    "marginal_bytes": 68714,
+    "bpb": 0.12290023924445166,
+    "create_seconds": 7.120520399999805,
+    "append_seconds": 1.251346899982309
+  },
+  {
+    "config": "seg50k",
+    "opts": [
+      "-a",
+      "-s",
+      "50000"
+    ],
+    "base_bytes": 1220799,
+    "full_bytes": 1232658,
+    "marginal_bytes": 11859,
+    "bpb": 0.021210727613003934,
+    "create_seconds": 5.747743300016737,
+    "append_seconds": 1.0675094999896828
+  },
+  {
+    "config": "seg100k",
+    "opts": [
+      "-a",
+      "-s",
+      "100000"
+    ],
+    "base_bytes": 1228982,
+    "full_bytes": 1230739,
+    "marginal_bytes": 1757,
+    "bpb": 0.003142528747453235,
+    "create_seconds": 5.768162699998356,
+    "append_seconds": 1.0208044000028167
+  },
+  {
+    "config": "seg200k",
+    "opts": [
+      "-a",
+      "-s",
+      "200000"
+    ],
+    "base_bytes": 1262231,
+    "full_bytes": 1263967,
+    "marginal_bytes": 1736,
+    "bpb": 0.003104968642902001,
+    "create_seconds": 5.576490400009789,
+    "append_seconds": 0.9648143000085838
+  }
+]

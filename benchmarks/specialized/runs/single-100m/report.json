@@ -1,0 +1,281 @@
+{
+  "schema_version": 2,
+  "kind": "specialized-scale-test",
+  "run_id": "single-100m",
+  "started_utc": "2026-11-03T15:09:28.726228+00:00",
+  "image_id": "sha256:580e58b6ee16d43f4dd99a2871b1c920548b7c6e9b0c695a01f521c17701a4ae",
+  "image_tag": "hypergrass-corpus:jdk27",
+  "provenance": {
+    "git_commit": "aec6a7953fc2a4dec2ca8c1e148a431ae7b03269",
+    "git_dirty": true,
+    "git_status": "M README.md\n M benchmarks/specialized/run.py\n M docs/SPECIALIZED.md\n M src/hypergrass/ArchiveByteAccounting.java\n M src/hypergrass/HyperGraSS.java\n M src/hypergrass/QuantumContextRepeatMixer.java\n M src/hypergrass/VerifyAllEdgeCases.java\n?? benchmarks/specialized/.tmp/",
+    "docker_version": "29.6.2",
+    "python": "3.12.10",
+    "platform": "Windows-11-10.0.28120-SP0"
+  },
+  "harness": {
+    "repeats": 1,
+    "timeout_seconds": 3600.0,
+    "memory_default": "2g",
+    "heap_override": "2g",
+    "memory_override": "3g",
+    "jvm_extra": null,
+    "runtime_override": null,
+    "binary_override": null
+  },
+  "source": "benchmarks\\specialized\\.tmp\\chr14.fa",
+  "sliced": true,
+  "input": {
+    "fasta": {
+      "path": "benchmarks\\specialized\\runs\\single-100m\\input.fasta",
+      "size_bytes": 102000008,
+      "sha256": "f18701221e6af6b68ee17a0d64e2e51b7cba45029dca79637344d45839058eb7",
+      "records": 1,
+      "bases": 100000000
+    },
+    "sequence": {
+      "path": "benchmarks\\specialized\\runs\\single-100m\\input.seq",
+      "size_bytes": 100000000,
+      "bases": 100000000,
+      "sha256": "d4d87ae5d7a1c6ee6bfeb479e873e4496e410dd1313a9f1676dacd8206e26187",
+      "non_acgt_bases_masked": 16315569,
+      "base_counts": {
+        "A": 24957627,
+        "C": 16735744,
+        "G": 16853332,
+        "T": 25137728
+      }
+    },
+    "normalization": "headers removed, letters uppercased, non-ACGT replaced with A; both tools receive this sequence and are verified against it"
+  },
+  "profiles": [
+    "hypergrass-single-tuned",
+    "grass"
+  ],
+  "execution_order": [
+    "hypergrass-single-tuned-r0",
+    "grass-r0"
+  ],
+  "results": [
+    {
+      "profile": "hypergrass-single-tuned",
+      "kind": "hypergrass",
+      "level": "single-tuned",
+      "config": {
+        "options": [
+          "--single"
+        ],
+        "jvm": [],
+        "heap": "2g",
+        "memory": "3g"
+      },
+      "planned_observations": 1,
+      "status": "success",
+      "roundtrip_ok": true,
+      "deterministic": true,
+      "artifact_bytes": 17084921,
+      "artifact_sha256": "c953592422971a35c30ceecf1dca5a46e5591bee0e349bcf11381d361633294c",
+      "bits_per_base": 1.36679368,
+      "wall_seconds": 115.55940976000056,
+      "wall_seconds_min": 115.55940976000056,
+      "wall_seconds_max": 115.55940976000056,
+      "cpu_seconds": 115.098074,
+      "peak_rss_bytes": 397942784,
+      "peak_rss_median_bytes": 397942784,
+      "cgroup_memory_peak_bytes": 432373760,
+      "cgroup_oom_kills": 0,
+      "decompress": {
+        "wall_seconds": 118.95260783499907,
+        "cpu_seconds": 116.087401,
+        "peak_rss_bytes": 408358912,
+        "cgroup_memory_peak_bytes": 394977280
+      },
+      "error": null,
+      "observations": [
+        {
+          "profile": "hypergrass-single-tuned-r0",
+          "base_profile": "hypergrass-single-tuned",
+          "repeat": 0,
+          "kind": "hypergrass",
+          "level": "single-tuned",
+          "input_bytes": 100000000,
+          "input_sha256": "d4d87ae5d7a1c6ee6bfeb479e873e4496e410dd1313a9f1676dacd8206e26187",
+          "input_bases": 100000000,
+          "status": "success",
+          "roundtrip_ok": true,
+          "artifact_bytes": 17084921,
+          "bits_per_base": 1.36679368,
+          "wall_seconds": 115.55940976000056,
+          "cpu_seconds": 115.098074,
+          "peak_rss_bytes": 397942784,
+          "error": null,
+          "returncode": 0,
+          "memory_method": "os.wait4 ru_maxrss: child, including descendants it reaped; converted to bytes",
+          "cgroup_memory_peak_bytes": 432373760,
+          "cgroup_oom_kills": 0,
+          "cgroup_memory_method": "cgroup v2 memory.peak/memory.events",
+          "stderr_tail": "",
+          "stderr_bytes": 0,
+          "container_name": "hgs-single-100m-hypergrass-single-tuned-r0-compress-12360",
+          "memory_limit": "3g",
+          "decompress": {
+            "status": "success",
+            "returncode": 0,
+            "wall_seconds": 118.95260783499907,
+            "cpu_seconds": 116.087401,
+            "peak_rss_bytes": 408358912,
+            "memory_method": "os.wait4 ru_maxrss: child, including descendants it reaped; converted to bytes",
+            "cgroup_memory_peak_bytes": 394977280,
+            "cgroup_oom_kills": 0,
+            "cgroup_memory_method": "cgroup v2 memory.peak/memory.events",
+            "error": null,
+            "stderr_tail": "",
+            "stderr_bytes": 0,
+            "container_name": "hgs-single-100m-hypergrass-single-tuned-r0-decompress-12360",
+            "memory_limit": "3g"
+          },
+          "verification": {
+            "verdict": "pass",
+            "problems": [],
+            "original": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\single-100m\\input.seq",
+            "restored": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\single-100m\\ops\\hypergrass-single-tuned-r0\\restored.seq",
+            "archive": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\single-100m\\ops\\hypergrass-single-tuned-r0\\archive.hgs",
+            "original_bytes": 100000000,
+            "restored_bytes": 100000000,
+            "archive_bytes": 17084921,
+            "bytes_compared": 100000000,
+            "byte_identical": true,
+            "first_mismatch_offset": null,
+            "original_sha256": "d4d87ae5d7a1c6ee6bfeb479e873e4496e410dd1313a9f1676dacd8206e26187",
+            "restored_sha256": "d4d87ae5d7a1c6ee6bfeb479e873e4496e410dd1313a9f1676dacd8206e26187",
+            "archive_sha256": "c953592422971a35c30ceecf1dca5a46e5591bee0e349bcf11381d361633294c",
+            "expected_sha256": "d4d87ae5d7a1c6ee6bfeb479e873e4496e410dd1313a9f1676dacd8206e26187",
+            "chunk_bytes": 8388608,
+            "seconds": 0.385,
+            "comparison": "streaming byte comparison independent of the codec"
+          },
+          "restored_sha256": "d4d87ae5d7a1c6ee6bfeb479e873e4496e410dd1313a9f1676dacd8206e26187"
+        }
+      ],
+      "input_bytes": 100000000,
+      "input_sha256": "d4d87ae5d7a1c6ee6bfeb479e873e4496e410dd1313a9f1676dacd8206e26187",
+      "input_bases": 100000000
+    },
+    {
+      "profile": "grass",
+      "kind": "grass",
+      "level": "default-e2",
+      "config": {
+        "heap": "1500m",
+        "memory": "2g"
+      },
+      "planned_observations": 1,
+      "status": "success",
+      "roundtrip_ok": true,
+      "deterministic": true,
+      "artifact_bytes": 18538762,
+      "artifact_sha256": "9227663dc3e03a53dcbaac928a01809338263262490dae44729f0dd841a9d520",
+      "bits_per_base": 1.48310096,
+      "wall_seconds": 81.94754759300122,
+      "wall_seconds_min": 81.94754759300122,
+      "wall_seconds_max": 81.94754759300122,
+      "cpu_seconds": 32.84841,
+      "peak_rss_bytes": 1006206976,
+      "peak_rss_median_bytes": 1006206976,
+      "cgroup_memory_peak_bytes": 1117360128,
+      "cgroup_oom_kills": 0,
+      "decompress": {
+        "wall_seconds": 67.70273081900086,
+        "cpu_seconds": 23.223984,
+        "peak_rss_bytes": 1598210048,
+        "cgroup_memory_peak_bytes": 1587286016
+      },
+      "error": null,
+      "observations": [
+        {
+          "profile": "grass-r0",
+          "base_profile": "grass",
+          "repeat": 0,
+          "kind": "grass",
+          "level": "default-e2",
+          "input_bytes": 100000000,
+          "input_sha256": "d4d87ae5d7a1c6ee6bfeb479e873e4496e410dd1313a9f1676dacd8206e26187",
+          "input_bases": 100000000,
+          "status": "success",
+          "roundtrip_ok": true,
+          "artifact_bytes": 18538762,
+          "bits_per_base": 1.48310096,
+          "wall_seconds": 81.94754759300122,
+          "cpu_seconds": 32.84841,
+          "peak_rss_bytes": 1006206976,
+          "error": null,
+          "returncode": 0,
+          "memory_method": "os.wait4 ru_maxrss: child, including descendants it reaped; converted to bytes",
+          "cgroup_memory_peak_bytes": 1117360128,
+          "cgroup_oom_kills": 0,
+          "cgroup_memory_method": "cgroup v2 memory.peak/memory.events",
+          "stderr_tail": "",
+          "stderr_bytes": 0,
+          "container_name": "hgs-single-100m-grass-r0-compress-12360",
+          "memory_limit": "2g",
+          "decompress": {
+            "status": "success",
+            "returncode": 0,
+            "wall_seconds": 67.70273081900086,
+            "cpu_seconds": 23.223984,
+            "peak_rss_bytes": 1598210048,
+            "memory_method": "os.wait4 ru_maxrss: child, including descendants it reaped; converted to bytes",
+            "cgroup_memory_peak_bytes": 1587286016,
+            "cgroup_oom_kills": 0,
+            "cgroup_memory_method": "cgroup v2 memory.peak/memory.events",
+            "error": null,
+            "stderr_tail": "",
+            "stderr_bytes": 0,
+            "container_name": "hgs-single-100m-grass-r0-decompress-12360",
+            "memory_limit": "2g"
+          },
+          "verification": {
+            "verdict": "pass",
+            "problems": [],
+            "original": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\single-100m\\input.seq",
+            "restored": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\single-100m\\ops\\grass-r0\\decompress\\Final.SSG",
+            "archive": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\specialized\\runs\\single-100m\\ops\\grass-r0\\compress\\FinalBsc.bsc",
+            "original_bytes": 100000000,
+            "restored_bytes": 100000000,
+            "archive_bytes": 18538762,
+            "bytes_compared": 100000000,
+            "byte_identical": true,
+            "first_mismatch_offset": null,
+            "original_sha256": "d4d87ae5d7a1c6ee6bfeb479e873e4496e410dd1313a9f1676dacd8206e26187",
+            "restored_sha256": "d4d87ae5d7a1c6ee6bfeb479e873e4496e410dd1313a9f1676dacd8206e26187",
+            "archive_sha256": "9227663dc3e03a53dcbaac928a01809338263262490dae44729f0dd841a9d520",
+            "expected_sha256": "d4d87ae5d7a1c6ee6bfeb479e873e4496e410dd1313a9f1676dacd8206e26187",
+            "chunk_bytes": 8388608,
+            "seconds": 0.452,
+            "comparison": "streaming byte comparison independent of the codec"
+          },
+          "restored_sha256": "d4d87ae5d7a1c6ee6bfeb479e873e4496e410dd1313a9f1676dacd8206e26187"
+        }
+      ],
+      "input_bytes": 100000000,
+      "input_sha256": "d4d87ae5d7a1c6ee6bfeb479e873e4496e410dd1313a9f1676dacd8206e26187",
+      "input_bases": 100000000
+    }
+  ],
+  "status": "success",
+  "vendor": {
+    "grass": {
+      "repo": "https://github.com/AnshuOishik/GraSS",
+      "commit": "6d93700f5a2de8841f7cf2c20064413c80df2c4a",
+      "jvm": "OpenJDK 27"
+    },
+    "libbsc": {
+      "repo": "https://github.com/IlyaGrebnov/libbsc",
+      "commit": "1dc676540cb40a41562af6f2db04bd1adce97f90",
+      "bsc_version": "3.4.0",
+      "note": "GraSS invokes ./bsc e FinalTar.tar FinalBsc.bsc -e2"
+    }
+  },
+  "failures": 0,
+  "finished_utc": "2026-11-03T15:16:03.353187+00:00"
+}
