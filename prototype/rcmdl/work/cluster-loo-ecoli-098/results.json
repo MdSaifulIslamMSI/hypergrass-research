@@ -1,0 +1,488 @@
+[
+  {
+    "index": 0,
+    "target": "00.seq",
+    "target_bytes": 4856080,
+    "target_sha256": "69bffb9d076cbd41fd80bc9a670e3549e4d43d7ee7c89721a0e22d32b95cf05e",
+    "excluded": [
+      "00.seq"
+    ],
+    "panel_genomes": 23,
+    "archive_bytes": 73194,
+    "bpb": 0.12058120953526301,
+    "panel_match_fraction": 0.9846742640154198,
+    "literal_fraction": 0.014727310917447818,
+    "mismatches": 40853,
+    "compress_seconds": 15.176,
+    "compress_wall_seconds": 15.570369500026572,
+    "decompress_seconds": 1.04,
+    "decompress_wall_seconds": 1.5740139000117779,
+    "verified": true
+  },
+  {
+    "index": 1,
+    "target": "01.seq",
+    "target_bytes": 5385437,
+    "target_sha256": "242cac2b93688bf72b1c172c0068514bce8e2d5c73449b44ee85f3a2a9c023e5",
+    "excluded": [
+      "01.seq"
+    ],
+    "panel_genomes": 23,
+    "archive_bytes": 33253,
+    "bpb": 0.049396919878553956,
+    "panel_match_fraction": 0.9939406959918016,
+    "literal_fraction": 0.004107558959467913,
+    "mismatches": 19557,
+    "compress_seconds": 12.316,
+    "compress_wall_seconds": 12.761119300004793,
+    "decompress_seconds": 1.278,
+    "decompress_wall_seconds": 2.050057900021784,
+    "verified": true
+  },
+  {
+    "index": 2,
+    "target": "02.seq",
+    "target_bytes": 4860582,
+    "target_sha256": "c45f0a9162aa507b847fe9f350c2cfbc3a2eeae9cf6fb4723089c6aba51313d8",
+    "excluded": [
+      "02.seq"
+    ],
+    "panel_genomes": 23,
+    "archive_bytes": 72932,
+    "bpb": 0.12003829994021292,
+    "panel_match_fraction": 0.964561856995726,
+    "literal_fraction": 0.030313653797014433,
+    "mismatches": 26187,
+    "compress_seconds": 15.512,
+    "compress_wall_seconds": 16.236021099990467,
+    "decompress_seconds": 1.979,
+    "decompress_wall_seconds": 3.0519827000098303,
+    "verified": true
+  },
+  {
+    "index": 3,
+    "target": "03.seq",
+    "target_bytes": 5421422,
+    "target_sha256": "443a1e75860c27eab11eba98723a7c1c2c01cf6f74f3231c7f51c046d7f6fc05",
+    "excluded": [
+      "03.seq"
+    ],
+    "panel_genomes": 23,
+    "archive_bytes": 116355,
+    "bpb": 0.17169665080489951,
+    "panel_match_fraction": 0.9686051002854971,
+    "literal_fraction": 0.020697521794097562,
+    "mismatches": 67094,
+    "compress_seconds": 19.908,
+    "compress_wall_seconds": 20.906465400010347,
+    "decompress_seconds": 1.424,
+    "decompress_wall_seconds": 2.3158913999795914,
+    "verified": true
+  },
+  {
+    "index": 4,
+    "target": "04.seq",
+    "target_bytes": 5365294,
+    "target_sha256": "01e4860a8ad8afb12c3120805cd51aa90a36d8082659c8b1cbb4280bb9b203e1",
+    "excluded": [
+      "04.seq"
+    ],
+    "panel_genomes": 23,
+    "archive_bytes": 32929,
+    "bpb": 0.04909926650804224,
+    "panel_match_fraction": 0.9932685888229051,
+    "literal_fraction": 0.005048558382821146,
+    "mismatches": 18491,
+    "compress_seconds": 18.099,
+    "compress_wall_seconds": 18.958751300000586,
+    "decompress_seconds": 1.288,
+    "decompress_wall_seconds": 2.0395420999848284,
+    "verified": true
+  },
+  {
+    "index": 5,
+    "target": "05.seq",
+    "target_bytes": 4803482,
+    "target_sha256": "91210fc73ff50272f7dbbdf47351ed2e256056f1caa340bb4a5b779539c78dda",
+    "excluded": [
+      "05.seq"
+    ],
+    "panel_genomes": 23,
+    "archive_bytes": 65978,
+    "bpb": 0.10988362192259699,
+    "panel_match_fraction": 0.9717571544975082,
+    "literal_fraction": 0.025414896943508895,
+    "mismatches": 25838,
+    "compress_seconds": 15.247,
+    "compress_wall_seconds": 15.909448499995051,
+    "decompress_seconds": 1.023,
+    "decompress_wall_seconds": 1.6379579000058584,
+    "verified": true
+  },
+  {
+    "index": 6,
+    "target": "06.seq",
+    "target_bytes": 4561780,
+    "target_sha256": "5762d454f5deaa58c100bbd38366a8a19f92141591a9262724fc80a250faaf15",
+    "excluded": [
+      "06.seq"
+    ],
+    "panel_genomes": 23,
+    "archive_bytes": 71641,
+    "bpb": 0.12563692242940255,
+    "panel_match_fraction": 0.9739803322387314,
+    "literal_fraction": 0.021116537842684215,
+    "mismatches": 34609,
+    "compress_seconds": 20.243,
+    "compress_wall_seconds": 20.949285800015787,
+    "decompress_seconds": 1.077,
+    "decompress_wall_seconds": 1.6369962000171654,
+    "verified": true
+  },
+  {
+    "index": 7,
+    "target": "07.seq",
+    "target_bytes": 4798114,
+    "target_sha256": "6279cf66939987cbf849f8226cfb30ffaad3a1d696a247ff104060eb7d85f5a8",
+    "excluded": [
+      "07.seq"
+    ],
+    "panel_genomes": 23,
+    "archive_bytes": 70697,
+    "bpb": 0.11787464824720713,
+    "panel_match_fraction": 0.985005149940164,
+    "literal_fraction": 0.013712679607028929,
+    "mismatches": 40114,
+    "compress_seconds": 14.249,
+    "compress_wall_seconds": 14.886768099997425,
+    "decompress_seconds": 1.098,
+    "decompress_wall_seconds": 1.8120788999949582,
+    "verified": true
+  },
+  {
+    "index": 8,
+    "target": "08.seq",
+    "target_bytes": 5012486,
+    "target_sha256": "09ee244ec12c92187cd9e39f67b9f4f08070f622c1005b59b90bc878cc824fc1",
+    "excluded": [
+      "08.seq"
+    ],
+    "panel_genomes": 23,
+    "archive_bytes": 154234,
+    "bpb": 0.24615969002207688,
+    "panel_match_fraction": 0.9720980766829075,
+    "literal_fraction": 0.026985611530885075,
+    "mismatches": 97934,
+    "compress_seconds": 12.453,
+    "compress_wall_seconds": 13.045606300001964,
+    "decompress_seconds": 1.041,
+    "decompress_wall_seconds": 1.5439996999921277,
+    "verified": true
+  },
+  {
+    "index": 9,
+    "target": "09.seq",
+    "target_bytes": 5053585,
+    "target_sha256": "7236bdf710505f45a9c63c1e32dad6c4629cc8222a0970432543611ae3d8bcbe",
+    "excluded": [
+      "09.seq"
+    ],
+    "panel_genomes": 23,
+    "archive_bytes": 101599,
+    "bpb": 0.16083473415407082,
+    "panel_match_fraction": 0.9510292198508583,
+    "literal_fraction": 0.02661773770501535,
+    "mismatches": 49589,
+    "compress_seconds": 11.945,
+    "compress_wall_seconds": 12.445602799998596,
+    "decompress_seconds": 1.12,
+    "decompress_wall_seconds": 1.713925600022776,
+    "verified": true
+  },
+  {
+    "index": 10,
+    "target": "10.seq",
+    "target_bytes": 4943650,
+    "target_sha256": "81d27afeab1f0f8322c394cd4edfc968442c5ac95bf7c1c3afe5c0bdaee985f0",
+    "excluded": [
+      "10.seq"
+    ],
+    "panel_genomes": 23,
+    "archive_bytes": 59828,
+    "bpb": 0.09681591536617681,
+    "panel_match_fraction": 0.9786766862540835,
+    "literal_fraction": 0.01921333427730523,
+    "mismatches": 25886,
+    "compress_seconds": 11.629,
+    "compress_wall_seconds": 12.108487499994226,
+    "decompress_seconds": 0.834,
+    "decompress_wall_seconds": 1.3345285000104923,
+    "verified": true
+  },
+  {
+    "index": 11,
+    "target": "11.seq",
+    "target_bytes": 5205165,
+    "target_sha256": "0ea997cd30d3adeca358cf6df64d2547ae8baaab190cabebc910325d8399591c",
+    "excluded": [
+      "11.seq"
+    ],
+    "panel_genomes": 23,
+    "archive_bytes": 184176,
+    "bpb": 0.2830665310321575,
+    "panel_match_fraction": 0.9456729997992379,
+    "literal_fraction": 0.05203581442663201,
+    "mismatches": 94605,
+    "compress_seconds": 11.757,
+    "compress_wall_seconds": 12.267792400001781,
+    "decompress_seconds": 0.743,
+    "decompress_wall_seconds": 1.2739369999908376,
+    "verified": true
+  },
+  {
+    "index": 12,
+    "target": "12.seq",
+    "target_bytes": 5053882,
+    "target_sha256": "5e435b26888919febe9da0ef561de67e315624bff6ee3b60750739bb7e0b8a80",
+    "excluded": [
+      "12.seq"
+    ],
+    "panel_genomes": 23,
+    "archive_bytes": 133278,
+    "bpb": 0.2109712890012074,
+    "panel_match_fraction": 0.9782836243505487,
+    "literal_fraction": 0.02095339780390599,
+    "mismatches": 85570,
+    "compress_seconds": 11.546,
+    "compress_wall_seconds": 12.094825499982107,
+    "decompress_seconds": 1.038,
+    "decompress_wall_seconds": 1.5820970000058878,
+    "verified": true
+  },
+  {
+    "index": 13,
+    "target": "13.seq",
+    "target_bytes": 5185030,
+    "target_sha256": "0e21cbe34659ad36e7f35e6e1a00b1f0ff5a5748dd1c4dd5018f4d8e124ed9b0",
+    "excluded": [
+      "13.seq",
+      "14.seq",
+      "15.seq"
+    ],
+    "panel_genomes": 21,
+    "archive_bytes": 186008,
+    "bpb": 0.2869923606999381,
+    "panel_match_fraction": 0.9280318532390363,
+    "literal_fraction": 0.06392962046506963,
+    "mismatches": 81757,
+    "compress_seconds": 10.441,
+    "compress_wall_seconds": 11.114175499998964,
+    "decompress_seconds": 0.903,
+    "decompress_wall_seconds": 1.4918510999996215,
+    "verified": true
+  },
+  {
+    "index": 14,
+    "target": "14.seq",
+    "target_bytes": 5182390,
+    "target_sha256": "668ee195decd103648d0fc26a7dfffca5015bd8590a868b9d6032dcd2474f739",
+    "excluded": [
+      "13.seq",
+      "14.seq",
+      "15.seq"
+    ],
+    "panel_genomes": 21,
+    "archive_bytes": 186063,
+    "bpb": 0.28722346253369585,
+    "panel_match_fraction": 0.9275758868012635,
+    "literal_fraction": 0.06390217640895417,
+    "mismatches": 81965,
+    "compress_seconds": 11.441,
+    "compress_wall_seconds": 12.110065299988491,
+    "decompress_seconds": 0.865,
+    "decompress_wall_seconds": 1.405905999999959,
+    "verified": true
+  },
+  {
+    "index": 15,
+    "target": "15.seq",
+    "target_bytes": 5256457,
+    "target_sha256": "9bc8243d477f4cbdc8c00a557db120d7685960b1a987d05b130e7d40c3c954e4",
+    "excluded": [
+      "13.seq",
+      "14.seq",
+      "15.seq"
+    ],
+    "panel_genomes": 21,
+    "archive_bytes": 188573,
+    "bpb": 0.2869963551494857,
+    "panel_match_fraction": 0.9274927960030872,
+    "literal_fraction": 0.06432735966450406,
+    "mismatches": 82467,
+    "compress_seconds": 11.025,
+    "compress_wall_seconds": 11.459714399999939,
+    "decompress_seconds": 1.012,
+    "decompress_wall_seconds": 1.549873000010848,
+    "verified": true
+  },
+  {
+    "index": 16,
+    "target": "16.seq",
+    "target_bytes": 5014829,
+    "target_sha256": "8210b512903a3cbd0b749b132beb9bb556445cf1bcd8b9e1bb2db4e16fddb582",
+    "excluded": [
+      "16.seq"
+    ],
+    "panel_genomes": 23,
+    "archive_bytes": 55231,
+    "bpb": 0.08810828843815013,
+    "panel_match_fraction": 0.9740154649340984,
+    "literal_fraction": 0.024991679676415687,
+    "mismatches": 17319,
+    "compress_seconds": 12.006,
+    "compress_wall_seconds": 12.650703099992825,
+    "decompress_seconds": 1.016,
+    "decompress_wall_seconds": 1.5594980000169016,
+    "verified": true
+  },
+  {
+    "index": 17,
+    "target": "17.seq",
+    "target_bytes": 4735631,
+    "target_sha256": "8a4fba17066ab132f07cc68c24389233dd97d159d180fc7c53e50d7e5079c303",
+    "excluded": [
+      "17.seq"
+    ],
+    "panel_genomes": 23,
+    "archive_bytes": 79927,
+    "bpb": 0.13502234443519776,
+    "panel_match_fraction": 0.9747336732950688,
+    "literal_fraction": 0.023759663706906218,
+    "mismatches": 38577,
+    "compress_seconds": 11.775,
+    "compress_wall_seconds": 12.55064250002033,
+    "decompress_seconds": 1.034,
+    "decompress_wall_seconds": 1.7268095000181347,
+    "verified": true
+  },
+  {
+    "index": 18,
+    "target": "18.seq",
+    "target_bytes": 4944989,
+    "target_sha256": "fcf737e5461b4d881fe769f52046c54354badb001e9f4285bb7e56ef6999a7e6",
+    "excluded": [
+      "18.seq"
+    ],
+    "panel_genomes": 23,
+    "archive_bytes": 42777,
+    "bpb": 0.06920460288182644,
+    "panel_match_fraction": 0.982314217483598,
+    "literal_fraction": 0.01667546682105865,
+    "mismatches": 16109,
+    "compress_seconds": 12.59,
+    "compress_wall_seconds": 13.127400299999863,
+    "decompress_seconds": 0.857,
+    "decompress_wall_seconds": 1.367062499979511,
+    "verified": true
+  },
+  {
+    "index": 19,
+    "target": "19.seq",
+    "target_bytes": 4837142,
+    "target_sha256": "69a91bac884b045165e0ae3333e99c31fb4546f7345dfb9d7765dbf5094688ec",
+    "excluded": [
+      "19.seq"
+    ],
+    "panel_genomes": 23,
+    "archive_bytes": 52085,
+    "bpb": 0.08614177545335655,
+    "panel_match_fraction": 0.9783711125288446,
+    "literal_fraction": 0.014315271290361127,
+    "mismatches": 25043,
+    "compress_seconds": 11.796,
+    "compress_wall_seconds": 12.206830000010086,
+    "decompress_seconds": 0.87,
+    "decompress_wall_seconds": 1.3462372000212781,
+    "verified": true
+  },
+  {
+    "index": 20,
+    "target": "20.seq",
+    "target_bytes": 4922292,
+    "target_sha256": "b17a49b4bb7c1abe743db4e5468bbde3ba8254a700445f29ec0b0f9cffe4138c",
+    "excluded": [
+      "20.seq"
+    ],
+    "panel_genomes": 23,
+    "archive_bytes": 96930,
+    "bpb": 0.15753636720454617,
+    "panel_match_fraction": 0.9684451877296186,
+    "literal_fraction": 0.026938263719421766,
+    "mismatches": 47213,
+    "compress_seconds": 11.68,
+    "compress_wall_seconds": 12.228805799997644,
+    "decompress_seconds": 0.913,
+    "decompress_wall_seconds": 1.4342966999975033,
+    "verified": true
+  },
+  {
+    "index": 21,
+    "target": "21.seq",
+    "target_bytes": 5047333,
+    "target_sha256": "cedeeb3747089a2b50602782be45ad3a7032dee8e88732dd5f505a5620034cf2",
+    "excluded": [
+      "21.seq"
+    ],
+    "panel_genomes": 23,
+    "archive_bytes": 93381,
+    "bpb": 0.14800846308337492,
+    "panel_match_fraction": 0.9777504278001867,
+    "literal_fraction": 0.019809471655624862,
+    "mismatches": 51243,
+    "compress_seconds": 11.613,
+    "compress_wall_seconds": 12.084227600018494,
+    "decompress_seconds": 1.13,
+    "decompress_wall_seconds": 1.7033741000050213,
+    "verified": true
+  },
+  {
+    "index": 22,
+    "target": "22.seq",
+    "target_bytes": 4960534,
+    "target_sha256": "9a1952eed96e5cf21ade19a3d98d1b856a148462602dd1ca215b2aa1542df770",
+    "excluded": [
+      "22.seq"
+    ],
+    "panel_genomes": 23,
+    "archive_bytes": 144449,
+    "bpb": 0.23295717759418644,
+    "panel_match_fraction": 0.9684193274353124,
+    "literal_fraction": 0.02673925831372187,
+    "mismatches": 89379,
+    "compress_seconds": 10.817,
+    "compress_wall_seconds": 11.464932100003352,
+    "decompress_seconds": 1.299,
+    "decompress_wall_seconds": 2.015287200018065,
+    "verified": true
+  },
+  {
+    "index": 23,
+    "target": "23.seq",
+    "target_bytes": 4700637,
+    "target_sha256": "3c597802a018dfe108902739790858e282ffb4263dae537ea8b69e7608df541d",
+    "excluded": [
+      "23.seq"
+    ],
+    "panel_genomes": 23,
+    "archive_bytes": 36178,
+    "bpb": 0.06157122960143487,
+    "panel_match_fraction": 0.9892121004025625,
+    "literal_fraction": 0.007663216708714159,
+    "mismatches": 18904,
+    "compress_seconds": 12.631,
+    "compress_wall_seconds": 13.213243600010173,
+    "decompress_seconds": 0.955,
+    "decompress_wall_seconds": 1.5064152000122704,
+    "verified": true
+  }
+]

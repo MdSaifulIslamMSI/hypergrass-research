@@ -1,0 +1,13 @@
+{
+  "genomes": 24,
+  "order": "prim.txt",
+  "fixed_anchors": 4,
+  "k": 16,
+  "step": 8,
+  "target_bases": 120108223,
+  "archive_bytes": 6621279,
+  "bpb": 0.4410208616607374,
+  "first_genome_bytes": 1110848,
+  "marginal_bytes": 5510431,
+  "verified": true
+}

@@ -1,0 +1,13 @@
+{
+  "genomes": 24,
+  "order": "ecoli-cluster-prim.txt",
+  "fixed_anchors": 0,
+  "k": 16,
+  "step": 8,
+  "target_bases": 120108223,
+  "archive_bytes": 3982813,
+  "bpb": 0.265281620226785,
+  "first_genome_bytes": 1110848,
+  "marginal_bytes": 2871965,
+  "verified": true
+}

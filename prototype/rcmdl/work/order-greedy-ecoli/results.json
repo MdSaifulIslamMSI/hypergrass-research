@@ -1,0 +1,194 @@
+[
+  {
+    "step": 0,
+    "target": "06.seq",
+    "archive_bytes": 1110848,
+    "cumulative_bytes": 1110848,
+    "panel_genomes": 0,
+    "evaluated": 24
+  },
+  {
+    "step": 1,
+    "target": "19.seq",
+    "archive_bytes": 171292,
+    "cumulative_bytes": 1282140,
+    "panel_genomes": 1,
+    "evaluated": 8
+  },
+  {
+    "step": 2,
+    "target": "05.seq",
+    "archive_bytes": 98206,
+    "cumulative_bytes": 1380346,
+    "panel_genomes": 2,
+    "evaluated": 8
+  },
+  {
+    "step": 3,
+    "target": "02.seq",
+    "archive_bytes": 100401,
+    "cumulative_bytes": 1480747,
+    "panel_genomes": 3,
+    "evaluated": 8
+  },
+  {
+    "step": 4,
+    "target": "23.seq",
+    "archive_bytes": 137010,
+    "cumulative_bytes": 1617757,
+    "panel_genomes": 4,
+    "evaluated": 8
+  },
+  {
+    "step": 5,
+    "target": "10.seq",
+    "archive_bytes": 71537,
+    "cumulative_bytes": 1689294,
+    "panel_genomes": 5,
+    "evaluated": 8
+  },
+  {
+    "step": 6,
+    "target": "00.seq",
+    "archive_bytes": 129017,
+    "cumulative_bytes": 1818311,
+    "panel_genomes": 6,
+    "evaluated": 8
+  },
+  {
+    "step": 7,
+    "target": "21.seq",
+    "archive_bytes": 113959,
+    "cumulative_bytes": 1932270,
+    "panel_genomes": 7,
+    "evaluated": 8
+  },
+  {
+    "step": 8,
+    "target": "07.seq",
+    "archive_bytes": 115259,
+    "cumulative_bytes": 2047529,
+    "panel_genomes": 8,
+    "evaluated": 8
+  },
+  {
+    "step": 9,
+    "target": "17.seq",
+    "archive_bytes": 78608,
+    "cumulative_bytes": 2126137,
+    "panel_genomes": 9,
+    "evaluated": 8
+  },
+  {
+    "step": 10,
+    "target": "09.seq",
+    "archive_bytes": 122694,
+    "cumulative_bytes": 2248831,
+    "panel_genomes": 10,
+    "evaluated": 8
+  },
+  {
+    "step": 11,
+    "target": "20.seq",
+    "archive_bytes": 124023,
+    "cumulative_bytes": 2372854,
+    "panel_genomes": 11,
+    "evaluated": 8
+  },
+  {
+    "step": 12,
+    "target": "03.seq",
+    "archive_bytes": 166251,
+    "cumulative_bytes": 2539105,
+    "panel_genomes": 12,
+    "evaluated": 8
+  },
+  {
+    "step": 13,
+    "target": "08.seq",
+    "archive_bytes": 211307,
+    "cumulative_bytes": 2750412,
+    "panel_genomes": 13,
+    "evaluated": 8
+  },
+  {
+    "step": 14,
+    "target": "12.seq",
+    "archive_bytes": 188037,
+    "cumulative_bytes": 2938449,
+    "panel_genomes": 14,
+    "evaluated": 8
+  },
+  {
+    "step": 15,
+    "target": "22.seq",
+    "archive_bytes": 181543,
+    "cumulative_bytes": 3119992,
+    "panel_genomes": 15,
+    "evaluated": 8
+  },
+  {
+    "step": 16,
+    "target": "01.seq",
+    "archive_bytes": 186527,
+    "cumulative_bytes": 3306519,
+    "panel_genomes": 16,
+    "evaluated": 8
+  },
+  {
+    "step": 17,
+    "target": "04.seq",
+    "archive_bytes": 31123,
+    "cumulative_bytes": 3337642,
+    "panel_genomes": 17,
+    "evaluated": 7
+  },
+  {
+    "step": 18,
+    "target": "11.seq",
+    "archive_bytes": 192118,
+    "cumulative_bytes": 3529760,
+    "panel_genomes": 18,
+    "evaluated": 6
+  },
+  {
+    "step": 19,
+    "target": "18.seq",
+    "archive_bytes": 205860,
+    "cumulative_bytes": 3735620,
+    "panel_genomes": 19,
+    "evaluated": 5
+  },
+  {
+    "step": 20,
+    "target": "16.seq",
+    "archive_bytes": 60049,
+    "cumulative_bytes": 3795669,
+    "panel_genomes": 20,
+    "evaluated": 4
+  },
+  {
+    "step": 21,
+    "target": "13.seq",
+    "archive_bytes": 186056,
+    "cumulative_bytes": 3981725,
+    "panel_genomes": 21,
+    "evaluated": 3
+  },
+  {
+    "step": 22,
+    "target": "14.seq",
+    "archive_bytes": 3288,
+    "cumulative_bytes": 3985013,
+    "panel_genomes": 22,
+    "evaluated": 2
+  },
+  {
+    "step": 23,
+    "target": "15.seq",
+    "archive_bytes": 5236,
+    "cumulative_bytes": 3990249,
+    "panel_genomes": 23,
+    "evaluated": 1
+  }
+]

@@ -1,0 +1,13 @@
+{
+  "genomes": 25,
+  "order": "cluster-prim.txt",
+  "fixed_anchors": 0,
+  "k": 16,
+  "step": 8,
+  "target_bases": 71043355,
+  "archive_bytes": 1237522,
+  "bpb": 0.13935400432594997,
+  "first_genome_bytes": 652519,
+  "marginal_bytes": 585003,
+  "verified": true
+}

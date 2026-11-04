@@ -1,0 +1,191 @@
+[
+  {
+    "config": "default",
+    "opts": [
+      "-a"
+    ],
+    "base_bytes": 2145655,
+    "full_bytes": 2274944,
+    "marginal_bytes": 129289,
+    "bpb": 0.35925598784872315,
+    "create_seconds": 1.7281724999775179,
+    "append_seconds": 0.5149491000047419
+  },
+  {
+    "config": "fallback",
+    "opts": [
+      "-a",
+      "-f",
+      "0.05"
+    ],
+    "base_bytes": 2146242,
+    "full_bytes": 2275529,
+    "marginal_bytes": 129287,
+    "bpb": 0.3592504304387679,
+    "create_seconds": 1.9807756999798585,
+    "append_seconds": 0.5110344999993686
+  },
+  {
+    "config": "min15",
+    "opts": [
+      "-a",
+      "-l",
+      "15"
+    ],
+    "base_bytes": 2144871,
+    "full_bytes": 2275586,
+    "marginal_bytes": 130715,
+    "bpb": 0.3632184211467785,
+    "create_seconds": 1.7303715999878477,
+    "append_seconds": 0.5013906999956816
+  },
+  {
+    "config": "min15-fallback",
+    "opts": [
+      "-a",
+      "-l",
+      "15",
+      "-f",
+      "0.05"
+    ],
+    "base_bytes": 2133896,
+    "full_bytes": 2264614,
+    "marginal_bytes": 130718,
+    "bpb": 0.3632267572617113,
+    "create_seconds": 1.9595257999899331,
+    "append_seconds": 0.4897687000047881
+  },
+  {
+    "config": "seg50k",
+    "opts": [
+      "-a",
+      "-s",
+      "50000"
+    ],
+    "base_bytes": 1922495,
+    "full_bytes": 2020368,
+    "marginal_bytes": 97873,
+    "bpb": 0.2719601922724909,
+    "create_seconds": 1.6069986999791581,
+    "append_seconds": 0.5197470999846701
+  },
+  {
+    "config": "seg100k",
+    "opts": [
+      "-a",
+      "-s",
+      "100000"
+    ],
+    "base_bytes": 2031055,
+    "full_bytes": 2167305,
+    "marginal_bytes": 136250,
+    "bpb": 0.3785985531977858,
+    "create_seconds": 1.6370002000185195,
+    "append_seconds": 0.48573169999872334
+  },
+  {
+    "config": "seg200k",
+    "opts": [
+      "-a",
+      "-s",
+      "200000"
+    ],
+    "base_bytes": 1933675,
+    "full_bytes": 2048246,
+    "marginal_bytes": 114571,
+    "bpb": 0.3183590079884295,
+    "create_seconds": 1.6709311000013258,
+    "append_seconds": 0.5235447000013664
+  },
+  {
+    "config": "seg500k",
+    "opts": [
+      "-a",
+      "-s",
+      "500000"
+    ],
+    "base_bytes": 1866411,
+    "full_bytes": 2001577,
+    "marginal_bytes": 135166,
+    "bpb": 0.3755864370020691,
+    "create_seconds": 2.1633566000091378,
+    "append_seconds": 0.7535005999961868
+  },
+  {
+    "config": "seg1m",
+    "opts": [
+      "-a",
+      "-s",
+      "1000000"
+    ],
+    "base_bytes": 3393863,
+    "full_bytes": 3660955,
+    "marginal_bytes": 267092,
+    "bpb": 0.7421698698767193,
+    "create_seconds": 6.048419800004922,
+    "append_seconds": 4.089911400020355
+  },
+  {
+    "config": "seg1m-min15",
+    "opts": [
+      "-a",
+      "-s",
+      "1000000",
+      "-l",
+      "15"
+    ],
+    "base_bytes": 3486428,
+    "full_bytes": 3759487,
+    "marginal_bytes": 273059,
+    "bpb": 0.7587504024780491,
+    "create_seconds": 5.877542500005802,
+    "append_seconds": 4.123557799990522
+  },
+  {
+    "config": "k25-seg200k",
+    "opts": [
+      "-a",
+      "-k",
+      "25",
+      "-s",
+      "200000"
+    ],
+    "base_bytes": 1934317,
+    "full_bytes": 2050639,
+    "marginal_bytes": 116322,
+    "bpb": 0.3232245204042043,
+    "create_seconds": 1.6480470999958925,
+    "append_seconds": 0.4613139000139199
+  },
+  {
+    "config": "plain-seg200k",
+    "opts": [
+      "-s",
+      "200000"
+    ],
+    "base_bytes": 1933675,
+    "full_bytes": 2048246,
+    "marginal_bytes": 114571,
+    "bpb": 0.3183590079884295,
+    "create_seconds": 1.6876551000168547,
+    "append_seconds": 0.3888623000239022
+  },
+  {
+    "config": "seg200k-min15-fallback",
+    "opts": [
+      "-a",
+      "-s",
+      "200000",
+      "-l",
+      "15",
+      "-f",
+      "0.05"
+    ],
+    "base_bytes": 1934441,
+    "full_bytes": 2050428,
+    "marginal_bytes": 115987,
+    "bpb": 0.32229365423670886,
+    "create_seconds": 1.892343699990306,
+    "append_seconds": 0.5077565999818034
+  }
+]

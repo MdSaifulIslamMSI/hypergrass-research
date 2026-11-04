@@ -1,0 +1,375 @@
+[
+  {
+    "index": 0,
+    "target": "00.fa",
+    "target_bytes": 4417526,
+    "excluded": [
+      "09",
+      "10",
+      "16",
+      "19",
+      "21"
+    ],
+    "panel_genomes": 18,
+    "base_bytes": 1515127,
+    "marginal_bytes": 136253,
+    "bpb": 0.24674987764644735,
+    "create_seconds": 3.663569299998926,
+    "append_seconds": 0.9180923000094481,
+    "verified": true
+  },
+  {
+    "index": 1,
+    "target": "01.fa",
+    "target_bytes": 4383276,
+    "excluded": [],
+    "panel_genomes": 23,
+    "base_bytes": 1230225,
+    "marginal_bytes": 2957,
+    "bpb": 0.005396876673976268,
+    "create_seconds": 3.3716655999887735,
+    "append_seconds": 0.9187363999953959,
+    "verified": true
+  },
+  {
+    "index": 2,
+    "target": "02.fa",
+    "target_bytes": 4433913,
+    "excluded": [
+      "06"
+    ],
+    "panel_genomes": 22,
+    "base_bytes": 1222678,
+    "marginal_bytes": 55516,
+    "bpb": 0.1001661512077481,
+    "create_seconds": 4.817187599983299,
+    "append_seconds": 0.922902200021781,
+    "verified": true
+  },
+  {
+    "index": 3,
+    "target": "03.fa",
+    "target_bytes": 4367421,
+    "excluded": [
+      "08",
+      "18"
+    ],
+    "panel_genomes": 21,
+    "base_bytes": 1227663,
+    "marginal_bytes": 3565,
+    "bpb": 0.006530169635581273,
+    "create_seconds": 3.18109899997944,
+    "append_seconds": 0.7932703999977093,
+    "verified": true
+  },
+  {
+    "index": 4,
+    "target": "04.fa",
+    "target_bytes": 4410864,
+    "excluded": [
+      "15"
+    ],
+    "panel_genomes": 22,
+    "base_bytes": 1221397,
+    "marginal_bytes": 22361,
+    "bpb": 0.04055622662589461,
+    "create_seconds": 3.56246960000135,
+    "append_seconds": 0.7859047000238206,
+    "verified": true
+  },
+  {
+    "index": 5,
+    "target": "05.fa",
+    "target_bytes": 4393628,
+    "excluded": [],
+    "panel_genomes": 23,
+    "base_bytes": 1228778,
+    "marginal_bytes": 4071,
+    "bpb": 0.0074125529061631985,
+    "create_seconds": 3.799972800014075,
+    "append_seconds": 0.8902975999808405,
+    "verified": true
+  },
+  {
+    "index": 6,
+    "target": "06.fa",
+    "target_bytes": 4431126,
+    "excluded": [
+      "02"
+    ],
+    "panel_genomes": 22,
+    "base_bytes": 1222678,
+    "marginal_bytes": 41358,
+    "bpb": 0.07466815432465698,
+    "create_seconds": 3.818656599993119,
+    "append_seconds": 0.8206438000197522,
+    "verified": true
+  },
+  {
+    "index": 7,
+    "target": "07.fa",
+    "target_bytes": 4395926,
+    "excluded": [],
+    "panel_genomes": 23,
+    "base_bytes": 1229599,
+    "marginal_bytes": 3342,
+    "bpb": 0.006081995010835032,
+    "create_seconds": 3.472935099998722,
+    "append_seconds": 0.8642623999912757,
+    "verified": true
+  },
+  {
+    "index": 8,
+    "target": "08.fa",
+    "target_bytes": 4367406,
+    "excluded": [
+      "03",
+      "18"
+    ],
+    "panel_genomes": 21,
+    "base_bytes": 1227663,
+    "marginal_bytes": 3528,
+    "bpb": 0.0064624172792728685,
+    "create_seconds": 3.544757900002878,
+    "append_seconds": 0.5907418999995571,
+    "verified": true
+  },
+  {
+    "index": 9,
+    "target": "09.fa",
+    "target_bytes": 4423136,
+    "excluded": [
+      "00",
+      "10",
+      "16",
+      "19",
+      "21"
+    ],
+    "panel_genomes": 18,
+    "base_bytes": 1515127,
+    "marginal_bytes": 136181,
+    "bpb": 0.24630669280799866,
+    "create_seconds": 3.761903500009794,
+    "append_seconds": 0.8609209999849554,
+    "verified": true
+  },
+  {
+    "index": 10,
+    "target": "10.fa",
+    "target_bytes": 4416237,
+    "excluded": [
+      "00",
+      "09",
+      "16",
+      "19",
+      "21"
+    ],
+    "panel_genomes": 18,
+    "base_bytes": 1515127,
+    "marginal_bytes": 152821,
+    "bpb": 0.2768347803797668,
+    "create_seconds": 3.3039966999785975,
+    "append_seconds": 0.8060272000147961,
+    "verified": true
+  },
+  {
+    "index": 11,
+    "target": "11.fa",
+    "target_bytes": 4409664,
+    "excluded": [],
+    "panel_genomes": 23,
+    "base_bytes": 1210547,
+    "marginal_bytes": 66579,
+    "bpb": 0.12078743414464231,
+    "create_seconds": 3.616705799999181,
+    "append_seconds": 0.7571563999808859,
+    "verified": true
+  },
+  {
+    "index": 12,
+    "target": "12.fa",
+    "target_bytes": 4420360,
+    "excluded": [],
+    "panel_genomes": 23,
+    "base_bytes": 1199340,
+    "marginal_bytes": 33514,
+    "bpb": 0.0606538833941127,
+    "create_seconds": 4.268551699991804,
+    "append_seconds": 0.7578944999841042,
+    "verified": true
+  },
+  {
+    "index": 13,
+    "target": "13.fa",
+    "target_bytes": 4425035,
+    "excluded": [],
+    "panel_genomes": 23,
+    "base_bytes": 1225352,
+    "marginal_bytes": 35085,
+    "bpb": 0.06343000676830805,
+    "create_seconds": 4.231803100003162,
+    "append_seconds": 0.8026785999827553,
+    "verified": true
+  },
+  {
+    "index": 14,
+    "target": "14.fa",
+    "target_bytes": 4393395,
+    "excluded": [],
+    "panel_genomes": 23,
+    "base_bytes": 1230280,
+    "marginal_bytes": 2567,
+    "bpb": 0.004674289473175073,
+    "create_seconds": 3.9311495999863837,
+    "append_seconds": 0.7622226999956183,
+    "verified": true
+  },
+  {
+    "index": 15,
+    "target": "15.fa",
+    "target_bytes": 4408964,
+    "excluded": [
+      "04"
+    ],
+    "panel_genomes": 22,
+    "base_bytes": 1221397,
+    "marginal_bytes": 22840,
+    "bpb": 0.041442842354802625,
+    "create_seconds": 3.1564355999871623,
+    "append_seconds": 0.7559828000084963,
+    "verified": true
+  },
+  {
+    "index": 16,
+    "target": "16.fa",
+    "target_bytes": 4414581,
+    "excluded": [
+      "00",
+      "09",
+      "10",
+      "19",
+      "21"
+    ],
+    "panel_genomes": 18,
+    "base_bytes": 1515127,
+    "marginal_bytes": 136653,
+    "bpb": 0.24763935694010372,
+    "create_seconds": 3.8364792999927886,
+    "append_seconds": 0.7516808000218589,
+    "verified": true
+  },
+  {
+    "index": 17,
+    "target": "17.fa",
+    "target_bytes": 4404196,
+    "excluded": [
+      "23"
+    ],
+    "panel_genomes": 22,
+    "base_bytes": 1225197,
+    "marginal_bytes": 4610,
+    "bpb": 0.008373832590556823,
+    "create_seconds": 3.7536559000145644,
+    "append_seconds": 0.9308241000107955,
+    "verified": true
+  },
+  {
+    "index": 18,
+    "target": "18.fa",
+    "target_bytes": 4363903,
+    "excluded": [
+      "03",
+      "08"
+    ],
+    "panel_genomes": 21,
+    "base_bytes": 1227663,
+    "marginal_bytes": 3501,
+    "bpb": 0.006418107826869662,
+    "create_seconds": 3.1708202000008896,
+    "append_seconds": 0.9555263000074774,
+    "verified": true
+  },
+  {
+    "index": 19,
+    "target": "19.fa",
+    "target_bytes": 4421184,
+    "excluded": [
+      "00",
+      "09",
+      "10",
+      "16",
+      "21"
+    ],
+    "panel_genomes": 18,
+    "base_bytes": 1515127,
+    "marginal_bytes": 136005,
+    "bpb": 0.24609697311851306,
+    "create_seconds": 3.8983050999813713,
+    "append_seconds": 0.6842192999902181,
+    "verified": true
+  },
+  {
+    "index": 20,
+    "target": "20.fa",
+    "target_bytes": 4421095,
+    "excluded": [
+      "22"
+    ],
+    "panel_genomes": 22,
+    "base_bytes": 1221318,
+    "marginal_bytes": 35842,
+    "bpb": 0.06485633084111515,
+    "create_seconds": 4.04673110001022,
+    "append_seconds": 0.7217246000072919,
+    "verified": true
+  },
+  {
+    "index": 21,
+    "target": "21.fa",
+    "target_bytes": 4401419,
+    "excluded": [
+      "00",
+      "09",
+      "10",
+      "16",
+      "19"
+    ],
+    "panel_genomes": 18,
+    "base_bytes": 1515127,
+    "marginal_bytes": 93521,
+    "bpb": 0.16998336218387752,
+    "create_seconds": 3.6708707000070717,
+    "append_seconds": 0.9195951000147033,
+    "verified": true
+  },
+  {
+    "index": 22,
+    "target": "22.fa",
+    "target_bytes": 4426369,
+    "excluded": [
+      "20"
+    ],
+    "panel_genomes": 22,
+    "base_bytes": 1221318,
+    "marginal_bytes": 35882,
+    "bpb": 0.06485134881434422,
+    "create_seconds": 3.30672580000828,
+    "append_seconds": 0.8517010000068694,
+    "verified": true
+  },
+  {
+    "index": 23,
+    "target": "23.fa",
+    "target_bytes": 4394511,
+    "excluded": [
+      "17"
+    ],
+    "panel_genomes": 22,
+    "base_bytes": 1225197,
+    "marginal_bytes": 20357,
+    "bpb": 0.03705895832323551,
+    "create_seconds": 3.538447200000519,
+    "append_seconds": 0.7871227000141516,
+    "verified": true
+  }
+]
