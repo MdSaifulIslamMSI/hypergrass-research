@@ -37,17 +37,17 @@ cp "$EXTRACT/benchmarks/specialized/runs/full-all-methods-v1/input.seq" benchmar
 cp "$EXTRACT/prototype/rcmdl/work/mtb/panel.fasta" prototype/rcmdl/work/mtb/panel.fasta
 cp "$EXTRACT/prototype/rcmdl/work/saureus/panel.fasta" prototype/rcmdl/work/saureus/panel.fasta
 
-python prototype/rcmdl/split_panel.py \
+python3 prototype/rcmdl/split_panel.py \
   --fasta benchmarks/pangenome/data/pangenome.fasta \
   --out prototype/rcmdl/work/genomes
-python prototype/rcmdl/split_input.py \
+python3 prototype/rcmdl/split_input.py \
   --input benchmarks/specialized/runs/full-all-methods-v1/input.seq \
   --manifest benchmarks/pangenome/manifest.json \
   --out prototype/rcmdl/work/genomes_masked
-python prototype/rcmdl/split_panel.py \
+python3 prototype/rcmdl/split_panel.py \
   --fasta prototype/rcmdl/work/mtb/panel.fasta \
   --out prototype/rcmdl/work/mtb/genomes
-python prototype/rcmdl/split_panel.py \
+python3 prototype/rcmdl/split_panel.py \
   --fasta prototype/rcmdl/work/saureus/panel.fasta \
   --out prototype/rcmdl/work/saureus/genomes
 
@@ -58,7 +58,7 @@ cat <<'EOF'
 Ready.
 
 Canonical E. coli leave-one-out run:
-  python prototype/rcmdl/run.py \
+  python3 prototype/rcmdl/run.py \
     --genomes prototype/rcmdl/work/genomes_masked \
     --out prototype/rcmdl/work/runs/loo24-masked \
     --heap 1200m

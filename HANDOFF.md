@@ -104,17 +104,20 @@ The result/report JSONs are the evidence. The bulk files are inputs and intermed
 3. **Free, no credit card: GitHub Codespaces.** Open the repository, choose
    **Code → Codespaces → Create codespace on master**. The included
    `.devcontainer/` downloads and verifies the 122 MiB handoff, rebuilds the per-genome
-   files, and compiles `Rcmdl.java` automatically. GitHub Free includes **120 core-hours per
-   month**; a 2-core/8 GB machine is roughly 60 hours/month, a 4-core/8 GB machine roughly
-   30 hours/month. The 32 GB disk is enough for the compact handoff and one experiment at a
-   time. It is not intended to hold the full 29 GB benchmark corpus.
+   files, and compiles `Rcmdl.java` automatically. The Student Developer Pack includes
+   **GitHub Pro**, so the Codespaces quota is **180 core-hours and 20 GB of storage per
+   month** (GitHub Free is 120 core-hours). The codec is single-threaded, so choose the
+   **2-core / 8 GB / 32 GB** machine: 180 core-hours ÷ 2 ≈ **90 wall-clock hours per
+   month**. Stop the codespace when idle; a stopped codespace consumes storage but no
+   compute. The disk is enough for the compact handoff and one experiment at a time, not
+   the full 29 GB benchmark corpus.
 4. **Free persistent VM, if you can pass card verification: Oracle Cloud Always Free.**
    The Ampere A1 allowance is 4 ARM OCPUs, 24 GB RAM, 200 GB storage, and 10 TB/month
    egress at no charge within the always-free limits. A card is used for identity
    verification, not a charge. Build AGC from source on ARM (or run the x86 binary under
    emulation); RC-MDL and HyperGraSS are Java and portable. Capacity varies by region.
-5. **Student?** The GitHub Student Developer Pack may add Codespaces hours and cloud
-   credits if you are eligible.
+5. **Another student option: the Pack's $100 Microsoft Azure credit.** This is a fallback
+   only if you need a persistent VM; Codespaces is simpler and already configured.
 6. **Paid only if the free quota is insufficient: Google Compute Engine.** For reference,
    `e2-standard-4` (4 vCPU, 16 GB) or `e2-custom-4-8192` (4 vCPU, 8 GB), 100 GB
    `pd-balanced`, `us-central1`, Spot. Roughly $0.04–0.06/hr Spot, $0.13–0.16/hr on-demand,
