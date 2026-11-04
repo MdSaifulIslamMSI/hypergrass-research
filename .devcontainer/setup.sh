@@ -11,6 +11,7 @@ EXPECTED="a3842a892560a261df7d62704979479a4f9d2f24a043a8ad0f48370c8f50046f"
 if [ ! -f "$ASSET" ]; then
   echo "Downloading the verified handoff release..."
   gh release download handoff-v1 \
+    --repo MdSaifulIslamMSI/hypergrass-research \
     --pattern 'hypergrass-handoff-v1.tar.gz' \
     --dir /tmp \
     --clobber
