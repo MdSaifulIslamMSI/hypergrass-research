@@ -43,7 +43,12 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--genomes", type=Path, default=Path("prototype/rcmdl/work/genomes"))
     parser.add_argument("--out", type=Path, required=True)
-    parser.add_argument("--java", default=str(Path.home() / "tools/jdk-27/bin/java.exe"))
+    default_java = Path.home() / "tools/jdk-27/bin/java.exe"
+    parser.add_argument(
+        "--java",
+        default=str(default_java) if default_java.exists() else "java",
+        help="Java executable (defaults to the pinned JDK 27 on Windows, else PATH)",
+    )
     parser.add_argument("--heap", default="1500m")
     parser.add_argument("--mode", choices=["loo", "self", "both"], default="both")
     parser.add_argument("--k", type=int, default=16)

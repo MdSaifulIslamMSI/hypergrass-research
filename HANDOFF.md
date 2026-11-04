@@ -95,30 +95,41 @@ The ~29 GB under `benchmarks/**/data` and `benchmarks/**/runs` is reproducible:
 
 The result/report JSONs are the evidence. The bulk files are inputs and intermediates.
 
-## Recommended way to continue
+## Recommended way to continue (free first)
 
 1. **Private GitHub repository** — done. Code, docs, result JSON, manifests, and restore
    scripts are versioned and available on any machine.
 2. **GitHub Release asset** — done. The canonical raw inputs travel as one verified
    `tar.gz`, so no laptop copy is the only copy.
-3. **Compute: Google Compute Engine VM.** For this workload (Java codec with 1.2 GB heap,
-   24-genome panels, AGC runs), use:
-   - `e2-standard-4` (4 vCPU, 16 GB RAM) or `e2-custom-4-8192` (4 vCPU, 8 GB RAM),
-   - 100 GB `pd-balanced` persistent disk,
-   - `us-central1` (cheap, close to GitHub/GCS; move the region if latency matters).
-   On-demand is roughly $0.13–0.16/hr; Spot is roughly $0.04–0.06/hr; the 100 GB disk is
-   roughly $10/month. A Spot VM is appropriate because runs checkpoint per target and can
-   be restarted.
-4. **Bulk storage only if exact run artifacts must be kept: Google Cloud Storage.** Standard
+3. **Free, no credit card: GitHub Codespaces.** Open the repository, choose
+   **Code → Codespaces → Create codespace on master**. The included
+   `.devcontainer/` downloads and verifies the 122 MiB handoff, rebuilds the per-genome
+   files, and compiles `Rcmdl.java` automatically. GitHub Free includes **120 core-hours per
+   month**; a 2-core/8 GB machine is roughly 60 hours/month, a 4-core/8 GB machine roughly
+   30 hours/month. The 32 GB disk is enough for the compact handoff and one experiment at a
+   time. It is not intended to hold the full 29 GB benchmark corpus.
+4. **Free persistent VM, if you can pass card verification: Oracle Cloud Always Free.**
+   The Ampere A1 allowance is 4 ARM OCPUs, 24 GB RAM, 200 GB storage, and 10 TB/month
+   egress at no charge within the always-free limits. A card is used for identity
+   verification, not a charge. Build AGC from source on ARM (or run the x86 binary under
+   emulation); RC-MDL and HyperGraSS are Java and portable. Capacity varies by region.
+5. **Student?** The GitHub Student Developer Pack may add Codespaces hours and cloud
+   credits if you are eligible.
+6. **Paid only if the free quota is insufficient: Google Compute Engine.** For reference,
+   `e2-standard-4` (4 vCPU, 16 GB) or `e2-custom-4-8192` (4 vCPU, 8 GB), 100 GB
+   `pd-balanced`, `us-central1`, Spot. Roughly $0.04–0.06/hr Spot, $0.13–0.16/hr on-demand,
+   plus about $10/month for the disk.
+7. **Bulk storage only if exact run artifacts must be kept: Google Cloud Storage.** Standard
    is roughly $0.02/GB/month (29 GB ≈ $0.58/month), Nearline ≈ $0.01/GB/month, Coldline
-   ≈ $0.004/GB/month. Re-fetching the public panels on the VM is cheaper than storing them;
-   keep GCS for artifacts that cannot be regenerated.
-5. **Alternative for code/tests only:** GitHub Codespaces (4-core, 8 GB RAM, 32 GB storage)
-   is fine for editing and small tests, but not for 29 GB benchmarks or long AGC sweeps.
+   ≈ $0.004/GB/month. Do not pay to store regenerable panels; re-fetch them on the compute
+   machine instead.
+8. **Local fallback:** the laptop now has ~190 GB free and the remaining checkout is only
+   ~11 MB. Fetch one panel at a time, keep the result JSON, and delete the bulk outputs
+   afterwards.
 
-**Current GCP constraint:** project `billy-b674c` has billing disabled and the Compute
-Engine API is not enabled. Creating a GCS bucket or GCE VM requires enabling billing first
-(and enabling the Compute Engine API). GitHub needs no billing and is already working.
+**GCP note:** project `billy-b674c` has billing disabled and the Compute Engine API is not
+enabled. That only blocks the paid GCE/GCS path; GitHub Codespaces needs no billing and is
+already available.
 
 ## What was removed from the laptop
 
