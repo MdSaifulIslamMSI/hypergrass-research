@@ -1,6 +1,6 @@
 # RC-MDL prototype: first measurements
 
-Status: research prototype, uncommitted. Every archive below was decompressed and compared
+Status: research prototype. Every archive below was decompressed and compared
 byte-for-byte with its target (SHA-256); no number is reported from compression alone.
 
 ## What it is
@@ -320,15 +320,60 @@ panel's clonality is part of the result.
 
 ### *Staphylococcus aureus*
 
-Fetched: 25 complete RefSeq chromosomes, 71,043,355 bases. LOO measurement pending.
+Fetched: 25 complete RefSeq chromosomes, 71,043,355 bases (manifest in
+`work/saureus/manifest.json`; panel SHA-256
+`9413289ee51e253b6adf6c389d04f20765ad1d5ac815b33d2552d9b7732adbd5`).
+
+| Metric | Value |
+|---|---:|
+| Genomes / bases | 25 / 71,043,355 |
+| Self-contained (S) | 16,802,462 B / 1.8921 bits/base |
+| Leave-one-out (R) | **267,412 B / 0.03011 bits/base** |
+| Median per-genome LOO | 0.01069 bits/base |
+| p10 / p90 per-genome LOO | 0.00316 / 0.05746 bits/base |
+| Panel coverage | 99.598% |
+| Literal bases | 0.312% |
+| Mismatch bases | 136,181 (0.192% of matched bases) |
+| Round-trip | 25/25 byte-exact |
+| AGC 3.2.5 LOO marginal | 3,539,729 B / 0.3986 bits/base |
+| AGC / RC-MDL | **13.24x larger** |
+| Targets where AGC is smaller | 0 / 25 |
+
+The self-contained rate is flat across the three species (1.892–1.948 bits/base); the
+reference-conditioned rate is not (0.00931–0.1186). That is the expected signature of a
+relative-LZ codec: the fallback is a constant floor, while the R-mode result is set by how
+much of the target the panel already explains.
+
+The *S. aureus* LOO distribution is strongly skewed. Twenty-one of 25 targets are below
+0.03 bits/base, but targets 10 (0.2396) and 24 (0.2018) alone account for 57% of the
+267,412 B total. The mean (0.03062) is therefore less representative than the median
+(0.01069); both are reported, and the per-target table is in
+`work/runs/loo25-saureus/results.json`. The first 21 targets reproduce the earlier
+interrupted run exactly (same archive bytes, bits/base, and target SHA-256); the remaining
+four were completed in this run.
+
+AGC was swept on targets 0, 10, and 24 across the same 13 configurations used for *E. coli*
+and *M. tuberculosis*. Its adaptive default (`-a`) had the smallest total marginal on the
+three-target sample (541,013 B), so the full table uses it. The segment-size settings that
+won on the other two species are worse here, which is itself a caution: "AGC at its best"
+must be swept per corpus. For context, AGC's full 25-genome archive is 2,145,694 B
+(0.2416 bits/base); that is a collection total, not a leave-one-out marginal, and is not
+directly comparable to the 267,412 B LOO total.
+
+The margin over AGC is larger than for *E. coli* (4.7x) or *M. tuberculosis* (11.3x)
+because this panel contains several near-identical chromosomes. RC-MDL represents a target
+as a small set of long panel copies plus its private differences; AGC's block model still
+pays a larger marginal for each appended genome. The ratio is a property of this panel, not
+a species-wide constant.
 
 ## Limits and threats to validity
 
-- **Near-duplicate panel members.** Three genomes are near-identical to others; the mean is
-  sensitive to them. Report medians and per-genome ranges, and repeat on a less clonal panel.
-- **One species, one panel.** *E. coli* is the easy case for a mosaic parser. The next panels
-  are *M. tuberculosis* (72 genomes, 317 Mb) and *S. aureus* (72 genomes, 203 Mb), which have
-  different divergence and repeat structure.
+- **Near-duplicate panel members.** The *S. aureus* panel is the extreme case: targets 10
+  and 24 contribute 57% of the LOO total, and several genomes are near-identical. Report
+  medians and per-genome ranges, and repeat on a less clonal panel.
+- **Three species, one panel each.** *E. coli*, *M. tuberculosis*, and *S. aureus* are
+  measured, but each is a single RefSeq panel. The absolute bits/base is panel-dependent;
+  a second panel per species and a less clonal *S. aureus* panel are the next controls.
 - **No random access.** RC-MDL decodes the target as one stream; AGC supports per-sample and
   per-contig extraction. That is a feature difference, not a size difference, but it matters
   for production.
@@ -341,8 +386,10 @@ Fetched: 25 complete RefSeq chromosomes, 71,043,355 bases. LOO measurement pendi
 ## Next experiments
 
 1. Progressive collection total versus HyperGraSS's 3,810,409 B (valid decode order).
-2. AGC parameter sweep to its best configuration, then the full 24-target AGC marginal table.
+2. AGC sensitivity: the setting is selected on three representative targets per species;
+   verify it on every target, and report the best-per-target oracle as an upper bound on AGC.
 3. Ablations: k, stride, `--no-approx`, mismatch cap, panel size scaling (1, 2, 4, 8, 16, 23).
-4. Cross-species panels: *M. tuberculosis* and *S. aureus*.
+4. Panel robustness: a second panel per species and a less clonal *S. aureus* panel, to
+   separate codec behavior from panel composition.
 5. If the margin holds: indel-aware extension (banded affine alignment) and a
    panel-conditioned literal model.

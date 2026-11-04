@@ -32,13 +32,15 @@ evidence (result JSON, report JSON, summaries) is included.
 | Self-contained single genome (*E. coli* 00) | HyperGraSS 1,136,083 B vs RC-MDL 1,192,494 B | HyperGraSS wins by 4.7% |
 | Progressive collection (24 *E. coli*) | HyperGraSS 3,810,409 B vs RC-MDL Prim **3,972,975 B** | HyperGraSS wins by 4.3% |
 | Panel-size ablation (target 00) | 1/2/4/8/16/23 genomes → 249,491 / 185,439 / 146,758 / 102,931 / 87,254 / 73,194 B | all byte-exact |
-| *S. aureus* LOO | incomplete (cancelled at ~5/25) | partial evidence preserved |
+| *S. aureus* LOO (25 genomes, 71,043,355 bases) | **267,412 B / 0.03011 bits/base** | 25/25 byte-exact |
+| AGC 3.2.5 LOO, same *S. aureus* panel (`-a`) | 3,539,729 B / 0.3986 bits/base | 13.24x larger than RC-MDL |
 
-The central claim is the reference-conditioned one: when a 23-genome panel is already
-present, RC-MDL costs 0.12 bits/base on *E. coli* and 0.0093 bits/base on *M. tuberculosis*,
-4.7x and 11.3x smaller than AGC. HyperGraSS still wins the self-contained single-genome and
-collection settings. See `prototype/rcmdl/RESULTS.md` for the full tables, caveats, and the
-lower-bound analysis of the collection gap.
+The central claim is the reference-conditioned one: when the rest of the panel is already
+present, RC-MDL costs 0.12 bits/base on *E. coli*, 0.0093 bits/base on *M. tuberculosis*,
+and 0.030 bits/base on *S. aureus* — 4.7x, 11.3x, and 13.24x smaller than AGC.
+HyperGraSS still wins the self-contained single-genome and collection settings. See
+`prototype/rcmdl/RESULTS.md` for the full tables, caveats, and the lower-bound analysis of
+the collection gap.
 
 ## Restore from the release asset
 

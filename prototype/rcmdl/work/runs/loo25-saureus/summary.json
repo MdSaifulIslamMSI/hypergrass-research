@@ -1,0 +1,31 @@
+{
+  "genomes": 25,
+  "k": 16,
+  "step": 8,
+  "modes": {
+    "self": {
+      "targets": 25,
+      "target_bases": 71043355,
+      "archive_bytes": 16802462,
+      "bpb": 1.8920797870539756,
+      "mean_bpb": 1.892087049056588,
+      "panel_match_fraction": 0.0,
+      "literal_fraction": 0.9816989780395365,
+      "mismatch_bases": 0,
+      "compress_seconds": 17.425,
+      "decompress_seconds": 3.464
+    },
+    "loo": {
+      "targets": 25,
+      "target_bases": 71043355,
+      "archive_bytes": 267412,
+      "bpb": 0.030112541841527615,
+      "mean_bpb": 0.030621522893263416,
+      "panel_match_fraction": 0.9959801588762243,
+      "literal_fraction": 0.003116857304951322,
+      "mismatch_bases": 136181,
+      "compress_seconds": 53.252,
+      "decompress_seconds": 4.79
+    }
+  }
+}

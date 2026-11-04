@@ -1,0 +1,191 @@
+[
+  {
+    "config": "default",
+    "opts": [
+      "-a"
+    ],
+    "base_bytes": 1990343,
+    "full_bytes": 2244661,
+    "marginal_bytes": 254318,
+    "bpb": 0.7273574882059451,
+    "create_seconds": 1.7277919000189286,
+    "append_seconds": 0.4832107999827713
+  },
+  {
+    "config": "fallback",
+    "opts": [
+      "-a",
+      "-f",
+      "0.05"
+    ],
+    "base_bytes": 1990930,
+    "full_bytes": 2245246,
+    "marginal_bytes": 254316,
+    "bpb": 0.7273517681429672,
+    "create_seconds": 1.9679865000071004,
+    "append_seconds": 0.49202119998517446
+  },
+  {
+    "config": "min15",
+    "opts": [
+      "-a",
+      "-l",
+      "15"
+    ],
+    "base_bytes": 1989669,
+    "full_bytes": 2245190,
+    "marginal_bytes": 255521,
+    "bpb": 0.730798106087148,
+    "create_seconds": 1.716781399998581,
+    "append_seconds": 0.48594230000162497
+  },
+  {
+    "config": "min15-fallback",
+    "opts": [
+      "-a",
+      "-l",
+      "15",
+      "-f",
+      "0.05"
+    ],
+    "base_bytes": 1978704,
+    "full_bytes": 2234214,
+    "marginal_bytes": 255510,
+    "bpb": 0.7307666457407697,
+    "create_seconds": 1.9752862000023015,
+    "append_seconds": 0.49758210001164116
+  },
+  {
+    "config": "seg50k",
+    "opts": [
+      "-a",
+      "-s",
+      "50000"
+    ],
+    "base_bytes": 1752253,
+    "full_bytes": 2051201,
+    "marginal_bytes": 298948,
+    "bpb": 0.8550006935576361,
+    "create_seconds": 1.6089136999798939,
+    "append_seconds": 0.4902544999786187
+  },
+  {
+    "config": "seg100k",
+    "opts": [
+      "-a",
+      "-s",
+      "100000"
+    ],
+    "base_bytes": 1833411,
+    "full_bytes": 2217766,
+    "marginal_bytes": 384355,
+    "bpb": 1.0992674029341063,
+    "create_seconds": 1.6058474000019487,
+    "append_seconds": 0.4516206000116654
+  },
+  {
+    "config": "seg200k",
+    "opts": [
+      "-a",
+      "-s",
+      "200000"
+    ],
+    "base_bytes": 1817350,
+    "full_bytes": 2147710,
+    "marginal_bytes": 330360,
+    "bpb": 0.9448400026884296,
+    "create_seconds": 1.663663200015435,
+    "append_seconds": 0.5149055999936536
+  },
+  {
+    "config": "seg500k",
+    "opts": [
+      "-a",
+      "-s",
+      "500000"
+    ],
+    "base_bytes": 1757130,
+    "full_bytes": 2183572,
+    "marginal_bytes": 426442,
+    "bpb": 1.2196375482094057,
+    "create_seconds": 2.022731599980034,
+    "append_seconds": 0.8253575999988243
+  },
+  {
+    "config": "seg1m",
+    "opts": [
+      "-a",
+      "-s",
+      "1000000"
+    ],
+    "base_bytes": 3282821,
+    "full_bytes": 3604749,
+    "marginal_bytes": 321928,
+    "bpb": 0.9207242171736311,
+    "create_seconds": 7.699575899983756,
+    "append_seconds": 4.7204968000005465
+  },
+  {
+    "config": "seg1m-min15",
+    "opts": [
+      "-a",
+      "-s",
+      "1000000",
+      "-l",
+      "15"
+    ],
+    "base_bytes": 3372984,
+    "full_bytes": 3703784,
+    "marginal_bytes": 330800,
+    "bpb": 0.9460984165435662,
+    "create_seconds": 6.3385745999985375,
+    "append_seconds": 4.6995447000081185
+  },
+  {
+    "config": "k25-seg200k",
+    "opts": [
+      "-a",
+      "-k",
+      "25",
+      "-s",
+      "200000"
+    ],
+    "base_bytes": 1816896,
+    "full_bytes": 2074543,
+    "marginal_bytes": 257647,
+    "bpb": 0.7368785330326487,
+    "create_seconds": 1.5972394999989774,
+    "append_seconds": 0.4638000999984797
+  },
+  {
+    "config": "plain-seg200k",
+    "opts": [
+      "-s",
+      "200000"
+    ],
+    "base_bytes": 1817350,
+    "full_bytes": 2147710,
+    "marginal_bytes": 330360,
+    "bpb": 0.9448400026884296,
+    "create_seconds": 1.6335343999962788,
+    "append_seconds": 0.3732601999945473
+  },
+  {
+    "config": "seg200k-min15-fallback",
+    "opts": [
+      "-a",
+      "-s",
+      "200000",
+      "-l",
+      "15",
+      "-f",
+      "0.05"
+    ],
+    "base_bytes": 1817426,
+    "full_bytes": 2152813,
+    "marginal_bytes": 335387,
+    "bpb": 0.9592173809833646,
+    "create_seconds": 1.9219829999783542,
+    "append_seconds": 0.5234035000030417
+  }
+]

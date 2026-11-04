@@ -1,0 +1,191 @@
+[
+  {
+    "config": "default",
+    "opts": [
+      "-a"
+    ],
+    "base_bytes": 2410507,
+    "full_bytes": 2423393,
+    "marginal_bytes": 12886,
+    "bpb": 0.036234415805808724,
+    "create_seconds": 1.6829986000084318,
+    "append_seconds": 0.4570073999930173
+  },
+  {
+    "config": "fallback",
+    "opts": [
+      "-a",
+      "-f",
+      "0.05"
+    ],
+    "base_bytes": 2379473,
+    "full_bytes": 2392369,
+    "marginal_bytes": 12896,
+    "bpb": 0.036262535017205444,
+    "create_seconds": 1.9076502000098117,
+    "append_seconds": 0.45788649999303743
+  },
+  {
+    "config": "min15",
+    "opts": [
+      "-a",
+      "-l",
+      "15"
+    ],
+    "base_bytes": 2407794,
+    "full_bytes": 2420645,
+    "marginal_bytes": 12851,
+    "bpb": 0.036135998565920216,
+    "create_seconds": 1.6329777000064496,
+    "append_seconds": 0.434315799997421
+  },
+  {
+    "config": "min15-fallback",
+    "opts": [
+      "-a",
+      "-l",
+      "15",
+      "-f",
+      "0.05"
+    ],
+    "base_bytes": 2354990,
+    "full_bytes": 2367819,
+    "marginal_bytes": 12829,
+    "bpb": 0.036074136300847444,
+    "create_seconds": 1.924954499991145,
+    "append_seconds": 0.45598810000228696
+  },
+  {
+    "config": "seg50k",
+    "opts": [
+      "-a",
+      "-s",
+      "50000"
+    ],
+    "base_bytes": 2309853,
+    "full_bytes": 2336532,
+    "marginal_bytes": 26679,
+    "bpb": 0.07501924408529963,
+    "create_seconds": 1.696207200002391,
+    "append_seconds": 0.3945570000214502
+  },
+  {
+    "config": "seg100k",
+    "opts": [
+      "-a",
+      "-s",
+      "100000"
+    ],
+    "base_bytes": 2567269,
+    "full_bytes": 2596989,
+    "marginal_bytes": 29720,
+    "bpb": 0.08357029627104108,
+    "create_seconds": 1.6447484999953303,
+    "append_seconds": 0.37981410001521
+  },
+  {
+    "config": "seg200k",
+    "opts": [
+      "-a",
+      "-s",
+      "200000"
+    ],
+    "base_bytes": 2554067,
+    "full_bytes": 2609259,
+    "marginal_bytes": 55192,
+    "bpb": 0.15519555154075704,
+    "create_seconds": 1.8789773999887984,
+    "append_seconds": 0.3748765999916941
+  },
+  {
+    "config": "seg500k",
+    "opts": [
+      "-a",
+      "-s",
+      "500000"
+    ],
+    "base_bytes": 3853239,
+    "full_bytes": 3979815,
+    "marginal_bytes": 126576,
+    "bpb": 0.3559217301750772,
+    "create_seconds": 8.649604899983387,
+    "append_seconds": 5.557272500009276
+  },
+  {
+    "config": "seg1m",
+    "opts": [
+      "-a",
+      "-s",
+      "1000000"
+    ],
+    "base_bytes": 3850810,
+    "full_bytes": 4072189,
+    "marginal_bytes": 221379,
+    "bpb": 0.6225002899793676,
+    "create_seconds": 11.594654199987417,
+    "append_seconds": 9.164291099994443
+  },
+  {
+    "config": "seg1m-min15",
+    "opts": [
+      "-a",
+      "-s",
+      "1000000",
+      "-l",
+      "15"
+    ],
+    "base_bytes": 3987044,
+    "full_bytes": 4209618,
+    "marginal_bytes": 222574,
+    "bpb": 0.6258605357412751,
+    "create_seconds": 11.65912580001168,
+    "append_seconds": 9.110834699997213
+  },
+  {
+    "config": "k25-seg200k",
+    "opts": [
+      "-a",
+      "-k",
+      "25",
+      "-s",
+      "200000"
+    ],
+    "base_bytes": 2564829,
+    "full_bytes": 2619688,
+    "marginal_bytes": 54859,
+    "bpb": 0.1542591818012464,
+    "create_seconds": 2.0142542999819852,
+    "append_seconds": 0.3824272000056226
+  },
+  {
+    "config": "plain-seg200k",
+    "opts": [
+      "-s",
+      "200000"
+    ],
+    "base_bytes": 2554067,
+    "full_bytes": 2609259,
+    "marginal_bytes": 55192,
+    "bpb": 0.15519555154075704,
+    "create_seconds": 1.8221238999976777,
+    "append_seconds": 0.26153879999765195
+  },
+  {
+    "config": "seg200k-min15-fallback",
+    "opts": [
+      "-a",
+      "-s",
+      "200000",
+      "-l",
+      "15",
+      "-f",
+      "0.05"
+    ],
+    "base_bytes": 2473377,
+    "full_bytes": 2528723,
+    "marginal_bytes": 55346,
+    "bpb": 0.15562858739626648,
+    "create_seconds": 2.167403400002513,
+    "append_seconds": 0.4042819000023883
+  }
+]
