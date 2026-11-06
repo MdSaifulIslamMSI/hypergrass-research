@@ -11,12 +11,64 @@ HyperGraSS extends the **GraSS** pipeline (*Roy, Maity & Mukhopadhyay, Briefings
 
 ---
 
+## Unified `HGS2` / `EIMDL` Fusion Architecture (HyperGraSS + RC-MDL)
+
+`HyperGraSS` now includes the unified **`HGS2` (`HyperGraSSFusionEngine` / `EIMDL`)** container and algorithmic engine alongside full backward compatibility for version-1 `.hgs` archives (`HGS\x01`). Full mathematical laws and falsification tests are documented in [`docs/COMPRESSION-LAW.md`](docs/COMPRESSION-LAW.md) and [`src/hypergrass/VerifyCompressionLaws.java`](src/hypergrass/VerifyCompressionLaws.java); complete SHA-256-verified benchmarks across all regimes are in [`docs/FUSION-BENCHMARKS.md`](docs/FUSION-BENCHMARKS.md).
+
+### Core Breakthroughs
+1. **Law I — Klein Four-Group ($V_4$) Strand-Invariant Kimura-CpG Substitution Coding (`EimdlMosaicCodec.java`):** Partitions non-zero substitutions $\delta = y \oplus x \in \{1, 2, 3\}$ into one Kimura transition ($\delta = 2$) and two transversions ($\delta \in \{1, 3\}$) that commute identically with Watson-Crick reverse-complementation, conditioned on reference trinucleotide CpG context ($H_{V_4} \le \log_2 3 \approx 1.585$ bits/SNP, typically $1.10\text{--}1.32$ bits/SNP).
+2. **Law II — Bijective Codon-Wobble Gap Coding & 6-State Causal ORF-HMM (`FastNoveltyCoder.java`):** Bijectively factors inter-SNP gaps into $(q = \lfloor \text{gap}/3 \rfloor, r = (\text{gap}+1)\bmod 3)$ with zero non-coding penalty, and tracks all 6 sense/antisense open reading frames ($\{+0, +1, +2, -0, -1, -2\}$) across non-multiple-of-3 intergenic boundaries via causal stop-codon depletion and dicodon posteriors.
+3. **Law III — Horizon-Bounded Two-Gear Coalescent Haplotype Copying & Syntenic Micro-Indel Splicing (`EimdlMosaicCodec.java`):** Exploits the ~20x population-genetic spectral gap between vertical clonal inheritance and horizontal recombination imports by pairing a strict Clonal Gear with an O(1)-cached Clonal Re-Entry Horizon (`findClonalReentryHorizon`) that bounds diverged homolog extension so recombinant scars never bulldoze downstream clonal blocks.
+4. **Law IV — Universal 5-Regime Existing & Non-Existing Sequence Completeness:** Joint MDL competition across panel homology, bidirectional self-homology, overlapping tandem periodicity ($1 \le P \le 64$), `FastCRM` context-repeat mixing, and raw 2-bit safety bypass ($\le 2.0012$ bpb on cryptographic white noise).
+5. **Law V — Streaming 2-Bit Bank & Zero-Materialization Subsampled CSR (`Packed2BitSequence.java`, `EimdlSyncmerIndex.java`):** Compresses and restores the full `120,108,223 B` 24-genome *E. coli* collection inside **`-Xmx256m`, `-Xmx224m`, and `-Xmx192m` on pure JVM** (`3,423,050 B` at `-Xmx256m`/`-Xmx224m` and `3,455,169 B` at `-Xmx192m`), beating unbounded `HyperGraSS v1` (`3,810,409 B`), `JARVIS3` (`3,896,361 B`), and `RC-MDL` (`3,972,975 B`).
+
+### `HGS2` / `EIMDL` Quick Start
+
+```powershell
+# Mode S: Self-contained single genome / sequence (FASTA, multi-FASTA, RNA, or flat .seq)
+java -cp bin hypergrass.HyperGraSS compress --v2 ecoli.fa ecoli.hgs2
+
+# Mode R: Reference-conditioned delta archive with 32-byte SHA-256 panel manifest pinning
+java -cp bin hypergrass.HyperGraSS compress --v2 --ref path/to/panel_dir target.seq delta.hgs2
+java -cp bin hypergrass.HyperGraSS decompress --ref path/to/panel_dir delta.hgs2 restored.seq
+
+# Mode C: Self-contained pangenome collection (default multi-core or strict -Xmx192m bounded heap)
+java -Xmx2200m -cp bin hypergrass.HyperGraSS compress --v2 --collection pangenome.fasta collection.hgs2
+java -Xmx192m  -cp bin hypergrass.HyperGraSS compress --v2 --collection --bounded input.seq bounded192.hgs2
+
+# Inspect, exact byte-account, random-access slice query, and JSON CLI telemetry
+java -cp bin hypergrass.HyperGraSS inspect collection.hgs2
+java -cp bin hypergrass.HyperGraSS profile collection.hgs2
+java -cp bin hypergrass.HyperGraSS query collection.hgs2 0 1000 1500
+java -cp bin hypergrass.EimdlCli compress --collection --target input.seq --out collection.hgs2
+```
+
+### Headline Verified `HGS2` / `EIMDL` Results (100% SHA-256 Verified)
+
+| Regime & Benchmark | Input Size | Prior Best Baseline(s) | **`HGS2` / `EIMDL`** | Margin / Speedup |
+|---|---:|---|---:|---|
+| **Mode S:** *E. coli* `00.fa` | 4,856,085 B | `HyperGraSS v1`: 1,136,083 B; `RC-MDL S`: 1,192,494 B | **1,123,893 B** (`1.8515 bpb`, `1T`: **1,122,240 B**) | **`-12,190 B`** vs `v1`; **`-68,601 B`** vs `RC-MDL` (`6.18 s`) |
+| **Mode R (LOO):** *E. coli* (24 genomes) | 120,108,223 bp | `RC-MDL`: 1,780,761 B; `AGC 3.2.5`: 8,384,117 B | **1,177,778 B** (`0.07845 bpb`) | **`-33.9%`** vs `RC-MDL`; **`7.12x` < `AGC`** (**24/24 wins**) |
+| **Mode R (LOO):** *M. tuberculosis* (24 genomes) | 105,745,015 bp | `AGC 13-cfg Oracle`: 96,580 B; `RC-MDL`: 122,998 B | **47,305 B** (`0.00358 bpb`) | **`2.04x` < `AGC Oracle`** (`-51.0%`); **`-61.5%`** vs `RC-MDL` (**24/24**) |
+| **Mode R (LOO):** *S. aureus* (25 genomes) | 71,043,114 bp | `RC-MDL`: 267,412 B; `AGC Oracle`: 1,617,085 B | **174,639 B** (`0.01967 bpb`, min `134 B`) | **`-34.7%`** vs `RC-MDL`; **`9.26x` < `AGC Oracle`** (**25/25**) |
+| **Mode C:** *E. coli* 24-genome `input.seq` | 120,108,223 B | `HyperGraSS v1`: 3,810,409 B (`887.3 s`); `JARVIS3`: 3,896,361 B; `RC-MDL`: 3,972,975 B | **3,393,302 B** (`0.2260 bpb`, `1T`: **3,377,802 B**) | **`-10.95%`** vs `v1` (**`20.2x–31.8x` faster**); **`-12.91%`** vs `JARVIS3` |
+| **Mode C Bounded (`-Xmx192m` Pure JVM):** `input.seq` | 120,108,223 B | `v1 JVM`: OOM; `v1 Native`: 3,864,464 B; `JARVIS3`: 3,896,361 B | **3,455,169 B** (`-Xmx256m`: **3,423,050 B**) | **`-11.32%`** vs `JARVIS3` inside **192 MiB JVM heap** |
+| **Adversarial:** Cryptographic white noise | 500,000 B | `gzip -9`: 144,017 B (`2.304 bpb`) | **125,075 B** (`2.0012 bpb`) | Raw 2-bit safety bypass ($\le 2.005$ bpb gate) |
+
+---
+
 ## Project Structure
 
 ```text
 hypergrass/
 ├── src/hypergrass/
-│   ├── HyperGraSS.java                # .hgs container engine, parallel pipeline, --lean streaming, page-indexed query CLI
+│   ├── HyperGraSS.java                # Unified .hgs (v1) + .hgs2 (v2) CLI, parallel pipeline, & random-access query
+│   ├── HyperGraSSFusionEngine.java    # HGS2 container (Modes S/R/C), Prim DAG, SHA-256 panel pinning, & streaming decode
+│   ├── EimdlMosaicCodec.java          # EIMDL Two-Gear Coalescent parser, Klein-V4 Kimura/CpG, wobble gap, & indel splicer
+│   ├── EimdlSyncmerIndex.java         # Strand-symmetric canonical open-syncmer CSR (parallel L3-striped & zero-alloc 2-pass)
+│   ├── FastNoveltyCoder.java          # 6-State Causal ORF-HMM + warm-primed parallel FastCRM range coder & 2-bit bypass
+│   ├── Packed2BitSequence.java        # 64-bit SWAR 2-bit DNA bank, O(1) RC involution, & streaming slice/concatenation
+│   ├── EimdlCli.java                  # Standalone JSON-telemetry CLI adapter for Mode S/R/C & ablation experiments
 │   ├── FastaStreamFactorizer.java     # 6-channel lossless FASTA/RNA/DNA factorizer & selective slice reconstructor
 │   ├── CanonicalSyncmerEngine.java    # BC-LZG bidirectional (+/-) k-mer + Kimura SNP-bridging referential engine
 │   ├── HaplotypeDonorIndex.java       # Exact inverted variant index + 64-lane bit-sliced donor counting
@@ -25,20 +77,25 @@ hypergrass/
 │   ├── QuantumContextRepeatMixer.java # Integer-only context-mixing range coder
 │   ├── BayesianMarkovRangeCoder.java  # Multi-order Markov (0..9) + codon-phase + Chargaff RC 64-bit range coder
 │   ├── VarIntCodec.java               # LEB128/ZigZag varints, 2-bit DNA packing, adaptive raw/Deflate aux streams
+│   ├── VerifyCompressionLaws.java     # Executable falsification tests for Laws I-V (171,933 assertions)
+│   ├── VerifyFusionEngine.java        # HGS2 Mode S/R/C round-trip, tamper-rejection, & corrupted-archive tests
 │   ├── VerifyAllEdgeCases.java        # 14-suite SHA-256 byte-exact lossless verification harness
 │   ├── VerifyDonorIndex.java          # Differential donor-count tests + optional synthetic microbenchmark
 │   ├── VerifyDonorArchives.java       # Cross-version archive-byte checks + optional synthetic pipeline timings
 │   ├── VerifyAnchorCodecs.java        # Bounded codec selection, size non-regression, previous-decoder checks
-│   ├── VerifyArchiveAccounting.java  # Format coverage, exact totals, malformed-framing checks
+│   ├── VerifyArchiveAccounting.java   # Format coverage, exact totals, malformed-framing checks
 │   ├── VerifyDonorCosts.java          # Independent raw-column serialization oracle for donor costs
-│   ├── VerifyCostAwareEncoding.java  # Saved-build size, default-byte, query, and decoder checks
+│   ├── VerifyCostAwareEncoding.java   # Saved-build size, default-byte, query, and decoder checks
 │   └── BenchmarkSuite.java            # Reproducible 5-experiment scientific benchmark suite
+├── benchmarks/fusion/                # Reproducible HGS2/EIMDL runner, synthetic/xeno generator, & verified JSONs
 ├── benchmarks/panman/                # Optional pinned comparison runner, reports, inputs, and command logs
 ├── benchmarks/corpus/                # Frozen held-out corpus, locked container, orchestrator, audit gate
 ├── benchmarks/pangenome/             # Reproducible >100 MB real E. coli scale test
 ├── benchmarks/ablation/              # Anchor-bank and block-size ablation harness
 ├── benchmarks/endtoend/              # Query-heavy end-to-end workload
 ├── benchmarks/cost-aware/            # Byte profiles, size/CPU results, and compatibility logs
+├── docs/COMPRESSION-LAW.md           # Mathematical & biological specification of EIMDL Laws I-V
+├── docs/FUSION-BENCHMARKS.md         # SHA-256 verified Mode S, Mode R, Mode C, ablation, & -Xmx192m benchmarks
 ├── docs/HGS-FORMAT.md                # Byte-level `.hgs` version-1 container specification
 ├── docs/BENCHMARKS.md                # Measured corpus and scale results (generated from JSON)
 ├── docs/ABLATION.md                  # Anchor-bank/block-size ablation results

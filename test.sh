@@ -18,4 +18,10 @@ java -Xmx512m -cp bin hypergrass.VerifyArchiveAccounting
 echo "== VerifyDonorCosts =="
 java -Xmx512m -cp bin hypergrass.VerifyDonorCosts
 
+echo "== VerifyCompressionLaws =="
+java -Xmx512m -cp bin hypergrass.VerifyCompressionLaws
+
+echo "== VerifyFusionEngine =="
+java -Xmx512m -cp bin hypergrass.VerifyFusionEngine
+
 echo "All verification suites passed."

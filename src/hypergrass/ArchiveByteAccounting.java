@@ -72,7 +72,27 @@ public final class ArchiveByteAccounting {
             throw new IllegalArgumentException(
                     "Usage: java -cp bin hypergrass.ArchiveByteAccounting <archive.hgs>");
         }
-        Report report = report(Path.of(args[0]));
+        byte[] raw = Files.readAllBytes(Path.of(args[0]));
+        if (HyperGraSSFusionEngine.isHgs2Magic(raw)) {
+            HyperGraSSFusionEngine.Hgs2Accounting acc = HyperGraSSFusionEngine.accountArchive(raw);
+            System.out.println("category\tencoded_bytes");
+            System.out.println("container.header\t" + acc.containerHeaderBytes());
+            System.out.println("reference.pinning\t" + acc.panelPinningBytes());
+            System.out.println("metadata.channels\t" + acc.metadataBytes());
+            System.out.println("mosaic.streams\t" + acc.mosaicBytes());
+            System.out.println("novelty.superstream\t" + acc.noveltyBytes());
+            long sum =
+                    acc.containerHeaderBytes()
+                            + acc.panelPinningBytes()
+                            + acc.metadataBytes()
+                            + acc.mosaicBytes()
+                            + acc.noveltyBytes();
+            System.out.println("total\t" + sum);
+            System.out.println("archive_bytes\t" + acc.totalBytes());
+            System.out.println("hgs2_mode\t" + acc.mode());
+            return;
+        }
+        Report report = report(raw);
         System.out.println("category\tencoded_bytes");
         report.categoryBytes().forEach((category, bytes) -> System.out.println(category + "\t" + bytes));
         System.out.println("total\t" + report.totalBytes());

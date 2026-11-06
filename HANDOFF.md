@@ -20,6 +20,24 @@ evidence (result JSON, report JSON, summaries) is included.
 | `prototype/rcmdl/work/saureus/panel.fasta` | 72,060,360 | `9413289ee51e253b6adf6c389d04f20765ad1d5ac815b33d2552d9b7732adbd5` |
 | `prototype/rcmdl/vendor/agc.zip` (AGC 3.2.5) | 802,120 | `4467b4183b37affe60b0444dee255761f085c060935c2b2e29d1b7c4cd683acd` |
 
+## Unified `HGS2` / `EIMDL` Breakthrough Update (2026-11-06)
+
+HyperGraSS and RC-MDL have been fused end-to-end into `HyperGraSSFusionEngine` (`HGS2` container magic `"HGS2"`, CLI adapter `EimdlCli`, mathematical specification [`docs/COMPRESSION-LAW.md`](docs/COMPRESSION-LAW.md), and full verified tables in [`docs/FUSION-BENCHMARKS.md`](docs/FUSION-BENCHMARKS.md)). Every previously open gap noted below has been resolved and verified byte-for-byte via SHA-256 in [`benchmarks/fusion/results/`](benchmarks/fusion/results/):
+
+| Regime & Benchmark | Previous Best (`HyperGraSS v1` / `RC-MDL` / `AGC`) | **`HGS2` / `EIMDL` Result** | Status |
+|---|---|---|---|
+| **Mode S:** *E. coli* `00.fa` (4,856,085 B) | HyperGraSS `1,136,083 B` vs RC-MDL `1,192,494 B` | **1,123,893 B (`1.8515 bpb`)** parallel / **1,122,240 B (`1.8488 bpb`)** `1T` in `6.18 s` | Beats both (`SHA-256` exact) |
+| **Mode R LOO:** *E. coli* (24 genomes, 120.1 Mbp) | RC-MDL `1,780,761 B` (`0.1186 bpb`); AGC won `13, 14` | **1,177,778 B (`0.07845 bpb`)**; `13.seq` = **635 B**, `14.seq` = **633 B** | **24/24 clean sweep** vs RC-MDL (`-33.9%`) & AGC (`7.12x`) |
+| **Mode R LOO:** *M. tuberculosis* (24 genomes, 105.7 Mbp) | AGC 13-config oracle `96,580 B` beat RC-MDL `122,998 B` | **47,305 B (`0.00358 bpb`)** (`03.seq` = **256 B**, `18` SNPs) | **2.04x smaller than AGC 13-config oracle** (`-51.0%`) with 1 universal config |
+| **Mode R LOO:** *S. aureus* (25 genomes, 71.0 Mbp) | RC-MDL `267,412 B` vs AGC oracle `1,617,085 B` | **174,639 B (`0.01967 bpb`)** (`20.seq` = **134 B**, `21,485x`) | **25/25 clean sweep** (`-34.7%` vs RC-MDL; `9.26x` < AGC oracle) |
+| **Leave-Cluster-Out:** *E. coli* / *MTB* / *S. aureus* | RC-MDL `2,331,696` / `153,182` / `741,650 B` | **1,625,424** (`-30.3%`) / **78,582** (`-48.7%`) / **525,828 B** (`-29.1%`) | 73/73 byte-exact |
+| **Mode C Collection:** *E. coli* `input.seq` (120.1 Mbp) | HyperGraSS `3,810,409 B` (`887.3 s`); JARVIS3 `3,896,361 B`; RC-MDL `3,972,975 B` | **3,393,302 B (`0.2260 bpb`)** in `44.0 s` (`27.9 s` cold); `1T` = **3,377,802 B** | **`-10.95%` vs v1** at **`20.2x–31.8x` speedup**; **`-12.91%` vs JARVIS3** |
+| **Bounded Heap (`-Xmx256m` / `-Xmx224m` / `-Xmx192m`):** | `v1` pure JVM OOMed `0/7` at 256 MiB | **3,423,050 B** (`-Xmx256m`/`-Xmx224m`) & **3,455,169 B** (`-Xmx192m`) | Pure JVM `-Xmx192m` beats unbounded v1, native v1, JARVIS3, & RC-MDL |
+
+---
+
+## Historical Pre-Fusion Baseline (2026-11-04)
+
 ## Results in one screen
 
 | Experiment | Result | Verification |

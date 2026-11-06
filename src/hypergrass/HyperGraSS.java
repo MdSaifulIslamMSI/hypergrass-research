@@ -21,7 +21,9 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.IntStream;
 import java.util.zip.CRC32;
 
@@ -99,6 +101,16 @@ public final class HyperGraSS {
          * bounded window and clears FLAG_SHARED_GAP.
          */
         public int threads = 1;
+        public boolean threadsExplicit = false;
+        /** Enables the fused HyperGraSS + RC-MDL (EIMDL / HGS2) engine across Mode S, R, and C. */
+        public boolean fusionMode = false;
+        /** Forces Mode C (phylogenetic Prim DAG + unified novelty superstream) in HGS2. */
+        public boolean collectionMode = false;
+        /** External reference genome or panel directory for Mode R (HGS2). */
+        public Path referencePanel = null;
+        public Set<String> excludePanelNames = new HashSet<>();
+        public List<String> explicitPanelNames = null;
+        public int panelLimit = 0;
 
         public static CompressOptions defaults() {
             return new CompressOptions();
@@ -156,8 +168,37 @@ public final class HyperGraSS {
         int blockSeqChars;
     }
 
+    private static HyperGraSSFusionEngine.FusionOptions toFusionOptions(CompressOptions opts) {
+        HyperGraSSFusionEngine.FusionOptions fo = new HyperGraSSFusionEngine.FusionOptions();
+        if (opts.referencePanel != null) {
+            fo.mode = HyperGraSSFusionEngine.MODE_REF;
+            fo.referencePanel = opts.referencePanel;
+            fo.excludePanelNames.addAll(opts.excludePanelNames);
+            fo.explicitPanelNames = opts.explicitPanelNames;
+            fo.panelLimit = opts.panelLimit;
+        } else if (opts.collectionMode) {
+            fo.mode = HyperGraSSFusionEngine.MODE_COLLECTION;
+        } else if (opts.singleMode) {
+            fo.mode = HyperGraSSFusionEngine.MODE_SINGLE;
+            fo.singleGenome = true;
+        }
+        fo.boundedMemory = opts.bounded || opts.leanMode;
+        if (!opts.parallel) {
+            fo.threads = 1;
+        } else if (opts.threadsExplicit) {
+            fo.threads = Math.max(1, opts.threads);
+        } else {
+            fo.threads = Math.max(1, Runtime.getRuntime().availableProcessors());
+        }
+        return fo;
+    }
+
     /** Compresses an input file to a .hgs archive on disk. */
     public static void compressFile(Path input, Path output, CompressOptions opts) throws IOException {
+        if (opts.fusionMode || opts.collectionMode || opts.referencePanel != null) {
+            HyperGraSSFusionEngine.compressFile(input, output, toFusionOptions(opts));
+            return;
+        }
         if (opts.leanMode) {
             compressStreamingLean(input, output);
             return;
@@ -317,6 +358,15 @@ public final class HyperGraSS {
 
     /** Decompresses a .hgs archive on disk to output path, verifying CRC-32 integrity. */
     public static void decompressFile(Path archive, Path output) throws IOException {
+        decompressFile(archive, output, null);
+    }
+
+    /** Decompresses a .hgs / HGS2 archive on disk, supplying an optional external Mode R panel. */
+    public static void decompressFile(Path archive, Path output, Path referencePanel) throws IOException {
+        if (HyperGraSSFusionEngine.isHgs2File(archive)) {
+            HyperGraSSFusionEngine.decompressFile(archive, output, referencePanel);
+            return;
+        }
         try (FileChannel ch = FileChannel.open(archive, StandardOpenOption.READ)) {
             ByteBuffer hdr = ByteBuffer.allocate(5);
             readFully(ch, 0L, hdr);
@@ -596,6 +646,13 @@ public final class HyperGraSS {
 
     /** Compresses raw input bytes in-memory using full 6-channel + BC-LZG + BMM-RC + Parallelism. */
     public static byte[] compressBytes(byte[] raw, CompressOptions opts) {
+        if (opts.fusionMode || opts.collectionMode || opts.referencePanel != null) {
+            try {
+                return HyperGraSSFusionEngine.compress(raw, toFusionOptions(opts));
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        }
         CRC32 crc = new CRC32();
         crc.update(raw, 0, raw.length);
         int crcVal = (int) crc.getValue();
@@ -998,6 +1055,18 @@ public final class HyperGraSS {
 
     /** Decompresses a full .hgs archive in memory and verifies exact CRC-32 checksum. */
     public static byte[] decompressBytes(byte[] archive) {
+        return decompressBytes(archive, null);
+    }
+
+    /** Decompresses a full .hgs / HGS2 archive in memory with optional Mode R reference panel. */
+    public static byte[] decompressBytes(byte[] archive, Path referencePanel) {
+        if (HyperGraSSFusionEngine.isHgs2Magic(archive)) {
+            try {
+                return HyperGraSSFusionEngine.decompress(archive, referencePanel);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        }
         ByteIn in = new ByteIn(archive);
         if (archive.length < 13) {
             throw new IllegalArgumentException("Truncated .hgs archive");
@@ -1117,6 +1186,15 @@ public final class HyperGraSS {
      * @param qEnd 0-based exclusive end base within record, or -1 for end of record
      */
     public static byte[] query(Path archive, int recordIndex, int qStart, int qEnd) throws IOException {
+        return query(archive, recordIndex, qStart, qEnd, null);
+    }
+
+    public static byte[] query(
+            Path archive, int recordIndex, int qStart, int qEnd, Path referencePanel)
+            throws IOException {
+        if (HyperGraSSFusionEngine.isHgs2File(archive)) {
+            return HyperGraSSFusionEngine.query(archive, recordIndex, qStart, qEnd, referencePanel);
+        }
         try (FileChannel ch = FileChannel.open(archive, StandardOpenOption.READ)) {
             long fileSize = ch.size();
             ByteBuffer hdr = ByteBuffer.allocate((int) Math.min(fileSize, 4096));
@@ -1264,6 +1342,9 @@ public final class HyperGraSS {
 
     /** Inspects archive structural metadata in O(1) without decompressing blocks. */
     public static ArchiveMetadata inspect(Path archive) throws IOException {
+        if (HyperGraSSFusionEngine.isHgs2File(archive)) {
+            return HyperGraSSFusionEngine.inspect(archive);
+        }
         try (FileChannel ch = FileChannel.open(archive, StandardOpenOption.READ)) {
             ByteBuffer hdr = ByteBuffer.allocate(13);
             readFully(ch, 0L, hdr);
@@ -1572,6 +1653,41 @@ public final class HyperGraSS {
                         opts.bounded = true;
                     } else if ("--split-tail-block".equals(args[idx])) {
                         opts.splitTailBlock = true;
+                    } else if ("--fusion".equals(args[idx]) || "--eimdl".equals(args[idx])) {
+                        opts.fusionMode = true;
+                    } else if ("--collection".equals(args[idx])) {
+                        opts.fusionMode = true;
+                        opts.collectionMode = true;
+                    } else if ("--ref".equals(args[idx]) || "--panel".equals(args[idx])) {
+                        if (idx + 1 >= args.length) {
+                            printUsage();
+                            return;
+                        }
+                        opts.fusionMode = true;
+                        opts.referencePanel = Path.of(args[++idx]);
+                    } else if ("--exclude".equals(args[idx])) {
+                        if (idx + 1 >= args.length) {
+                            printUsage();
+                            return;
+                        }
+                        opts.excludePanelNames.add(args[++idx]);
+                    } else if ("--panel-list".equals(args[idx])) {
+                        if (idx + 1 >= args.length) {
+                            printUsage();
+                            return;
+                        }
+                        List<String> lines = new ArrayList<>();
+                        for (String line : Files.readAllLines(Path.of(args[++idx]), StandardCharsets.UTF_8)) {
+                            String trimmed = line.trim();
+                            if (!trimmed.isEmpty()) lines.add(trimmed);
+                        }
+                        opts.explicitPanelNames = lines;
+                    } else if ("--panel-limit".equals(args[idx])) {
+                        if (idx + 1 >= args.length) {
+                            printUsage();
+                            return;
+                        }
+                        opts.panelLimit = Integer.parseInt(args[++idx]);
                     } else if ("--threads".equals(args[idx])) {
                         if (idx + 1 >= args.length) {
                             printUsage();
@@ -1583,6 +1699,7 @@ public final class HyperGraSS {
                             return;
                         }
                         opts.threads = n;
+                        opts.threadsExplicit = true;
                     } else if ("--anchor-mib".equals(args[idx])) {
                         if (idx + 1 >= args.length) {
                             printUsage();
@@ -1625,22 +1742,54 @@ public final class HyperGraSS {
                         in.getFileName(), inBytes, out.getFileName(), outBytes, cr, (t1 - t0) / 1e6);
             }
             case "decompress", "d" -> {
-                Path in = Path.of(args[1]);
-                Path out = Path.of(args[2]);
+                Path refPanel = null;
+                int idx = 1;
+                while (idx < args.length && args[idx].startsWith("--")) {
+                    if ("--ref".equals(args[idx]) || "--panel".equals(args[idx])) {
+                        if (idx + 1 >= args.length) {
+                            printUsage();
+                            return;
+                        }
+                        refPanel = Path.of(args[++idx]);
+                    }
+                    idx++;
+                }
+                if (idx + 1 >= args.length) {
+                    printUsage();
+                    return;
+                }
+                Path in = Path.of(args[idx]);
+                Path out = Path.of(args[idx + 1]);
                 long t0 = System.nanoTime();
-                decompressFile(in, out);
+                decompressFile(in, out, refPanel);
                 long t1 = System.nanoTime();
                 System.out.printf(
                         "Decompressed %s -> %s (%,d B) | CRC-32 OK | %.2f ms%n",
                         in.getFileName(), out.getFileName(), Files.size(out), (t1 - t0) / 1e6);
             }
             case "query", "q" -> {
-                Path archive = Path.of(args[1]);
-                int recIdx = Integer.parseInt(args[2]);
-                int qStart = (args.length >= 4) ? Integer.parseInt(args[3]) : -1;
-                int qEnd = (args.length >= 5) ? Integer.parseInt(args[4]) : -1;
+                Path refPanel = null;
+                int idx = 1;
+                while (idx < args.length && args[idx].startsWith("--")) {
+                    if ("--ref".equals(args[idx]) || "--panel".equals(args[idx])) {
+                        if (idx + 1 >= args.length) {
+                            printUsage();
+                            return;
+                        }
+                        refPanel = Path.of(args[++idx]);
+                    }
+                    idx++;
+                }
+                if (idx + 1 >= args.length) {
+                    printUsage();
+                    return;
+                }
+                Path archive = Path.of(args[idx]);
+                int recIdx = Integer.parseInt(args[idx + 1]);
+                int qStart = (args.length >= idx + 3) ? Integer.parseInt(args[idx + 2]) : -1;
+                int qEnd = (args.length >= idx + 4) ? Integer.parseInt(args[idx + 3]) : -1;
                 long t0 = System.nanoTime();
-                byte[] slice = query(archive, recIdx, qStart, qEnd);
+                byte[] slice = query(archive, recIdx, qStart, qEnd, refPanel);
                 long t1 = System.nanoTime();
                 System.err.printf("[Query record=%d [%d..%d) -> %,d B in %.3f ms]%n",
                         recIdx, qStart, qEnd, slice.length, (t1 - t0) / 1e6);
@@ -1669,22 +1818,20 @@ public final class HyperGraSS {
     }
 
     private static void printUsage() {
-        System.out.println("HyperGraSS CLI (Java 21):");
-        System.out.println("  compress [--lean] [--single] [--single-thread] [--optimize] [--bounded] <input.fa> <output.hgs>");
-        System.out.println("    --single: one unified QCRM superblock, skip the anchor probe (one genome/assembly)");
-        System.out.println("              combine with --threads N to encode N independent QCRM segments");
+        System.out.println("HyperGraSS CLI (Java 27):");
+        System.out.println("  compress [--fusion] [--collection] [--ref <panel>] [--lean] [--single] [--bounded] <input.fa> <output.hgs>");
+        System.out.println("    --fusion / --eimdl: enable fused HyperGraSS + RC-MDL (EIMDL / HGS2) engine");
+        System.out.println("    --collection: HGS2 Mode C phylogenetic Prim DAG + unified novelty superstream");
+        System.out.println("    --ref <path> [--exclude <name>] [--panel-list <file>]: HGS2 Mode R pinned delta archive");
+        System.out.println("    --single: one unified superblock (with --fusion uses Mode S EIMDL; else v1 QCRM)");
         System.out.println("    --optimize: bounded extra size search for small archives; costs more CPU");
-        System.out.println("    --bounded: two-pass bounded-memory compression for large anchored archives");
-        System.out.println("    --threads N: worker threads (default 1); with --single it sets QCRM segment count");
-        System.out.println("                 and enables segmented parallel encode/decode");
-        System.out.println("    --pangenome: scale-tuned 16 MiB anchor bank and 8 MiB blocks");
-        System.out.println("    --anchor-mib N / --block-mib N: explicit tuning for large inputs");
-        System.out.println("    --anchor-single-page: one anchor page (maximum compression, slower header)");
-        System.out.println("    --anchor-cm-pages: 64 KiB context-mixing anchor pages (slightly larger, faster header)");
-        System.out.println("    --seed-step N: anchor seed stride (4 default, 8 halves the index)");
-        System.out.println("    --split-tail-block: split a huge final record into target-sized blocks");
-        System.out.println("  decompress <input.hgs> <output.fa>");
-        System.out.println("  query <input.hgs> <recordIdx> [startBase endBase]");
+        System.out.println("    --bounded: bounded-memory compression");
+        System.out.println("    --threads N: worker threads");
+        System.out.println("    --pangenome: v1 scale-tuned 16 MiB anchor bank and 8 MiB blocks");
+        System.out.println("    --anchor-mib N / --block-mib N: explicit v1 tuning for large inputs");
+        System.out.println("    --anchor-single-page / --anchor-cm-pages / --seed-step N / --split-tail-block");
+        System.out.println("  decompress [--ref <panel>] <input.hgs> <output.fa>");
+        System.out.println("  query [--ref <panel>] <input.hgs> <recordIdx> [startBase endBase]");
         System.out.println("  inspect <input.hgs>");
         System.out.println("  profile <input.hgs>  (exact encoded-byte accounting; reads archive into memory)");
     }

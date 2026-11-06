@@ -4,6 +4,7 @@ target/
 original-bin/
 *.class
 *.hgs
+*.hgs2
 *.co
 *.jc
 *.de
@@ -65,3 +66,5 @@ prototype/rcmdl/bin/
 prototype/rcmdl/bin2/
 prototype/rcmdl/vendor/
 benchmarks/specialized/.tmp/
+benchmarks/fusion/synthetic_data/
+benchmarks/fusion/tmp/
