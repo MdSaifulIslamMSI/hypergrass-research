@@ -1,0 +1,325 @@
+{
+  "schema_version": 1,
+  "benchmark": "independent-pangenome-trio",
+  "dataset": "klebsiella",
+  "run_id": "trio-1",
+  "started_utc": "2026-11-06T17:34:45.514364+00:00",
+  "provenance": {
+    "git_commit": "d830f4f7be73d72a95df6fef5b5aa68aaec0a52f",
+    "git_dirty": true,
+    "git_status": "?? benchmarks/independent/fetch_locked.py\n?? benchmarks/independent/run_trio.py",
+    "docker_version": "29.6.2",
+    "python": "3.12.10",
+    "platform": "Windows-11-10.0.28120-SP0"
+  },
+  "image": {
+    "tag": "hypergrass-corpus:jdk27",
+    "id": "sha256:580e58b6ee16d43f4dd99a2871b1c920548b7c6e9b0c695a01f521c17701a4ae",
+    "memory": "2800m",
+    "cpus": 2
+  },
+  "tools": {
+    "eimdl": {
+      "entry": "hypergrass.EimdlCli",
+      "heap": "2200m"
+    },
+    "jarvis3": {
+      "path": "/usr/local/bin/JARVIS3",
+      "version": "3.7",
+      "level": 7,
+      "input": "raw DNA only"
+    },
+    "grass": {
+      "repo": "https://github.com/AnshuOishik/GraSS",
+      "commit": "6d93700f5a2de8841f7cf2c20064413c80df2c4a",
+      "mode": "default-e2",
+      "heap": "1500m"
+    },
+    "libbsc": {
+      "repo": "https://github.com/IlyaGrebnov/libbsc",
+      "commit": "1dc676540cb40a41562af6f2db04bd1adce97f90",
+      "bsc_sha256": "84f7960dc211b5b146f45e0b6186569dd73db96ee97e36ecb534728c63e64640"
+    }
+  },
+  "inputs": {
+    "fasta": {
+      "path": "benchmarks\\independent\\data\\klebsiella\\pangenome.fasta",
+      "size_bytes": 124455339,
+      "sha256": "fa5d322d96e585dbc779665341c346f74eeedfc1fe888befe5e70e27da9390ae",
+      "records": 23,
+      "bases": 122700601,
+      "source": "locked manifest, re-fetched by accessions"
+    },
+    "flat": {
+      "path": "benchmarks\\independent\\runs\\klebsiella\\trio-1\\input.seq",
+      "size_bytes": 122700601,
+      "bases": 122700601,
+      "sha256": "600eb1ba6e842beb6277a3fadacd80b61862d4c5fedd02f69fe7c362fc568d27",
+      "non_acgt_bases_masked": 0,
+      "base_counts": {
+        "A": 26111573,
+        "C": 35245257,
+        "G": 35216108,
+        "T": 26127663
+      }
+    }
+  },
+  "protocol": "All codecs receive the identical canonical flat sequence (headers removed, uppercased, non-ACGT masked to A), because JARVIS3 v3.7 accepts raw DNA only and original GraSS's raw path is headerless. Every archive is decompressed in a fresh container and compared by an independent streaming verifier.",
+  "results": [
+    {
+      "profile": "eimdl-flat",
+      "kind": "eimdl",
+      "tool": {
+        "artifact": "HGS2 Mode C",
+        "stats": {
+          "mode": 2,
+          "raw_bytes": 122700601,
+          "target_bases": 122700601,
+          "archive_bytes": 2523991,
+          "panel_genomes": 0,
+          "panel_bases": 0,
+          "panel_match_bases": 113616228,
+          "self_match_bases": 386802,
+          "tandem_match_bases": 2068,
+          "literal_bases": 8697571,
+          "panel_tokens": 150096,
+          "self_tokens": 998,
+          "tandem_tokens": 65,
+          "literal_runs": 96729,
+          "indel_splices": 2728,
+          "mismatches": 129269,
+          "compress_seconds": 32.292749
+        }
+      },
+      "input": {
+        "path": "benchmarks\\independent\\runs\\klebsiella\\trio-1\\input.seq",
+        "bytes": 122700601,
+        "sha256": "600eb1ba6e842beb6277a3fadacd80b61862d4c5fedd02f69fe7c362fc568d27"
+      },
+      "status": "success",
+      "archive_bytes": 2523991,
+      "bits_per_base": 0.16456258433485588,
+      "compression_ratio": 48.61372366224761,
+      "roundtrip_ok": true,
+      "verified_sha256": true,
+      "compress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 32.68856114000005,
+        "cpu_seconds": 36.797619,
+        "peak_rss_bytes": 808665088,
+        "memory_method": "os.wait4 ru_maxrss: child, including descendants it reaped; converted to bytes",
+        "cgroup_memory_peak_bytes": 797720576,
+        "cgroup_oom_kills": 0,
+        "cgroup_memory_method": "cgroup v2 memory.peak/memory.events",
+        "error": null,
+        "stderr_tail": "",
+        "stderr_bytes": 0,
+        "container_name": "hgs-trio-1-eimdl-flat-compress-19360",
+        "memory_limit": "2800m"
+      },
+      "decompress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 16.18629567400012,
+        "cpu_seconds": 16.523918,
+        "peak_rss_bytes": 198463488,
+        "memory_method": "os.wait4 ru_maxrss: child, including descendants it reaped; converted to bytes",
+        "cgroup_memory_peak_bytes": 185864192,
+        "cgroup_oom_kills": 0,
+        "cgroup_memory_method": "cgroup v2 memory.peak/memory.events",
+        "error": null,
+        "stderr_tail": "",
+        "stderr_bytes": 0,
+        "container_name": "hgs-trio-1-eimdl-flat-decompress-19360",
+        "memory_limit": "2800m"
+      },
+      "verification": {
+        "verdict": "pass",
+        "problems": [],
+        "original": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\independent\\runs\\klebsiella\\trio-1\\input.seq",
+        "restored": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\independent\\runs\\klebsiella\\trio-1\\ops\\eimdl-flat\\decompress\\restored.seq",
+        "archive": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\independent\\runs\\klebsiella\\trio-1\\ops\\eimdl-flat\\compress\\archive.hgs2",
+        "original_bytes": 122700601,
+        "restored_bytes": 122700601,
+        "archive_bytes": 2523991,
+        "bytes_compared": 122700601,
+        "byte_identical": true,
+        "first_mismatch_offset": null,
+        "original_sha256": "600eb1ba6e842beb6277a3fadacd80b61862d4c5fedd02f69fe7c362fc568d27",
+        "restored_sha256": "600eb1ba6e842beb6277a3fadacd80b61862d4c5fedd02f69fe7c362fc568d27",
+        "archive_sha256": "dec3ccdc04c7e65f7a4d94baf85945aa039038d22e200e4bdc92e1b06a600ebe",
+        "expected_sha256": "600eb1ba6e842beb6277a3fadacd80b61862d4c5fedd02f69fe7c362fc568d27",
+        "chunk_bytes": 8388608,
+        "seconds": 0.372,
+        "comparison": "streaming byte comparison independent of the codec"
+      }
+    },
+    {
+      "profile": "jarvis3-l7",
+      "kind": "jarvis3",
+      "tool": {
+        "artifact": "JARVIS3 .jc",
+        "level": 7
+      },
+      "input": {
+        "path": "benchmarks\\independent\\runs\\klebsiella\\trio-1\\input.seq",
+        "bytes": 122700601,
+        "sha256": "600eb1ba6e842beb6277a3fadacd80b61862d4c5fedd02f69fe7c362fc568d27"
+      },
+      "status": "success",
+      "archive_bytes": 2948926,
+      "bits_per_base": 0.19226807210178212,
+      "compression_ratio": 41.60857240907367,
+      "roundtrip_ok": true,
+      "verified_sha256": true,
+      "compress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 55.323134440999866,
+        "cpu_seconds": 15.596684,
+        "peak_rss_bytes": 300548096,
+        "memory_method": "os.wait4 ru_maxrss: child, including descendants it reaped; converted to bytes",
+        "cgroup_memory_peak_bytes": 309579776,
+        "cgroup_oom_kills": 0,
+        "cgroup_memory_method": "cgroup v2 memory.peak/memory.events",
+        "error": null,
+        "stderr_tail": "",
+        "stderr_bytes": 0,
+        "container_name": "hgs-trio-1-jarvis3-compress-19360",
+        "memory_limit": "2g"
+      },
+      "decompress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 52.03371232900008,
+        "cpu_seconds": 13.686368,
+        "peak_rss_bytes": 300285952,
+        "memory_method": "os.wait4 ru_maxrss: child, including descendants it reaped; converted to bytes",
+        "cgroup_memory_peak_bytes": 309837824,
+        "cgroup_oom_kills": 0,
+        "cgroup_memory_method": "cgroup v2 memory.peak/memory.events",
+        "error": null,
+        "stderr_tail": "",
+        "stderr_bytes": 0,
+        "container_name": "hgs-trio-1-jarvis3-decompress-19360",
+        "memory_limit": "2g"
+      },
+      "verification": {
+        "verdict": "pass",
+        "problems": [],
+        "original": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\independent\\runs\\klebsiella\\trio-1\\input.seq",
+        "restored": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\independent\\runs\\klebsiella\\trio-1\\ops\\jarvis3\\decompress\\restored.seq",
+        "archive": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\independent\\runs\\klebsiella\\trio-1\\ops\\jarvis3\\compress\\archive.jc",
+        "original_bytes": 122700601,
+        "restored_bytes": 122700601,
+        "archive_bytes": 2948926,
+        "bytes_compared": 122700601,
+        "byte_identical": true,
+        "first_mismatch_offset": null,
+        "original_sha256": "600eb1ba6e842beb6277a3fadacd80b61862d4c5fedd02f69fe7c362fc568d27",
+        "restored_sha256": "600eb1ba6e842beb6277a3fadacd80b61862d4c5fedd02f69fe7c362fc568d27",
+        "archive_sha256": "ad57bf23a52c75ef1cd2517180e4698e68e55d189ca36332e4a9e7d0e1a90639",
+        "expected_sha256": "600eb1ba6e842beb6277a3fadacd80b61862d4c5fedd02f69fe7c362fc568d27",
+        "chunk_bytes": 8388608,
+        "seconds": 0.401,
+        "comparison": "streaming byte comparison independent of the codec"
+      }
+    },
+    {
+      "profile": "grass-e2",
+      "kind": "grass",
+      "tool": {
+        "artifact": "FinalBsc.bsc",
+        "grass_commit": "6d93700f5a2de8841f7cf2c20064413c80df2c4a",
+        "libbsc_commit": "1dc676540cb40a41562af6f2db04bd1adce97f90"
+      },
+      "input": {
+        "path": "benchmarks\\independent\\runs\\klebsiella\\trio-1\\input.seq",
+        "bytes": 122700601,
+        "sha256": "600eb1ba6e842beb6277a3fadacd80b61862d4c5fedd02f69fe7c362fc568d27"
+      },
+      "status": "success",
+      "archive_bytes": 21191566,
+      "bits_per_base": 1.3816764271594726,
+      "compression_ratio": 5.790067661823576,
+      "roundtrip_ok": true,
+      "verified_sha256": true,
+      "compress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 87.18783676099997,
+        "cpu_seconds": 32.717336,
+        "peak_rss_bytes": 1054404608,
+        "memory_method": "os.wait4 ru_maxrss: child, including descendants it reaped; converted to bytes",
+        "cgroup_memory_peak_bytes": 1166483456,
+        "cgroup_oom_kills": 0,
+        "cgroup_memory_method": "cgroup v2 memory.peak/memory.events",
+        "error": null,
+        "stderr_tail": "",
+        "stderr_bytes": 0,
+        "container_name": "hgs-trio-1-grass-compress-19360",
+        "memory_limit": "2g"
+      },
+      "decompress": {
+        "status": "success",
+        "returncode": 0,
+        "wall_seconds": 75.03903388399999,
+        "cpu_seconds": 21.678787,
+        "peak_rss_bytes": 1543815168,
+        "memory_method": "os.wait4 ru_maxrss: child, including descendants it reaped; converted to bytes",
+        "cgroup_memory_peak_bytes": 1533448192,
+        "cgroup_oom_kills": 0,
+        "cgroup_memory_method": "cgroup v2 memory.peak/memory.events",
+        "error": null,
+        "stderr_tail": "",
+        "stderr_bytes": 0,
+        "container_name": "hgs-trio-1-grass-decompress-19360",
+        "memory_limit": "2g"
+      },
+      "verification": {
+        "verdict": "pass",
+        "problems": [],
+        "original": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\independent\\runs\\klebsiella\\trio-1\\input.seq",
+        "restored": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\independent\\runs\\klebsiella\\trio-1\\ops\\grass\\decompress\\Final.SSG",
+        "archive": "C:\\Users\\mdsai\\.gemini\\antigravity\\scratch\\hypergrass\\benchmarks\\independent\\runs\\klebsiella\\trio-1\\ops\\grass\\compress\\FinalBsc.bsc",
+        "original_bytes": 122700601,
+        "restored_bytes": 122700601,
+        "archive_bytes": 21191566,
+        "bytes_compared": 122700601,
+        "byte_identical": true,
+        "first_mismatch_offset": null,
+        "original_sha256": "600eb1ba6e842beb6277a3fadacd80b61862d4c5fedd02f69fe7c362fc568d27",
+        "restored_sha256": "600eb1ba6e842beb6277a3fadacd80b61862d4c5fedd02f69fe7c362fc568d27",
+        "archive_sha256": "341fc04b032e4355113dcd2993a5d3864ad3532f3ddddfe770b927ded5588b92",
+        "expected_sha256": "600eb1ba6e842beb6277a3fadacd80b61862d4c5fedd02f69fe7c362fc568d27",
+        "chunk_bytes": 8388608,
+        "seconds": 0.433,
+        "comparison": "streaming byte comparison independent of the codec"
+      }
+    }
+  ],
+  "status": "success",
+  "ranking_flat_input": [
+    {
+      "rank": 1,
+      "profile": "eimdl-flat",
+      "archive_bytes": 2523991,
+      "bits_per_base": 0.16456258433485588
+    },
+    {
+      "rank": 2,
+      "profile": "jarvis3-l7",
+      "archive_bytes": 2948926,
+      "bits_per_base": 0.19226807210178212
+    },
+    {
+      "rank": 3,
+      "profile": "grass-e2",
+      "archive_bytes": 21191566,
+      "bits_per_base": 1.3816764271594726
+    }
+  ],
+  "failures": [],
+  "finished_utc": "2026-11-06T17:40:13.027435+00:00"
+}
