@@ -88,6 +88,70 @@ Source JSON: [`benchmarks/fusion/results/mode_c_collections.json`](../benchmarks
 | *M. tuberculosis* (24 genomes, multi-FASTA) | 107,257,786 | 105,745,015 | `xz -9`: ~2.3 MB | **1,041,596 B** | **0.0788** | **102.97x** | 40.0 s / 49.9 s | PASS |
 | *S. aureus* (25 genomes, multi-FASTA) | 72,060,360 | 71,043,114 | `RC-MDL Prim`: 1,233,433 B / `AGC`: 2,145,694 B | **1,082,866 B** (`-12.21%` vs RC-MDL; **`1.98x`** < AGC) | **0.1219** | **66.55x** | 31.4 s / 35.0 s | PASS |
 
+### 3.3 Independent Locked Pangenomes (*Salmonella* + *Klebsiella*)
+
+Source JSON: [`salmonella`](../benchmarks/independent/runs/salmonella/trio-1/report.json), [`klebsiella`](../benchmarks/independent/runs/klebsiella/trio-1/report.json). Harness: [`benchmarks/independent/run_trio.py`](../benchmarks/independent/run_trio.py).
+
+Both panels were re-fetched by exact accession from their locked manifests and accepted only after matching the recorded byte counts and SHA-256. JARVIS3 v3.7 accepts raw DNA only (`currently JARVIS3 only supports DNA format`), and original GraSS's raw path is headerless, so all three codecs received the **identical canonical flat sequence** (headers removed, uppercased, non-ACGT masked to `A`; both panels contained zero non-ACGT bases). Archives therefore compare like with like, with no metadata asymmetry.
+
+| Dataset (genomes) | DNA Bases | `JARVIS3 -l 7` | original `GraSS -e2` | **`HGS2` / `EIMDL`** (`--collection --threads 1`) | **`EIMDL` bpb** | **Ratio** | vs `JARVIS3` | vs `GraSS` | SHA-256 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|:---:|
+| *Salmonella enterica* (25) | 120,527,038 | 2,709,545 B | 19,991,646 B | **2,390,106 B** | **0.1586** | **50.43x** | **`-11.79%`** (`-319,439 B`) | **`-88.04%`** (`-17,601,540 B`) | PASS |
+| *Klebsiella pneumoniae* (23) | 122,700,601 | 2,948,926 B | 21,191,566 B | **2,523,991 B** | **0.1646** | **48.61x** | **`-14.41%`** (`-424,935 B`) | **`-88.09%`** (`-18,667,575 B`) | PASS |
+
+- **Verified round trips:** each archive was decompressed in a fresh container and checked by [`benchmarks/verify/verify.py`](../benchmarks/verify/verify.py) (streaming byte comparison plus SHA-256). Both panels: `PASS`.
+- **Environment:** `hypergrass-corpus:jdk27`, pinned by digest `sha256:580e58b6ee16d43f4dd99a2871b1c920548b7c6e9b0c695a01f521c17701a4ae`, 2 CPUs, strictly sequential runs; EIMDL `-Xmx2200m` under a 2800 MiB cap, JARVIS3 and GraSS under 2 GiB.
+- **Baselines:** JARVIS3 v3.7 at level 7; original GraSS commit `6d93700f5a2de8841f7cf2c20064413c80df2c4a` with libbsc `1dc676540cb40a41562af6f2db04bd1adce97f90` (`bsc` 3.4.0, SHA-256 `84f7960dc211b5b146f45e0b6186569dd73db96ee97e36ecb534728c63e64640`), default `-e2` path.
+- **Times (compress / restore):** EIMDL 100.8 / 53.4 s and 32.7 / 16.2 s; JARVIS3 90.0 / 85.9 s and 55.3 / 52.0 s; GraSS 212.3 / 94.5 s and 87.2 / 75.0 s. Host load varied between runs; archive sizes and round trips are the stable measurements.
+- **Versus prior generation:** the earlier tuned `HyperGraSS v1` results on these panels were 3,443,600 B (0.2286 bpb) and 3,464,423 B (0.2259 bpb); `EIMDL` is **30.59%** and **27.15%** smaller on the same DNA-base denominator.
+
+### 3.4 Mode S / Mode R 25% Subset with JARVIS3, GraSS, and RSS
+
+Source JSON: [`salmonella`](../benchmarks/independent/runs/salmonella/modes-subset-1/report.json), [`klebsiella`](../benchmarks/independent/runs/klebsiella/modes-subset-1/report.json). Harness: [`benchmarks/independent/run_modes.py`](../benchmarks/independent/run_modes.py).
+
+The full per-genome mode campaign was cut to **25%**: six evenly spaced genomes per panel, always including the first and last record (6 of 25 *Salmonella*, 6 of 23 *Klebsiella*). Every record was written as its canonical flat sequence, so Mode S compares like-for-like with the two reference-free baselines on identical bytes. Mode R is `EIMDL`-only leave-one-out against the full 24/22-genome panel; JARVIS3 v3.7 and original GraSS expose no reference mode, so their columns are context for Mode R, not a like-for-like baseline.
+
+**Archive size**
+
+| Panel (targets) | `EIMDL` S | `JARVIS3 -l 7` | original `GraSS -e2` | `EIMDL` R | S bpb | R bpb | S vs `JARVIS3` | S vs `GraSS` | R vs S |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| *Salmonella* (6) | **6,629,508 B** | 7,162,390 B | 7,029,710 B | **179,303 B** | **1.8540** | **0.0501** | **`-7.44%`** | **`-5.69%`** | **`-97.30%`** |
+| *Klebsiella* (6) | **7,238,897 B** | 8,041,937 B | 7,786,274 B | **254,195 B** | **1.7983** | **0.0632** | **`-9.99%`** | **`-7.03%`** | **`-96.49%`** |
+| **Both (12)** | **13,868,405 B** | 15,204,327 B | 14,815,984 B | **433,498 B** | **1.8245** | **0.0570** | **`-8.79%`** | **`-6.40%`** | **`-96.87%`** |
+
+**Speed and memory (12 targets, 60,810,308 bp)**
+
+| Regime | Compress wall | Restore wall | Compress CPU | Restore CPU | Compress MiB/s | Restore MiB/s | cgroup C (med–max) | cgroup R (med–max) |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| **`EIMDL` S** | 332.5 s | 277.9 s | 368.8 s | 299.3 s | 0.17 | 0.21 | **108–113 MiB** | **88–89 MiB** |
+| `JARVIS3` S | **91.0 s** | 87.9 s | **52.3 s** | **49.3 s** | **0.64** | 0.66 | 266–267 MiB | 266–267 MiB |
+| `GraSS` S | 102.6 s | **81.2 s** | 83.6 s | 63.7 s | 0.57 | 0.71 | 265–310 MiB | 132–135 MiB |
+| **`EIMDL` R** | 398.2 s | **48.4 s** | 451.9 s | 62.2 s | 0.15 | **1.20** | 343–379 MiB | 222–234 MiB |
+
+- **Size:** `EIMDL` Mode S is **8.79% smaller than JARVIS3** (−1,335,922 B) and **6.40% smaller than original GraSS** (−947,579 B) across the 12 genomes. The margin is larger on *Klebsiella* (−9.99% / −7.03%) than on *Salmonella* (−7.44% / −5.69%).
+- **Mode R:** 433,498 B total at **0.0570 bpb**, **31.99x smaller** than `EIMDL` Mode S. Per-target wins range from **−90.78%** to **−99.98%**. Near-identical genomes collapse to **271–1,311 B**; the most divergent targets still need 41.8–112.5 KB.
+- **Speed:** Mode S is **3.65x slower to compress** and **3.16x slower to restore** than JARVIS3 (3.24x / 3.42x versus GraSS). Mode R is **1.20x slower to compress** than Mode S (it loads the full panel) but **5.74x faster to restore**; against JARVIS3, Mode R compresses 4.38x slower and restores 1.82x faster. By CPU time the Mode S gap is wider (**7.05x** compress / **6.07x** restore versus JARVIS3); Mode R restore uses **4.81x less CPU** than Mode S, though its 62.2 CPU-s is 1.26x JARVIS3's 49.3 CPU-s because JARVIS3 is wall-clock I/O-bound.
+- **Memory:** Mode S uses **2.46x less compress RSS** and **3.02x less restore RSS** than JARVIS3 (2.45x / 1.50x versus GraSS). Mode R uses **3.18x more compress RSS** than Mode S because of the panel, but **1.20x less restore RSS** than JARVIS3. Peak cgroup was **379 MiB** (Mode R compress) against a 2,200 MiB cap; no OOM kills across all 48 runs (96 compress/restore phases).
+- **Protocol:** `hypergrass-corpus:jdk27` at digest `sha256:580e58b6ee16d43f4dd99a2871b1c920548b7c6e9b0c695a01f521c17701a4ae`, 2 CPUs, `--threads 1` for `EIMDL`. Heaps/caps: Mode S `-Xmx1200m` / 1800 MiB, Mode R `-Xmx1600m` / 2200 MiB, JARVIS3 and GraSS 2 GiB. Every archive was decompressed in a fresh container and byte/SHA-256 verified against its target.
+- **Measurement:** wall is the in-container wrapper duration (Docker creation/startup excluded); CPU and RSS are container-side `os.wait4` rusage of the tool process (including descendants it reaped); cgroup is v2 `memory.peak`. Speed is host-dependent, so treat it as a tool-process ranking, not a storage-system benchmark.
+- **Baseline caveat:** the earlier *E. coli* Mode S numbers in §1 were measured with default parallelism; these runs are single-threaded, so absolute times are not comparable. A smoke rerun reproduced `EIMDL` and JARVIS3 archives byte-identically but GraSS moved by 6 B on a 1.14 MB archive (5 ppm), so small GraSS deltas are noise.
+
+**Tuned baseline control: JARVIS3 `-l 31`**
+
+JARVIS3's default is level 7. To test whether the Mode S margin above is a tuning artifact, the same 12 canonical flat targets were recompressed at level 31 (4 context models, 2 repeat-class models, NN mixer, `-hs 48`) under the identical 2 GiB cap, with a fresh-container restore and byte/SHA-256 verification. Harness: [`run_jarvis_level.py`](../benchmarks/independent/run_jarvis_level.py).
+
+| Panel (targets) | `EIMDL` S | `JARVIS3 -l 31` | `JARVIS3 -l 7` | EIMDL vs L31 | L31 vs L7 | L31 compress/restore wall | L31 cgroup C/R |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| *Salmonella* (6) | **6,629,508 B** | 6,748,736 B | 7,162,390 B | **`-1.77%`** | `-5.78%` | 100.0 / 106.4 s | 1,158 / 1,157 MiB |
+| *Klebsiella* (6) | **7,238,897 B** | 7,448,657 B | 8,041,937 B | **`-2.82%`** | `-7.38%` | 317.5 / 345.7 s | 1,159 / 1,159 MiB |
+| **Both (12)** | **13,868,405 B** | 14,197,393 B | 15,204,327 B | **`-2.32%`** | `-6.62%` | 417.5 / 452.1 s | 1,158–1,159 MiB |
+
+- **Verified:** 12/12 targets round-tripped byte-exactly, 0 OOM kills, 1.16 GiB peak against the 2 GiB cap.
+- **Memory:** level 31 uses **10.7x / 13.2x** more cgroup RSS than `EIMDL` Mode S (1,158–1,159 MiB vs 108 / 88 MiB).
+- **Speed:** combined, `EIMDL` is **1.26x faster to compress** and **1.63x faster to restore** (417.5 / 452.1 s versus 332.5 / 277.9 s); compress CPU is essentially tied (363.0 vs 368.8 s) and restore CPU favors `EIMDL` by 1.30x. Per panel the ranking flips: JARVIS3 L31 is faster on *Salmonella* (100.0 / 106.4 s vs 153.1 / 130.9 s) but 1.77x / 2.35x slower on *Klebsiella*.
+- **Effect on the claim:** tuning JARVIS3 narrows the Mode S size margin from **8.79% to 2.32%**, while costing ~11x the memory. Level 7 numbers earlier in this section are still the published default-setting results; the L31 row is the tuned control.
+- **Mode C caveat:** a full-panel level-31 run was started but **not completed**. JARVIS3 consumed ~40 min to compress the 120.5 Mb *Salmonella* stream (~3x the per-base cost measured on the subset, i.e. superlinear in stream length) and was stopped deliberately; no full-panel L31 archive exists. Mode C comparisons in §3.3 therefore remain versus `-l 7` and `GraSS` only.
+
 ---
 
 ## 4. Amdahl Multi-Core Scaling & Strict Bounded-Heap Execution
