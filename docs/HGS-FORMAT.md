@@ -1,10 +1,144 @@
-# HyperGraSS Archive Format (`.hgs`), version 1
+# HyperGraSS Archive Container Specifications (`.hgs2` v2.0 & `.hgs` v1.0)
+
+Status: Production implementation-defined binary container specifications documented from the unified **Generation 3 `HGS2` / `EIMDL` engine** ([`HyperGraSSFusionEngine.java`](../src/hypergrass/HyperGraSSFusionEngine.java), [`EimdlMosaicCodec.java`](../src/hypergrass/EimdlMosaicCodec.java), [`FastNoveltyCoder.java`](../src/hypergrass/FastNoveltyCoder.java)) and the **Generation 1 `HyperGraSS` 1.0.0 engine** ([`HyperGraSS.java`](../src/hypergrass/HyperGraSS.java)). Both decoders enforce strict structural validation, CRC-32 verification, and (for Mode R in `.hgs2`) cryptographic 32-byte `SHA-256` donor-panel manifest verification before emitting output.
+
+---
+
+# Part I — Unified `.hgs2` Container Format (Version 2, Magic `"HGS2"`)
+
+## 1. Overview & Regime Separation
+
+An `.hgs2` archive begins with the 4-byte ASCII magic `48 47 53 32` (`"HGS2"`) and losslessly encodes any raw byte stream (FASTA, multi-FASTA, RNA `A/C/G/U`, mixed IUPAC/masked sequences, or headerless `.seq` streams) under one of three explicit operational regimes:
+
+| Mode ID (`flags & 0x03`) | Regime Name | Reference Conditioning | Description |
+|---:|---|---|---|
+| `0` (`MODE_SINGLE`) | **Mode S** | $\mathcal{R} = \emptyset$ (self-contained) | Single genome, chromosome, or synthetic sequence encoded via bidirectional ($\pm$) self-mosaic, tandem periodicity, and `FastNoveltyCoder` (`6F-ORF-HMM` + `FastCRM`). |
+| `1` (`MODE_REF`) | **Mode R** | $\mathcal{R} \neq \emptyset$ (external panel) | Reference-conditioned delta archive relative to an external donor panel pinned in the header by a compressed donor-name directory and a mandatory **32-byte `SHA-256` Merkle manifest digest**. |
+| `2` (`MODE_COLLECTION`) | **Mode C** | $\mathcal{R} = \emptyset$ (self-contained) | Multi-genome pangenome collection ordered along a causal syncmer-Jaccard Prim minimum spanning tree (`rankToUnit[r]`, `maxAncestorRank[r]`) with a unified pan-genome novelty superstream. |
+
+## 2. Top-Level `.hgs2` Physical Layout
+
+```text
+offset  type                   field                        condition
+------  ---------------------  ---------------------------  ----------------------------------------
+0       bytes[4]               magic = "HGS2" (48 47 53 32) always
+4       byte                   headerFlags                  bits 0..1 = mode (0,1,2);
+                                                            bit 2 (0x04) = FLAG_RAW_FLAT_ACGT;
+                                                            bit 3 (0x08) = FLAG_RAW_RNA_U;
+                                                            bits 4..7 must be 0 (else rejected)
+5       longLE (8 B)           rawByteLen                   exact uncompressed file byte length (>= 0)
+13      intLE  (4 B)           rawCrc32                     IEEE 802.3 CRC-32 of uncompressed bytes
+17      uvarint                totalRecords                 number of FASTA records (or 1 if flat)
+...     uvarint                numUnits                     number of coding units U (>= 0)
+...     [PanelPinningBlock]    modeRPinning                 present iff mode == 1 (MODE_REF)
+...     [CollectionDagBlock]   modeCDagPermutation          present iff mode == 2 && numUnits > 1
+...     [UnitFramingBlock]     unitMetadataOrLengths        present iff numUnits > 0
+...     [RankMosaicStreams]    mosaicPayloads[0..U-1]       present iff numUnits > 0 (in rank order)
+...     [NoveltySuperstream]   unifiedNoveltyPayload        present iff numUnits > 0
+```
+
+A valid `.hgs2` decoder (`HyperGraSSFusionEngine.parseHeaderAndDirectory`) rejects any archive shorter than 18 bytes, any non-zero bit in `headerFlags & ~0x0F`, any `mode > 2`, any negative length, or any trailing byte after `unifiedNoveltyPayload`.
+
+## 3. Mode R Cryptographic Reference-Panel Pinning (`mode == 1`)
+
+Present immediately after `numUnits` when and only when `mode == 1`:
+
+```text
+panelCount          uvarint      number of donor sequences M in the external reference panel
+compNamesLen        uvarint      byte length of Deflate-compressed donor name table
+compNames           bytes[n]     Deflate-compressed UTF-8 donor filenames (newline-delimited)
+panelManifestSha256 bytes[32]    256-bit SHA-256 Merkle digest over ordered donor names,
+                                 base lengths, and 2-bit packed DNA word banks
+```
+
+Prior to decoding any mosaic token (`verifyAndLoadPanelForDecode`), the decoder loads the external `--panel` directory or file, resolves the exact ordered donor list `panelNames[0..M-1]`, recomputes the 32-byte `SHA-256` manifest digest, and aborts immediately with an `IllegalStateException` if any donor is missing, reordered, or modified by even a single base.
+
+## 4. Mode C Causal Phylogenetic DAG Permutation (`mode == 2 && numUnits > 1`)
+
+When compressing a multi-unit collection in Mode C, `buildPhylogeneticPrimOrder` computes bottom-2048 canonical open-syncmer sketches for all $U$ units, selects the medoid root $r = 0$, and orders $r = 0, \dots, U-1$ by Prim's maximum-similarity spanning tree:
+
+```text
+rankToUnit[0..U-1]       uvarint[U]   bijective permutation mapping phylogenetic rank r -> input unit u
+maxAncestorRank[0..U-1]  uvarint[U]   causal ancestor cap for rank r (must satisfy 0 <= anc <= r)
+```
+
+The decoder verifies that `rankToUnit` is a valid permutation of $\{0, \dots, U-1\}$ and that `0 <= maxAncestorRank[r] <= r` for every rank $r$, guaranteeing strictly causal DAG reconstruction without cycles.
+
+## 5. Per-Unit Framing & 6-Channel Factorized Metadata (`numUnits > 0`)
+
+- **Case A — Fast Flat Sequence Path (`FLAG_RAW_FLAT_ACGT = 0x04` set):**
+  Used when the input is a headerless, newline-free uppercase `ACGT` (or `ACGU` when `FLAG_RAW_RNA_U = 0x08` is set) stream streamed directly via `tryStreamFlatFile`:
+  ```text
+  unitDnaLens[0..U-1]    uvarint[U]   exact base length of each input unit u
+  ```
+- **Case B — General 6-Channel Factorized Path (`FLAG_RAW_FLAT_ACGT` clear):**
+  Used for all FASTA, multi-FASTA, soft-masked, `N`-scaffolded, or IUPAC-containing inputs factorized by `FastaStreamFactorizer`:
+  ```text
+  for each input unit u in 0 .. U-1:
+    firstRecordIdx       uvarint      0-based index of the first FASTA record in unit u
+    recordCount          uvarint      number of FASTA records in unit u
+    unitMetaLen          uvarint      byte length of serialized 6-channel metadata
+    unitMetaBytes        bytes[mLen]  6-channel metadata stream (identical to Section 11.1 below)
+  ```
+
+## 6. Rank-Ordered `EimdlMosaicCodec` Streams (`mosaicPayloads[0..U-1]`)
+
+For each phylogenetic rank $r \in \{0, \dots, U-1\}$:
+
+```text
+mosaicLen                uvarint      byte length of rank r's encoded mosaic stream
+mosaicBytes              bytes[mLen]  self-contained EimdlMosaicCodec stream for rank r
+```
+
+Inside each `mosaicBytes` payload:
+1. **Mosaic Header:**
+   - `configByte` (`1 byte`): encodes active EIMDL law flags (`allowApprox`, `allowSplice`, `allowV4`, `allowWobble`, `allowSelf`, `allowTandem`, `hasPanel`).
+   - `targetBases` (`uvarint`): exact DNA base length $n_r$ reconstructed by rank $r$.
+   - `noveltyBases` (`uvarint`, present iff `targetBases > 0`): exact number of novel/literal + insertion-splice bases consumed by rank $r$ from the unified novelty superstream.
+2. **Bitwise Order-1 Adaptive Range-Coded Phrase & Evolutionary Residual Stream (`BitRangeEnc`):**
+   - Phrase kind decision trees (`LITERAL`, `PANEL` copy, `SELF` copy, `TANDEM` period $1 \le P \le 64$).
+   - Panel donor ID (conditioned on `preferredTwinDonor` and similarity order `mtf[0..3]`), strand bit ($\pm$), reference coordinate delta or global position, and token span.
+   - **Law IIIc Syntenic Micro-Indel Splices:** `hasSplice` flag conditioned on 8-state `(kind, spanBin)` prior, splice sub-block length, and $(\Delta_{\text{tgt}}, \Delta_{\text{ref}})$ insertion/deletion offsets.
+   - **Law IIa Bijective Codon-Wobble Substitution Gaps:** quotient $q = \lfloor \text{gap}/3 \rfloor$ and codon-phase remainder $r = (\text{gap}+1)\bmod 3$ conditioned on local divergence regime.
+   - **Law I Klein Four-Group ($V_4$) Substitution Operators:** non-zero XOR operator $\delta = y \oplus x \in \{1, 2, 3\}$ conditioned on reference trinucleotide context $c = (x_{-1}, x_0, x_{+1})$ (including $\text{CpG}$ hypermutability) and divergence regime:
+     - First binary decision: **Kimura Transition** ($\delta = 2$) vs. **Transversion** ($\delta \in \{1, 3\}$).
+     - Second binary decision (if transversion): **Keto-Amino** ($\delta = 1$) vs. **Watson-Crick Complement** ($\delta = 3$).
+
+## 7. Unified Pan-Genome Novelty Superstream (`FastNoveltyCoder`)
+
+All novel literal runs and insertion-splice bases from ranks $r = 0, \dots, U-1$ are concatenated in rank order into a single contiguous buffer of length `totalNoveltyBases` ($\sum_{r=0}^{U-1} \text{noveltyLen}_r$) and encoded at the end of the `.hgs2` archive:
+
+```text
+totalNoveltyBases        uvarint      total novelty bases N_nov across all ranks
+noveltyPayloadLen        uvarint      byte length of the FastNoveltyCoder payload
+noveltyPayload           bytes[nLen]  segmented FastNoveltyCoder stream
+```
+
+Inside `noveltyPayload` (when `totalNoveltyBases > 0`):
+
+```text
+totalSegs                uvarint      1 (serial) or 1 + workerCount (warm-primed parallel stripes)
+modelFlags               byte         bit 0 (0x01) = boundedMem; bit 1 (0x02) = panSuper
+segLens[0..totalSegs-1]  uvarint[]    base count of each segment (sum must equal totalNoveltyBases)
+compLens[0..totalSegs-1] uvarint[]    compressed byte length of each segment
+segPayloads[0..totalSegs-1]:
+  segMode                byte         0x00 = SEG_CRM (6F-ORF-HMM + multi-order Markov/repeat mixer)
+                                      0x01 = SEG_RAW_2BIT (Law IV incompressible raw 2-bit bypass)
+  segBody                bytes[...]   if SEG_CRM: carryless range-coded stream;
+                                      if SEG_RAW_2BIT: ceil(segLen / 4) bytes of 2-bit packed DNA
+```
+
+When `totalSegs > 1`, segment `0` (`warmBases`) is decoded first to populate the shared `WarmSnapshot` (`6F-ORF-HMM` posteriors, Markov tables, and prefix repeat rings), after which segments `1 .. totalSegs-1` are decoded concurrently across worker threads.
+
+---
+
+# Part II — Legacy `.hgs` Container Format (Version 1, Magic `"HGS\x01"`)
 
 Status: implementation-defined format, documented from the HyperGraSS 1.0.0
-encoder and decoder. It is not yet an external standard. A decoder must reject
+encoder and decoder (`src/hypergrass/HyperGraSS.java`). A decoder must reject
 malformed input; the encoder emits only the canonical choices described here.
 
-## 1. Scope
+## 8. Scope
 
 An `.hgs` file stores an arbitrary byte stream losslessly. When the input is
 FASTA, the encoder additionally factorizes headers, line layout, soft-masking,
@@ -16,14 +150,14 @@ The format has two physical layouts:
 
 | Layout | Used for | Header |
 | --- | --- | --- |
-| Compact single-block | Small inputs chosen by the encoder | 13-byte header + one payload |
+| Compact single-block | Small inputs or `--single` superblock | 13-byte header + one payload |
 | Multi-block | General inputs | Header, optional anchor bank, blocks, footer, 12-byte trailer |
 
 Both layouts start with the same 4-byte magic `48 47 53 01` (`"HGS"` + version
 byte `0x01`). Readers must check the magic and the layout flag before parsing
 anything else.
 
-## 2. Primitive encodings
+## 9. Primitive Encodings (Shared by `.hgs` and `.hgs2`)
 
 - **`uvarint`** — unsigned LEB128, 7 bits per byte, least-significant group
   first, high bit set on every byte except the last. Values are limited to the
@@ -32,22 +166,19 @@ anything else.
   `zz = (value << 1) ^ (value >> 31)` for 32-bit values.
 - **`intLE` / `longLE`** — fixed-width little-endian 32-bit / 64-bit integers.
 - **`bytes[n]`** — `n` raw bytes with no length prefix unless stated.
-- **`aux`** — a length-delimited auxiliary channel:
+- **`aux`** — a length-delimited auxiliary channel (`VarIntCodec`):
 
   | First byte | Meaning |
   | --- | --- |
   | `0` | Empty. No further bytes. |
   | `1` | Raw. Followed by `uvarint` length and that many bytes. |
   | `2` | Deflate. Followed by `uvarint` uncompressed length, `uvarint` compressed length, and that many bytes of a raw DEFLATE stream (`nowrap=true`, level 9). |
+  | `3..6` | Specialized entropy-floor codecs (RLE, Delta-ZigZag, Nibble-pack, Order-0/Order-1 Range Coding). |
+  | `7` | Cross-block LZ77 + range-coded stream decoded against the preceding 256 KiB of gap plaintext (when `SHARED_GAP` is set). |
 
-  The encoder emits `0` for an empty payload and `1` for payloads of at most 12
-  bytes. Otherwise it uses Deflate only when `compressedLength + varintSize(compressedLength)`
-  is strictly smaller than the raw length; a decoder must accept raw even when
-  Deflate would also have been valid.
+## 10. `.hgs` Common Header, Compact Layout & Multi-Block Layout
 
-## 3. Common header
-
-```
+```text
 offset  size  field
 0       4     magic = 48 47 53 01
 4       1     mode flags (bit field)
@@ -61,38 +192,25 @@ Mode flags:
 | `0x02` | `LEAN_MODE` | Streaming/low-memory encoder settings. |
 | `0x04` | `COMPACT_SINGLE` | Compact single-block layout. |
 | `0x08` | `SHARED_GAP` | Block gap channels share a 256 KiB LZ history across blocks. |
+| `0x10` | `COMPACT_TUNED` | Compact single archive using the tuned single-genome `QCRM` profile. |
+| `0x20` | `QCRM_SEGMENTED` | Tuned `QCRM` payload split into independently coded segments. |
 
-`COMPACT_SINGLE` and `HAS_ANCHOR` are mutually exclusive. `COMPACT_SINGLE`
-implies no anchor bank. `LEAN_MODE` affects the payload encoding choices, not
-the framing. `SHARED_GAP` means each block's gap channel may be an `aux` mode-7
-stream: `uvarint rawLen`, `uvarint compLen`, then `compLen` bytes of an
-LZ77+range-coded stream decoded against the preceding 256 KiB of gap plaintext.
-The encoder appends only the block's chosen gap plaintext to the history, and
-the decoder appends the plaintext it recovered, so both sides rebuild the same
-dictionary deterministically. The bounded multiblock path sets this flag; a
-reader that ignores it cannot decode mode-7 gap streams.
+### 10.1 Compact Single-Block Layout
 
-## 4. Compact single-block layout
-
-```
+```text
 offset  size  field
-0       4     magic
-4       1     flags = 0x04
+0       4     magic = 48 47 53 01
+4       1     flags (includes 0x04 COMPACT_SINGLE)
 5       4     rawLen, intLE
 9       4     crc32, intLE
 13      ...   payload
 ```
 
-`rawLen` is the exact decompressed byte length. `crc32` is the standard
-CRC-32 (IEEE 802.3, as in `java.util.zip.CRC32`) of the decompressed bytes.
-`payload` is a block payload as defined in section 6. The archive ends after
-the payload; there is no footer or trailer.
+### 10.2 Multi-Block Layout
 
-## 5. Multi-block layout
-
-```
+```text
 offset  size  field
-0       4     magic
+0       4     magic = 48 47 53 01
 4       1     flags
 5       ...   optional anchor bank (present iff HAS_ANCHOR)
 ...     ...   block payloads, concatenated
@@ -101,216 +219,70 @@ offset  size  field
 ...     4     FOOTER_MAGIC = 0x31464748 ("HGF1" in little-endian bytes)
 ```
 
-The last 12 bytes are always the trailer. `footerOffset` is the absolute file
-offset of the footer body. The footer body is `aux`-encoded; its decoded bytes
-are the directory. Block offsets in the directory are absolute.
+### 10.3 Anchor Bank (`HAS_ANCHOR`)
 
-### 5.1 Anchor bank
-
-Present only when `HAS_ANCHOR` is set:
-
-```
-fast2Bit      byte        0 = 2-bit packed pages, 1 = context-mixer-coded pages
-anchorLen     uvarint     total anchor bases
-numPages      uvarint     number of pages
+```text
+fast2Bit       byte        0 = 2-bit packed pages, 1 = context-mixer-coded pages
+anchorLen      uvarint     total anchor bases
+numPages       uvarint     number of pages (ANCHOR_PAGE_SIZE = 65,536 bases)
 primarySeedLen uvarint
-numDonors     uvarint
-donorGaps     aux         per donor: uvarint length, then per element
-                          uvarint(pos - prevPos - 1)
-donorDiffs    aux         one byte per element, low 2 bits used
-pageBaseLen[] uvarint     one per page, in page order
-pageEncLen[]  uvarint     one per page, in page order
-pagePayload[] bytes       one per page, in page order
+numDonors      uvarint
+donorGaps      aux         per donor: uvarint length, then uvarint(pos - prevPos - 1)
+donorDiffs     aux         one byte per element, low 2 bits used
+pageBaseLen[]  uvarint     one per page, in page order
+pageEncLen[]   uvarint     one per page, in page order
+pagePayload[]  bytes       one per page, in page order
 ```
 
-`ANCHOR_PAGE_SIZE` is 65,536 bases. The final page may be shorter. When the
-flag is `0`, each page payload is an `aux` stream containing 2-bit packed bases
-(A=0, C=1, G=2, T/U=3), least-significant base first within each byte
-(`pack2Bit` in `VarIntCodec`). When the flag is `1`, each page payload is a
-`QuantumContextRepeatMixer` stream as described in section 6.3. Global donor
-entries encode a position and a 2-bit difference; they are an internal reuse
-catalog, not part of the public API.
+### 10.4 Footer Body
 
-### 5.2 Footer body
-
-The decoded footer body is:
-
-```
-numBlocks      uvarint
-totalRawBytes  uvarint (64-bit)
-totalRecords   uvarint
-crc32          intLE
+```text
+numBlocks              uvarint
+totalRawBytes          uvarint (64-bit)
+totalRecords           uvarint
+crc32                  intLE
 entries[numBlocks]:
-  offsetDelta  uvarint (64-bit)
-  compressedLen uvarint
-  firstRecordDelta uvarint
-  recordCount  uvarint
+  offsetDelta          uvarint (64-bit)
+  compressedLen        uvarint
+  firstRecordDelta     uvarint
+  recordCount          uvarint
   firstRecordBaseOffset uvarint (64-bit)
-  blockSeqChars uvarint
+  blockSeqChars        uvarint
 ```
 
-For entry 0, `offsetDelta` is the absolute block offset. For later entries it
-is `blockOffset - previousBlockEnd`, where `previousBlockEnd` is the previous
-entry's `blockOffset + compressedLen`. `firstRecordDelta` is relative to the
-previous entry's `firstRecordIdx`; entry 0 is relative to 0. This keeps the
-directory small and makes block order explicit.
+## 11. Block Payload & 6-Channel `FastaStreamFactorizer` Metadata
 
-`firstRecordBaseOffset` is the sequence-character offset of the block start
-within the record identified by `firstRecordIdx` (headers and line endings
-excluded). It is `0` when the block starts at that record's header or first
-base, and greater than `0` when a long record was split at a line boundary.
-It is what maps a record-relative query range to the block's DNA stream without
-decompressing earlier blocks.
+### 11.1 Auxiliary Metadata Channels (`FastaStreamFactorizer`)
 
-`blockSeqChars` is the number of sequence characters contributed by the block;
-it is used to map a record-relative query range to the block's DNA stream.
+Used identically by `.hgs` block payloads and `.hgs2` non-flat unit metadata:
 
-## 6. Block payload
-
-A block payload is:
-
-```
-auxMetadata    section 6.1
-dnaPayload     section 6.2
-```
-
-### 6.1 Auxiliary metadata channels
-
-```
-flags          byte
+```text
+flags          byte        0x01 RNA mode, 0x02 headers, 0x04 lowercase, 0x08 N-runs, 0x10 exceptions
 dnaLen         uvarint
 totalSeqChars  uvarint
 numSeqLines    uvarint
 ```
 
-Flag bits: `0x01` RNA mode, `0x02` headers present, `0x04` lowercase intervals
-present, `0x08` `N` runs present, `0x10` exception symbols present.
+- **Channel 1 — Headers (iff `0x02`):** `uvarint numHeaders`, then `aux headerBlock` containing per-header `uvarint seqLineDelta` followed by front-coded `(sharedPrefixLen, suffixLen, suffixBytes)` (excluding leading `>` and EOL).
+- **Channel 2 — Line Layout (always present):** `aux lineLengths` (RLE of sequence line widths) and `aux lineEols` (RLE of EOL codes: `0` = none, `1` = `LF`, `2` = `CRLF`).
+- **Channel 3 — Lowercase Soft-Mask Intervals (iff `0x04`):** `uvarint numIntervals`, `uvarint minLength`, `aux gaps`, `aux lengths` (`length - minLength`).
+- **Channel 4 — `N` Runs (iff `0x08`):** `uvarint numRuns`, `aux runs` of `(uvarint acgtGap, uvarint runLength)`.
+- **Channel 5 — IUPAC Exception Symbols (iff `0x10`):** `uvarint numExceptions`, `aux gaps`, `aux symbols` (1 raw byte per exception).
 
-Channel 1 — headers, present iff `0x02`:
-
-```
-numHeaders     uvarint
-headerBlock    aux
-```
-
-`headerBlock` contains, for each header: `uvarint seqLineDelta`; then, for each
-header in order, `uvarint sharedPrefixLen`, `uvarint suffixLen`, and the suffix
-bytes. Headers are front-coded against the previous header. Header bytes
-exclude the leading `>` (the decoder re-inserts it) and exclude the line ending.
-
-Channel 2 — line layout (always present):
-
-```
-lineLengths    aux    RLE of sequence line widths
-lineEols       aux    RLE of per-line EOL codes
-```
-
-EOL codes: `0` = none, `1` = LF, `2` = CRLF. The EOL stream covers header
-lines and sequence lines in file order. Both RLE streams contain
-`(runLength, value)` pairs of `uvarint`s; see `writeRleInts` / `writeRleBytes`
-in `FastaStreamFactorizer`.
-
-Channel 3 — lowercase intervals, present iff `0x04`:
-
-```
-numIntervals   uvarint
-minLength      uvarint
-gaps           aux    uvarint gap to each interval
-lengths        aux    uvarint (length - minLength)
-```
-
-Gaps are measured in uppercase bases between lowercase intervals. Case is
-restored from these intervals, not stored per base.
-
-Channel 4 — `N` runs, present iff `0x08`:
-
-```
-numRuns        uvarint
-runs           aux    per run: uvarint ACGT gap, uvarint run length
-```
-
-Channel 5 — exception symbols, present iff `0x10`:
-
-```
-numExceptions  uvarint
-gaps           aux    uvarint gap before each exception
-symbols        aux    one raw byte per exception
-```
-
-Exception symbols are bytes that are neither A/C/G/T/U/N nor lowercase
-variants. They are stored verbatim and reinserted at the recorded gaps.
-
-The DNA stream contains only canonical base codes. `U` is folded to `T` in RNA
-mode and restored on decode; lowercase is reconstructed from channel 3.
-
-### 6.2 DNA payload
-
-The first byte selects the DNA encoding:
+### 11.2 `.hgs` DNA Payload Modes
 
 | Mode | Layout |
 | --- | --- |
 | `0` | Empty DNA stream. No further bytes. |
 | `1` | `uvarint compressedLen`, then that many bytes of a `QuantumContextRepeatMixer` stream that decodes to `dnaLen` bases. |
-| `2` | Seed matches with per-match literals and SNP residuals. |
-| `3` | Anchor-coordinate haplotype matrix with donor reuse. |
+| `2` | Seed matches with per-match literals and SNP residuals (`CanonicalSyncmerEngine`). |
+| `3` | Anchor-coordinate haplotype matrix with donor reuse (`CanonicalSyncmerEngine`). |
 
-Modes 2 and 3 are internal to `CanonicalSyncmerEngine`. Their subfields use
-`aux` streams for literal lengths, strand bits, match geometry, SNP counts,
-SNP gaps, and SNP differences. A conforming decoder should use the reference
-implementation rather than reimplement these modes from this summary.
+## 12. Reference Implementation Files
 
-### 6.3 `QuantumContextRepeatMixer` stream
-
-Mode 1 and non-2-bit anchor pages contain a self-delimiting context-mixer
-stream. In mode 1 the compressed stream is stored as `uvarint compressedLen`
-followed by that many bytes and decodes to the block's `dnaLen` bases. A
-non-2-bit anchor page stores the compressed stream bytes directly and takes its
-compressed length from `pageEncLen` in section 5.1; it decodes to the page's
-`pageBaseLen` bases. There is no additional `aux` wrapper. A 2-bit anchor page
-is different: its packed bases are wrapped in `aux` before being stored as the
-page payload. The mixer is a byte-oriented adaptive model; its internal state is
-reset per stream. The decoder must consume exactly the declared number of output
-bytes and reject truncated or overlong input.
-
-## 7. Compression and verification rules
-
-- The encoder computes CRC-32 over the exact decompressed bytes and stores it
-  in the header (compact layout) or footer (multi-block layout).
-- The decoder verifies the CRC before returning data.
-- The 1.0.0 decoder rejects malformed magic, footer magic, impossible lengths,
-  truncated varints, and directory entries that point outside the file. It
-  currently ignores reserved header flag bits; a future or independent reader
-  should reject any bit outside `0x0F` rather than guess at its meaning.
-- A round trip is successful only when the restored byte sequence is identical
-  to the input, not merely when it decodes without error.
-
-## 8. Query semantics
-
-`HyperGraSS query <archive.hgs> <recordIndex> <start> <end>` returns a slice of
-one record. `start` and `end` are zero-based, half-open, and relative to the
-record's sequence characters; `end = -1` means the record end. The query reads
-the footer, finds the directory entries whose record range contains the
-requested record index, and decodes only those blocks plus the anchor pages they
-reference. For a record spanning several blocks, `firstRecordBaseOffset` and
-`blockSeqChars` map the requested range to the overlapping blocks. The requested
-bases are written to stdout followed by a newline. Query output is therefore not
-a FASTA record; it is the raw base slice.
-
-## 9. Determinism and compatibility
-
-- For a fixed input and fixed options, the encoder is deterministic: the same
-  bytes and the same archive size are produced.
-- The `--optimize` flag performs a bounded extra search and may choose a
-  different, smaller archive; it does not change the format.
-- `--lean` changes encoder memory behavior and payload choices but not the
-  framing.
-- Version byte `0x01` identifies this layout. A future incompatible layout
-  must use a different magic/version byte; readers must not guess.
-
-## 10. Reference implementation
-
-- `src/hypergrass/HyperGraSS.java` — container, footer, CLI, query.
-- `src/hypergrass/FastaStreamFactorizer.java` — six-channel metadata layout.
-- `src/hypergrass/CanonicalSyncmerEngine.java` — DNA modes 0–3, anchor bank.
-- `src/hypergrass/VarIntCodec.java` — varints, 2-bit packing, `aux` streams.
-- `src/hypergrass/QuantumContextRepeatMixer.java` — context-mixer stream.
+- [`src/hypergrass/HyperGraSSFusionEngine.java`](../src/hypergrass/HyperGraSSFusionEngine.java) — `.hgs2` container, Mode R SHA-256 manifest pinning, Mode C Prim DAG permutation, random-access query, byte accounting.
+- [`src/hypergrass/EimdlMosaicCodec.java`](../src/hypergrass/EimdlMosaicCodec.java) — `.hgs2` Laws I–IV mosaic phrase, micro-indel splice, wobble bijection, and Klein $V_4$ substitution coder.
+- [`src/hypergrass/FastNoveltyCoder.java`](../src/hypergrass/FastNoveltyCoder.java) — `.hgs2` `6F-ORF-HMM` + `FastCRM` parallel novelty superstream and `SEG_RAW_2BIT` safety bypass.
+- [`src/hypergrass/HyperGraSS.java`](../src/hypergrass/HyperGraSS.java) — `.hgs` v1 container, footer, CLI, `--lean` streaming, and automatic `.hgs2` magic dispatch.
+- [`src/hypergrass/FastaStreamFactorizer.java`](../src/hypergrass/FastaStreamFactorizer.java) — 6-channel lossless FASTA/RNA/DNA stream factorization.
+- [`src/hypergrass/VarIntCodec.java`](../src/hypergrass/VarIntCodec.java) — LEB128 varints, 2-bit packing, and `aux` modes `0..7`.
