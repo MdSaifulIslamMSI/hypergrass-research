@@ -32,8 +32,10 @@ public final class VerifyCompressionLaws {
         verifyLaw3MonotonicityAndIndelContinuity();
         verifyLaw4UniversalFiveRegimes();
         verifyLaw5WarmParallelAndBoundedDeterminism();
+        verifyLaw6HierarchicalPitmanYorAndTwoAdicAdaptation();
+        verifyLaw7DisjointLifecycleAndBoundedScaling();
         System.out.printf(
-                "=== ALL 5 COMPRESSION LAWS VERIFIED (%d assertions passed) ===%n", checksPassed);
+                "=== ALL 7 COMPRESSION LAWS VERIFIED (%d assertions passed) ===%n", checksPassed);
     }
 
     // -------------------------------------------------------------------------
@@ -344,12 +346,12 @@ public final class VerifyCompressionLaws {
                             + " B");
 
             // Part B: Syntenic Micro-Indel Continuity vs Ungapped Match Shattering
-            // Conserved syntenic exons/blocks of 20..38 bp separated by frequent micro-indels
+            // Conserved syntenic exons/blocks of 16..34 bp separated by frequent micro-indels
             ByteArrayBuilder mutTarget = new ByteArrayBuilder(n + 8192);
             int cur = 0;
             Random indelRng = new Random(606L);
             while (cur < n) {
-                int seg = Math.min(n - cur, 20 + indelRng.nextInt(19));
+                int seg = Math.min(n - cur, 16 + indelRng.nextInt(19));
                 for (int j = 0; j < seg; j++) {
                     mutTarget.append(twin[cur + j]);
                 }
@@ -531,6 +533,94 @@ public final class VerifyCompressionLaws {
         System.out.printf(
                 "  [PASS] Law V   (Warm-Primed Parallel + Bounded)   : 1T=%d B, 8T=%d B (delta=%.3f%%)%n",
                 size1, size8, 100.0 * (size8 - size1) / size1);
+    }
+
+    // -------------------------------------------------------------------------
+    // Law VI: Hierarchical Pitman-Yor Backoff & Two-Adic Tapered Adaptation Law
+    // -------------------------------------------------------------------------
+    private static void verifyLaw6HierarchicalPitmanYorAndTwoAdicAdaptation() throws Exception {
+        // 1. Verify Two-Adic Tapered Adaptation reaches <= 12/4096 (0.29%) vs classic 31/4096 (0.76%)
+        int pTaper = 2048;
+        int pClassic = 2048;
+        for (int i = 0; i < 4096; i++) {
+            pTaper -= (pTaper + 20) >>> 5;
+            pClassic -= pClassic >>> 5;
+        }
+        check(pTaper == 11, "Law VI(1): Two-adic tapered adaptation fixed point is 11/4096: got " + pTaper);
+        check(pClassic == 31, "Law VI(1): Classic shift-5 fixed point is 31/4096: got " + pClassic);
+        check(pTaper < (pClassic >>> 1), "Law VI(1): Tapered fixed-point rate is >2.5x lower than classic floor");
+
+        // 2. Verify FastNoveltyCoder Hierarchical Pitman-Yor backoff + Post-SNP Homology Recovery
+        Random rng = new Random(1010L);
+        byte[] baseCoding = generateCodingLikeSequence(60_000, rng);
+        byte[] twoBit = new byte[120_000];
+        for (int i = 0; i < 60_000; i++) {
+            twoBit[i] = (byte) charToCode(baseCoding[i]);
+        }
+        // Second 60 kbp has 80-bp homologous repeats separated by single SNPs and novel linkers
+        for (int i = 60_000; i < 120_000; i++) {
+            if ((i % 100) < 80) {
+                int srcIdx = (i - 60_000) % 50_000;
+                int b = twoBit[srcIdx];
+                if ((i % 100) == 40) b ^= 2; // Single SNP inside homologous repeat
+                twoBit[i] = (byte) b;
+            } else {
+                twoBit[i] = (byte) charToCode(baseCoding[i - 60_000]);
+            }
+        }
+        byte[] comp = FastNoveltyCoder.encode(twoBit, twoBit.length, 1, false);
+        byte[] dec =
+                FastNoveltyCoder.decode(
+                        new VarIntCodec.ByteIn(comp, 0, comp.length),
+                        twoBit.length,
+                        1,
+                        false);
+        check(Arrays.equals(twoBit, dec), "Law VI(2): FastNoveltyCoder exact round-trip failed");
+        double bpb = comp.length * 8.0 / twoBit.length;
+        check(bpb < 1.25, "Law VI(2): Hierarchical Pitman-Yor + Post-SNP Homology bpb too high: " + bpb);
+        System.out.printf(
+                "  [PASS] Law VI  (Pitman-Yor Backoff + Two-Adic)    : p_min=%d/4096 (vs %d/4096), Novelty=%.4f bpb%n",
+                pTaper, pClassic, bpb);
+    }
+
+    // -------------------------------------------------------------------------
+    // Law VII: Disjoint Index/Superstream Lifecycle & Bounded-Heap Scaling Law
+    // -------------------------------------------------------------------------
+    private static void verifyLaw7DisjointLifecycleAndBoundedScaling() throws Exception {
+        Random rng = new Random(2026L);
+        byte[] anc = generateCodingLikeSequence(90_000, rng);
+        StringBuilder sb = new StringBuilder(380_000);
+        for (int g = 0; g < 4; g++) {
+            sb.append(">strain_").append(g).append('\n');
+            byte[] strain = Arrays.copyOf(anc, anc.length);
+            for (int i = 0; i < strain.length; i++) {
+                if (rng.nextDouble() < 0.008) {
+                    strain[i] = codeToChar(charToCode(strain[i]) ^ (1 + rng.nextInt(3)));
+                }
+            }
+            sb.append(new String(strain, StandardCharsets.US_ASCII)).append('\n');
+        }
+        byte[] collectionBytes = sb.toString().getBytes(StandardCharsets.US_ASCII);
+
+        FusionOptions optUnbounded = new FusionOptions();
+        optUnbounded.mode = HyperGraSSFusionEngine.MODE_COLLECTION;
+        optUnbounded.threads = 2;
+        optUnbounded.boundedMemory = false;
+        byte[] archUnbounded = roundTripVerify(collectionBytes, optUnbounded, null);
+
+        FusionOptions optBounded = new FusionOptions();
+        optBounded.mode = HyperGraSSFusionEngine.MODE_COLLECTION;
+        optBounded.threads = 2;
+        optBounded.boundedMemory = true;
+        byte[] archBounded = roundTripVerify(collectionBytes, optBounded, null);
+
+        double deltaPct = 100.0 * Math.abs(archBounded.length - archUnbounded.length) / archUnbounded.length;
+        check(
+                deltaPct < 2.0,
+                "Law VII: Bounded-memory collection archive diverged by >2%: " + deltaPct + "%");
+        System.out.printf(
+                "  [PASS] Law VII (Disjoint Lifecycle + Bounded Mode): Unbounded=%d B, Bounded=%d B (delta=%.3f%%)%n",
+                archUnbounded.length, archBounded.length, deltaPct);
     }
 
     // -------------------------------------------------------------------------

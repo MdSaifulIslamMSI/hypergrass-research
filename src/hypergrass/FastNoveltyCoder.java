@@ -121,7 +121,7 @@ public final class FastNoveltyCoder {
             return empty.toByteArray();
         }
 
-        boolean panSuper = !boundedMem && len > PAN_SUPER_THRESHOLD;
+        boolean panSuper = len > PAN_SUPER_THRESHOLD;
         int modelFlags = (boundedMem ? 1 : 0) | (panSuper ? 2 : 0);
 
         int warmBases = panSuper ? 131_072 : (len >= 1_500_000 ? 393_216 : 65_536);
@@ -152,6 +152,7 @@ public final class FastNoveltyCoder {
                 new FastCrmModel(null, boundedMem, panSuper, warmBases, len, totalSegs);
         byte[] warmSeg = encodeSegmentWithSafety(bases, 0, warmBases, warmModel);
         WarmSnapshot snapshot = warmModel.snapshot();
+        warmModel = null; // Free warm-up model before spawning parallel segment workers!
 
         // Step 2: Partition remaining [warmBases .. len) across workerCount parallel chunks
         int[] segLens = new int[totalSegs];
@@ -171,7 +172,8 @@ public final class FastNoveltyCoder {
         encoded[0] = warmSeg;
 
         final int finalWarmBases = warmBases;
-        ForkJoinPool pool = new ForkJoinPool(workerCount);
+        int poolThreads = boundedMem ? Math.min(workerCount, 6) : workerCount;
+        ForkJoinPool pool = new ForkJoinPool(poolThreads);
         try {
             pool.submit(
                             () ->
@@ -274,6 +276,7 @@ public final class FastNoveltyCoder {
                         null, encodedBounded, encodedPanSuper, warmBases, expectedLen, totalSegs);
         decodeSegmentWithSafety(payloads[0], out, 0, warmBases, warmModel, true);
         WarmSnapshot snapshot = warmModel.snapshot();
+        warmModel = null; // Free warm-up model before spawning parallel segment workers!
 
         int[] segStarts = new int[totalSegs];
         int cur = 0;
@@ -284,7 +287,7 @@ public final class FastNoveltyCoder {
 
         int maxSafeWorkers =
                 boundedMem
-                        ? Math.min(Math.max(1, threads), 3)
+                        ? Math.min(Math.max(1, threads), 6)
                         : (encodedPanSuper ? Math.min(Math.max(1, threads), 8) : Math.max(1, threads));
         int workers = Math.min(maxSafeWorkers, totalSegs - 1);
         if (workers <= 1) {
@@ -586,10 +589,10 @@ public final class FastNoveltyCoder {
             this.sparseMask = spSize - 1;
 
             int ringBuckets =
-                    boundedMem
-                            ? (1 << 14)
-                            : (panSuper && totalSegs >= 4
-                                    ? (1 << 16)
+                    (panSuper && totalSegs >= 4)
+                            ? (1 << 16)
+                            : (boundedMem
+                                    ? (1 << 14)
                                     : (totalStreamLen >= 500_000 ? (1 << 19) : (1 << 16)));
             this.repFineMask = ringBuckets - 1;
             this.repLongMask = ringBuckets - 1;
@@ -795,52 +798,50 @@ public final class FastNoveltyCoder {
 
             int highOrderCountSum = 0;
 
-            // 0..7: L1/L2-cache-resident 16-bit Dense Markov Hierarchy
+            // 0..7: L1/L2-cache-resident 16-bit Dense Markov Hierarchy with Hierarchical Pitman-Yor Backoff
             shortPredict(ord0, 0, uniformP, 32, expP[0]);
-            System.arraycopy(expP[0], 0, p0Buf, 0, 4);
 
             if (relPos >= 1) {
-                shortPredict(ord1, ((int) (fwdHist & 3L)) << 2, p0Buf, 24, expP[1]);
+                shortPredict(ord1, ((int) (fwdHist & 3L)) << 2, expP[0], 24, expP[1]);
             } else {
-                System.arraycopy(p0Buf, 0, expP[1], 0, 4);
+                System.arraycopy(expP[0], 0, expP[1], 0, 4);
             }
 
             if (relPos >= 2) {
-                shortPredict(ord2, ((int) (fwdHist & 15L)) << 2, p0Buf, 24, expP[2]);
+                shortPredict(ord2, ((int) (fwdHist & 15L)) << 2, expP[1], 24, expP[2]);
             } else {
-                System.arraycopy(p0Buf, 0, expP[2], 0, 4);
+                System.arraycopy(expP[1], 0, expP[2], 0, 4);
             }
-            System.arraycopy(expP[2], 0, p2Buf, 0, 4);
 
             if (relPos >= 3) {
-                shortPredict(ord3, ((int) (fwdHist & 63L)) << 2, p2Buf, 16, expP[3]);
+                shortPredict(ord3, ((int) (fwdHist & 63L)) << 2, expP[2], 16, expP[3]);
             } else {
-                System.arraycopy(p2Buf, 0, expP[3], 0, 4);
+                System.arraycopy(expP[2], 0, expP[3], 0, 4);
             }
 
             if (relPos >= 4) {
-                shortPredict(ord4, ((int) (fwdHist & 255L)) << 2, p2Buf, 16, expP[4]);
+                shortPredict(ord4, ((int) (fwdHist & 255L)) << 2, expP[3], 16, expP[4]);
             } else {
-                System.arraycopy(p2Buf, 0, expP[4], 0, 4);
+                System.arraycopy(expP[3], 0, expP[4], 0, 4);
             }
 
             if (relPos >= 5) {
-                shortPredict(ord5, ((int) (fwdHist & 1023L)) << 2, p2Buf, 8, expP[5]);
+                shortPredict(ord5, ((int) (fwdHist & 1023L)) << 2, expP[4], 10, expP[5]);
             } else {
-                System.arraycopy(p2Buf, 0, expP[5], 0, 4);
+                System.arraycopy(expP[4], 0, expP[5], 0, 4);
             }
 
             if (relPos >= 6) {
-                shortPredict(ord6, ((int) (fwdHist & 4095L)) << 2, p2Buf, 8, expP[6]);
+                shortPredict(ord6, ((int) (fwdHist & 4095L)) << 2, expP[5], 8, expP[6]);
             } else {
-                System.arraycopy(p2Buf, 0, expP[6], 0, 4);
+                System.arraycopy(expP[5], 0, expP[6], 0, 4);
             }
 
             if (relPos >= 7) {
                 highOrderCountSum +=
-                        shortPredict(ord7, ((int) (fwdHist & 16383L)) << 2, p2Buf, 3, expP[7]);
+                        shortPredict(ord7, ((int) (fwdHist & 16383L)) << 2, expP[6], 4, expP[7]);
             } else {
-                System.arraycopy(p2Buf, 0, expP[7], 0, 4);
+                System.arraycopy(expP[6], 0, expP[7], 0, 4);
             }
 
             // 8, 9, 10: 6-State Causal Open-Reading-Frame Hidden Markov Model (6F-ORF-HMM)
@@ -879,25 +880,25 @@ public final class FastNoveltyCoder {
             int ctx5Orf = (int) (fwdHist & 1023L);
             for (int c = 0; c < 3; c++) {
                 if (relPos >= 2) {
-                    shortPredict(orfPlus2, ((ctx2Orf * 3) + c) << 2, p0Buf, 16, pPlus2[c]);
-                    shortPredict(orfMinus2, ((ctx2Orf * 3) + c) << 2, p0Buf, 16, pMinus2[c]);
+                    shortPredict(orfPlus2, ((ctx2Orf * 3) + c) << 2, expP[1], 16, pPlus2[c]);
+                    shortPredict(orfMinus2, ((ctx2Orf * 3) + c) << 2, expP[1], 16, pMinus2[c]);
                 } else {
-                    System.arraycopy(p0Buf, 0, pPlus2[c], 0, 4);
-                    System.arraycopy(p0Buf, 0, pMinus2[c], 0, 4);
+                    System.arraycopy(expP[1], 0, pPlus2[c], 0, 4);
+                    System.arraycopy(expP[1], 0, pMinus2[c], 0, 4);
                 }
                 if (relPos >= 3) {
-                    shortPredict(orfPlus3, ((ctx3Orf * 3) + c) << 2, p2Buf, 12, pPlus3[c]);
-                    shortPredict(orfMinus3, ((ctx3Orf * 3) + c) << 2, p2Buf, 12, pMinus3[c]);
+                    shortPredict(orfPlus3, ((ctx3Orf * 3) + c) << 2, pPlus2[c], 12, pPlus3[c]);
+                    shortPredict(orfMinus3, ((ctx3Orf * 3) + c) << 2, pMinus2[c], 12, pMinus3[c]);
                 } else {
-                    System.arraycopy(p2Buf, 0, pPlus3[c], 0, 4);
-                    System.arraycopy(p2Buf, 0, pMinus3[c], 0, 4);
+                    System.arraycopy(pPlus2[c], 0, pPlus3[c], 0, 4);
+                    System.arraycopy(pMinus2[c], 0, pMinus3[c], 0, 4);
                 }
                 if (relPos >= 5) {
-                    shortPredict(orfPlus5, ((ctx5Orf * 3) + c) << 2, p2Buf, 8, pPlus5[c]);
-                    shortPredict(orfMinus5, ((ctx5Orf * 3) + c) << 2, p2Buf, 8, pMinus5[c]);
+                    shortPredict(orfPlus5, ((ctx5Orf * 3) + c) << 2, pPlus3[c], 8, pPlus5[c]);
+                    shortPredict(orfMinus5, ((ctx5Orf * 3) + c) << 2, pMinus3[c], 8, pMinus5[c]);
                 } else {
-                    System.arraycopy(p2Buf, 0, pPlus5[c], 0, 4);
-                    System.arraycopy(p2Buf, 0, pMinus5[c], 0, 4);
+                    System.arraycopy(pPlus3[c], 0, pPlus5[c], 0, 4);
+                    System.arraycopy(pMinus3[c], 0, pMinus5[c], 0, 4);
                 }
             }
 
@@ -945,14 +946,14 @@ public final class FastNoveltyCoder {
 
             // 11, 12: Wobble (110_110_110_11) & Palindromic Gapped-9 (1111_0_1111) Spaced Seeds
             if (relPos >= 11) {
-                shortPredict(wobble8, extractWobbleKey(fwdHist) << 2, p2Buf, 8, expP[11]);
+                shortPredict(wobble8, extractWobbleKey(fwdHist) << 2, expP[4], 8, expP[11]);
             } else {
-                System.arraycopy(p2Buf, 0, expP[11], 0, 4);
+                System.arraycopy(expP[4], 0, expP[11], 0, 4);
             }
             if (relPos >= 9) {
-                shortPredict(gapped8, extractGapped9Key(fwdHist) << 2, p2Buf, 8, expP[12]);
+                shortPredict(gapped8, extractGapped9Key(fwdHist) << 2, expP[4], 8, expP[12]);
             } else {
-                System.arraycopy(p2Buf, 0, expP[12], 0, 4);
+                System.arraycopy(expP[4], 0, expP[12], 0, 4);
             }
 
             // Optional Megabase / Pan-Superstream High-Order Experts (13, 14, 15)
@@ -960,23 +961,23 @@ public final class FastNoveltyCoder {
                 if (relPos >= 8) {
                     int p8 = ord8[(int) (fwdHist & 65535L)];
                     highOrderCountSum += swarSum(p8);
-                    swarPredict(p8, p2Buf, 3, expP[13]);
+                    swarPredict(p8, expP[7], 3, expP[13]);
                 } else {
-                    System.arraycopy(p2Buf, 0, expP[13], 0, 4);
+                    System.arraycopy(expP[7], 0, expP[13], 0, 4);
                 }
             }
             if (panSuper) {
                 if (relPos >= 9) {
                     int p9 = ord9[(int) (fwdHist & 262143L)];
                     highOrderCountSum += swarSum(p9);
-                    swarPredict(p9, p2Buf, 1, expP[14]);
+                    swarPredict(p9, expP[13], 2, expP[14]);
                 } else {
                     System.arraycopy(expP[13], 0, expP[14], 0, 4);
                 }
                 if (relPos >= 12) {
-                    highOrderCountSum += predictSparse12(fwdHist & 0xFFFFFFL, p2Buf, expP[15]);
+                    highOrderCountSum += predictSparse12(fwdHist & 0xFFFFFFL, expP[14], expP[15]);
                 } else {
-                    System.arraycopy(p2Buf, 0, expP[15], 0, 4);
+                    System.arraycopy(expP[14], 0, expP[15], 0, 4);
                 }
             }
 
@@ -989,7 +990,7 @@ public final class FastNoveltyCoder {
                         anyStrongRepeat = true;
                     }
                 } else {
-                    System.arraycopy(p2Buf, 0, expP[idxFirstHead + h], 0, 4);
+                    System.arraycopy(expP[4], 0, expP[idxFirstHead + h], 0, 4);
                 }
             }
 
@@ -1038,12 +1039,13 @@ public final class FastNoveltyCoder {
                 logit3 += nw * lp3;
             }
 
-            QuantumContextRepeatMixer.normalizeP(
-                    QuantumContextRepeatMixer.divRound(bAcc0, bWsum),
-                    QuantumContextRepeatMixer.divRound(bAcc1, bWsum),
-                    QuantumContextRepeatMixer.divRound(bAcc2, bWsum),
-                    QuantumContextRepeatMixer.divRound(bAcc3, bWsum),
-                    bayesP);
+            long bHalf = bWsum >> 1;
+            long bInv = (1L << 36) / bWsum;
+            int bp0 = divFast(bAcc0, bWsum, bHalf, bInv, 36);
+            int bp1 = divFast(bAcc1, bWsum, bHalf, bInv, 36);
+            int bp2 = divFast(bAcc2, bWsum, bHalf, bInv, 36);
+            int bp3 = divFast(bAcc3, bWsum, bHalf, bInv, 36);
+            QuantumContextRepeatMixer.normalizeP(bp0, bp1, bp2, bp3, bayesP);
 
             long l0 = logit0 >> 12, l1 = logit1 >> 12, l2 = logit2 >> 12, l3 = logit3 >> 12;
             long maxL = Math.max(Math.max(l0, l1), Math.max(l2, l3));
@@ -1052,22 +1054,26 @@ public final class FastNoveltyCoder {
             int e2 = EXP_NEG_LUT[(int) Math.min(EXP_MAX_X, maxL - l2)];
             int e3 = EXP_NEG_LUT[(int) Math.min(EXP_MAX_X, maxL - l3)];
             int eSum = e0 + e1 + e2 + e3;
+            long eHalf = eSum >> 1;
+            long eInv = (1L << 32) / eSum;
             QuantumContextRepeatMixer.normalizeP(
-                    QuantumContextRepeatMixer.divRound((long) e0 * P_SCALE, eSum),
-                    QuantumContextRepeatMixer.divRound((long) e1 * P_SCALE, eSum),
-                    QuantumContextRepeatMixer.divRound((long) e2 * P_SCALE, eSum),
-                    QuantumContextRepeatMixer.divRound((long) e3 * P_SCALE, eSum),
+                    divFast((long) e0 * P_SCALE, eSum, eHalf, eInv, 32),
+                    divFast((long) e1 * P_SCALE, eSum, eHalf, eInv, 32),
+                    divFast((long) e2 * P_SCALE, eSum, eHalf, eInv, 32),
+                    divFast((long) e3 * P_SCALE, eSum, eHalf, eInv, 32),
                     neuralP);
 
             long maxMeta = Math.max(metaBayes, metaNeural);
             long mb = EXP_NEG_LUT[(int) Math.min(EXP_MAX_X, maxMeta - metaBayes)];
             long mn = EXP_NEG_LUT[(int) Math.min(EXP_MAX_X, maxMeta - metaNeural)];
             long mSum = mb + mn;
+            long mHalf = mSum >> 1;
+            long mInv = (1L << 34) / mSum;
 
-            int f0 = Math.max(1, QuantumContextRepeatMixer.divRound((mb * bayesP[0] + mn * neuralP[0]) << 1, mSum));
-            int f1 = Math.max(1, QuantumContextRepeatMixer.divRound((mb * bayesP[1] + mn * neuralP[1]) << 1, mSum));
-            int f2 = Math.max(1, QuantumContextRepeatMixer.divRound((mb * bayesP[2] + mn * neuralP[2]) << 1, mSum));
-            int f3 = Math.max(1, QuantumContextRepeatMixer.divRound((mb * bayesP[3] + mn * neuralP[3]) << 1, mSum));
+            int f0 = Math.max(1, divFast((mb * bayesP[0] + mn * neuralP[0]) << 1, mSum, mHalf, mInv, 34));
+            int f1 = Math.max(1, divFast((mb * bayesP[1] + mn * neuralP[1]) << 1, mSum, mHalf, mInv, 34));
+            int f2 = Math.max(1, divFast((mb * bayesP[2] + mn * neuralP[2]) << 1, mSum, mHalf, mInv, 34));
+            int f3 = Math.max(1, divFast((mb * bayesP[3] + mn * neuralP[3]) << 1, mSum, mHalf, mInv, 34));
             int fix = TOT - (f0 + f1 + f2 + f3);
             if (fix != 0) {
                 if (f0 >= f1 && f0 >= f2 && f0 >= f3) f0 += fix;
@@ -1522,6 +1528,24 @@ public final class FastNoveltyCoder {
             }
         }
 
+        private static int divFast(long num, long denom, long half, long inv, int shift) {
+            long n = num + half;
+            long q = (n * inv) >>> shift;
+            if (n - q * denom >= denom) {
+                q++;
+            }
+            return (int) q;
+        }
+
+        private static int divRecip(long num, int denom, int half, long r) {
+            long n = num + half;
+            long q = (n * r) >>> 30;
+            if (n - q * denom >= denom) {
+                q++;
+            }
+            return (int) q;
+        }
+
         private static int shortPredict(
                 short[] tab, int baseIdx, int[] priorP, int tau, int[] outP) {
             int c0 = tab[baseIdx];
@@ -1534,21 +1558,32 @@ public final class FastNoveltyCoder {
                 return 0;
             }
             int denom = (sum << 2) + tau;
+            int half = denom >> 1;
+            long r = RECIP[denom] & 0xFFFFFFFFL;
             int p0 =
                     Math.max(
                             1,
-                            divRoundSmall(
-                                    ((long) c0 << 2) * P_SCALE + (long) tau * priorP[0], denom));
+                            divRecip(
+                                    ((long) c0 << 2) * P_SCALE + (long) tau * priorP[0],
+                                    denom,
+                                    half,
+                                    r));
             int p1 =
                     Math.max(
                             1,
-                            divRoundSmall(
-                                    ((long) c1 << 2) * P_SCALE + (long) tau * priorP[1], denom));
+                            divRecip(
+                                    ((long) c1 << 2) * P_SCALE + (long) tau * priorP[1],
+                                    denom,
+                                    half,
+                                    r));
             int p2 =
                     Math.max(
                             1,
-                            divRoundSmall(
-                                    ((long) c2 << 2) * P_SCALE + (long) tau * priorP[2], denom));
+                            divRecip(
+                                    ((long) c2 << 2) * P_SCALE + (long) tau * priorP[2],
+                                    denom,
+                                    half,
+                                    r));
             int p3 = Math.max(1, P_SCALE - (p0 + p1 + p2));
             QuantumContextRepeatMixer.normalizeP(p0, p1, p2, p3, outP);
             return sum;
@@ -1577,21 +1612,32 @@ public final class FastNoveltyCoder {
             int c3 = (packed >>> 24) & 0xFF;
             int sum = c0 + c1 + c2 + c3;
             int denom = (sum << 2) + tau;
+            int half = denom >> 1;
+            long r = RECIP[denom] & 0xFFFFFFFFL;
             int p0 =
                     Math.max(
                             1,
-                            divRoundSmall(
-                                    ((long) c0 << 2) * P_SCALE + (long) tau * priorP[0], denom));
+                            divRecip(
+                                    ((long) c0 << 2) * P_SCALE + (long) tau * priorP[0],
+                                    denom,
+                                    half,
+                                    r));
             int p1 =
                     Math.max(
                             1,
-                            divRoundSmall(
-                                    ((long) c1 << 2) * P_SCALE + (long) tau * priorP[1], denom));
+                            divRecip(
+                                    ((long) c1 << 2) * P_SCALE + (long) tau * priorP[1],
+                                    denom,
+                                    half,
+                                    r));
             int p2 =
                     Math.max(
                             1,
-                            divRoundSmall(
-                                    ((long) c2 << 2) * P_SCALE + (long) tau * priorP[2], denom));
+                            divRecip(
+                                    ((long) c2 << 2) * P_SCALE + (long) tau * priorP[2],
+                                    denom,
+                                    half,
+                                    r));
             int p3 = Math.max(1, P_SCALE - (p0 + p1 + p2));
             QuantumContextRepeatMixer.normalizeP(p0, p1, p2, p3, outP);
         }
@@ -1662,7 +1708,12 @@ public final class FastNoveltyCoder {
             }
             int tpl = buf[cursor] & 3;
             if (dir < 0) tpl ^= 3;
-            int cMatch = xorCnt[0] + Math.min(96, streak << 1);
+            int cMatch =
+                    xorCnt[0]
+                            + Math.min(
+                                    96,
+                                    (streak << 1)
+                                            + (misses == 0 ? Math.min(48, totalMatched) : 0));
             int c1 = xorCnt[1];
             int c2 = xorCnt[2];
             int c3 = xorCnt[3];

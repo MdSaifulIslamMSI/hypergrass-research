@@ -230,13 +230,18 @@ def make_fig2_mode_r_loo_73genomes():
     ec_hgs2 = [r["archive_bytes"] / 1000.0 for r in ecoli_recs]
     ec_rcmdl = [r["rcmdl_bytes"] / 1000.0 for r in ecoli_recs]
     ec_agc = [r["agc_bytes"] / 1000.0 for r in ecoli_recs]
+    ec_hgs2_kb = sum(ec_hgs2)
+    ec_rcmdl_kb = sum(ec_rcmdl)
+    ec_agc_kb = sum(ec_agc)
+    ec_wins = loo_ecoli.get("eimdl_wins_vs_agc", len(ecoli_recs))
+    ec_fac = ec_agc_kb / ec_hgs2_kb
 
     ax_a.plot(idx_ec, ec_agc, "s--", color=PALETTE["agc_single"], markersize=4, linewidth=1.2,
-              label="AGC 3.2.5 Best Single (-s 200000): 8,384.1 KB")
+              label=f"AGC 3.2.5 Best Single (-s 200000): {ec_agc_kb:,.1f} KB")
     ax_a.plot(idx_ec, ec_rcmdl, "^-", color=PALETTE["rcmdl"], markersize=4, linewidth=1.2,
-              label="RC-MDL v2 (Unaligned): 1,636.4 KB")
+              label=f"RC-MDL v2 (Unaligned): {ec_rcmdl_kb:,.1f} KB")
     ax_a.plot(idx_ec, ec_hgs2, "o-", color=PALETTE["eimdl"], markersize=4.5, linewidth=1.6,
-              label="EIMDL / HGS2 Mode R: 1,177.8 KB (24/24 wins)")
+              label=f"EIMDL / HGS2 Mode R: {ec_hgs2_kb:,.1f} KB ({ec_wins}/{len(ecoli_recs)} wins)")
     ax_a.set_yscale("log")
     # Peak is 767 KB; setting ylim up to 11,000 KB puts the upper band completely above all curves
     ax_a.set_ylim(0.5, 11000)
@@ -244,7 +249,7 @@ def make_fig2_mode_r_loo_73genomes():
     ax_a.set_xticklabels([r["target"].replace(".seq", "") for r in ecoli_recs[::2]])
     ax_a.set_xlabel("E. coli Target Genome Index (00..23)")
     ax_a.set_ylabel("Marginal Archive Size (KB, log scale)")
-    ax_a.set_title("(A) E. coli Leave-One-Out (24 Genomes, 120.11 Mbp): 7.12x Smaller than AGC")
+    ax_a.set_title(f"(A) E. coli Leave-One-Out (24 Genomes, 120.11 Mbp): {ec_fac:.2f}x Smaller than AGC")
     ax_a.legend(loc="upper right", frameon=True, facecolor="white", framealpha=0.95, fontsize=7.4)
 
     # Panel B: M. tuberculosis 24 genomes per-target Mode R LOO (with AGC 13-Config Oracle)
@@ -255,13 +260,17 @@ def make_fig2_mode_r_loo_73genomes():
     mtb_rcmdl = [r["rcmdl_bytes"] for r in mtb_recs]
     mtb_oracle_map = {r["target"]: r["best_bytes"] for r in mtb_agc["targets_detail"]}
     mtb_agc_oracle = [mtb_oracle_map[r["target"]] for r in mtb_recs]
+    mtb_hgs2_sum = loo_mtb["total_archive_bytes"]
+    mtb_rcmdl_sum = sum(mtb_rcmdl)
+    mtb_oracle_sum = sum(mtb_agc_oracle)
+    mtb_o_fac = mtb_oracle_sum / mtb_hgs2_sum
 
     ax_b.plot(idx_mtb, mtb_agc_oracle, "d-.", color=PALETTE["agc_oracle"], markersize=4, linewidth=1.2,
-              label="AGC 13-Config Per-Target Oracle: 96,580 B")
+              label=f"AGC 13-Config Per-Target Oracle: {mtb_oracle_sum:,} B")
     ax_b.plot(idx_mtb, mtb_rcmdl, "^-", color=PALETTE["rcmdl"], markersize=4, linewidth=1.1,
-              label="RC-MDL v2 (Unaligned): 92,506 B")
+              label=f"RC-MDL v2 (Unaligned): {mtb_rcmdl_sum:,} B")
     ax_b.plot(idx_mtb, mtb_hgs2, "o-", color=PALETTE["eimdl"], markersize=4.5, linewidth=1.6,
-              label="EIMDL / HGS2 Mode R: 47,305 B (2.04x < Oracle)")
+              label=f"EIMDL / HGS2 Mode R: {mtb_hgs2_sum:,} B ({mtb_o_fac:.2f}x < Oracle)")
     ax_b.axhline(292170 / 24.0, color=PALETTE["agc_single"], linestyle="--", linewidth=1.1,
                  label="AGC Best Single (-s 100000) Mean: 12,174 B/genome")
     ax_b.set_yscale("log")
@@ -271,7 +280,7 @@ def make_fig2_mode_r_loo_73genomes():
     ax_b.set_xticklabels([r["target"].replace(".seq", "") for r in mtb_recs[::2]])
     ax_b.set_xlabel("M. tuberculosis Target Genome Index (00..23)")
     ax_b.set_ylabel("Marginal Archive Size (Bytes, log scale)")
-    ax_b.set_title("(B) M. tuberculosis LOO (24 Genomes, 105.75 Mbp): 0.00358 bpb Total")
+    ax_b.set_title(f"(B) M. tuberculosis LOO (24 Genomes, 105.75 Mbp): {loo_mtb['total_bpb']:.5f} bpb Total")
     ax_b.legend(loc="upper left", frameon=True, facecolor="white", framealpha=0.95, fontsize=7.4)
 
     # Panel C: S. aureus 25 genomes per-target Mode R LOO
@@ -282,15 +291,20 @@ def make_fig2_mode_r_loo_73genomes():
     sa_rcmdl = [r["rcmdl_bytes"] / 1000.0 for r in saur_recs]
     sa_oracle_map = {r["target"].replace(".fa", ".seq"): r["marginal_bytes"] for r in saur_oracle}
     sa_agc_oracle = [sa_oracle_map[r["target"]] / 1000.0 for r in saur_recs]
+    sa_hgs2_kb = loo_saur["total_archive_bytes"] / 1000.0
+    sa_rcmdl_kb = sum(sa_rcmdl)
+    sa_oracle_kb = sum(sa_agc_oracle)
+    sa_o_fac = sa_oracle_kb / sa_hgs2_kb
+    sa_o_wins = sum(1 for a, o in zip(sa_hgs2, sa_agc_oracle) if a < o)
 
     ax_c.axhline((2979078 / 25.0) / 1000.0, color=PALETTE["agc_single"], linestyle="--", linewidth=1.1,
                  label="AGC Best Single (-s 50000) Mean: 119.2 KB/genome (2,979.1 KB total)")
     ax_c.plot(idx_sa, sa_agc_oracle, "d-.", color=PALETTE["agc_oracle"], markersize=4, linewidth=1.2,
-              label="AGC 13-Config Per-Target Oracle: 1,617.1 KB")
+              label=f"AGC 13-Config Per-Target Oracle: {sa_oracle_kb:,.1f} KB")
     ax_c.plot(idx_sa, sa_rcmdl, "^-", color=PALETTE["rcmdl"], markersize=4, linewidth=1.1,
-              label="RC-MDL v2: 243.8 KB")
+              label=f"RC-MDL v2: {sa_rcmdl_kb:,.1f} KB")
     ax_c.plot(idx_sa, sa_hgs2, "o-", color=PALETTE["eimdl"], markersize=4.5, linewidth=1.6,
-              label="EIMDL / HGS2 Mode R: 174.6 KB (24/25 vs Oracle, 25/25 vs Single)")
+              label=f"EIMDL / HGS2 Mode R: {sa_hgs2_kb:,.1f} KB ({sa_o_wins}/25 vs Oracle, 25/25 vs Single)")
     ax_c.set_yscale("log")
     # Peak is 274 KB; setting ylim up to 6,000 KB keeps the top band completely clear of all lines
     ax_c.set_ylim(0.08, 6000)
@@ -298,7 +312,7 @@ def make_fig2_mode_r_loo_73genomes():
     ax_c.set_xticklabels([r["target"].replace(".seq", "") for r in saur_recs[::2]])
     ax_c.set_xlabel("S. aureus Target Genome Index (00..24)")
     ax_c.set_ylabel("Marginal Archive Size (KB, log scale)")
-    ax_c.set_title("(C) S. aureus LOO (25 Genomes, 71.04 Mbp): 9.26x Smaller than AGC Oracle")
+    ax_c.set_title(f"(C) S. aureus LOO (25 Genomes, 71.04 Mbp): {sa_o_fac:.2f}x Smaller than AGC Oracle")
     ax_c.legend(loc="upper left", frameon=True, facecolor="white", framealpha=0.95, fontsize=7.3)
 
     # Panel D: Leave-Cluster-Out (Unseen Lineage) vs Standard LOO vs AGC
@@ -320,9 +334,9 @@ def make_fig2_mode_r_loo_73genomes():
         cl_saur["rcmdl_cluster_bytes"] * 8.0 / cl_saur["total_bases"],
     ]
     agc_cl_bpb = [
-        9193975 * 8.0 / cl_ecoli["total_bases"],
-        1189036 * 8.0 / cl_mtb["total_bases"],
-        4132331 * 8.0 / cl_saur["total_bases"],
+        9203994 * 8.0 / cl_ecoli["total_bases"],
+        1188909 * 8.0 / cl_mtb["total_bases"],
+        4132771 * 8.0 / cl_saur["total_bases"],
     ]
 
     x_d = np.arange(3)
@@ -512,11 +526,11 @@ def make_fig4_amdahl_and_bounded_memory():
     tot_s = [e + d for e, d in zip(enc_s, dec_s)]
 
     ax1.plot(threads, tot_s, "s-", color=PALETTE["eimdl"], linewidth=2.0, markersize=6,
-             label="Total Round-Trip Time (152.37s -> 62.40s, 2.44x)")
+             label=f"Total Round-Trip ({tot_s[0]:.2f}s -> {tot_s[-1]:.2f}s, {tot_s[0]/tot_s[-1]:.2f}x)")
     ax1.plot(threads, enc_s, "o--", color=PALETTE["jarvis_l7"], linewidth=1.6, markersize=5,
-             label="Encode Time (96.93s -> 44.04s, 2.20x)")
+             label=f"Encode Time ({enc_s[0]:.2f}s -> {enc_s[-1]:.2f}s, {enc_s[0]/enc_s[-1]:.2f}x)")
     ax1.plot(threads, dec_s, "^-.", color=PALETTE["rcmdl"], linewidth=1.6, markersize=5,
-             label="Decode Time (55.44s -> 18.36s, 3.02x)")
+             label=f"Decode Time ({dec_s[0]:.2f}s -> {min(dec_s):.2f}s best / {dec_s[-1]:.2f}s 12T)")
 
     for t, tot in zip(threads, tot_s):
         ax1.annotate(f"{tot:.1f}s", (t, tot), textcoords="offset points", xytext=(0, 7),
@@ -525,33 +539,25 @@ def make_fig4_amdahl_and_bounded_memory():
     ax1.set_xticks(threads)
     ax1.set_xlabel("Worker Thread Count (--threads T)")
     ax1.set_ylabel("In-Process Execution Time (seconds)")
-    ax1.set_ylim(0, 195)
-    ax1.set_title("(A) Law V: Amdahl Multi-Core Scaling on 24-Genome E. coli (120.11 Mbp)", pad=10)
-    ax1.legend(loc="upper right", frameon=True, facecolor="white", framealpha=0.95, fontsize=7.5)
+    ax1.set_ylim(0, max(tot_s) * 1.32)
+    ax1.set_title("(A) Laws V & VII: Amdahl Multi-Core Scaling on 120.11 Mbp E. coli", pad=10)
+    ax1.legend(loc="upper right", frameon=True, facecolor="white", framealpha=0.95, fontsize=7.4)
 
-    # Panel B: Bounded-Heap JVM Execution (-Xmx192m, -Xmx224m, -Xmx256m, Default)
+    # Panel B: Bounded-Heap JVM Execution (-Xmx128m .. -Xmx256m, Default)
     ax2 = fig.add_subplot(gs[1])
     mem_recs = amdahl_mem["bounded_memory"]
     default_rec = [r for r in mode_c_col["collections"] if r["label"] == "ecoli_24_flat_seq"][0]
 
-    labels_m = [
-        "Default Heap\n(s=0, full CSR)",
-        "-Xmx256m\n(s=1, 1/2 CSR)",
-        "-Xmx224m\n(s=1, 1/2 CSR)",
-        "-Xmx192m\n(s=2, 1/4 CSR)",
-    ]
-    bank_plus_csr_mb = [
-        120.108223 * (0.25 + 1.0),
-        120.108223 * (0.25 + 0.5),
-        120.108223 * (0.25 + 0.5),
-        120.108223 * (0.25 + 0.25),
-    ]
-    archive_mb = [
-        default_rec["archive_bytes"] / 1e6,
-        mem_recs[0]["archive_bytes"] / 1e6,
-        mem_recs[1]["archive_bytes"] / 1e6,
-        mem_recs[2]["archive_bytes"] / 1e6,
-    ]
+    cap_cfg = {
+        "-Xmx256m": ("-Xmx256m\n(s=1, 1/2)", 120.108223 * (0.25 + 0.5)),
+        "-Xmx224m": ("-Xmx224m\n(s=1, 1/2)", 120.108223 * (0.25 + 0.5)),
+        "-Xmx192m": ("-Xmx192m\n(s=2, 1/4)", 120.108223 * (0.25 + 0.25)),
+        "-Xmx160m": ("-Xmx160m\n(s=2, L-VII)", 120.108223 * (0.25 + 0.25)),
+        "-Xmx128m": ("-Xmx128m\n(s=2, L-VII)", 120.108223 * (0.25 + 0.25)),
+    }
+    labels_m = ["Default\n(s=0, full)"] + [cap_cfg.get(r["heap_cap"], (r["heap_cap"], 60.1))[0] for r in mem_recs]
+    bank_plus_csr_mb = [120.108223 * (0.25 + 1.0)] + [cap_cfg.get(r["heap_cap"], (r["heap_cap"], 60.1))[1] for r in mem_recs]
+    archive_mb = [default_rec["archive_bytes"] / 1e6] + [r["archive_bytes"] / 1e6 for r in mem_recs]
 
     x_m = np.arange(len(labels_m))
     w_m = 0.36
@@ -567,28 +573,24 @@ def make_fig4_amdahl_and_bounded_memory():
                   label="JARVIS3 -l 7 (3.896 MB @ 549 MB RSS)")
 
     ax2.set_xticks(x_m)
-    ax2.set_xticklabels(labels_m)
+    ax2.set_xticklabels(labels_m, fontsize=7.0)
     ax2.set_ylabel("Stage-1 Core Data Structure Footprint (MB)", color=PALETTE["eimdl_alt"])
     ax2_r.set_ylabel("Mode C Compressed Archive Size (MB)", color=PALETTE["eimdl"])
-    # Carefully calibrated y-ranges so:
-    # - 150.1 MB sits at 150.1/215 = 69.8% height (well ABOVE the 3.90 MB line at (3.90-3.15)/1.30 = 57.4%!)
-    # - 90.1 MB sits at 90.1/215 = 41.9% height (well BELOW the 3.81 MB line at 50.8%!)
-    # - 3.393..3.455 MB sit at 18.7%..23.5% height (well BELOW 90.1 MB!)
-    ax2.set_ylim(0, 215)
-    ax2_r.set_ylim(3.15, 4.45)
-    ax2.set_title("(B) Law V: Pure-JVM Bounded-Heap Sweep on 120.11 Mbp Pangenome", pad=10)
+    ax2.set_ylim(0, 225)
+    ax2_r.set_ylim(3.10, 4.55)
+    ax2.set_title("(B) Laws V & VII: Pure-JVM Bounded Heap (-Xmx128m to -Xmx256m)", pad=10)
 
     for bar, v in zip(bars_mem, bank_plus_csr_mb):
-        ax2.text(bar.get_x() + bar.get_width() / 2.0, v + 3.5, f"{v:.1f} MB",
-                 ha="center", va="bottom", fontsize=7.3, fontweight="bold")
+        ax2.text(bar.get_x() + bar.get_width() / 2.0, v + 3.5, f"{v:.1f}\nMB",
+                 ha="center", va="bottom", fontsize=6.6, fontweight="bold")
     for bar, v in zip(bars_arc, archive_mb):
         ax2_r.text(bar.get_x() + bar.get_width() / 2.0 + 0.03, v + 0.02, f"{v:.3f}\nMB",
-                   ha="center", va="bottom", fontsize=6.9, fontweight="bold", color=PALETTE["eimdl"])
+                   ha="center", va="bottom", fontsize=6.5, fontweight="bold", color=PALETTE["eimdl"])
 
     lines1, labels1 = ax2.get_legend_handles_labels()
     lines2, labels2 = ax2_r.get_legend_handles_labels()
     ax2_r.legend(lines1 + lines2, labels1 + labels2, loc="upper right", frameon=True,
-                 facecolor="white", framealpha=0.95, fontsize=7.1)
+                 facecolor="white", framealpha=0.95, fontsize=6.9)
 
     save_fig(fig, "fig4_amdahl_and_bounded_memory")
 
@@ -618,23 +620,25 @@ def make_fig5_laws_ablations_and_synthetic():
     ]
     step_labels = [
         "Exact Only\n(No Approx)",
-        "No Laws\nI-IIIb",
+        "No Laws\nI,II,IIIc",
         "No Law I\n(Flat SNP)",
         "No Law II\n(Flat Gap)",
-        "No Law IIIb\n(No Splice)",
+        "No Law IIIc\n(No Splice)",
         "Full EIMDL\n(All Laws ON)",
     ]
     dist_base = dist_map["exact_matches_only_no_approx"]["archive_bytes"]
     loo_base = loo_map["exact_matches_only_no_approx"]["archive_bytes"]
+    dist_full = dist_map["full_eimdl"]["archive_bytes"]
+    loo_full = loo_map["full_eimdl"]["archive_bytes"]
 
     dist_pct = [(dist_map[k]["archive_bytes"] / dist_base) * 100.0 for k in order_keys]
     loo_pct = [(loo_map[k]["archive_bytes"] / loo_base) * 100.0 for k in order_keys]
 
     x_a = np.arange(len(step_labels))
     ax1.plot(x_a, dist_pct, "o-", color=PALETTE["eimdl"], linewidth=2.0, markersize=6,
-             label="Distant Single Donor (00|20: 239.1 KB -> 197.1 KB, -17.6%)")
+             label=f"Distant Single Donor (00|20: {dist_base/1e3:.1f} KB -> {dist_full/1e3:.1f} KB, {(dist_full/dist_base - 1)*100:.1f}%)")
     ax1.plot(x_a, loo_pct, "s--", color=PALETTE["rcmdl"], linewidth=1.8, markersize=5.5,
-             label="Dense 23-Donor LOO (00|23: 43.6 KB -> 40.7 KB, -6.6%)")
+             label=f"Dense 23-Donor LOO (00|23: {loo_base/1e3:.1f} KB -> {loo_full/1e3:.1f} KB, {(loo_full/loo_base - 1)*100:.1f}%)")
 
     for i, k in enumerate(order_keys):
         db = dist_map[k]["archive_bytes"]
@@ -670,7 +674,7 @@ def make_fig5_laws_ablations_and_synthetic():
     ax2.plot(n_donors, rcmdl_scale_kb, "^--", color=PALETTE["rcmdl"], linewidth=1.7, markersize=6,
              label="RC-MDL v2 Panel Scaling (273.7 KB -> 57.5 KB)")
     ax2.plot(hgs2_endpoints_n, hgs2_endpoints_kb, "o-", color=PALETTE["eimdl"], linewidth=2.1, markersize=6.5,
-             label="EIMDL / HGS2 Endpoints (197.1 KB -> 40.7 KB)")
+             label=f"EIMDL / HGS2 Endpoints ({hgs2_endpoints_kb[0]:.1f} KB -> {hgs2_endpoints_kb[1]:.1f} KB)")
 
     for n, kb in zip(n_donors, rcmdl_scale_kb):
         if n == 8:
@@ -682,10 +686,10 @@ def make_fig5_laws_ablations_and_synthetic():
         else:
             ax2.annotate(f"{kb:.1f}K", (n, kb), textcoords="offset points", xytext=(0, 7),
                          ha="center", fontsize=7.2, color="#147A36")
-    ax2.annotate("197.1 KB\n(0.325 bpb)", (1, hgs2_endpoints_kb[0]),
+    ax2.annotate(f"{hgs2_endpoints_kb[0]:.1f} KB\n({dist_map['full_eimdl']['bpb']:.3f} bpb)", (1, hgs2_endpoints_kb[0]),
                  textcoords="offset points", xytext=(4, -28),
                  ha="left", fontsize=7.5, fontweight="bold", color=PALETTE["eimdl"])
-    ax2.annotate("40.7 KB (0.067 bpb)", (23, hgs2_endpoints_kb[1]),
+    ax2.annotate(f"{hgs2_endpoints_kb[1]:.1f} KB ({loo_map['full_eimdl']['bpb']:.3f} bpb)", (23, hgs2_endpoints_kb[1]),
                  textcoords="offset points", xytext=(-10, -14),
                  ha="right", fontsize=7.5, fontweight="bold", color=PALETTE["eimdl"])
 
@@ -1020,7 +1024,7 @@ def make_fig7_gen1_gen2_foundations():
         "AGC 3.2.5 (-a -s 200k)",
     ]
     topo_mb = [
-        3377802 / 1e6,
+        load_json("benchmarks/fusion/results/amdahl_and_memory.json")["amdahl_scaling"][0]["archive_bytes"] / 1e6,
         3810409 / 1e6,
         3972975 / 1e6,
         3982813 / 1e6,

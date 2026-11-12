@@ -4,8 +4,8 @@
 
 [![Java](https://img.shields.io/badge/Java-21%2B%20%7C%20JDK%2025%2F27-blue.svg)](src/hypergrass/)
 [![Container](https://img.shields.io/badge/Formats-.hgs2%20v2.0%20%7C%20.hgs%20v1.0-success.svg)](docs/HGS-FORMAT.md)
-[![Paper](https://img.shields.io/badge/Monograph-22%20Pages%20PDF%20%2B%20LaTeX-critical.svg)](paper/HGS2_EIMDL_Research_Paper.pdf)
-[![Audit](https://img.shields.io/badge/Automated%20Audit-1%2C274%20%2F%201%2C274%20PASS-brightgreen.svg)](paper/audit_paper_numbers.py)
+[![Paper](https://img.shields.io/badge/Monograph-23%20Pages%20PDF%20%2B%20LaTeX-critical.svg)](paper/HGS2_EIMDL_Research_Paper.pdf)
+[![Audit](https://img.shields.io/badge/Automated%20Audit-1%2C362%20%2F%201%2C362%20PASS-brightgreen.svg)](paper/audit_paper_numbers.py)
 
 ---
 
@@ -13,11 +13,11 @@
 
 | Resource | Description | Path |
 |---|---|---|
-| **22-Page Research Monograph (PDF)** | Complete typeset two-column IEEE/ACM research paper covering Generations 1, 2, and 3, Laws I–V, 21 tables, and 7 figures (`0` overfull boxes) | [`paper/HGS2_EIMDL_Research_Paper.pdf`](paper/HGS2_EIMDL_Research_Paper.pdf) |
-| **Research Monograph (Markdown)** | Full GitHub-flavored Markdown edition of the 22-page monograph with embedded figures and complete tables | [`docs/PAPER-DRAFT.md`](docs/PAPER-DRAFT.md) |
-| **LaTeX Source & Reproducible Build** | Deterministic generators (`build_latex_paper.py`, `build_markdown_paper.py`, `generate_figures.py`) & `1,274`-assertion audit (`audit_paper_numbers.py`) | [`paper/README.md`](paper/README.md) |
-| **Mathematical & Biological Laws (I–V)** | Formal specification of $V_4$ Kimura-CpG algebra, 6-state causal ORF-HMM, Two-Gear coalescent copying, 5-regime MDL, and Amdahl-Memory scaling | [`docs/COMPRESSION-LAW.md`](docs/COMPRESSION-LAW.md) |
-| **Unified `HGS2` / `EIMDL` Benchmarks** | Complete Mode S, Mode R (LOO + Cluster-LOO), Mode C, Amdahl scaling, `-Xmx192m` bounded-heap, and synthetic/adversarial tables | [`docs/FUSION-BENCHMARKS.md`](docs/FUSION-BENCHMARKS.md) |
+| **23-Page Research Monograph (PDF)** | Complete typeset two-column IEEE/ACM research paper covering Generations 1, 2, and 3, Laws I–VII, OpenAI `2026` ETH architectural transfer (+ §1.1.3 OVC scope boundary), 21 tables, and 7 figures (`0` overfull boxes) | [`paper/HGS2_EIMDL_Research_Paper.pdf`](paper/HGS2_EIMDL_Research_Paper.pdf) |
+| **Research Monograph (Markdown)** | Full GitHub-flavored Markdown edition of the 23-page monograph with embedded figures and complete tables | [`docs/PAPER-DRAFT.md`](docs/PAPER-DRAFT.md) |
+| **LaTeX Source & Reproducible Build** | Deterministic generators (`build_latex_paper.py`, `build_markdown_paper.py`, `generate_figures.py`) & `1,362`-assertion audit (`audit_paper_numbers.py`) | [`paper/README.md`](paper/README.md) |
+| **Mathematical & Biological Laws (I–VII)** | Formal specification of $V_4$ Kimura-CpG algebra, 6-state causal ORF-HMM, Two-Gear coalescent copying, 5-regime MDL, Amdahl-Memory scaling, Law VI two-adic/Pitman-Yor coding, Law VII disjoint `-Xmx128m` heap lifecycle, and `openai2026eth` §1.1.3 OVC boundary | [`docs/COMPRESSION-LAW.md`](docs/COMPRESSION-LAW.md) |
+| **Unified `HGS2` / `EIMDL` Benchmarks** | Complete Mode S, Mode R (LOO + Cluster-LOO), Mode C, Amdahl scaling, `-Xmx128m` bounded-heap, and synthetic/adversarial tables | [`docs/FUSION-BENCHMARKS.md`](docs/FUSION-BENCHMARKS.md) |
 | **Locked Independent Replication** | Independent *Salmonella enterica* (25 genomes) and *Klebsiella pneumoniae* (23 genomes) Mode C, Mode S, Mode R, and tuned `JARVIS3 -l 31` evaluation | [`docs/INDEPENDENT.md`](docs/INDEPENDENT.md) |
 | **Archive Container Specification** | Byte-exact binary format specification for `.hgs2` v2.0 (`0x48475332`) and legacy `.hgs` v1.0 (`0x48475301`) | [`docs/HGS-FORMAT.md`](docs/HGS-FORMAT.md) |
 | **Foundational Invariants & Gen 1/2 Docs** | Scientific contract ([`FOUNDATIONS.md`](docs/FOUNDATIONS.md)), specialized panels ([`SPECIALIZED.md`](docs/SPECIALIZED.md)), broad panels ([`BROAD.md`](docs/BROAD.md)), ablations ([`ABLATION.md`](docs/ABLATION.md)), entropy floor ([`ENTROPY-FLOOR.md`](docs/ENTROPY-FLOOR.md)), scaling ([`SCALING.md`](docs/SCALING.md)), RC-MDL v2 ([`RESULTS.md`](prototype/rcmdl/RESULTS.md)), handoff ([`HANDOFF.md`](HANDOFF.md)) | [`docs/`](docs/) |
@@ -34,26 +34,27 @@ $$L_{\text{total}}(\text{file} \mid \mathcal{R}) = L_{\text{meta}}(\mathcal{M}) 
 
 1. **Mode S (`mode=0`, Self-Contained Single Genome, $\mathcal{R} = \emptyset$):** Compresses an individual genome or multi-chromosome assembly without any external reference ($L_{\text{pin}}(\mathcal{R}) = 0$), combining bidirectional ($\pm$) approximate self-homology, tandem periodicity ($1 \le P \le 64$), and the **6-State Causal Open-Reading-Frame HMM (`6F-ORF-HMM`, Law IIb)** inside [`FastNoveltyCoder.java`](src/hypergrass/FastNoveltyCoder.java).
 2. **Mode R (`mode=1`, Reference-Conditioned Delta Archive, $\mathcal{R} \neq \emptyset$):** Encodes a target genome relative to an external donor panel $\mathcal{R} = (R_1, \dots, R_m)$ pinned in the archive header by a mandatory **32-byte cryptographic SHA-256 Merkle manifest digest** $L_{\text{pin}}(\mathcal{R})$ verified before decoding. Powered by **Klein Four-Group ($V_4$) Kimura-CpG substitution coding (Law I)**, **bijective codon-wobble gap factorization (Law IIa)**, **Horizon-Bounded Two-Gear Coalescent Haplotype Copying (Law IIIb)**, and **affine syntenic micro-indel splicing (Law IIIc)** in [`EimdlMosaicCodec.java`](src/hypergrass/EimdlMosaicCodec.java).
-3. **Mode C (`mode=2`, Self-Contained Pangenome Collection Archive, $X = (G_1, \dots, G_N), \mathcal{R} = \emptyset$):** Jointly compresses $N$ genomes into one self-contained archive using **canonical open-syncmer Jaccard Prim MST ordering**, **lock-free parallel multi-core rank DAG mosaic parsing**, and a **unified pan-genome novelty superstream** (Law V).
+3. **Mode C (`mode=2`, Self-Contained Pangenome Collection Archive, $X = (G_1, \dots, G_N), \mathcal{R} = \emptyset$):** Jointly compresses $N$ genomes into one self-contained archive using **canonical open-syncmer Jaccard Prim MST ordering**, **lock-free parallel multi-core rank DAG mosaic parsing**, and a **unified pan-genome novelty superstream** with disjoint Stage-1/Stage-2 memory lifespans (Laws V & VII).
 4. **Law IV (Universal 5-Regime Existing & Non-Existing Sequence Completeness):** Evaluates five competing generative mechanisms under a strict MDL bit-budget with a sub-block **raw 2-bit safety bypass**, guaranteeing $L_{\text{DNA}}(X) \le 2|X| + O(1)$ bits even on cryptographic `SHA-256` counter-mode white noise (`2.0012 bpb` on `500,000 B`).
+5. **Laws VI & VII (`openai2026eth`-Inspired Probability & Memory Scaling + §1.1.3 OVC Boundary):** Incorporates two-adic symmetric adaptation tapering (`tau = 20`, stalling floor `11/4096`), hierarchical Pitman-Yor suffix backoff, and reciprocal-multiplication normalization inside [`FastNoveltyCoder.java`](src/hypergrass/FastNoveltyCoder.java) (Law VI), paired with strictly disjoint Stage-1 index vs. Stage-2 superstream memory lifetimes down to **`-Xmx128m`** (`1.06 B/base` JVM heap cap on `120.1 Mbp`, Law VII). Explicitly respects Section 1.1.3 of OpenAI's October 2026 `#k-SAT` ETH refutation: subexponential `#k-SAT` algorithms do **not** bypass polynomial-time OVC/edit-distance/LCS barriers, so algorithmic transfers act through shared linear hierarchies, two-adic probability tapering, and sequential disjoint-space state accumulation rather than `#k-SAT` reductions.
 
 ### Master Cross-Regime Benchmark Summary (100% SHA-256 Verified)
 
-Every measurement below is backed by committed JSON reports in [`benchmarks/fusion/results/`](benchmarks/fusion/results/) and [`benchmarks/independent/runs/`](benchmarks/independent/runs/) and audited automatically by [`paper/audit_paper_numbers.py`](paper/audit_paper_numbers.py) (**1,274 / 1,274 checks PASS**).
+Every measurement below is backed by committed JSON reports in [`benchmarks/fusion/results/`](benchmarks/fusion/results/) and [`benchmarks/independent/runs/`](benchmarks/independent/runs/) and audited automatically by [`paper/audit_paper_numbers.py`](paper/audit_paper_numbers.py).
 
 | Regime | Dataset / Panel | Raw DNA Bases | External / Prior Baseline | **`HGS2` / `EIMDL` Archive** | **`EIMDL` bpb** | **Ratio** | Key Margin & Operational Milestone |
 |---|---|---:|---|---|---:|---:|---|
-| **Mode R (LOO)** | ***E. coli*** (24 genomes) | 120,108,223 | `AGC 3.2.5`: `8,384,117 B`<br>`RC-MDL v2`: `1,780,761 B` | **1,177,778 B** | **0.07845** | **101.98x** | **24/24 clean sweep** (`-33.86%` vs RC-MDL; **`7.12x` < AGC**; twins `13.seq` = **635 B**, `14.seq` = **633 B**) |
-| **Mode R (LOO)** | ***M. tuberculosis*** (24 genomes) | 105,745,015 | `AGC` 13-cfg oracle: `96,580 B`<br>`AGC` best single: `292,170 B`<br>`RC-MDL v2`: `122,998 B` | **47,305 B** | **0.00358** | **2,235.39x** | **24/24 clean sweep** (**`2.04x` smaller than AGC 13-config oracle** with 1 universal config; `03.seq` = **256 B**, `18` SNPs) |
-| **Mode R (LOO)** | ***S. aureus*** (25 genomes) | 71,043,114 | `AGC` 13-cfg oracle: `1,617,085 B`<br>`AGC` best single: `2,979,078 B`<br>`RC-MDL v2`: `267,412 B` | **174,639 B** | **0.01967** | **406.80x** | **25/25 clean sweep** (`-34.69%` vs RC-MDL; **`9.26x` < AGC oracle**; `20.seq` = **134 B**, **`21,485x`**) |
+| **Mode R (LOO)** | ***E. coli*** (24 genomes) | 120,108,223 | `AGC 3.2.5`: `8,384,117 B`<br>`RC-MDL v1/v2`: `1,780,761 B` / `1,636,367 B` | **1,174,113 B** | **0.07820** | **102.30x** | **24/24 clean sweep** (`-34.07%` vs v1, `-28.25%` vs v2; **`7.14x` < AGC**; twins `13.seq` = **633 B**, `14.seq` = **632 B**) |
+| **Mode R (LOO)** | ***M. tuberculosis*** (24 genomes) | 105,745,015 | `AGC` 13-cfg oracle: `96,580 B`<br>`AGC` best single: `292,170 B`<br>`RC-MDL v1/v2`: `122,998 B` / `92,506 B` | **47,339 B** | **0.00358** | **2,233.78x** | **24/24 vs Single (`6.17x`) & RC-MDL (`-61.51%`/`-48.83%`)**; **`2.04x` < AGC 13-cfg oracle** (`19/24` wins; misses `5/24` by `13–239 B`; `03.seq` = **256 B**, `18` SNPs) |
+| **Mode R (LOO)** | ***S. aureus*** (25 genomes) | 71,043,114 | `AGC` 13-cfg oracle: `1,617,085 B`<br>`AGC` best single: `2,979,078 B`<br>`RC-MDL v1/v2`: `267,412 B` / `243,807 B` | **174,217 B** | **0.01962** | **407.79x** | **25/25 vs Single (`17.10x`) & RC-MDL (`-34.85%`/`-28.54%`)**; **`9.28x` < AGC oracle** (`24/25` wins; sole miss `04.seq` `683` vs `617 B`; `20.seq` = **134 B**, **`21,485x`**) |
 | **Mode R (LOO)** | ***Salmonella* + *Klebsiella*** (12-genome subset) | 60,810,308 | `EIMDL` Mode S: `13,868,405 B` | **433,498 B** | **0.0570** | **140.28x** | **`-96.87%` (`31.99x` smaller)** than Mode S; restores in `48.4 s` (`1.20 MiB/s`) |
-| **Mode R (Cluster-LOO)** | ***E. coli* / *MTB* / *S. aureus*** (unseen lineages) | 296,896,352 | `AGC (-a)`: `9.20M` / `1.19M` / `4.13M`<br>`RC-MDL`: `2.33M` / `153.2K` / `741.7K` | **1,625,424 B**<br>**78,582 B**<br>**525,828 B** | **0.10826**<br>**0.00595**<br>**0.05921** | **73.9x**<br>**1,345.7x**<br>**135.1x** | **`-30.29%`**, **`-48.70%`**, **`-29.10%`** vs RC-MDL; **`5.66x`**, **`15.13x`**, **`7.86x`** smaller than `AGC (-a)` |
-| **Mode C (Collection)** | ***E. coli*** (24 genomes, flat `.seq`) | 120,108,223 | `HyperGraSS v1`: `3,810,409 B` (`887.3 s`)<br>`JARVIS3 -l 7`: `3,896,361 B`<br>`RC-MDL Prim`: `3,972,975 B`<br>`GraSS -e2`: `24,777,592 B` | **3,393,302 B** *(par)*<br>**3,377,802 B** *(`1T`)* | **0.2260**<br>**0.2250** | **35.40x**<br>**35.56x** | **`-10.95%` vs v1** at **`20.2x–31.8x` faster compress** (`44.0 s` / `27.9 s` cold); **`-12.91%` vs JARVIS3** |
-| **Mode C (Bounded JVM)** | ***E. coli*** (24 genomes, `-Xmx256m` / `-Xmx192m`) | 120,108,223 | `HyperGraSS v1` pure JVM: **OOM (`0/7`)**<br>`v1` GraalVM native: `3,864,464 B` | **3,423,050 B** *(256m)*<br>**3,455,169 B** *(192m)* | **0.2280**<br>**0.2301** | **35.09x**<br>**34.76x** | Pure JVM at **`-Xmx192m`** beats unbounded `v1`, native `v1`, `JARVIS3`, and `RC-MDL` (`+1.82%` vs unbounded) |
-| **Mode C (Multi-FASTA)** | ***E. coli* / *MTB* / *S. aureus*** (full FASTA) | 296,896,352 | `v1 --pangenome`: `4,885,851 B`<br>`RC-MDL`: `1,233,433 B` / `AGC`: `2,145,694 B` | **3,392,869 B**<br>**1,041,596 B**<br>**1,082,866 B** | **0.2260**<br>**0.0788**<br>**0.1219** | **35.91x**<br>**102.97x**<br>**66.55x** | Full 6-channel exact FASTA restore (`-30.56%` vs `v1` on *E. coli*; **`1.98x` < AGC** on *S. aureus*) |
+| **Mode R (Cluster-LOO)** | ***E. coli* / *MTB* / *S. aureus*** (unseen lineages) | 296,896,352 | `AGC (-a)`: `9,203,994` / `1,188,909` / `4,132,771`<br>`RC-MDL`: `2,331,696` / `153,182` / `741,650` | **1,619,296 B**<br>**78,603 B**<br>**524,535 B** | **0.10786**<br>**0.00595**<br>**0.05907** | **74.17x**<br>**1,345.31x**<br>**135.44x** | **`-30.55%`**, **`-48.69%`**, **`-29.27%`** vs RC-MDL; **`5.68x`**, **`15.13x`**, **`7.88x`** smaller than `AGC (-a)` |
+| **Mode C (Collection)** | ***E. coli*** (24 genomes, flat `.seq`) | 120,108,223 | `HyperGraSS v1`: `3,810,409 B` (`887.45 s`)<br>`JARVIS3 -l 7`: `3,896,361 B`<br>`RC-MDL Prim`: `3,972,975 B`<br>`GraSS -e2`: `24,777,592 B` | **3,388,639 B** *(`12T`)*<br>**3,371,489 B** *(`1T`)* | **0.2257**<br>**0.2246** | **35.44x**<br>**35.62x** | **`-11.52%` (`1T`) / `-11.07%` (`12T`) vs v1** at **`45.16x` faster (`19.65 s` Amdahl `12T`)**; **`-13.47%` (`1T`) vs JARVIS3** |
+| **Mode C (Bounded JVM)** | ***E. coli*** (24 genomes, `-Xmx256m` to `-Xmx128m`) | 120,108,223 | `HyperGraSS v1` pure JVM: **OOM (`0/7`)**<br>`v1` GraalVM native: `3,864,464 B` | **3,422,314 B** *(256m/224m)*<br>**3,452,703 B** *(192m/160m/128m)* | **0.2279**<br>**0.2300** | **35.10x**<br>**34.79x** | Pure JVM at **`-Xmx128m`** (`25.59 s` enc / `11.67 s` dec) beats unbounded `v1` (`-9.39%`), native `v1`, `JARVIS3`, & `RC-MDL` |
+| **Mode C (Multi-FASTA)** | ***E. coli* / *MTB* / *S. aureus*** (full FASTA) | 296,896,352 | `v1 --pangenome`: `4,885,851 B`<br>`RC-MDL`: `1,233,433 B` / `AGC`: `2,145,694 B` | **3,387,485 B**<br>**1,049,266 B**<br>**1,086,129 B** | **0.2256**<br>**0.0794**<br>**0.1223** | **35.96x**<br>**102.22x**<br>**66.35x** | Full 6-channel exact FASTA restore (`-30.67%` vs `v1` on *E. coli*; **`1.98x` < AGC** on *S. aureus*) |
 | **Mode C (Independent)** | ***Salmonella enterica*** (25 genomes, locked) | 120,527,038 | `JARVIS3 -l 7`: `2,709,545 B`<br>`GraSS -e2`: `19,991,646 B`<br>`HyperGraSS v1`: `3,443,600 B` | **2,390,106 B** | **0.1586** | **50.43x** | **`-11.79%` (`-319,439 B`) vs JARVIS3**; **`-88.04%` vs GraSS**; **`-30.59%` vs v1** |
 | **Mode C (Independent)** | ***Klebsiella pneumoniae*** (23 genomes, locked) | 122,700,601 | `JARVIS3 -l 7`: `2,948,926 B`<br>`GraSS -e2`: `21,191,566 B`<br>`HyperGraSS v1`: `3,464,423 B` | **2,523,991 B** | **0.1646** | **48.61x** | **`-14.41%` (`-424,935 B`) vs JARVIS3**; **`-88.09%` vs GraSS**; **`-27.15%` vs v1** |
-| **Mode S (Host)** | ***E. coli* `00.fa`** (single genome) | 4,856,080 | `HyperGraSS v1`: `1,136,083 B`<br>`RC-MDL S`: `1,192,494 B` | **1,123,893 B** *(par)*<br>**1,122,240 B** *(`1T`)* | **1.8515**<br>**1.8488** | **4.32x**<br>**4.33x** | Beats `HyperGraSS v1` (`-12,190 B` / `-13,843 B`) & `RC-MDL S` (`-68,601 B`) in `6.18 s` |
+| **Mode S (Host)** | ***E. coli* `00.fa`** (single genome) | 4,856,080 | `HyperGraSS v1`: `1,136,069 B`<br>`RC-MDL S`: `1,192,494 B` | **1,122,777 B** *(`00.fa`)*<br>**1,122,749 B** *(`00.seq`)* | **1.8497**<br>**1.8496** | **4.33x**<br>**4.33x** | Beats `HyperGraSS v1` (`-1.17%`, `-13,292 B`) & `RC-MDL S` (`-69,717 B`) in **`6.75 s`** (`6.57 s` dec) |
 | **Mode S (Independent)** | **12-Genome *Salmonella* + *Klebsiella* Subset** | 60,810,308 | `JARVIS3 -l 7`: `15,204,327 B`<br>**`JARVIS3 -l 31`**: `14,197,393 B`<br>`GraSS -e2`: `14,815,984 B` | **13,868,405 B** | **1.8245** | **4.38x** | **12/12 wins**: **`-8.79%` vs JARVIS3 L7** and **`-2.32%` (`-328,988 B`) vs tuned JARVIS3 L31** at **`10.7x` less RSS** (`108` vs `1,159 MiB`) & **`1.26x` faster** |
 | **Law IV (Safety)** | **`08_crypto_white_noise.seq`** (`SHA-256` stream) | 500,000 | `gzip -9`: `144,017 B` (`2.3043 bpb`) | **125,075 B** | **2.0012** | **4.00x** | Sub-block 2-bit safety bypass caps overhead at **`+0.0012 bpb` (`+0.06%`)** above $H_0 = 2.0000\text{ bpb}$ |
 
@@ -68,7 +69,7 @@ flowchart TD
     G0["Baseline: Original GraSS (2017)<br/>Single-Block Lempel-Ziv + Parity Folding + MPC/BSC<br/>E. coli 24-genome collection: 24,777,592 B (1.6503 bpb)"]
     G1["Generation 1: HyperGraSS v1 (.hgs, 0x48475301)<br/>6-Channel Lossless Factorization + Stride-4 16-mer Anchor Bank + QCRM<br/>E. coli Mode C: 3,810,409 B (0.2538 bpb, 887.3 s) | Mode S: 1,136,083 B<br/>Limitations: 62% serial Amdahl bottleneck, 7.1 B/base hash table (OOM on pure JVM at 256 MiB)"]
     G2["Generation 2: RC-MDL v2 Prototype (Rcmdl.java)<br/>Reference-Conditioned Semi-Markov Mosaic + Prim Collection Ordering<br/>E. coli LOO: 1,780,761 B | M. tuberculosis LOO: 122,998 B | Mode C: 3,972,975 B<br/>Limitations: Lost to AGC 13-cfg oracle on MTB (96,580 B), lost E. coli twins 13 & 14, lost Mode C & S to Gen 1"]
-    G3["Generation 3: Unified HGS2 / EIMDL Engine (.hgs2, 0x48475332)<br/>Laws I–V: Klein V4 Kimura-CpG + 6F-ORF-HMM + Two-Gear Coalescent Horizon + 2-Pass Zero-Mat CSR<br/>Mode R LOO: 1,177,778 B (E. coli) / 47,305 B (MTB, 2.04x < AGC oracle) / 174,639 B (S. aureus)<br/>Mode C: 3,377,802 B (1T) / 3,393,302 B (44.0 s) / 3,455,169 B (-Xmx192m pure JVM)<br/>Mode S: 1,122,240 B (E. coli) | Beats tuned JARVIS3 -l 31 (12/12 wins) at 10.7x less RAM"]
+    G3["Generation 3: Unified HGS2 / EIMDL Engine (.hgs2, 0x48475332)<br/>Laws I–VII: Klein V4 Kimura-CpG + 6F-ORF-HMM + Two-Gear Horizon + 2-Pass Zero-Mat CSR + Two-Adic Pitman-Yor + Disjoint -Xmx128m Heap<br/>Mode R LOO: 1,174,113 B (E. coli) / 47,339 B (MTB, 2.04x < AGC oracle) / 174,217 B (S. aureus)<br/>Mode C: 3,371,489 B (1T) / 3,388,639 B (19.65 s 12T) / 3,452,703 B (-Xmx128m pure JVM)<br/>Mode S: 1,122,777 B (E. coli 00.fa, 6.75 s) | Beats tuned JARVIS3 -l 31 (12/12 wins) at 10.7x less RAM"]
 
     G0 --> G1
     G0 --> G2
@@ -80,15 +81,15 @@ flowchart TD
 
 | Failure Mode / Bottleneck in Gen 1 (`HyperGraSS v1`) or Gen 2 (`RC-MDL v2`) | Root Cause Diagnosed | Generation 3 (`HGS2` / `EIMDL`) Architectural Resolution | Measured Verification |
 |---|---|---|---|
-| **Gen 2 lost to `AGC 3.2.5` 13-config oracle on *M. tuberculosis* (`122,998 B` vs `96,580 B`)** | Single-gear approximate matching (`R_lit ≈ 1.865 bpb`) bulldozed across recombination boundaries (`261` mismatches on `03.seq`), plus FIFO bucket eviction | **Law IIIb (Two-Gear Coalescent Copying + `findClonalReentryHorizon`)** + sticky donor probing + distinct-donor CSR buckets | **`47,305 B` (`0.00358 bpb`)** — **`2.04x` smaller than AGC's 13-config oracle** (`03.seq` drops from `261` to **`18` SNPs**, **`256 B`**) |
-| **Gen 2 lost to `AGC` on *E. coli* twins `13.seq` (`2,032 B` vs `1,680 B`) & `14.seq` (`2,266 B` vs `1,624 B`)** | Micro-indels broke megabase syntenic blocks into costly re-addressed fragments (`42–60` bits/break) | **Law IIIc (Affine Syntenic Micro-Indel Splicing)** conditioned on an 8-state `(kind, spanBin)` prior | `13.seq` = **`635 B` (`8,165x`)** and `14.seq` = **`633 B` (`8,187x`)** — **24/24 clean sweep** over AGC |
-| **Gen 1 Mode C took `887.3 s` and topped out at `1.15x` multi-core speedup** | 4 sequential file passes + single-threaded `9.43 Mbp` `QCRM` anchor page ($f_{\text{serial}} \approx 0.62$, $S_{\max} \approx 1.61\times$) | **Law V (Rank-Ordered Parallel DAG Mosaic + Warm-Primed Parallel `FastCRM` Stripes)** | **`3,393,302 B` in `44.0 s` (`27.9 s` cold)** — **`20.2x–31.8x` faster** and **`-10.95%` (`-417,107 B`) smaller** than Gen 1 |
-| **Gen 1 pure JVM OOM-killed (`0/7`) under strict `256 MiB` container limit** | `Files.readAllBytes` (`120 MB`) + `SeedHashTable` (`7.1 B/base`) + per-donor object arrays stacked on the Java heap | **Law V (`tryStreamFlatFile` 64 KiB streaming + `0.25 B/base` 2-bit bank + 2-pass zero-materialization CSR at $s \in \{1,2\}$)** | Completes in **pure JVM at `-Xmx256m`, `-Xmx224m` (`3,423,050 B`) and `-Xmx192m` (`3,455,169 B`)**, beating unbounded Gen 1 & `JARVIS3` |
-| **Gen 2 lost Mode S (`1,192,494 B`) and Mode C (`3,972,975 B`) to Gen 1** | Gen 2 used global `pos % 3` phase (decorrelated by non-3n intergenic spacers) and encoded per-genome novelty streams separately | **Law IIb (`6F-ORF-HMM` 6-state causal reading-frame tracker)** + **Unified Pan-Genome Novelty Superstream** | Mode S *E. coli* `00.fa` = **`1,122,240 B` (`1T`) / `1,123,893 B` (par)**; Mode C = **`3,377,802 B` (`1T`)** |
+| **Gen 2 lost to `AGC 3.2.5` 13-config oracle on *M. tuberculosis* (`122,998 B` vs `96,580 B`)** | Single-gear approximate matching (`R_lit ≈ 1.865 bpb`) bulldozed across recombination boundaries (`261` mismatches on `03.seq`), plus FIFO bucket eviction | **Law IIIb (Two-Gear Coalescent Copying + `findClonalReentryHorizon`)** + sticky donor probing + distinct-donor CSR buckets | **`47,339 B` (`0.00358 bpb`)** — **`2.04x` smaller than AGC's 13-config oracle** (`03.seq` drops from `261` to **`18` SNPs**, **`256 B`**) |
+| **Gen 2 lost to `AGC` on *E. coli* twins `13.seq` (`2,032 B` vs `1,680 B`) & `14.seq` (`2,266 B` vs `1,624 B`)** | Micro-indels broke megabase syntenic blocks into costly re-addressed fragments (`42–60` bits/break) | **Law IIIc (Affine Syntenic Micro-Indel Splicing)** conditioned on an 8-state `(kind, spanBin)` prior (active on syntenic divergence; note `-119 B`/`-227 B` dense-panel trade-off) | `13.seq` = **`633 B` (`8,191.2x`)** and `14.seq` = **`632 B` (`8,200.0x`)** — **24/24 clean sweep** over AGC |
+| **Gen 1 Mode C took `887.45 s` and topped out at `1.15x` multi-core speedup** | 4 sequential file passes + single-threaded `9.43 Mbp` `QCRM` anchor page ($f_{\text{serial}} \approx 0.62$, $S_{\max} \approx 1.61\times$) | **Law V (Rank-Ordered Parallel DAG Mosaic + Warm-Primed Parallel `FastCRM` Stripes)** + **Law VIc (Reciprocal Mixer Normalization)** | **`3,388,639 B` (`19.65 s` `12T` Amdahl / `33.78 s` Mode C)** — **`26.3x–45.2x` faster** and **`-11.07%` (`-11.52%` `1T`)** smaller than Gen 1 |
+| **Gen 1 pure JVM OOM-killed (`0/7`) under strict `256 MiB` container limit** | `Files.readAllBytes` (`120 MB`) + `SeedHashTable` (`7.1 B/base`) + overlapping Stage-1/Stage-2 buffers on the Java heap | **Laws V & VII (`tryStreamFlatFile` 64 KiB streaming + `0.25 B/base` 2-bit bank + 2-pass CSR + Disjoint Stage-1/Stage-2 Lifetimes + `int[]` syncmers)** | Completes in **pure JVM at `-Xmx256m`/`-Xmx224m` (`3,422,314 B`) and `-Xmx192m`/`-Xmx160m`/`-Xmx128m` (`3,452,703 B`)**, beating unbounded Gen 1 & `JARVIS3` |
+| **Gen 2 lost Mode S (`1,192,494 B`) and Mode C (`3,972,975 B`) to Gen 1** | Gen 2 used global `pos % 3` phase (decorrelated by non-3n intergenic spacers), flat order backoff, and separate per-genome novelty streams | **Laws IIb (`6F-ORF-HMM`) & VI (`tau=20` Two-Adic Taper + Hierarchical Pitman-Yor Backoff)** + **Unified Pan-Genome Novelty Superstream** | Mode S *E. coli* `00.fa` = **`1,122,777 B` (`6.75 s`)**; Mode C = **`3,371,489 B` (`1T`)** |
 
 ---
 
-## 3. Mathematical & Biological Laws of `HGS2` / `EIMDL` (Laws I–V)
+## 3. Mathematical & Biological Laws of `HGS2` / `EIMDL` (Laws I–VII)
 
 In strict adherence to [`docs/FOUNDATIONS.md`](docs/FOUNDATIONS.md), every law in [`docs/COMPRESSION-LAW.md`](docs/COMPRESSION-LAW.md) is backed by an **invariant**, **mechanism**, **measured effect**, and **executable falsification suite** ([`VerifyCompressionLaws.java`](src/hypergrass/VerifyCompressionLaws.java)):
 
@@ -108,8 +109,8 @@ $$H_{V_4}(Y \mid X, c, Y \neq X) = h_2(p_{\text{ti}}(c)) + (1 - p_{\text{ti}}(c)
 
 ### Law III — Conditional Monotonicity, Horizon-Bounded Two-Gear Coalescent Copying & Micro-Indel Splicing
 1. **Conditional Monotonicity (Law IIIa):** Sticky active-donor probing (`mtf[0..1]`), distinct-donor CSR bucket preservation, and 32-bit signature verification eliminate the FIFO candidate eviction that degraded Gen 2 on clonal panels.
-2. **Horizon-Bounded Two-Gear Coalescent Haplotype Copying (Law IIIb):** Bacterial genealogies exhibit a $\sim 20\times$ spectral gap between vertical clonal inheritance ($\theta_{\text{clonal}} \le 5\times 10^{-4}$) and horizontal recombination imports ($\theta_{\text{recomb}} \in [3\times 10^{-3}, 1.2\times 10^{-1}]$). **Gear 1 (`clonalGear`)** prices extension against the clonal baseline (`baseGain = 0.008` bits/bp, `snpPenalty = 11.2` bits/SNP, $\ge 128\text{ bp}$ exact tail guard). When no clonal donor covers `pos`, **Gear 2 (`!clonalGear`)** queries `findClonalReentryHorizon` (`horizonCache`) to find the earliest downstream coordinate `gear2Limit` where any panel donor resumes an exact $\ge 192\text{ bp}$ clonal haplotype, clamping diverged homolog extension to `[pos .. gear2Limit)` so recombination islands never bulldoze downstream clonal runs (cutting *E. coli* `00.seq` LOO false SNPs from `29,623` to `5,706` and archive bytes from `56,813 B` to **`40,735 B`**).
-3. **Affine Syntenic Micro-Indel Continuity (Law IIIc):** Bounded-window lookahead (`trySyntenicIndelSplice`) re-anchors $(g^*, o^*)$ across deletions ($\Delta_{\text{ref}} \in [1, 256]$), insertions ($\Delta_{\text{tgt}} \in [1, 64]$), and compound micro-indels under an 8-state `(kind, spanBin)` `hasSplice` context prior, paying $12\text{--}18\text{ bits}$ instead of $42\text{--}60\text{ bits}$ for a full match break.
+2. **Horizon-Bounded Two-Gear Coalescent Haplotype Copying (Law IIIb):** Bacterial genealogies exhibit a $\sim 20\times$ spectral gap between vertical clonal inheritance ($\theta_{\text{clonal}} \le 5\times 10^{-4}$) and horizontal recombination imports ($\theta_{\text{recomb}} \in [3\times 10^{-3}, 1.2\times 10^{-1}]$). **Gear 1 (`clonalGear`)** prices extension against the clonal baseline (`baseGain = 0.008` bits/bp, `snpPenalty = 11.2` bits/SNP, $\ge 128\text{ bp}$ exact tail guard). When no clonal donor covers `pos`, **Gear 2 (`!clonalGear`)** queries `findClonalReentryHorizon` (`horizonCache`) to find the earliest downstream coordinate `gear2Limit` where any panel donor resumes an exact $\ge 192\text{ bp}$ clonal haplotype, clamping diverged homolog extension to `[pos .. gear2Limit)` so recombination islands never bulldoze downstream clonal runs (cutting *E. coli* `00.seq` LOO false SNPs to `5,706` and archive bytes to **`40,588 B`**).
+3. **Affine Syntenic Micro-Indel Continuity (Law IIIc):** Bounded-window lookahead (`trySyntenicIndelSplice`) re-anchors $(g^*, o^*)$ across deletions ($\Delta_{\text{ref}} \in [1, 256]$), insertions ($\Delta_{\text{tgt}} \in [1, 64]$), and compound micro-indels under an 8-state `(kind, spanBin)` `hasSplice` context prior, paying $12\text{--}18\text{ bits}$ instead of $42\text{--}60\text{ bits}$ for a full match break (saving `+428` broken tokens vs no-splice on syntenic single-donor `00|20` and `-32.3%` on synthetic hypermutator `07`, while trading `-119 B` / `-227 B` on dense real panels).
 
 ### Law IV — Universal 5-Regime Existing & Non-Existing Sequence Completeness Law
 Minimizes total description length across (1) panel syntenic homology, (2) bidirectional self-homology, (3) tandem periodicity ($1 \le P \le 64$), (4) `FastCRM` + `6F-ORF-HMM` context-repeat mixing, and (5) a per-sub-block raw 2-bit safety bypass (bit 31 header flag), guaranteeing non-expansion on arbitrary or cryptographically random sequences.
@@ -119,7 +120,17 @@ Streams flat inputs in `64 KiB` chunks directly into one contiguous 2-bit word-p
 
 $$M_{\text{peak}}(L_{\text{total}}, s, P) = L_{\text{total}} \cdot \left(0.25 + \frac{6}{w \cdot 2^s}\right)\text{ B} + P \cdot B_{\text{worker}}$$
 
-At full density ($s=0$), the index + 2-bit bank requires `1.58 B/base` (`4.5x` smaller than Gen 1's `7.1 B/base` hash table); under `-Xmx256m`/`-Xmx224m` ($s=1$) it requires `0.93 B/base`, and under `-Xmx192m` ($s=2$) only `0.59 B/base` (`~71 MiB` for `120.1 Mbp`), keeping **100% of donors indexed** with zero intermediate object allocations.
+At full density ($s=0$), the index + 2-bit bank requires `1.58 B/base` (`4.5x` smaller than Gen 1's `7.1 B/base` hash table); under `-Xmx256m`/`-Xmx224m` ($s=1$) it requires `0.93 B/base`, and under `-Xmx192m` to `-Xmx128m` ($s=2$) only `0.59 B/base` (`~71 MiB` for `120.1 Mbp`), keeping **100% of donors indexed** with zero intermediate object allocations.
+
+### Law VI — Two-Adic Tapered Adaptation, Hierarchical Pitman-Yor Backoff & Reciprocal Mixer Normalization
+1. **Two-Adic Symmetric Adaptation Tapering (Law VIa):** Replaces fixed shift-5 saturation in `BitRangeEnc`/`BitRangeDec` (where integer truncation stalls probabilities at `31/4096`) with symmetric `tau = 20` two-adic rounding (`(p + 20) >>> 5` and `(4096 - p + 20) >>> 5`), lowering the residual stalling floor $>2.8\times$ to exact fixed point `11/4096`.
+2. **Hierarchical Pitman-Yor Suffix-Tree Backoff & Post-SNP Recovery (Law VIb):** Because genomic $k$-mer estimators operate in the sparse low-count regime, [`FastNoveltyCoder.java`](src/hypergrass/FastNoveltyCoder.java) interpolates each order-$k$ posterior ($k \in \{1, \dots, 9, \text{Sparse-}12, \text{ORF-3}, \text{ORF-5}\}$) with its already-computed order-$(k-1)$ posterior $P_{k-1}(a \mid c_{k-1})$ rather than flat uniform $1/4$, while `MicroRepeatHead` restores full repeat confidence once a single SNP clears (`misses == 0`).
+3. **Reciprocal-Multiplication Mixer Normalization (Law VIc):** Replaces 64-bit hardware integer divisions inside `FastCRM` with an immutable 16,385-entry reciprocal lookup table $R(d) = \lfloor (2^{32} + d - 1)/d \rfloor$ (`(num * R(d)) >>> 32`).
+
+### Law VII — Disjoint Index/Superstream Lifecycle & Sub-Linear Bounded-Heap Law (`-Xmx128m`)
+Enforces strict disjoint lifetimes between Stage-1 CSR indexing (`sharedDagIdx`, `mstParentRank`, `rankDonorSimilarityOrder`) and Stage-2 pan-genome superstream coding (`rankMosaics`, `unitNovSlices`, `FastCRM`), narrows per-worker syncmer hashes from `long[]` to 32-bit `int[]` (`-38%` worker RAM), replaces 3.43M per-line FASTA restoration syscalls with 64 KB buffered writes, and decouples `FastCRM` stripe parallelism from thread count under `ultraTight`/`extremeTight` caps so **full `panSuper` (`Order-8`, `Order-9`, `Sparse-12`) context modeling stays active down to `-Xmx128m`** (`1.06 B/base` heap on `120.1 Mbp`, `+1.89%` vs `12T`).
+
+> **Scope & Architectural Transfer from OpenAI's Oct 2026 ETH Refutation (`openai2026eth`):** Laws VI–VII draw concrete algorithmic structure from OpenAI's 67-page *"The Exponential Time Hypothesis is False"* (Oct 2026) — specifically shared linear hierarchical summaries (§2.4, §2.7, §4.2 $\to$ Law VIb), two-adic valuation tapering (App. D.4.3–D.4.4, eq. D.10 $\to$ Law VIa), and disjoint-partition sequential polynomial-space accumulation (Lemma 3.2, Prop. 3.4, §5.2, §D.4.7 $\to$ Law VII). In explicit fidelity to **Section 1.1.3** of that preprint, subexponential `#k-SAT` algebraic reductions do **not** bypass polynomial-time fine-grained complexity barriers tied to the Orthogonal Vectors Conjecture (OVC) — including edit-distance and LCS matching bottlenecks.
 
 ---
 
@@ -131,14 +142,14 @@ At full density ($s=0$), the index + 2-bit bank requires `1.58 B/base` (`4.5x` s
 
 All 73 genomes across *E. coli*, *M. tuberculosis*, and *S. aureus* are compressed and restored using **one universal default `HGS2` configuration** (zero per-species or per-target parameter tuning), with every archive embedding a mandatory 32-byte SHA-256 donor-panel manifest digest:
 
-| Species Panel | Genomes | Total Bases | `AGC 3.2.5` (Best Single) | `AGC 3.2.5` (13-Config Oracle) | `RC-MDL v2` | **`HGS2` / `EIMDL` (1 Universal Config)** | **`EIMDL` Total bpb** | **Median bpb** | Wins vs `RC-MDL` | Wins vs `AGC` | SHA-256 |
+| Species Panel | Genomes | Total Bases | `AGC 3.2.5` (Best Single) | `AGC 3.2.5` (13-Config Oracle) | `RC-MDL` (`v1 / v2`) | **`HGS2` / `EIMDL` (1 Universal Config)** | **`EIMDL` Total bpb** | **Median bpb** | Wins vs `RC-MDL v1` | Wins vs `AGC` | SHA-256 |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|:---:|:---:|:---:|
-| ***E. coli*** (LOO) | 24 | 120,108,223 | 8,384,117 B | — | 1,780,761 B | **1,177,778 B** (`-33.86%` vs RC-MDL; **`7.12x` < AGC**) | **0.07845** | **0.07185** | **24 / 24** | **24 / 24** | 24/24 PASS |
-| ***M. tuberculosis*** (LOO) | 24 | 105,745,015 | 292,170 B | 96,580 B | 122,998 B | **47,305 B** (`-61.54%` vs RC-MDL; **`2.04x` < AGC Oracle**) | **0.00358** | **0.00366** | **24 / 24** | **24 / 24** | 24/24 PASS |
-| ***S. aureus*** (LOO) | 25 | 71,043,114 | 2,979,078 B | 1,617,085 B | 267,412 B | **174,639 B** (`-34.69%` vs RC-MDL; **`9.26x` < AGC Oracle**) | **0.01967** | **0.00192** | **25 / 25** | **25 / 25** | 25/25 PASS |
-| ***E. coli*** (Cluster-LOO) | 24 (22 cl.) | 120,108,223 | 9,203,994 B (`-a`) | — | 2,331,696 B | **1,625,424 B** (`-30.29%` vs RC-MDL; **`5.66x` < AGC**) | **0.10826** | **0.09777** | **24 / 24** | **24 / 24** | 24/24 PASS |
-| ***M. tuberculosis*** (Cluster-LOO) | 24 (13 cl.) | 105,745,015 | 1,188,909 B (`-a`) | — | 153,182 B | **78,582 B** (`-48.70%` vs RC-MDL; **`15.13x` < AGC**) | **0.00595** | **0.00405** | **24 / 24** | **24 / 24** | 24/24 PASS |
-| ***S. aureus*** (Cluster-LOO) | 25 (14 cl.) | 71,043,114 | 4,132,771 B (`-a`) | — | 741,650 B | **525,828 B** (`-29.10%` vs RC-MDL; **`7.86x` < AGC**) | **0.05921** | **0.04453** | **25 / 25** | **25 / 25** | 25/25 PASS |
+| ***E. coli*** (LOO) | 24 | 120,108,223 | 8,384,117 B | — | 1,780,761 / 1,636,367 B | **1,174,113 B** (`-34.07%` / `-28.25%`; **`7.14x` < AGC**) | **0.07820** | **0.07162** | **24 / 24** | **24 / 24** (`-s 200k`) | 24/24 PASS |
+| ***M. tuberculosis*** (LOO) | 24 | 105,745,015 | 292,170 B | 96,580 B | 122,998 / 92,506 B | **47,339 B** (`-61.51%` / `-48.83%`; **`2.04x` < AGC Oracle**) | **0.00358** | **0.00367** | **24 / 24** | **24 / 24** Single / **19 / 24** Oracle | 24/24 PASS |
+| ***S. aureus*** (LOO) | 25 | 71,043,114 | 2,979,078 B | 1,617,085 B | 267,412 / 243,807 B | **174,217 B** (`-34.85%` / `-28.54%`; **`9.28x` < AGC Oracle**) | **0.01962** | **0.00193** | **25 / 25** | **25 / 25** Single / **24 / 25** Oracle | 25/25 PASS |
+| ***E. coli*** (Cluster-LOO) | 24 (22 cl.) | 120,108,223 | 9,203,994 B (`-a`) | — | 2,331,696 B | **1,619,296 B** (`-30.55%` vs RC-MDL; **`5.68x` < AGC**) | **0.10786** | **0.08477** | Aggregate | Aggregate (`5.68x`) | 24/24 PASS |
+| ***M. tuberculosis*** (Cluster-LOO) | 24 (13 cl.) | 105,745,015 | 1,188,909 B (`-a`) | — | 153,182 B | **78,603 B** (`-48.69%` vs RC-MDL; **`15.13x` < AGC**) | **0.00595** | **0.00580** | Aggregate | Aggregate (`15.13x`) | 24/24 PASS |
+| ***S. aureus*** (Cluster-LOO) | 25 (14 cl.) | 71,043,114 | 4,132,771 B (`-a`) | — | 741,650 B | **524,535 B** (`-29.27%` vs RC-MDL; **`7.88x` < AGC**) | **0.05907** | **0.03397** | Aggregate | Aggregate (`7.88x`) | 25/25 PASS |
 
 ---
 
@@ -148,19 +159,19 @@ All 73 genomes across *E. coli*, *M. tuberculosis*, and *S. aureus* are compress
 
 #### Canonical 24-Genome *E. coli* Benchmark (`120,108,223 B`, SHA-256 `51cb3ecb...`)
 
-| Compressor / Configuration | Archive Bytes | Bits / Base | Ratio | Compress Wall | Restore Wall | Delta vs `HGS2 (1T)` | SHA-256 |
+| Compressor / Configuration | Archive Bytes | Bits / Base | Ratio | Compress | Restore | Delta vs `HGS2 (1T)` | SHA-256 |
 |---|---:|---:|---:|---:|---:|---:|:---:|
-| `Original GraSS (-e2)` | 24,777,592 B | 1.6503 | 4.85x | 224.5 s | — | `+633.54%` | PASS |
-| `AGC 3.2.5` *(multi-FASTA)* | 8,540,341 B | 0.5688 | 14.06x | — | — | `+152.84%` | PASS |
-| `xz -9` *(multi-FASTA)* | 8,394,900 B | 0.5592 | 14.51x | 186.3 s | — | `+148.53%` | PASS |
-| `xz -9` *(flat .seq)* | 5,663,640 B | 0.3772 | 21.21x | 72.1 s | 3.5 s | `+67.67%` | PASS |
-| `RC-MDL v2 (Prim)` | 3,972,975 B | 0.2646 | 30.23x | — | — | `+17.62%` | PASS |
-| `JARVIS3 (level 7)` | 3,896,361 B | 0.2595 | 30.83x | 95.4 s | 84.2 s | `+15.35%` | PASS |
-| `HyperGraSS v1` *(tuned + LZ gap)* | 3,810,409 B | 0.2538 | 31.52x | 887.3 s | 82.4 s | `+12.81%` | PASS |
-| **`HGS2` / `EIMDL` (`--bounded -Xmx192m`)** | **3,455,169 B** | **0.2301** | **34.76x** | **57.6 s** *(34.9 s cold)* | **27.2 s** *(15.6 s cold)* | `+2.29%` | **PASS** |
-| **`HGS2` / `EIMDL` (`--bounded -Xmx256m`)** | **3,423,050 B** | **0.2280** | **35.09x** | **59.5 s** *(37.5 s cold)* | **29.0 s** *(16.3 s cold)* | `+1.34%` | **PASS** |
-| **`HGS2` / `EIMDL` (Default Parallel)** | **3,393,302 B** | **0.2260** | **35.40x** | **44.0 s** *(27.9 s cold)* | **25.0 s** *(14.0 s cold)* | `+0.46%` | **PASS** |
-| **`HGS2` / `EIMDL` (`--threads 1`)** | **3,377,802 B** | **0.2250** | **35.56x** | **96.9 s** | **55.4 s** | **Baseline** | **PASS** |
+| `Original GraSS (-e2)` | 24,777,592 B | 1.6503 | 4.85x | 224.5 s | — | `+634.92%` | PASS |
+| `AGC 3.2.5` *(multi-FASTA)* | 8,540,341 B | 0.5688 | 14.06x | — | — | `+153.31%` | PASS |
+| `xz -9` *(multi-FASTA)* | 8,394,900 B | 0.5592 | 14.51x | 186.3 s | — | `+149.00%` | PASS |
+| `xz -9` *(flat .seq)* | 5,663,640 B | 0.3772 | 21.21x | 72.1 s | 3.5 s | `+67.99%` | PASS |
+| `RC-MDL v2 (Prim)` | 3,972,975 B | 0.2646 | 30.23x | — | — | `+17.84%` | PASS |
+| `JARVIS3 (level 7)` | 3,896,361 B | 0.2595 | 30.83x | 95.4 s | 84.2 s | `+15.57%` | PASS |
+| `HyperGraSS v1` *(tuned + LZ gap)* | 3,810,409 B | 0.2538 | 31.52x | 887.45 s | 82.4 s | `+13.02%` | PASS |
+| **`HGS2` / `EIMDL` (`--bounded -Xmx128m` / `-Xmx160m` / `-Xmx192m`)** | **3,452,703 B** | **0.2300** | **34.79x** | **25.59 s** *(`128m`)* / **62.68 s** *(`192m`)* | **11.67 s** *(`128m`)* / **27.46 s** *(`192m`)* | `+2.41%` | **PASS** |
+| **`HGS2` / `EIMDL` (`--bounded -Xmx256m` / `-Xmx224m`)** | **3,422,314 B** | **0.2279** | **35.10x** | **22.38 s** *(`256m`)* / **24.03 s** *(`224m`)* | **10.61 s** *(`256m`)* / **13.89 s** *(`224m`)* | `+1.51%` | **PASS** |
+| **`HGS2` / `EIMDL` (Default Parallel, `12T`)** | **3,388,639 B** | **0.2257** | **35.44x** | **19.65 s** *(Amdahl `12T`)* / **33.78 s** *(Mode C)* | **10.40 s** / **18.17 s** | `+0.51%` | **PASS** |
+| **`HGS2` / `EIMDL` (`--threads 1`)** | **3,371,489 B** | **0.2246** | **35.62x** | **40.31 s** | **56.78 s** | **Baseline** | **PASS** |
 
 #### Locked Independent Pangenomes (*Salmonella enterica* & *Klebsiella pneumoniae* Three-Codec Trio)
 
@@ -173,17 +184,17 @@ Re-fetched by locked RefSeq accession manifests ([`benchmarks/independent/data/`
 
 ---
 
-### 4.3 Law V — Multi-Core Amdahl Scaling & Strict Bounded-Heap Execution (`-Xmx192m`)
+### 4.3 Laws V & VII — Multi-Core Amdahl Scaling & Strict Bounded-Heap Execution (`-Xmx128m`)
 
-![Figure 4 — Law V Multi-Core Scaling & Strict Bounded-Heap Execution](paper/figures/fig4_amdahl_and_bounded_memory.png)
+![Figure 4 — Laws V & VII Multi-Core Scaling & Strict Bounded-Heap Execution](paper/figures/fig4_amdahl_and_bounded_memory.png)
 
-| Threads (`--threads`) | Archive Bytes | Size Delta vs `1T` | Encode Wall | Speedup vs `v1` (`887.3 s`) | Speedup vs `1T` (`96.93 s`) | Decode Wall | Decode Speedup vs `1T` | SHA-256 |
+| Threads (`--threads`) | Archive Bytes | Size Delta vs `1T` | Encode (in-proc) | Speedup vs `v1` (`887.3 s`) | Speedup vs `1T` (`40.31 s`) | Decode (in-proc) | Decode Speedup vs `1T` | SHA-256 |
 |---:|---:|---:|---:|---:|---:|---:|---:|:---:|
-| `1` | **3,377,802 B** | `0.00%` | 96.93 s | **9.15x** | 1.00x | 55.44 s | 1.00x | PASS |
-| `2` | **3,380,134 B** | `+0.07%` | 62.06 s | **14.30x** | **1.56x** | 39.83 s | **1.39x** | PASS |
-| `4` | **3,388,767 B** | `+0.32%` | 51.94 s | **17.08x** | **1.87x** | 26.02 s | **2.13x** | PASS |
-| `8` | **3,393,302 B** | `+0.46%` | 51.74 s | **17.15x** | **1.87x** | 23.27 s | **2.38x** | PASS |
-| `12` | **3,393,302 B** | `+0.46%` | **44.04 s** *(27.9 s cold)* | **20.15x** *(31.8x cold)* | **2.20x** | **18.36 s** *(14.0 s cold)* | **3.02x** | PASS |
+| `1` | **3,371,489 B** | `0.00%` | 40.31 s | **22.01x** | 1.00x | 56.78 s | 1.00x | PASS |
+| `2` | **3,373,077 B** | `+0.05%` | 37.44 s | **23.70x** | **1.08x** | 12.58 s | **4.51x** | PASS |
+| `4` | **3,383,225 B** | `+0.35%` | 25.47 s | **34.83x** | **1.58x** | 12.58 s | **4.51x** | PASS |
+| `8` | **3,388,639 B** | `+0.51%` | 21.32 s | **41.61x** | **1.89x** | **8.66 s** | **6.56x** | PASS |
+| `12` | **3,388,639 B** | `+0.51%` | **19.65 s** | **45.16x** | **2.05x** | 10.40 s | **5.46x** | PASS |
 
 ---
 
@@ -195,26 +206,26 @@ Re-fetched by locked RefSeq accession manifests ([`benchmarks/independent/data/`
 
 | Ablation Variant | *E. coli* `00.seq` vs Distant Single Donor `20.seq` (`54,124` SNPs, `619` splices) | *E. coli* `00.seq` LOO (23 Donors) | *M. tuberculosis* `00.seq` LOO (23 Donors) |
 |---|---:|---:|---:|
-| **`full_eimdl` (All Laws I–IV Active)** | **197,112 B** (`0.3247 bpb`) | **40,735 B** (`0.0671 bpb`) | **1,237 B** (`0.00224 bpb`) |
-| `no_kimura_v4_law_I` (4-symbol allele fallback) | 203,140 B (`+6,028 B` / **`+3.06%`**) | 41,335 B (`+600 B` / **`+1.47%`**) | 1,258 B (`+21 B` / **`+1.70%`**) |
-| `no_codon_wobble_law_II` (flat gap coding) | 198,966 B (`+1,854 B` / **`+0.94%`**) | 40,856 B (`+121 B` / **`+0.30%`**) | 1,235 B (`-2 B`, only 251 SNPs) |
-| `no_indel_splice_law_III` (no micro-indel splicing) | 197,205 B (`+93 B`, `+428` broken tokens) | 40,607 B (`-128 B` on dense 23-donor panel) | 1,236 B (`-1 B`, `0` splices) |
-| `no_v4_no_wobble_no_splice` (all 3 disabled) | 204,912 B (`+7,800 B` / **`+3.96%`**) | 41,330 B (`+595 B` / **`+1.46%`**) | 1,255 B (`+18 B` / **`+1.46%`**) |
-| `exact_matches_only_no_approx` (exact copy only) | 239,083 B (`+41,971 B` / **`+21.29%`**) | 43,596 B (`+2,861 B` / **`+7.02%`**) | 1,275 B (`+38 B` / **`+3.07%`**) |
-| Prior `RC-MDL v2` Baseline | 249,491 B (`+52,379 B` / **`+26.57%`**) | 73,194 B (`+32,459 B` / **`+79.68%`**) | 4,012 B (`+2,775 B` / **`+224.3%`**) |
+| **`full_eimdl` (All Laws I–IV Active)** | **197,163 B** (`0.3248 bpb`) | **40,588 B** (`0.0669 bpb`) | **1,240 B** (`0.0022 bpb`) |
+| `no_kimura_v4_law_I` (4-symbol allele fallback) | 203,340 B (`+6,177 B` / **`+3.13%`**) | 41,178 B (`+590 B` / **`+1.45%`**) | 1,261 B (`+21 B` / **`+1.69%`**) |
+| `no_codon_wobble_law_II` (flat gap coding) | 199,024 B (`+1,861 B` / **`+0.94%`**) | 40,697 B (`+109 B` / **`+0.27%`**) | 1,237 B (`-3 B`, only 251 SNPs) |
+| `no_indel_splice_law_III` (no micro-indel splicing) | 196,936 B (`-227 B`, `+428` broken tokens) | 40,469 B (`-119 B` on dense 23-donor panel) | 1,240 B (`0 B`, `0` splices) |
+| `no_v4_no_wobble_no_splice` (all 3 disabled) | 205,071 B (`+7,908 B` / **`+4.01%`**) | 41,175 B (`+587 B` / **`+1.45%`**) | 1,258 B (`+18 B` / **`+1.45%`**) |
+| `exact_matches_only_no_approx` (exact copy only) | 238,550 B (`+41,387 B` / **`+20.99%`**) | 43,357 B (`+2,769 B` / **`+6.82%`**) | 1,267 B (`+27 B` / **`+2.18%`**) |
+| Prior `RC-MDL v1` Baseline | 249,491 B (`+52,328 B` / **`+26.54%`**) | 73,194 B (`+32,606 B` / **`+80.33%`**) | 4,012 B (`+2,772 B` / **`+223.5%`**) |
 
 #### Non-Existing, Xenobiological, Synthetic & Cryptographic White-Noise Suite ([`mode_s_and_synthetic.json`](benchmarks/fusion/results/mode_s_and_synthetic.json))
 
 | Corpus ID | Regime | Biological / Adversarial Stress Design | Raw Bytes | `gzip -9` | **`HGS2` / `EIMDL`** | **DNA bpb** | SHA-256 |
 |---|---|---|---:|---:|---:|---:|:---:|
-| `01_euk_centromere` | Mode S | Higher-order alpha-satellite repeats + HOR inversions (`485 kbp`) | 491,604 B | 83,797 B | **42,193 B** | **0.6954** | PASS |
-| `02_viral_rna_acgu` | Mode C | Pure RNA (`A/C/G/U`) segmented quasispecies swarm (`299 kbp`) | 304,013 B | 42,923 B | **12,122 B** | **0.3241** | PASS |
-| `03_chimeric_iupac_crlf` | Mode S | Mixed DNA+RNA (`T`+`U`), all 11 IUPAC codes, soft-masking, `N`-scaffolds, ragged `CRLF` | 263,817 B | 86,566 B | **51,518 B** | **1.6887** *(1.562 raw)* | PASS |
-| `04_xeno_at88` | Mode S | Extreme `88% AT` xenobiological / *Carsonella*-like genome (`500 kbp`) | 506,294 B | 123,139 B | **94,222 B** | **1.5076** | PASS |
-| `05_xeno_gc86` | Mode S | Extreme `86% GC` actinomycete / synthetic genome (`500 kbp`) | 506,291 B | 126,076 B | **97,524 B** | **1.5604** | PASS |
-| `06_denovo_grammar` | Mode S | Non-existing synthetic regulatory grammar + palindromic hairpins (`500 kbp`) | 506,287 B | 141,540 B | **41,096 B** | **0.6575** | PASS |
-| `07_hypermutator_pangenome` | Mode C | 6-strain `6%` hypermutator + heavy indel pangenome (`1.495 Mbp`) | 1,513,506 B | 454,203 B | **101,566 B** | **0.5436** | PASS |
-| `07_hypermutator_strain05` | Mode R | Single `6%` hypermutator strain vs 5-donor panel (`249 kbp`) | 249,436 B | — | **7,514 B** | **0.2410** | PASS |
+| `01_euk_centromere` | Mode S | Higher-order alpha-satellite repeats + HOR inversions (`485 kbp`) | 491,604 B | 83,797 B | **42,075 B** | **0.6934** | PASS |
+| `02_viral_rna_acgu` | Mode C | Pure RNA (`A/C/G/U`) segmented quasispecies swarm (`299 kbp`) | 304,013 B | 42,923 B | **11,995 B** | **0.3207** | PASS |
+| `03_chimeric_iupac_crlf` | Mode S | Mixed DNA+RNA (`T`+`U`), all 11 IUPAC codes, soft-masking, `N`-scaffolds, ragged `CRLF` | 263,817 B | 86,566 B | **51,536 B** | **1.6893** *(1.5628 raw)* | PASS |
+| `04_xeno_at88` | Mode S | Extreme `88% AT` xenobiological / *Carsonella*-like genome (`500 kbp`) | 506,294 B | 123,139 B | **94,248 B** | **1.5080** | PASS |
+| `05_xeno_gc86` | Mode S | Extreme `86% GC` actinomycete / synthetic genome (`500 kbp`) | 506,291 B | 126,076 B | **97,525 B** | **1.5604** | PASS |
+| `06_denovo_grammar` | Mode S | Non-existing synthetic regulatory grammar + palindromic hairpins (`500 kbp`) | 506,287 B | 141,540 B | **41,159 B** | **0.6585** | PASS |
+| `07_hypermutator_pangenome` | Mode C | 6-strain `6%` hypermutator + heavy indel pangenome (`1.495 Mbp`) | 1,513,506 B | 454,203 B | **102,503 B** | **0.5486** | PASS |
+| `07_hypermutator_strain05` | Mode R | Single `6%` hypermutator strain vs 5-donor panel (`249 kbp`) | 249,436 B | — | **7,809 B** | **0.2505** | PASS |
 | `08_crypto_white_noise` | Mode S | Cryptographic `SHA-256` counter-mode white noise (`500,000 bp`, $H_0 = 2.0000$) | 500,000 B | 144,017 B (`2.304 bpb`) | **125,075 B** | **2.0012** *($\le 2.005$ gate)* | PASS |
 
 ---
@@ -272,7 +283,7 @@ $$\text{Score}(M) = L_{\text{match}} \times R_{\text{novel}} - \bigl(C_{\text{to
 
 | Panel (Genomes / Records) | DNA Bases | `HyperGraSS v1 (tuned)` | `JARVIS3 (l7)` | `GeCo3` | `NAF` | `Spring` | `xz -9` | `GraSS (-e2)` | `v1` vs Best Baseline |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---|
-| *E. coli* (24) | 120,108,223 | **3,810,409 B** *(HGS2: **3,377,802 B**)* | 3,896,361 B | 5,863,341 B | 6,753,167 B | 9,532,683 B | 5,663,640 B | 24,777,592 B | `-2.21%` vs JARVIS3 *(HGS2: **`-13.31%`**)* |
+| *E. coli* (24) | 120,108,223 | **3,810,409 B** *(HGS2: **3,371,489 B**)* | 3,896,361 B | 5,863,341 B | 6,753,167 B | 9,532,683 B | 5,663,640 B | 24,777,592 B | `-2.21%` vs JARVIS3 *(HGS2: **`-13.47%`**)* |
 | *S. cerevisiae* (8) | 97,298,425 | **3,309,522 B** | 3,727,630 B | 5,451,481 B | 4,761,724 B | 9,583,843 B | 3,915,672 B | 20,762,253 B | **`-11.22%`** vs JARVIS3 |
 | *P. aeruginosa* (16) | 104,705,180 | **2,784,234 B** | 3,332,374 B | 4,940,389 B | 5,273,477 B | 7,448,302 B | 4,660,728 B | 20,406,120 B | **`-16.45%`** vs JARVIS3 |
 | *M. tuberculosis* (20) | 88,266,267 | **213,949 B** | 288,895 B | 1,648,359 B | 341,089 B | 2,010,771 B | 269,500 B | 2,508,162 B | **`-20.61%`** vs `xz -9` |
@@ -330,22 +341,22 @@ hypergrass/
 │   ├── ArchiveByteAccounting.java           # Exact per-channel byte accounting for .hgs and .hgs2 containers
 │   ├── BenchmarkSuite.java                  # Synthetic & analytical compression benchmark harness
 │   ├── RealCorpusBench.java                 # Frozen 7-file real genome & PanMAN pangenome benchmark runner
-│   ├── VerifyCompressionLaws.java           # Executable falsification tests for Laws I–V (6 suites)
+│   ├── VerifyCompressionLaws.java           # Executable falsification tests for Laws I–VII (7 suites, 171,941 assertions)
 │   ├── VerifyFusionEngine.java              # End-to-end Mode S, Mode R, Mode C, and corruption rejection verifier
 │   ├── VerifyAllEdgeCases.java              # 15-suite adversarial edge-case & format torture harness
 │   ├── VerifyAnchorCodecs.java              # 9-suite anchor-bank codec verifier
 │   ├── VerifyArchiveAccounting.java         # 34-suite byte-accounting & 1,721-mutation fuzz rejection verifier
 │   └── [VerifyCostAwareEncoding, VerifyDonorArchives, VerifyDonorCosts, VerifyDonorIndex, AuxPlaneSelfTest, RangeCoderSelfTest].java
-├── paper/                                   # 22-Page Research Monograph, Figures & 1,274-Assertion Automated Audit
-│   ├── HGS2_EIMDL_Research_Paper.pdf        # Compiled 22-page two-column PDF monograph (0 overfull boxes)
+├── paper/                                   # 23-Page Research Monograph, Figures & 1,362-Assertion Automated Audit
+│   ├── HGS2_EIMDL_Research_Paper.pdf        # Compiled 23-page two-column PDF monograph (0 overfull boxes)
 │   ├── HGS2_EIMDL_Research_Paper.tex        # Generated LaTeX source
-│   ├── references.bib                       # BibTeX bibliography
+│   ├── references.bib                       # BibTeX bibliography (incl. openai2026eth)
 │   ├── figures/                             # 7 publication-grade 300 DPI figures (fig1 .. fig7)
 │   ├── generate_figures.py                  # Deterministic figure generator from committed JSON results
 │   ├── table_builders.py                    # LaTeX table generator from committed JSON results
 │   ├── build_latex_paper.py                 # Full LaTeX monograph builder
 │   ├── build_markdown_paper.py              # Full Markdown monograph builder (-> docs/PAPER-DRAFT.md)
-│   ├── audit_paper_numbers.py               # Automated 1,274-assertion numerical audit against JSON evidence
+│   ├── audit_paper_numbers.py               # Automated 1,362-assertion numerical audit against JSON evidence
 │   └── README.md                            # Paper build & verification instructions
 ├── prototype/rcmdl/                         # Generation 2 RC-MDL prototype, AGC 3.2.5 sweeps & LOO/Cluster-LOO harnesses
 ├── benchmarks/                              # Reproducible Docker/Python benchmark harnesses & committed JSON evidence
@@ -357,7 +368,7 @@ hypergrass/
 │   └── verify/                              # Independent fresh-process byte & SHA-256 verification scripts
 ├── docs/                                    # Technical specifications & empirical reports
 │   ├── PAPER-DRAFT.md                       # Complete Markdown edition of the research monograph
-│   ├── COMPRESSION-LAW.md                   # Mathematical & biological laws (Laws I–V)
+│   ├── COMPRESSION-LAW.md                   # Mathematical & biological laws (Laws I–VII + openai2026eth §1.1.3 OVC boundary)
 │   ├── FUSION-BENCHMARKS.md                 # Complete HGS2 / EIMDL benchmark tables
 │   ├── INDEPENDENT.md                       # Independent Salmonella & Klebsiella replication report
 │   ├── HGS-FORMAT.md                        # Binary container specification for .hgs2 (v2.0) and .hgs (v1.0)
@@ -393,9 +404,9 @@ java -cp bin hypergrass.EimdlCli decompress --archive target.hgs2 --panel panel_
 java -cp bin hypergrass.EimdlCli compress --collection --target pangenome.fasta --out pangenome.hgs2 --threads 12
 java -cp bin hypergrass.EimdlCli decompress --archive pangenome.hgs2 --out restored_pangenome.fasta
 
-# 4. Mode C under strict 192 MiB pure-JVM bounded heap (Law V)
-java -Xmx192m -cp bin hypergrass.EimdlCli compress --collection --bounded --target input.seq --out bounded192.hgs2
-java -Xmx192m -cp bin hypergrass.EimdlCli decompress --archive bounded192.hgs2 --out restored_input.seq
+# 4. Mode C under strict 128 MiB pure-JVM bounded heap (Laws V & VII)
+java -Xmx128m -cp bin hypergrass.EimdlCli compress --collection --bounded --target input.seq --out bounded128.hgs2
+java -Xmx128m -cp bin hypergrass.EimdlCli decompress --archive bounded128.hgs2 --out restored_input.seq
 ```
 
 ### 7.3 Unified `HyperGraSS` CLI (Supports both `.hgs2` via `--fusion` and legacy `.hgs`)
@@ -411,19 +422,19 @@ java -cp bin hypergrass.HyperGraSS decompress pangenome.hgs2 restored.fa
 ### 7.4 Running the Automated Verification & Falsification Suites
 
 ```powershell
-# 1. Execute the 6-suite mathematical & biological falsification harness for Laws I–V
+# 1. Execute the 7-suite mathematical & biological falsification harness for Laws I–VII (171,941 assertions)
 java -cp bin hypergrass.VerifyCompressionLaws
 
 # 2. Execute end-to-end HGS2 Mode S / Mode R / Mode C & corruption-rejection checks
 java -cp bin hypergrass.VerifyFusionEngine
 
-# 3. Execute Generation 1 & shared infrastructure verification suites (58+ suites, 3,326+ checks)
+# 3. Execute Generation 1 & shared infrastructure verification suites (or run .\test.ps1 for all 7 suites)
 java -cp bin hypergrass.VerifyAllEdgeCases
 java -cp bin hypergrass.VerifyAnchorCodecs
 java -cp bin hypergrass.VerifyArchiveAccounting
 java -cp bin hypergrass.AuxPlaneSelfTest
 java -cp bin hypergrass.RangeCoderSelfTest
 
-# 4. Run the 1,274-assertion automated numerical audit across the research paper & JSON reports
+# 4. Run the 1,362-assertion automated numerical audit across the research paper & JSON reports
 python paper/audit_paper_numbers.py
 ```

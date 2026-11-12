@@ -7,7 +7,7 @@ Verifies that:
   2. All aggregate Mode R, Mode C, Mode S, Law IV, and Independent Trio/L31 numbers
      are present verbatim in README.md and HANDOFF.md.
   3. Zero unverified/fabricated numbers appear in any manuscript or documentation file.
-  4. All 7 vector PDF and 300-DPI PNG figures and the compiled 22-page PDF exist.
+  4. All 7 vector PDF and 300-DPI PNG figures and the compiled 23-page PDF exist.
 """
 
 import json
@@ -103,6 +103,8 @@ def main():
     am = load_json("benchmarks/fusion/results/amdahl_and_memory.json")
     for r in am["amdahl_scaling"]:
         require_number(r["archive_bytes"], f"amdahl_t{r['threads']}")
+        if r["threads"] in (1, 12):
+            require_in_readme_and_handoff(r["archive_bytes"], f"amdahl_t{r['threads']}")
     for r in am["bounded_memory"]:
         require_number(r["archive_bytes"], f"bounded_{r['heap_cap']}")
         require_in_readme_and_handoff(r["archive_bytes"], f"bounded_{r['heap_cap']}")
@@ -111,6 +113,8 @@ def main():
     ms = load_json("benchmarks/fusion/results/mode_s_and_synthetic.json")
     for r in ms["real_mode_s"]:
         require_number(r["archive_bytes"], f"mode_s_{r['label']}")
+        if r["label"] in ("ecoli_00_fa", "ecoli_00_seq"):
+            require_in_readme_and_handoff(r["archive_bytes"], f"mode_s_{r['label']}")
     for r in ms["synthetic_and_non_existing"]:
         require_number(r["archive_bytes"], f"synthetic_{r['corpus_id']}")
 
@@ -185,7 +189,12 @@ def main():
         require_number(v, f"gen2_agc_saureus_{k}")
 
     # 9. Verify forbidden unbacked numbers are ABSENT across TEX, MD, README, and HANDOFF
-    for bad in ["1,136,892", "1136892", "998,412", "998412", "642,108", "642108"]:
+    for bad in [
+        "1,136,892", "1136892", "998,412", "998412", "642,108", "642108",
+        "1,177,778", "1177778", "47,305", "47305", "174,639", "174639",
+        "1,625,424", "1625424", "78,582", "78582", "525,828", "525828",
+        "3,377,802", "3377802", "3,393,302", "3393302", "3,455,169", "3455169",
+    ]:
         checks += 4
         if bad in tex_text:
             failures.append(f"[FORBIDDEN UNBACKED NUMBER IN TEX]: {bad}")
@@ -194,7 +203,7 @@ def main():
         if bad in readme_text:
             failures.append(f"[FORBIDDEN UNBACKED NUMBER IN README]: {bad}")
         if bad in handoff_text:
-            failures.append(f"[FORBIDDEN UNBACKED NUMBER IN它在HANDOFF]: {bad}")
+            failures.append(f"[FORBIDDEN UNBACKED NUMBER IN HANDOFF]: {bad}")
 
     # 10. Verify compiled PDF and 7 figure pairs exist + all 7 figures are embedded in README.md
     if not os.path.exists(pdf_path) or os.path.getsize(pdf_path) < 100_000:

@@ -1,9 +1,9 @@
 # HyperGraSS / RC-MDL / Unified `HGS2` (`EIMDL`) Research Handoff
 
-Snapshot: **2026-11-07**
+Snapshot: **2026-11-13**
 Repository: `https://github.com/MdSaifulIslamMSI/hypergrass-research`
 Release asset: `hypergrass-handoff-v1.tar.gz`
-Research Monograph (22-Page PDF): [`paper/HGS2_EIMDL_Research_Paper.pdf`](paper/HGS2_EIMDL_Research_Paper.pdf) (`0` overfull boxes, `1,274 / 1,274` automated numerical audit checks PASS via [`paper/audit_paper_numbers.py`](paper/audit_paper_numbers.py))
+Research Monograph (23-Page PDF): [`paper/HGS2_EIMDL_Research_Paper.pdf`](paper/HGS2_EIMDL_Research_Paper.pdf) (`0` overfull boxes, `1,362 / 1,362` automated numerical audit checks PASS via [`paper/audit_paper_numbers.py`](paper/audit_paper_numbers.py))
 Research Monograph (Markdown): [`docs/PAPER-DRAFT.md`](docs/PAPER-DRAFT.md)
 
 This package is the compact, byte-exact research state for the three-generation lossless genomic, reference-conditioned, and pangenomic sequence compressor project (**Generation 1 `HyperGraSS v1`** $\to$ **Generation 2 `RC-MDL v2`** $\to$ **Generation 3 `HGS2` / `EIMDL`**). It contains all Java 21+ source files, documentation, result JSONs, manifests, publication figures, and the LaTeX/PDF monograph. The ~29 GB of raw benchmark corpus and run output is regenerable from the locked manifests and scripts; the machine-readable evidence (`benchmarks/fusion/results/*.json`, `benchmarks/independent/runs/*/*.json`, `prototype/rcmdl/work/*/*.json`, `benchmarks/corpus/runs/*/*.json`) is committed in the repository.
@@ -24,22 +24,22 @@ This package is the compact, byte-exact research state for the three-generation 
 
 ---
 
-## Unified `HGS2` / `EIMDL` Final Results (2026-11-07)
+## Unified `HGS2` / `EIMDL` Final Results (2026-11-13)
 
-`HyperGraSS` and `RC-MDL` are unified in [`HyperGraSSFusionEngine.java`](src/hypergrass/HyperGraSSFusionEngine.java) (`.hgs2` container magic `"HGS2"`, CLI [`EimdlCli.java`](src/hypergrass/EimdlCli.java), mathematical laws in [`docs/COMPRESSION-LAW.md`](docs/COMPRESSION-LAW.md), full benchmark tables in [`docs/FUSION-BENCHMARKS.md`](docs/FUSION-BENCHMARKS.md) and [`docs/INDEPENDENT.md`](docs/INDEPENDENT.md)):
+`HyperGraSS` and `RC-MDL` are unified in [`HyperGraSSFusionEngine.java`](src/hypergrass/HyperGraSSFusionEngine.java) (`.hgs2` container magic `"HGS2"`, CLI [`EimdlCli.java`](src/hypergrass/EimdlCli.java), Laws I–VII + `openai2026eth` §1.1.3 OVC boundary in [`docs/COMPRESSION-LAW.md`](docs/COMPRESSION-LAW.md), full benchmark tables in [`docs/FUSION-BENCHMARKS.md`](docs/FUSION-BENCHMARKS.md) and [`docs/INDEPENDENT.md`](docs/INDEPENDENT.md)):
 
 | Regime & Benchmark | Previous Best (`HyperGraSS v1` / `RC-MDL` / `AGC` / `JARVIS3`) | **`HGS2` / `EIMDL` Result** | Verification & Status |
 |---|---|---|---|
-| **Mode S (Host):** *E. coli* `00.fa` (`4,856,085 B`) | `HyperGraSS v1`: `1,136,083 B` vs `RC-MDL S`: `1,192,494 B` | **1,123,893 B (`1.8515 bpb`)** parallel / **1,122,240 B (`1.8488 bpb`)** `1T` in `6.18 s` | Beats both (`SHA-256` exact) |
+| **Mode S (Host):** *E. coli* `00.fa` (`4,856,085 B`) | `HyperGraSS v1`: `1,136,069 B` vs `RC-MDL S`: `1,192,494 B` | **1,122,777 B (`1.8497 bpb`)** `00.fa` in **`6.75 s`** (`6.57 s` dec); `00.seq` = **1,122,749 B** | Beats both (`-1.17%` vs `v1`, `SHA-256` exact) |
 | **Mode S (Independent 12-Genome Subset):** *Salmonella* (6) + *Klebsiella* (6) (`60,810,308 bp`) | `JARVIS3 -l 7`: `15,204,327 B`<br>**`JARVIS3 -l 31`**: `14,197,393 B` (`1,159 MiB` RSS)<br>`GraSS -e2`: `14,815,984 B` | **13,868,405 B (`1.8245 bpb`)** (`6,629,508 B` + `7,238,897 B`) at **`108 MiB` C / `88 MiB` R RSS** | **12/12 wins** (`-8.79%` vs L7; **`-2.32%` vs tuned L31** at **`10.7x` less RAM** & **`1.26x` faster**) |
-| **Mode R LOO:** *E. coli* (24 genomes, `120.1 Mbp`) | `RC-MDL`: `1,780,761 B` (`0.1186 bpb`); `AGC`: `8,384,117 B` (won `13, 14`) | **1,177,778 B (`0.07845 bpb`)**; `13.seq` = **635 B**, `14.seq` = **633 B** | **24/24 clean sweep** vs RC-MDL (`-33.86%`) & AGC (`7.12x`) |
-| **Mode R LOO:** *M. tuberculosis* (24 genomes, `105.7 Mbp`) | `AGC` 13-config oracle: `96,580 B` beat `RC-MDL`: `122,998 B` | **47,305 B (`0.00358 bpb`)** (`03.seq` = **256 B**, `18` SNPs) | **24/24 clean sweep**: **`2.04x` smaller than AGC 13-config oracle** (`-51.02%`) with 1 universal config |
-| **Mode R LOO:** *S. aureus* (25 genomes, `71.0 Mbp`) | `RC-MDL`: `267,412 B` vs `AGC` oracle: `1,617,085 B` | **174,639 B (`0.01967 bpb`)** (`20.seq` = **134 B**, `21,485x`) | **25/25 clean sweep** (`-34.69%` vs RC-MDL; **`9.26x` < AGC oracle**) |
+| **Mode R LOO:** *E. coli* (24 genomes, `120.1 Mbp`) | `RC-MDL` v1/v2: `1,780,761` / `1,636,367 B`; `AGC`: `8,384,117 B` (won `13, 14`) | **1,174,113 B (`0.07820 bpb`)**; `13.seq` = **633 B**, `14.seq` = **632 B** | **24/24 clean sweep** vs RC-MDL (`-34.07%` v1 / `-28.25%` v2) & AGC (`7.14x`) |
+| **Mode R LOO:** *M. tuberculosis* (24 genomes, `105.7 Mbp`) | `AGC` 13-cfg oracle: `96,580 B`; `RC-MDL` v1/v2: `122,998` / `92,506 B` | **47,339 B (`0.00358 bpb`)** (`03.seq` = **256 B**, `18` SNPs) | **24/24 vs Single & RC-MDL**; **`2.04x` < AGC 13-cfg oracle** (`19/24` wins; 5 misses `13–239 B`) |
+| **Mode R LOO:** *S. aureus* (25 genomes, `71.0 Mbp`) | `RC-MDL` v1/v2: `267,412` / `243,807 B` vs `AGC` oracle: `1,617,085 B` | **174,217 B (`0.01962 bpb`)** (`20.seq` = **134 B**, `21,485x`) | **25/25 vs Single & RC-MDL**; **`9.28x` < AGC oracle** (`24/25` wins; `04.seq` `683` vs `617 B`) |
 | **Mode R LOO (Independent 12-Genome Subset):** *Salmonella* + *Klebsiella* | `EIMDL` Mode S: `13,868,405 B` | **433,498 B (`0.0570 bpb`)** (`179,303 B` + `254,195 B`) | **`31.99x` smaller** than Mode S; restores in `48.4 s` (`1.20 MiB/s`) |
-| **Leave-Cluster-Out:** *E. coli* / *MTB* / *S. aureus* | `RC-MDL`: `2,331,696` / `153,182` / `741,650 B` | **1,625,424** (`-30.29%`) / **78,582** (`-48.70%`) / **525,828 B** (`-29.10%`) | 73/73 byte-exact (`5.66x` / `15.13x` / `7.86x` < `AGC -a`) |
-| **Mode C Collection:** *E. coli* `input.seq` (`120.1 Mbp`) | `HyperGraSS v1`: `3,810,409 B` (`887.3 s`); `JARVIS3 l7`: `3,896,361 B`; `RC-MDL`: `3,972,975 B` | **3,393,302 B (`0.2260 bpb`)** in `44.0 s` (`27.9 s` cold); `1T` = **3,377,802 B** (`0.2250 bpb`) | **`-10.95%` vs v1** at **`20.2x–31.8x` speedup**; **`-12.91%` vs JARVIS3** |
+| **Leave-Cluster-Out:** *E. coli* / *MTB* / *S. aureus* | `RC-MDL`: `2,331,696` / `153,182` / `741,650 B` | **1,619,296** (`-30.55%`) / **78,603** (`-48.69%`) / **524,535 B** (`-29.27%`) | 73/73 byte-exact (`5.68x` / `15.13x` / `7.88x` < `AGC -a`) |
+| **Mode C Collection:** *E. coli* `input.seq` (`120.1 Mbp`) | `HyperGraSS v1`: `3,810,409 B` (`887.3 s`); `JARVIS3 l7`: `3,896,361 B`; `RC-MDL`: `3,972,975 B` | **3,388,639 B (`0.2257 bpb`)** in `19.65 s` (`12T` Amdahl; `33.78 s` Mode C); `1T` = **3,371,489 B** (`0.2246 bpb`) | **`-11.52%` (`1T`) / `-11.07%` (`12T`) vs v1** at **`45.16x` speedup**; **`-13.47%` (`1T`) vs JARVIS3** |
 | **Mode C (Independent Locked Trio):** *Salmonella* (25) & *Klebsiella* (23) | `JARVIS3 -l 7`: `2,709,545 B` & `2,948,926 B`<br>`GraSS -e2`: `19,991,646 B` & `21,191,566 B` | ***Salmonella***: **2,390,106 B (`0.1586 bpb`, `50.43x`)**<br>***Klebsiella***: **2,523,991 B (`0.1646 bpb`, `48.61x`)** | **`-11.79%`** & **`-14.41%` vs JARVIS3**; **`-88.04%`** & **`-88.09%` vs GraSS** |
-| **Bounded Heap (`-Xmx256m` / `-Xmx224m` / `-Xmx192m`):** | `v1` pure JVM OOMed `0/7` at 256 MiB | **3,423,050 B** (`-Xmx256m`/`-Xmx224m`) & **3,455,169 B** (`-Xmx192m`) | Pure JVM `-Xmx192m` beats unbounded `v1`, native `v1`, `JARVIS3`, & `RC-MDL` |
+| **Bounded Heap (`-Xmx256m` to `-Xmx128m`):** | `v1` pure JVM OOMed `0/7` at 256 MiB | **3,422,314 B** (`-Xmx256m`/`-Xmx224m`) & **3,452,703 B** (`-Xmx192m`/`-Xmx160m`/`-Xmx128m`; `25.59 s` enc / `11.67 s` dec at `128m`) | Pure JVM **`-Xmx128m`** beats unbounded `v1`, native `v1`, `JARVIS3`, & `RC-MDL` |
 | **Law IV Cryptographic Safety:** `08_crypto_white_noise.seq` (`500,000 B`) | `gzip -9`: `144,017 B` (`2.3043 bpb`) | **125,075 B (`2.0012 bpb`)** | Sub-block 2-bit bypass (`+0.0012 bpb` over $H_0 = 2.0000$) |
 
 ---
@@ -96,7 +96,7 @@ python prototype/rcmdl/split_panel.py --fasta prototype/rcmdl/work/mtb/panel.fas
 python prototype/rcmdl/split_panel.py --fasta prototype/rcmdl/work/saureus/panel.fasta --out prototype/rcmdl/work/saureus/genomes
 ```
 
-Compile the unified `HGS2` / `EIMDL` engine, run the verification suites, and execute the `1,274`-assertion numerical audit:
+Compile the unified `HGS2` / `EIMDL` engine, run the verification suites (`Laws I–VII`, `171,941` assertions in `VerifyCompressionLaws`), and execute the `1,362`-assertion automated numerical audit:
 
 ```powershell
 New-Item -ItemType Directory -Force -Path bin | Out-Null

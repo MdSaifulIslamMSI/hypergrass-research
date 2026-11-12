@@ -82,7 +82,7 @@ $$L^*(X \mid \mathcal{R}_2) \le L^*(X \mid \mathcal{R}_1) + \Delta L_{\text{addr
    - **Vertical clonal inheritance:** $\theta_{\text{clonal}} \le 5 \times 10^{-4}$ ($\le 1$ SNP per $2,000\text{--}50,000\text{ bp}$), and
    - **Horizontal homologous recombination / diverged homolog imports:** $\theta_{\text{recomb}} \in [3 \times 10^{-3}, 1.2 \times 10^{-1}]$ ($\ge 1$ SNP per $10\text{--}300\text{ bp}$).
 
-   A naive single-gear approximate matcher calibrated against the single-genome novelty entropy ($R_{\text{lit}} \approx 1.865\text{ bpb}$, tolerating up to $\sim 15\%$ SNP divergence) commits catastrophic **recombination bulldozing** in multi-donor panels: when donor $d_A$ hits a recombination scar or mobile-element boundary while donor $d_B$ carries an exact $0$-SNP clonal haplotype $200\text{ bp}$ downstream, extending $d_A$ across the boundary at $5\text{--}12\%$ SNP density beats $1.865\text{ bpb}$ locally (`~0.85 bpb`) yet destroys $d_B$'s downstream $0.001\text{ bpb}$ clonal run (`29,623` false SNPs on *E. coli* `00.seq` before horizon bounding vs. `5,706` true SNPs with Law IIIb, cutting archive size from `56,813 B` to **`40,735 B`**).
+   A naive single-gear approximate matcher calibrated against the single-genome novelty entropy ($R_{\text{lit}} \approx 1.865\text{ bpb}$, tolerating up to $\sim 15\%$ SNP divergence) commits catastrophic **recombination bulldozing** in multi-donor panels: when donor $d_A$ hits a recombination scar or mobile-element boundary while donor $d_B$ carries an exact $0$-SNP clonal haplotype $200\text{ bp}$ downstream, extending $d_A$ across the boundary at $5\text{--}12\%$ SNP density beats $1.865\text{ bpb}$ locally (`~0.85 bpb`) yet destroys $d_B$'s downstream $0.001\text{ bpb}$ clonal run (`29,623` false SNPs on *E. coli* `00.seq` before horizon bounding vs. `5,706` true SNPs with Law IIIb, cutting archive size from `56,813 B` to **`40,588 B`**).
 3. **Affine Syntenic Micro-Indel Continuity (Law IIIc):** When a localized insertion or deletion $(\Delta_{\text{tgt}}, \Delta_{\text{ref}})$ occurs inside a syntenic block on donor $(g^*, o^*)$, breaking the match pays full global addressing $L_{\text{break}} \approx L(\text{event}) + L(g^*, o^*) + L(\text{pos}) + L(\text{len}) \approx 42\text{--}60$ bits, whereas an **in-match syntenic micro-indel splice** pays only:
 
 $$L_{\text{splice}}(\Delta_{\text{tgt}}, \Delta_{\text{ref}}) = L(\text{spliceFlag} \mid \text{ctx}_8) + L(\Delta_{\text{tgt}}, \Delta_{\text{ref}}) + R_{\text{lit}} \cdot \Delta_{\text{tgt}}$$
@@ -98,8 +98,8 @@ $$L_{\text{splice}}(\Delta_{\text{tgt}}, \Delta_{\text{ref}}) = L(\text{spliceFl
 
 ### Falsification Test
 1. **Conditional Monotonicity Test:** Adding distractors to a panel containing a twin donor must never degrade compressed payload by more than $\log_2(|\mathcal{R}_2|/|\mathcal{R}_1|)$ bits per token (and on *M. tuberculosis* `03.seq`, 23-panel LOO substitution count `18` is strictly below single-twin `08.seq` mismatch count `59`).
-2. **Clonal Horizon & Distant-Homolog Ablation Test:** On real 23-donor *E. coli* `00.seq` LOO and single-distant-donor (`00.seq` vs `20.seq`, `54,124` SNPs, `619` indel splices), ablating Kimura $V_4$, codon wobble, or approximate homology strictly increases archive bytes (`197,112 B` full EIMDL vs. `203,140 B` no-$V_4$, `198,966 B` no-wobble, `197,205 B` no-splice, and `239,083 B` exact-only).
-3. **Indel Continuity Test:** Injecting random 1–20 bp insertions and deletions into a homologous chromosome reduces compressed bytes by $>15\%$ compared to splice-disabled parsing (`6,136 B` vs `7,267 B` in `VerifyCompressionLaws`).
+2. **Clonal Horizon & Distant-Homolog Ablation Test:** On real 23-donor *E. coli* `00.seq` LOO and single-distant-donor (`00.seq` vs `20.seq`, `54,124` SNPs, `619` indel splices), ablating Kimura $V_4$, codon wobble, or approximate homology increases archive bytes (`197,163 B` full EIMDL vs. `203,340 B` no-$V_4$, `199,024 B` no-wobble, `205,071 B` no-$V_4$/no-wobble/no-splice, and `238,550 B` exact-only); disabling micro-indel splicing alone fragments synteny from `1,517` to `1,945` panel tokens (`196,936 B`, `-227 B`), reflecting the honest Law VIa/VIb trade-off where cheaper short-gap and literal coding offsets long-tail splice signaling on this strain.
+3. **Indel Continuity Test:** Injecting random 1–20 bp insertions and deletions into a homologous chromosome reduces compressed bytes by $>30\%$ compared to splice-disabled parsing (`6,818 B` vs `10,067 B`, `-32.3%` in `VerifyCompressionLaws`).
 
 ---
 
@@ -126,7 +126,7 @@ In [`HyperGraSS.compressFileBounded`](../src/hypergrass/HyperGraSS.java) ([SCALI
 ### Fused Parallel & Memory Law
 By:
 1. **Single-pass streaming factorization (`tryStreamFlatFile` + incremental `concatenateAndConsume`)** directly into one contiguous 2-bit word-packed DNA bank ($0.25\text{ B/base}$ with zero duplicate copies),
-2. **Zero-materialization 2-pass strand-symmetric canonical open-syncmer CSR indexing** ($\approx \frac{1}{w \cdot 2^s}(4 + 2) + 0.25\text{ B/base}$: $1.58\text{ B/base}$ full at $s=0$, $0.93\text{ B/base}$ at $s=1$ inside `-Xmx256m`/`-Xmx224m`, and $0.59\text{ B/base}$ at $s=2$ inside `-Xmx192m`, keeping **100% of donors indexed** with $0\text{ bytes}$ of intermediate per-donor syncmer arrays),
+2. **Zero-materialization 2-pass strand-symmetric canonical open-syncmer CSR indexing** ($\approx \frac{1}{w \cdot 2^s}(4 + 2) + 0.25\text{ B/base}$: $1.58\text{ B/base}$ full at $s=0$, $0.93\text{ B/base}$ at $s=1$ inside `-Xmx256m`/`-Xmx224m`, and $0.59\text{ B/base}$ at $s=2$ inside `-Xmx192m`/`-Xmx160m`/`-Xmx128m`, keeping **100% of donors indexed** with $0\text{ bytes}$ of intermediate per-donor syncmer arrays),
 3. **Rank-ordered lock-free parallel DAG mosaic parsing** (every genome/unit $r \in \{0, \dots, N-1\}$ slices its target view on demand from the immutable 2-bit bank and parses concurrently across $P$ worker threads against strictly causal ancestors $< r$), and
 4. **Warm-primed L3-cache-sized parallel `FastCRM` novelty stripes** (encoding a single shared warm-up prefix once, cloning the adapted Markov/6F-ORF-HMM snapshot, and right-sizing per-worker repeat rings to fit CPU L3 cache across concurrent workers),
 
@@ -140,4 +140,60 @@ where Stage 1 releases the entire CSR index before Stage 2 (`FastCRM`) begins, p
 
 ### Falsification Test
 1. Parallel determinism & scaling: `compress` across `--threads 1..12` must produce byte-exact SHA-256 decompressed reconstructions with $\le 0.5\%$ multi-stripe size delta and $>35\times$ end-to-end speedup over `HyperGraSS v1` (`887.3 s`).
-2. Strict bounded-heap gate: Compressing and restoring the full 24-genome *E. coli* collection (`120,108,223 B`) must complete and pass fresh-process SHA-256 verification under `-Xmx256m`, `-Xmx224m`, and **`-Xmx192m`** JVM heap caps while still beating unbounded `HyperGraSS v1` (`3,810,409 B`), `JARVIS3` (`3,896,361 B`), and `RC-MDL` (`3,972,975 B`).
+2. Strict bounded-heap gate: Compressing and restoring the full 24-genome *E. coli* collection (`120,108,223 B`) must complete and pass fresh-process SHA-256 verification under `-Xmx256m`, `-Xmx224m`, `-Xmx192m`, `-Xmx160m`, and **`-Xmx128m`** JVM heap caps while still beating unbounded `HyperGraSS v1` (`3,810,409 B`), `JARVIS3` (`3,896,361 B`), and `RC-MDL` (`3,972,975 B`).
+
+---
+
+## 7. Law VI — Hierarchical Pitman-Yor Backoff & Two-Adic Tapered Adaptation Law
+
+### Mathematical & Algorithmic Invariant
+1. **Two-Adic Tapered Binary Range Adaptation (Law VIa):** In shift-based binary arithmetic range coding over probability scale $M = 2^{12} = 4096$ with shift $k = 5$, standard integer updates $p_{t+1} = p_t - (p_t \gg 5)$ stall at the integer truncation fixed point $p_{\min}^{\text{classic}} = 2^5 - 1 = 31 / 4096 \approx 0.757\%$, lower-bounding the asymptotic code length of high-certainty structural flags (`isMtf0`, `useCollinearPred`, `hasSplice`, `hasSnps`) at $-\log_2(1 - 31/4096) \approx 0.0110\text{ bits/symbol}$. Introducing a symmetric two-adic rounding taper $\tau = 20$ ($p_{t+1} = p_t - ((p_t + \tau) \gg 5)$ on $b = 0$; $p_{t+1} = p_t + ((M - p_t + \tau) \gg 5)$ on $b = 1$) lowers the asymptotic fixed point to:
+
+$$p_{\min}(\tau) = 31 - \tau = 11 / 4096 \approx 0.269\%, \qquad L_{\min}(\tau) = -\log_2\!\left(1 - \frac{11}{4096}\right) \approx 0.00388 \text{ bits/symbol}$$
+
+   cutting steady-state binary flag entropy by **$2.8\times$** at zero extra clock cycles, while joint Law I $\times$ Law II substitution conditioning (`(kimuraCtx << 1) | prevMod3Zero`) and slot-isolated low-bit contexts (`lowBitProbs[8][128]`, `posDeltaSlots[2][64]`) eliminate cross-stream probability pollution.
+2. **Hierarchical Pitman-Yor Suffix-Tree Backoff & Post-SNP Homology Recovery (Law VIb):** Because genomic $k$-mer frequencies follow a heavy-tailed Pitman-Yor / Zipf distribution, high-order Markov and codon models ($k \in \{1, \dots, 9, \text{Sparse-}12, \text{ORF-3}, \text{ORF-5}\}$) spend most updates in the low-count regime. Instead of backing off sparse counts to the flat uniform baseline $1/4$ ($2.0\text{ bpb}$), each order-$k$ estimator interpolates directly with its already-computed order-$(k-1)$ posterior $P_{k-1}(a \mid c_{k-1})$:
+
+$$P_k(a \mid c_k) = \frac{n_k(c_k, a) + \alpha_k \, P_{k-1}(a \mid c_{k-1})}{n_k(c_k) + \alpha_k}$$
+
+   recovering $(2.0 - H_{k-1})\text{ bpb}$ on every novel or rare context transition, while `MicroRepeatHead` conditions post-mismatch confidence on cumulative homologous match length (`totalMatched`) once a single SNP is cleared (`misses == 0`).
+3. **Reciprocal-Multiplication Mixer Normalization (Law VIc):** Replacing variable-denominator 64-bit hardware integer divisions (`idiv`) inside `FastCRM`'s per-symbol prediction loop with an immutable 16,385-entry reciprocal lookup table $R(d) = \lfloor (2^{32} + d - 1)/d \rfloor$ (`(num * R(d)) >>> 32`) eliminates hardware division latency across all 17 experts.
+
+### Falsification Test
+1. Verify algebraically that two-adic tapered adaptation ($\tau = 20$) converges to exact fixed point $p_{\min} = 11 / 4096$ vs. $31 / 4096$ for classic shift-5 updates ($>2.8\times$ lower residual probability floor) and compresses coding+repeat novelty test streams to `1.0897 bpb` in `VerifyCompressionLaws` (`Novelty=1.0897 bpb`).
+2. Verify in fresh-process Mode S execution (`mode_s_and_synthetic.json`) that `FastNoveltyCoder` compresses real *E. coli* `00.fa` (`4,856,085 B`) down to **`1,122,777 B`** (`1.8497 bpb`) in **`6.75 s`** in-process encode (`6.92 s` wall) / **`6.57 s`** in-process decode (`6.79 s` wall) and *M. tuberculosis* `00.seq` (`4,417,521 B`) down to **`969,382 B`** (`1.7555 bpb`) in **`7.49 s`** encode / **`6.25 s`** decode.
+
+---
+
+## 8. Law VII — Disjoint Index/Superstream Lifecycle & Sub-Linear Bounded-Heap Law (`-Xmx128m`)
+
+### Mathematical & Architectural Invariant
+In two-stage pangenome collection compression (Stage 1: rank-ordered parallel DAG mosaic parsing over CSR syncmer index $\mathcal{I}_{\text{CSR}}$; Stage 2: unified pan-genome novelty superstream coding over $\mathcal{L}_{\text{super}}$), the memory lifespans of $\mathcal{I}_{\text{CSR}}$ and $\mathcal{L}_{\text{super}}$ are **strictly disjoint** once per-rank mosaic bitstreams are emitted:
+
+$$\text{Live}(\text{Stage 1}) = \{\mathcal{B}_{2\text{bit}}, \, \mathcal{I}_{\text{CSR}}, \, \{\mathcal{S}_r\}\}, \qquad \text{Live}(\text{Stage 2}) = \{\mathcal{M}_{\text{out}}, \, \mathcal{L}_{\text{super}}, \, \{\mathcal{W}_p\}_{p=1}^{P}\}$$
+
+$$\implies M_{\text{peak}} = \max\!\big(M_{\text{Stage 1}}, \, M_{\text{Stage 2}}\big) \ll M_{\text{Stage 1}} + M_{\text{Stage 2}}$$
+
+By:
+1. Explicitly releasing `sharedDagIdx`, `mstParentRank`, and `rankDonorSimilarityOrder` immediately after Stage 1 mosaic emission and incrementally nulling `rankMosaics[r]` and `unitNovSlices[r]` as $\mathcal{L}_{\text{super}}$ is assembled,
+2. Narrowing per-worker target syncmer canonical hashes from 64-bit `long[]` to 32-bit `int[]` (`TargetSyncmers.canonKmers`, `-38%` per-worker memory),
+3. Decoupling `FastCRM` warm-primed stripe count (`workerCount`) from `ForkJoinPool` concurrency (`poolThreads`) and dynamically throttling `buildThreads`/`workerThreads` $\le 2$ under `extremeTight` ($\le 145\text{ MiB}$) while enabling $s=2$ (`ultraTight` $\le 205\text{ MiB}$) so **full `panSuper` (`Order-8`, `Order-9`, `Sparse-12`) context modeling remains active even when `--bounded` is enabled**, and
+4. Replacing 3.43 million per-line kernel writes and JNI CRC updates in `FastaStreamFactorizer.reconstructTo` with a 64 KB staging buffer and parallelizing Multi-FASTA chunk factorization across CPU cores,
+
+pure-JVM Mode C scales down to **`-Xmx160m` and `-Xmx128m`** ($1.06\text{ B/base}$ total JVM heap limit on the $120,108,223\text{ B}$ 24-genome *E. coli* collection), hitting **`3,422,314 B`** (`0.2279 bpb`, `+0.99%`) at `-Xmx256m`/`-Xmx224m` and **`3,452,703 B`** (`0.2300 bpb`, `+1.89%`) at `-Xmx192m`/`-Xmx160m`/`-Xmx128m` (all within the `<2%` unbounded delta gate).
+
+### Falsification Test
+1. Verify in `VerifyCompressionLaws` (`Unbounded=27257 B, Bounded=27257 B, delta=0.000%`, part of **`171,941` passing assertions**) that Mode C unbounded and `--bounded` archives round-trip with identical `SHA-256` and $<2\%$ archive size difference.
+2. Verify in fresh-process CLI execution (`run_fusion_benchmarks.py`) that the $120,108,223\text{ B}$ 24-genome *E. coli* collection compresses and decompresses with `SHA-256 = True` at `-Xmx256m`, `-Xmx224m`, `-Xmx192m`, **`-Xmx160m`**, and **`-Xmx128m`**.
+
+---
+
+## 9. Architectural Transfer from OpenAI's October 2026 ETH Refutation Preprint
+
+Three structural proof techniques from OpenAI's 67-page ETH refutation (*"The Exponential Time Hypothesis is False"*, 17 Oct 2026 / rev. 25 Oct 2026; `openai2026eth` in [`paper/references.bib`](../paper/references.bib)) directly inspired Laws VI–VII, subject to an explicit asymptotic scope boundary:
+
+1. **Honest Asymptotic Boundary (§1.1.3 OVC Caveat):** Theorem 1.1 solves `#k-SAT` in $(n+m)^{O_k(1)} 2^{O_k(n \log\log n / \sqrt{\log n})}$ time and polynomial space, but Section 1.1.3 explicitly cautions that polynomial-time fine-grained complexity lower bounds tied to the Orthogonal Vectors Conjecture (OVC) — including quadratic-time edit distance and Longest Common Subsequence (LCS) bottlenecks — remain intact. Accordingly, subexponential `#k-SAT` algebraic reductions do **not** bypass polynomial-time string-matching complexity in biological sequence compression.
+2. **Shared Linear Summaries (§2.4 Def. 2.1, §2.7 eqs. 2.14–2.16, §4.2 Lemma 4.1) $\to$ Law VIb:** Computing shared hierarchical summaries rather than independent sparse tables maps directly to `FastNoveltyCoder`'s incremental Hierarchical Pitman-Yor suffix backoff chain (`ord0 -> ... -> ord9 -> sparse12` and `orf2 -> orf3 -> orf5`).
+3. **Two-Adic Valuation Tapering (Appendix D.4.3–D.4.4, Lemma D.5 eq. D.10) $\to$ Law VIa:** Replacing uniform integer degree/step floors with two-adic multiplicity tapering inspired the symmetric `tau = 20` rounding taper in `BitRangeEnc`/`BitRangeDec` (`(p + 20) >>> 5` and `(4096 - p + 20) >>> 5`), lowering the stalling floor from `31/4096` to `11/4096`.
+4. **Disjoint Partitioning & Sequential Polynomial-Space Accumulation (Lemma 3.2, Prop. 3.4, §5.2 $\mathbb{Q}[V]/(V^\ell)$, Prop. 6.4, App. A & §D.4.7) $\to$ Law VII:** Decomposing global state into disjoint partitions accumulated sequentially in polynomial space motivated strict Stage-1 (`sharedDagIdx`, `mstParentRank`, `rankDonorSimilarityOrder`) vs. Stage-2 (`rankMosaics`, `unitNovSlices`, pooled `FastCRM`) buffer deallocation and `ultraTight`/`extremeTight` scaling down to `-Xmx128m`.
+

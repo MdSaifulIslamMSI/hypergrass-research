@@ -130,7 +130,7 @@ public final class EimdlMosaicCodec {
         BitRangeEnc enc = new BitRangeEnc(headerAndBody);
         MosaicModels models = new MosaicModels();
         enc.encodeBit(models.isLiteral, 1, 1);
-        models.writeCount(enc, models.litLenSlots, 0, n - 1);
+        models.writeCount(enc, models.litLenSlots, 0, 0, n - 1);
         enc.finish();
         byte[] novelty = target.extractTwoBitSlice(0, n);
         return new EncodedMosaic(
@@ -236,7 +236,7 @@ public final class EimdlMosaicCodec {
                         && tgtSync16.positions[selfInsertedUpTo] + Packed2BitSequence.K_PRIMARY
                                 <= pos) {
                     selfTable.insert(
-                            tgtSync16.canonKmers[selfInsertedUpTo],
+                            tgtSync16.canonKmers[selfInsertedUpTo] & 0xFFFFFFFFL,
                             tgtSync16.positions[selfInsertedUpTo],
                             tgtSync16.strands[selfInsertedUpTo]);
                     selfInsertedUpTo++;
@@ -398,12 +398,13 @@ public final class EimdlMosaicCodec {
             if (tok.kind == 0) {
                 // Literal run: prevWasLiteral is guaranteed false here
                 enc.encodeBit(models.isLiteral, prevWasPanel ? 1 : 2, 1);
-                models.writeCount(enc, models.litLenSlots, 0, tok.litLen - 1);
+                models.writeCount(enc, models.litLenSlots, 0, 0, tok.litLen - 1);
                 cursorPos += tok.litLen;
                 prevWasLiteral = true;
                 continue;
             }
 
+            boolean afterLit = prevWasLiteral;
             if (!prevWasLiteral) {
                 enc.encodeBit(models.isLiteral, prevWasPanel ? 1 : 2, 0);
             }
@@ -419,7 +420,8 @@ public final class EimdlMosaicCodec {
 
             if (isPanel) {
                 int ds = (tok.donorId << 1) | tok.strand;
-                encodeMtfDonorStrand(enc, models, encMtf, maxDonorExclusive, ds);
+                int isMtf0 = (ds == encMtf[0]) ? 1 : 0;
+                encodeMtfDonorStrand(enc, models, encMtf, maxDonorExclusive, ds, afterLit ? 1 : 0);
 
                 int donorStart = panelIdx.donorOffsets[tok.donorId];
                 int donorLen = panelIdx.donorOffsets[tok.donorId + 1] - donorStart;
@@ -430,7 +432,8 @@ public final class EimdlMosaicCodec {
                         cursorPos,
                         donorLen,
                         encLastRefEnd[ds],
-                        encLastTgtEnd[ds]);
+                        encLastTgtEnd[ds],
+                        isMtf0);
 
                 encodeSubblocks(
                         enc,
@@ -454,7 +457,7 @@ public final class EimdlMosaicCodec {
                     enc.encodeBit(models.isTandem, 0, 1);
                 }
                 models.writeFixedTree(enc, models.tandemPeriodTree, tok.donorId - 1, 6);
-                models.writeCount(enc, models.matchLenSlots, 0, tok.totalTgtSpan - MIN_TANDEM_LEN);
+                models.writeCount(enc, models.matchLenSlots, 0, 1, tok.totalTgtSpan - MIN_TANDEM_LEN);
                 cursorPos += tok.totalTgtSpan;
             } else {
                 // Bidirectional Self Match
@@ -466,7 +469,7 @@ public final class EimdlMosaicCodec {
                         (tok.strand == 0)
                                 ? (cursorPos - 1 - tok.startRefPos)
                                 : tok.startRefPos;
-                models.writeCount(enc, models.selfDistSlots, tok.strand, selfDistCode);
+                models.writeCount(enc, models.selfDistSlots, tok.strand, 2, selfDistCode);
 
                 encodeSubblocks(
                         enc,
@@ -572,7 +575,7 @@ public final class EimdlMosaicCodec {
                 isLit = dec.decodeBit(models.isLiteral, prevWasPanel ? 1 : 2) == 1;
             }
             if (isLit) {
-                int litLen = models.readCount(dec, models.litLenSlots, 0) + 1;
+                int litLen = models.readCount(dec, models.litLenSlots, 0, 0) + 1;
                 if (pos + litLen > targetLen || novCursor + litLen > noveltyLen) {
                     throw new IllegalStateException("Literal run exceeds target or novelty bounds");
                 }
@@ -582,6 +585,7 @@ public final class EimdlMosaicCodec {
                 prevWasLiteral = true;
                 continue;
             }
+            boolean afterLit = prevWasLiteral;
             prevWasLiteral = false;
 
             boolean isPanel = false;
@@ -595,7 +599,9 @@ public final class EimdlMosaicCodec {
             prevWasPanel = isPanel;
 
             if (isPanel) {
-                int ds = decodeMtfDonorStrand(dec, models, mtf, maxDonorExclusive);
+                int prevMtf0 = mtf[0];
+                int ds = decodeMtfDonorStrand(dec, models, mtf, maxDonorExclusive, afterLit ? 1 : 0);
+                int isMtf0 = (ds == prevMtf0) ? 1 : 0;
                 int donorId = ds >>> 1;
                 int strand = ds & 1;
                 int donorStart = donorOffsets[donorId];
@@ -607,7 +613,8 @@ public final class EimdlMosaicCodec {
                                 pos,
                                 donorLen,
                                 lastRefEnd[ds],
-                                lastTgtEnd[ds]);
+                                lastTgtEnd[ds],
+                                isMtf0);
 
                 int[] adv =
                         decodeSubblocksFromPanel(
@@ -638,7 +645,7 @@ public final class EimdlMosaicCodec {
                 }
                 if (isTandem) {
                     int period = models.readFixedTree(dec, models.tandemPeriodTree, 6) + 1;
-                    int len = models.readCount(dec, models.matchLenSlots, 0) + MIN_TANDEM_LEN;
+                    int len = models.readCount(dec, models.matchLenSlots, 0, 1) + MIN_TANDEM_LEN;
                     if (period > pos || pos + len > targetLen) {
                         throw new IllegalStateException("Malformed tandem copy geometry");
                     }
@@ -649,7 +656,7 @@ public final class EimdlMosaicCodec {
                     pos += len;
                 } else {
                     int strand = dec.decodeBit(models.selfStrand, 0);
-                    int distCode = models.readCount(dec, models.selfDistSlots, strand);
+                    int distCode = models.readCount(dec, models.selfDistSlots, strand, 2);
                     int startRefPos = (strand == 0) ? (pos - 1 - distCode) : distCode;
                     int selfRefLen = pos;
                     if (startRefPos < 0 || startRefPos >= selfRefLen) {
@@ -847,18 +854,18 @@ public final class EimdlMosaicCodec {
                 int maxPanelWin = Packed2BitSequence.W_PRIMARY << panelIdx.primarySubsampleShift;
                 while (pIdx < tgtSync16.count
                         && tgtSync16.positions[pIdx] < pos + maxPanelWin
-                        && !panelIdx.acceptsPrimary(tgtSync16.canonKmers[pIdx])) {
+                        && !panelIdx.acceptsPrimary(tgtSync16.canonKmers[pIdx] & 0xFFFFFFFFL)) {
                     pIdx++;
                 }
                 hasNearPanelSync16 =
                         pIdx < tgtSync16.count
                                 && tgtSync16.positions[pIdx] < pos + maxPanelWin
                                 && tgtSync16.positions[pIdx] + Packed2BitSequence.K_PRIMARY <= n
-                                && panelIdx.acceptsPrimary(tgtSync16.canonKmers[pIdx]);
+                                && panelIdx.acceptsPrimary(tgtSync16.canonKmers[pIdx] & 0xFFFFFFFFL);
             }
             if (hasNearPanelSync16) {
                 int syncOff = tgtSync16.positions[pIdx] - pos;
-                long qCanon = tgtSync16.canonKmers[pIdx];
+                long qCanon = tgtSync16.canonKmers[pIdx] & 0xFFFFFFFFL;
                 int qStrand = tgtSync16.strands[pIdx];
                 int bucket = panelIdx.bucketForPrimary(qCanon);
                 short qSig = panelIdx.sigForPrimary(qCanon);
@@ -989,7 +996,7 @@ public final class EimdlMosaicCodec {
                         && tgtSync13.positions[s13] < pos + Packed2BitSequence.W_SECONDARY
                         && tgtSync13.positions[s13] + Packed2BitSequence.K_SECONDARY <= secLimit) {
                     int syncOff = tgtSync13.positions[s13] - pos;
-                    long qCanon13 = tgtSync13.canonKmers[s13];
+                    long qCanon13 = tgtSync13.canonKmers[s13] & 0xFFFFFFFFL;
                     int b13 = panelIdx.secBucketFor(qCanon13);
                     if (b13 >= 0) {
                         short qSig13 = panelIdx.secSigFor(qCanon13);
@@ -1044,7 +1051,7 @@ public final class EimdlMosaicCodec {
             int selfLimit = (!multiDonor || selfClonal) ? n : gear2Limit;
 
             int syncOff = tgtSync16.positions[sIdx] - pos;
-            long qCanon = tgtSync16.canonKmers[sIdx];
+            long qCanon = tgtSync16.canonKmers[sIdx] & 0xFFFFFFFFL;
             int qStrand = tgtSync16.strands[sIdx];
             int setBase = selfTable.setBase(qCanon);
             short qSig = selfTable.sigFor(qCanon);
@@ -1155,7 +1162,7 @@ public final class EimdlMosaicCodec {
             int sp = tgtSync16.positions[idx];
             if (sp < nextCheckPos) continue;
             if (sp > scanEnd) break;
-            long qCanon = tgtSync16.canonKmers[idx];
+            long qCanon = tgtSync16.canonKmers[idx] & 0xFFFFFFFFL;
             if (!panelIdx.acceptsPrimary(qCanon)) continue;
             nextCheckPos = sp + 32;
 
@@ -1912,7 +1919,7 @@ public final class EimdlMosaicCodec {
         for (int b = 0; b < subblocks.length; b++) {
             Subblock sb = subblocks[b];
             int minL = (b == 0) ? MIN_MATCH_LEN : MIN_SPLICE_ANCHOR;
-            models.writeCount(enc, models.matchLenSlots, b == 0 ? 0 : 1, sb.len - minL);
+            models.writeCount(enc, models.matchLenSlots, b == 0 ? 0 : 1, 1, sb.len - minL);
 
             if (cfg.allowApprox) {
                 int lenBin = sb.len < 64 ? 0 : (sb.len < 512 ? 1 : (sb.len < 4096 ? 2 : 3));
@@ -1961,10 +1968,11 @@ public final class EimdlMosaicCodec {
                                             ? refBank.baseAtStrand(refOffset, refLen, strand, mRef + 1)
                                             : 0;
                             int subCtx =
-                                    (refB << 5)
-                                            | (prevRefB << 3)
-                                            | (nextRefB << 1)
-                                            | (reg <= 1 ? 1 : 0);
+                                    (refB << 6)
+                                            | (prevRefB << 4)
+                                            | (nextRefB << 2)
+                                            | ((reg <= 1 ? 1 : 0) << 1)
+                                            | (cfg.allowWobbleMod3 ? prevMod3Zero : 0);
                             int delta = tgtB ^ refB; // guaranteed in {1, 2, 3}
                             if (delta == 2) {
                                 enc.encodeBit(models.kimuraTi, subCtx, 1);
@@ -2007,16 +2015,16 @@ public final class EimdlMosaicCodec {
                     int dRef = sb.dRefAfter;
                     if (dTgt == 0) {
                         enc.encodeBit(models.spliceIsPureDel, 0, 1);
-                        models.writeCount(enc, models.spliceDelSlots, 0, dRef - 1);
+                        models.writeCount(enc, models.spliceDelSlots, 0, 7, dRef - 1);
                     } else {
                         enc.encodeBit(models.spliceIsPureDel, 0, 0);
                         if (dRef == 0) {
                             enc.encodeBit(models.spliceIsPureIns, 0, 1);
-                            models.writeCount(enc, models.spliceInsSlots, 0, dTgt - 1);
+                            models.writeCount(enc, models.spliceInsSlots, 0, 6, dTgt - 1);
                         } else {
                             enc.encodeBit(models.spliceIsPureIns, 0, 0);
-                            models.writeCount(enc, models.spliceInsSlots, 0, dTgt - 1);
-                            models.writeCount(enc, models.spliceDelSlots, 0, dRef - 1);
+                            models.writeCount(enc, models.spliceInsSlots, 0, 6, dTgt - 1);
+                            models.writeCount(enc, models.spliceDelSlots, 0, 7, dRef - 1);
                         }
                     }
                     curTgt += dTgt;
@@ -2048,7 +2056,7 @@ public final class EimdlMosaicCodec {
 
         while (true) {
             int minL = (b == 0) ? MIN_MATCH_LEN : MIN_SPLICE_ANCHOR;
-            int subLen = models.readCount(dec, models.matchLenSlots, b == 0 ? 0 : 1) + minL;
+            int subLen = models.readCount(dec, models.matchLenSlots, b == 0 ? 0 : 1, 1) + minL;
             if (curRef < 0 || curRef + subLen > refLen || curTgt + subLen > targetLen) {
                 throw new IllegalStateException("Panel subblock exceeds donor or target bounds");
             }
@@ -2105,10 +2113,11 @@ public final class EimdlMosaicCodec {
                                             ? refBank.baseAtStrand(refOffset, refLen, strand, mRef + 1)
                                             : 0;
                             int subCtx =
-                                    (refB << 5)
-                                            | (prevRefB << 3)
-                                            | (nextRefB << 1)
-                                            | (reg <= 1 ? 1 : 0);
+                                    (refB << 6)
+                                            | (prevRefB << 4)
+                                            | (nextRefB << 2)
+                                            | ((reg <= 1 ? 1 : 0) << 1)
+                                            | (cfg.allowWobbleMod3 ? prevMod3Zero : 0);
                             int delta;
                             if (dec.decodeBit(models.kimuraTi, subCtx) == 1) {
                                 delta = 2;
@@ -2145,13 +2154,13 @@ public final class EimdlMosaicCodec {
             int dRef;
             if (dec.decodeBit(models.spliceIsPureDel, 0) == 1) {
                 dTgt = 0;
-                dRef = models.readCount(dec, models.spliceDelSlots, 0) + 1;
+                dRef = models.readCount(dec, models.spliceDelSlots, 0, 7) + 1;
             } else if (dec.decodeBit(models.spliceIsPureIns, 0) == 1) {
                 dRef = 0;
-                dTgt = models.readCount(dec, models.spliceInsSlots, 0) + 1;
+                dTgt = models.readCount(dec, models.spliceInsSlots, 0, 6) + 1;
             } else {
-                dTgt = models.readCount(dec, models.spliceInsSlots, 0) + 1;
-                dRef = models.readCount(dec, models.spliceDelSlots, 0) + 1;
+                dTgt = models.readCount(dec, models.spliceInsSlots, 0, 6) + 1;
+                dRef = models.readCount(dec, models.spliceDelSlots, 0, 7) + 1;
             }
             if (curTgt + dTgt > targetLen || novCursor + dTgt > noveltyLen) {
                 throw new IllegalStateException("Splice insertion exceeds bounds");
@@ -2187,7 +2196,7 @@ public final class EimdlMosaicCodec {
 
         while (true) {
             int minL = (b == 0) ? MIN_MATCH_LEN : MIN_SPLICE_ANCHOR;
-            int subLen = models.readCount(dec, models.matchLenSlots, b == 0 ? 0 : 1) + minL;
+            int subLen = models.readCount(dec, models.matchLenSlots, b == 0 ? 0 : 1, 1) + minL;
             if (curRef < 0 || curRef + subLen > selfRefLen || curTgt + subLen > targetLen) {
                 throw new IllegalStateException("Self subblock exceeds prefix or target bounds");
             }
@@ -2252,10 +2261,11 @@ public final class EimdlMosaicCodec {
                                             ? selfBaseAt(out, selfRefLen, strand, mRef + 1)
                                             : 0;
                             int subCtx =
-                                    (refB << 5)
-                                            | (prevRefB << 3)
-                                            | (nextRefB << 1)
-                                            | (reg <= 1 ? 1 : 0);
+                                    (refB << 6)
+                                            | (prevRefB << 4)
+                                            | (nextRefB << 2)
+                                            | ((reg <= 1 ? 1 : 0) << 1)
+                                            | (cfg.allowWobbleMod3 ? prevMod3Zero : 0);
                             int delta;
                             if (dec.decodeBit(models.kimuraTi, subCtx) == 1) {
                                 delta = 2;
@@ -2292,13 +2302,13 @@ public final class EimdlMosaicCodec {
             int dRef;
             if (dec.decodeBit(models.spliceIsPureDel, 0) == 1) {
                 dTgt = 0;
-                dRef = models.readCount(dec, models.spliceDelSlots, 0) + 1;
+                dRef = models.readCount(dec, models.spliceDelSlots, 0, 7) + 1;
             } else if (dec.decodeBit(models.spliceIsPureIns, 0) == 1) {
                 dRef = 0;
-                dTgt = models.readCount(dec, models.spliceInsSlots, 0) + 1;
+                dTgt = models.readCount(dec, models.spliceInsSlots, 0, 6) + 1;
             } else {
-                dTgt = models.readCount(dec, models.spliceInsSlots, 0) + 1;
-                dRef = models.readCount(dec, models.spliceDelSlots, 0) + 1;
+                dTgt = models.readCount(dec, models.spliceInsSlots, 0, 6) + 1;
+                dRef = models.readCount(dec, models.spliceDelSlots, 0, 7) + 1;
             }
             if (curTgt + dTgt > targetLen || novCursor + dTgt > noveltyLen) {
                 throw new IllegalStateException("Self splice insertion exceeds bounds");
@@ -2376,12 +2386,12 @@ public final class EimdlMosaicCodec {
             int reg,
             int prevMod3Zero) {
         if (!wobbleMod3) {
-            models.writeCount(enc, models.gapQuotSlots, reg, gap);
+            models.writeCount(enc, models.gapQuotSlots, reg, 5, gap);
             return;
         }
         int q = gap / 3;
         int remIdx = gap - 3 * q; // 0 -> r=1, 1 -> r=2, 2 -> r=0 (wobble!)
-        models.writeCount(enc, models.gapQuotSlots, reg, q);
+        models.writeCount(enc, models.gapQuotSlots, reg, 5, q);
 
         int maxRemIdx = Math.min(2, maxGap - 3 * q);
         if (maxRemIdx == 0) {
@@ -2409,9 +2419,9 @@ public final class EimdlMosaicCodec {
             int reg,
             int prevMod3Zero) {
         if (!wobbleMod3) {
-            return models.readCount(dec, models.gapQuotSlots, reg);
+            return models.readCount(dec, models.gapQuotSlots, reg, 5);
         }
-        int q = models.readCount(dec, models.gapQuotSlots, reg);
+        int q = models.readCount(dec, models.gapQuotSlots, reg, 5);
         int maxRemIdx = Math.min(2, maxGap - 3 * q);
         if (maxRemIdx < 0) {
             throw new IllegalStateException("Decoded gap quotient exceeds subblock bound");
@@ -2433,16 +2443,16 @@ public final class EimdlMosaicCodec {
     }
 
     private static void encodeMtfDonorStrand(
-            BitRangeEnc enc, MosaicModels models, int[] mtf, int maxDonors, int ds) {
+            BitRangeEnc enc, MosaicModels models, int[] mtf, int maxDonors, int ds, int afterLit) {
         int totalStates = maxDonors << 1;
         if (totalStates <= 1) {
             return;
         }
         if (ds == mtf[0]) {
-            enc.encodeBit(models.mtfHit0, 0, 1);
+            enc.encodeBit(models.mtfHit0, afterLit, 1);
             return;
         }
-        enc.encodeBit(models.mtfHit0, 0, 0);
+        enc.encodeBit(models.mtfHit0, afterLit, 0);
         if (totalStates == 2) {
             promoteMtf(mtf, ds);
             return;
@@ -2483,12 +2493,12 @@ public final class EimdlMosaicCodec {
     }
 
     private static int decodeMtfDonorStrand(
-            BitRangeDec dec, MosaicModels models, int[] mtf, int maxDonors) {
+            BitRangeDec dec, MosaicModels models, int[] mtf, int maxDonors, int afterLit) {
         int totalStates = maxDonors << 1;
         if (totalStates <= 1) {
             return 0;
         }
-        if (dec.decodeBit(models.mtfHit0, 0) == 1) {
+        if (dec.decodeBit(models.mtfHit0, afterLit) == 1) {
             return mtf[0];
         }
         if (totalStates == 2) {
@@ -2527,7 +2537,8 @@ public final class EimdlMosaicCodec {
             int tgtPos,
             int donorLen,
             int lastRef,
-            int lastTgt) {
+            int lastTgt,
+            int isMtf0) {
         if (lastRef >= 0) {
             int pred0 = Math.max(0, Math.min(donorLen - 1, lastRef));
             int pred1 = Math.max(0, Math.min(donorLen - 1, lastRef + (tgtPos - lastTgt)));
@@ -2546,18 +2557,18 @@ public final class EimdlMosaicCodec {
                 useCol = 0;
             }
             if (Math.abs(bestDelta) <= 65536) {
-                enc.encodeBit(models.usePosDelta, 0, 1);
+                enc.encodeBit(models.usePosDelta, isMtf0, 1);
                 if (pred0 != pred1) {
-                    enc.encodeBit(models.useCollinearPred, 0, useCol);
+                    enc.encodeBit(models.useCollinearPred, isMtf0, useCol);
                 }
                 int zz = (bestDelta << 1) ^ (bestDelta >> 31);
-                models.writeCount(enc, models.posDeltaSlots, 0, zz);
+                models.writeCount(enc, models.posDeltaSlots, useCol, 3, zz);
                 bestPred &= 0;
                 return;
             }
-            enc.encodeBit(models.usePosDelta, 0, 0);
+            enc.encodeBit(models.usePosDelta, isMtf0, 0);
         }
-        models.writeCount(enc, models.rawPosSlots, 0, refPos);
+        models.writeCount(enc, models.rawPosSlots, 0, 4, refPos);
     }
 
     private static int decodePanelRefPos(
@@ -2566,15 +2577,18 @@ public final class EimdlMosaicCodec {
             int tgtPos,
             int donorLen,
             int lastRef,
-            int lastTgt) {
-        if (lastRef >= 0 && dec.decodeBit(models.usePosDelta, 0) == 1) {
+            int lastTgt,
+            int isMtf0) {
+        if (lastRef >= 0 && dec.decodeBit(models.usePosDelta, isMtf0) == 1) {
             int pred0 = Math.max(0, Math.min(donorLen - 1, lastRef));
             int pred1 = Math.max(0, Math.min(donorLen - 1, lastRef + (tgtPos - lastTgt)));
             int pred = pred0;
+            int useCol = 1;
             if (pred0 != pred1) {
-                pred = dec.decodeBit(models.useCollinearPred, 0) == 1 ? pred1 : pred0;
+                useCol = dec.decodeBit(models.useCollinearPred, isMtf0);
+                pred = useCol == 1 ? pred1 : pred0;
             }
-            int zz = models.readCount(dec, models.posDeltaSlots, 0);
+            int zz = models.readCount(dec, models.posDeltaSlots, useCol, 3);
             int delta = (zz >>> 1) ^ -(zz & 1);
             int refPos = pred + delta;
             if (refPos < 0 || refPos >= donorLen) {
@@ -2582,7 +2596,7 @@ public final class EimdlMosaicCodec {
             }
             return refPos;
         }
-        int refPos = models.readCount(dec, models.rawPosSlots, 0);
+        int refPos = models.readCount(dec, models.rawPosSlots, 0, 4);
         if (refPos < 0 || refPos >= donorLen) {
             throw new IllegalStateException("Decoded raw position out of donor bounds");
         }
@@ -2634,7 +2648,7 @@ public final class EimdlMosaicCodec {
         return -1;
     }
 
-    private record TargetSyncmers(int[] positions, long[] canonKmers, byte[] strands, int count) {}
+    private record TargetSyncmers(int[] positions, int[] canonKmers, byte[] strands, int count) {}
 
     private static TargetSyncmers extractTargetSyncmers(Packed2BitSequence seq, boolean primary) {
         int k = primary ? Packed2BitSequence.K_PRIMARY : Packed2BitSequence.K_SECONDARY;
@@ -2642,7 +2656,7 @@ public final class EimdlMosaicCodec {
         int t = primary ? Packed2BitSequence.T_PRIMARY : Packed2BitSequence.T_SECONDARY;
         int cap = Math.max(32, seq.length / (k - s) + 32);
         int[][] pos = {new int[cap]};
-        long[][] km = {new long[cap]};
+        int[][] km = {new int[cap]};
         byte[][] st = {new byte[cap]};
         int[] cnt = {0};
         seq.forEachCanonicalOpenSyncmer(
@@ -2660,7 +2674,7 @@ public final class EimdlMosaicCodec {
                         st[0] = Arrays.copyOf(st[0], ncap);
                     }
                     pos[0][idx] = p;
-                    km[0][idx] = canon;
+                    km[0][idx] = (int) canon;
                     st[0][idx] = (byte) strand;
                     cnt[0] = idx + 1;
                 });
@@ -2733,31 +2747,31 @@ public final class EimdlMosaicCodec {
         final int[] usePosDelta = probs(2);
         final int[] useCollinearPred = probs(2);
 
-        final int[] hasSnps = probs(8);
+        final int[] hasSnps = probsInit(8, 600);
         final int[] moreSnps = probs(16);
-        final int[] hasSplice = probsInit(8, 256);
+        final int[] hasSplice = probsInit(8, 96);
         final int[] spliceIsPureDel = probs(2);
-        final int[] spliceIsPureIns = probs(2);
+        final int[] spliceIsPureIns = probsInit(2, 3800);
 
-        // Law I: Klein V_4 Kimura + CpG trinucleotide substitution contexts (128 contexts)
-        final int[] kimuraTi = probsInit(128, 2700); // ~66% initial Kimura transition prior!
-        final int[] kimuraTv = probs(128);
+        // Law I & II Coupled: Klein V_4 Kimura + CpG trinucleotide + mod-3 wobble contexts (256 contexts)
+        final int[] kimuraTi = probsInit(256, 2700); // ~66% initial Kimura transition prior!
+        final int[] kimuraTv = probs(256);
         final int[][] ablateBase4 = probs2d(4, 4);
 
         // Law II: Bijective Codon-Wobble phase models ((reg<<3) | (qBin<<1) | prevWobble < 32)
         final int[] wobbleIsThirdBase = probsInit(32, 1800);
         final int[] wobbleRem01 = probs(32);
 
-        // Variable-length integer slot models (32 slots -> 6-bit tree of size 64, plus low-bit refinements)
+        // Variable-length integer slot models (32 slots -> 6-bit tree of size 64, plus isolated low-bit refinements)
         final int[][] litLenSlots = probs2d(1, 64);
         final int[][] matchLenSlots = probs2d(2, 64);
         final int[][] selfDistSlots = probs2d(2, 64);
-        final int[][] posDeltaSlots = probs2d(1, 64);
+        final int[][] posDeltaSlots = probs2d(2, 64);
         final int[][] rawPosSlots = probs2d(1, 64);
         final int[][] gapQuotSlots = probs2d(4, 64);
         final int[][] spliceInsSlots = probs2d(1, 64);
         final int[][] spliceDelSlots = probs2d(1, 64);
-        final int[] lowBitProbs = probs(32 * 8);
+        final int[][] lowBitProbs = probs2d(8, 128);
 
         final int[] tandemPeriodTree = probs(64);
 
@@ -2805,7 +2819,7 @@ public final class EimdlMosaicCodec {
             if (maxExclusive <= 1) return;
             int bits = 32 - Integer.numberOfLeadingZeros(maxExclusive - 1);
             if (bits > 11) {
-                writeCount(enc, rawPosSlots, 0, val);
+                writeCount(enc, rawPosSlots, 0, 4, val);
                 return;
             }
             int node = 1;
@@ -2829,7 +2843,7 @@ public final class EimdlMosaicCodec {
             if (maxExclusive <= 1) return 0;
             int bits = 32 - Integer.numberOfLeadingZeros(maxExclusive - 1);
             if (bits > 11) {
-                return readCount(dec, rawPosSlots, 0);
+                return readCount(dec, rawPosSlots, 0, 4);
             }
             int node = 1;
             int prefix = 0;
@@ -2847,7 +2861,7 @@ public final class EimdlMosaicCodec {
             return prefix;
         }
 
-        void writeCount(BitRangeEnc enc, int[][] slotTable, int ctx, int value) {
+        void writeCount(BitRangeEnc enc, int[][] slotTable, int ctx, int lowCtx, int value) {
             int[] tree = slotTable[ctx];
             if (value < 4) {
                 writeFixedTree(enc, tree, value, 6);
@@ -2859,17 +2873,18 @@ public final class EimdlMosaicCodec {
             int slot = ((msb - 1) << 1) + 2 + secondBit; // 4..61 (fits in 6-bit tree!)
             writeFixedTree(enc, tree, slot, 6);
             int rem = value & ((1 << extraBits) - 1);
+            int[] lowRow = lowBitProbs[lowCtx];
             for (int b = extraBits - 1; b >= 0; b--) {
                 int bit = (rem >>> b) & 1;
                 if (b < 4 && slot < 32) {
-                    enc.encodeBit(lowBitProbs, (slot << 2) | b, bit);
+                    enc.encodeBit(lowRow, (slot << 2) | b, bit);
                 } else {
                     enc.encodeDirectBit(bit);
                 }
             }
         }
 
-        int readCount(BitRangeDec dec, int[][] slotTable, int ctx) {
+        int readCount(BitRangeDec dec, int[][] slotTable, int ctx, int lowCtx) {
             int slot = readFixedTree(dec, slotTable[ctx], 6);
             if (slot < 4) {
                 return slot;
@@ -2877,10 +2892,11 @@ public final class EimdlMosaicCodec {
             int extraBits = ((slot - 2) >>> 1);
             int secondBit = (slot - 2) & 1;
             int rem = 0;
+            int[] lowRow = lowBitProbs[lowCtx];
             for (int b = extraBits - 1; b >= 0; b--) {
                 int bit;
                 if (b < 4 && slot < 32) {
-                    bit = dec.decodeBit(lowBitProbs, (slot << 2) | b);
+                    bit = dec.decodeBit(lowRow, (slot << 2) | b);
                 } else {
                     bit = dec.decodeDirectBit();
                 }
@@ -2906,11 +2922,11 @@ public final class EimdlMosaicCodec {
             int bound = (range >>> PROB_BITS) * p;
             if (bit == 1) {
                 range = bound;
-                probs[idx] = p + ((PROB_SCALE - p) >>> 5);
+                probs[idx] = p + ((PROB_SCALE - p + 20) >>> 5);
             } else {
                 low += bound & 0xFFFFFFFFL;
                 range -= bound;
-                probs[idx] = p - (p >>> 5);
+                probs[idx] = p - ((p + 20) >>> 5);
             }
             while ((range & 0xFFFFFFFFL) < TOP) {
                 range <<= 8;
@@ -2973,12 +2989,12 @@ public final class EimdlMosaicCodec {
             int bit;
             if ((code & 0xFFFFFFFFL) < (bound & 0xFFFFFFFFL)) {
                 range = bound;
-                probs[idx] = p + ((PROB_SCALE - p) >>> 5);
+                probs[idx] = p + ((PROB_SCALE - p + 20) >>> 5);
                 bit = 1;
             } else {
                 code -= bound;
                 range -= bound;
-                probs[idx] = p - (p >>> 5);
+                probs[idx] = p - ((p + 20) >>> 5);
                 bit = 0;
             }
             while ((range & 0xFFFFFFFFL) < TOP) {

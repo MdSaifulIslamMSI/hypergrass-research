@@ -320,11 +320,29 @@ public final class Packed2BitSequence {
 
     /** Writes {@code src[0..len)} (2-bit values {@code 0..3}) into this bank starting at {@code dstPos}. */
     public void writeTwoBitSlice(int dstPos, byte[] src, int len) {
-        for (int i = 0; i < len; i++) {
+        int i = 0;
+        while (i < len && ((dstPos + i) & 31) != 0) {
             int p = dstPos + i;
             int wIdx = p >>> 5;
             int shift = (p & 31) << 1;
             words[wIdx] = (words[wIdx] & ~(3L << shift)) | (((long) (src[i] & 3)) << shift);
+            i++;
+        }
+        int wIdx = (dstPos + i) >>> 5;
+        while (i + 32 <= len) {
+            long w = 0L;
+            for (int j = 0; j < 32; j++) {
+                w |= ((long) (src[i + j] & 3)) << (j << 1);
+            }
+            words[wIdx++] = w;
+            i += 32;
+        }
+        while (i < len) {
+            int p = dstPos + i;
+            int remW = p >>> 5;
+            int shift = (p & 31) << 1;
+            words[remW] = (words[remW] & ~(3L << shift)) | (((long) (src[i] & 3)) << shift);
+            i++;
         }
     }
 

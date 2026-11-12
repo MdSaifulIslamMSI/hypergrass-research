@@ -6,6 +6,7 @@ import hypergrass.EimdlMosaicCodec.MosaicStats;
 import hypergrass.FastaStreamFactorizer.FactorizedChunk;
 import hypergrass.VarIntCodec.ByteIn;
 import hypergrass.VarIntCodec.ByteOut;
+import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -229,7 +230,15 @@ public final class HyperGraSSFusionEngine {
             }
         } else {
             if (mode == MODE_COLLECTION) {
-                units = partitionFactorizedCollectionUnits(raw, TARGET_COLLECTION_UNIT_BASES);
+                boolean boundedParse =
+                        opts.boundedMemory
+                                || Runtime.getRuntime().maxMemory() <= 320L * 1024 * 1024;
+                units =
+                        partitionFactorizedCollectionUnits(
+                                raw,
+                                TARGET_COLLECTION_UNIT_BASES,
+                                Math.max(1, opts.threads),
+                                boundedParse);
                 int sumRec = 0;
                 for (InputUnit u : units) {
                     sumRec += u.recordCount;
@@ -427,7 +436,11 @@ public final class HyperGraSSFusionEngine {
                                 bestTwin,
                                 simOrder,
                                 opts.mosaicConfig);
+                units.get(u).seq = null;
             }
+            panelIdx = null;
+            loadedPanel = null;
+            units = null;
         } else {
             // MODE_COLLECTION: Rank-ordered parallel DAG mosaic encoding!
             Packed2BitSequence[] orderedDonors = new Packed2BitSequence[numUnits];
@@ -439,15 +452,16 @@ public final class HyperGraSSFusionEngine {
             units.clear();
             units = null;
 
-            // Under bounded memory (-Xmx192m..-Xmx256m), index ALL donors via subsampled canonical
+            // Under bounded memory (-Xmx128m..-Xmx256m), index ALL donors via subsampled canonical
             // open syncmers + zero-materialization 2-pass CSR while consuming per-unit sequences into
             // the single 2-bit bank (0.25 B/base), eliminating unindexed blind spots!
             long maxMemBytes = Runtime.getRuntime().maxMemory();
-            boolean ultraTight = maxMemBytes <= 215L * 1024 * 1024;
+            boolean ultraTight = maxMemBytes <= 205L * 1024 * 1024;
+            boolean extremeTight = maxMemBytes <= 145L * 1024 * 1024;
             int subsampleShift = bounded ? (ultraTight ? 2 : 1) : 0;
             int buildThreads =
-                    ultraTight ? Math.min(threads, 2) : (bounded ? Math.min(threads, 4) : threads);
-            final EimdlSyncmerIndex sharedDagIdx =
+                    extremeTight ? Math.min(threads, 2) : (bounded ? Math.min(threads, 4) : threads);
+            EimdlSyncmerIndex sharedDagIdx =
                     EimdlSyncmerIndex.buildWithSubsampling(
                             orderedDonors,
                             subsampleShift,
@@ -457,9 +471,13 @@ public final class HyperGraSSFusionEngine {
             orderedDonors = null;
 
             int workerThreads =
-                    ultraTight
+                    extremeTight
                             ? Math.min(threads, 2)
-                            : (bounded ? Math.min(threads, 3) : Math.min(threads, numUnits));
+                            : (ultraTight
+                                    ? Math.min(threads, 3)
+                                    : (bounded
+                                            ? Math.min(threads, 4)
+                                            : Math.min(threads, numUnits)));
             if (workerThreads <= 1) {
                 for (int r = 0; r < numUnits; r++) {
                     int dStart = sharedDagIdx.donorOffsets[r];
@@ -481,6 +499,10 @@ public final class HyperGraSSFusionEngine {
                     }
                 }
             } else {
+                final EimdlSyncmerIndex dagIdx = sharedDagIdx;
+                final int[] parentRanks = mstParentRank;
+                final int[][] simOrders = rankDonorSimilarityOrder;
+                final EncodedMosaic[] outMosaics = rankMosaics;
                 ForkJoinPool pool = new ForkJoinPool(workerThreads);
                 try {
                     pool.submit(
@@ -490,17 +512,15 @@ public final class HyperGraSSFusionEngine {
                                                     .forEach(
                                                             r -> {
                                                                 int dStart =
-                                                                        sharedDagIdx.donorOffsets[
-                                                                                r];
+                                                                        dagIdx.donorOffsets[r];
                                                                 int dLen =
-                                                                        sharedDagIdx.donorOffsets[
-                                                                                        r + 1]
+                                                                        dagIdx.donorOffsets[r + 1]
                                                                                 - dStart;
                                                                 Packed2BitSequence targetSeq =
-                                                                        sharedDagIdx.bank.sliceSeq(
+                                                                        dagIdx.bank.sliceSeq(
                                                                                 dStart, dLen);
                                                                 if (r == 0) {
-                                                                    rankMosaics[0] =
+                                                                    outMosaics[0] =
                                                                             EimdlMosaicCodec
                                                                                     .encodeMosaic(
                                                                                             targetSeq,
@@ -510,15 +530,15 @@ public final class HyperGraSSFusionEngine {
                                                                                             null,
                                                                                             opts.mosaicConfig);
                                                                 } else {
-                                                                    rankMosaics[r] =
+                                                                    outMosaics[r] =
                                                                             EimdlMosaicCodec
                                                                                     .encodeMosaic(
                                                                                             targetSeq,
-                                                                                            sharedDagIdx,
+                                                                                            dagIdx,
                                                                                             r,
-                                                                                            mstParentRank[
+                                                                                            parentRanks[
                                                                                                     r],
-                                                                                            rankDonorSimilarityOrder[
+                                                                                            simOrders[
                                                                                                     r],
                                                                                             opts.mosaicConfig);
                                                                 }
@@ -528,6 +548,9 @@ public final class HyperGraSSFusionEngine {
                     pool.shutdown();
                 }
             }
+            sharedDagIdx = null; // Free CSR index + 2-bit bank before Novelty Superstream coding!
+            mstParentRank = null;
+            rankDonorSimilarityOrder = null;
         }
 
         // Write mosaic streams & assemble Unified Pan-Genome Novelty Superstream
@@ -543,11 +566,16 @@ public final class HyperGraSSFusionEngine {
         long sumSplices = 0L;
         long sumSnps = 0L;
 
+        byte[][] unitNovSlices = new byte[numUnits][];
+        int[] unitNovLens = new int[numUnits];
         for (int r = 0; r < numUnits; r++) {
             EncodedMosaic em = rankMosaics[r];
+            rankMosaics[r] = null; // release EncodedMosaic & mosaicBytes immediately after writing!
             out.writeVarInt(em.mosaicBytes().length);
             out.writeBytes(em.mosaicBytes());
             totalNoveltyLong += em.noveltyLen();
+            unitNovSlices[r] = em.noveltyBases();
+            unitNovLens[r] = em.noveltyLen();
 
             MosaicStats st = em.stats();
             totalTargetBases += st.targetBases();
@@ -561,6 +589,7 @@ public final class HyperGraSSFusionEngine {
             sumSplices += st.indelSplices();
             sumSnps += st.substitutions();
         }
+        rankMosaics = null;
 
         if (totalNoveltyLong > Integer.MAX_VALUE - 64) {
             throw new IllegalStateException("Novelty superstream exceeds 2.14 Gbp");
@@ -569,16 +598,17 @@ public final class HyperGraSSFusionEngine {
         byte[] noveltySuper = new byte[totalNovelty];
         int novDst = 0;
         for (int r = 0; r < numUnits; r++) {
-            EncodedMosaic em = rankMosaics[r];
-            if (em.noveltyLen() > 0) {
-                System.arraycopy(em.noveltyBases(), 0, noveltySuper, novDst, em.noveltyLen());
-                novDst += em.noveltyLen();
+            int nLen = unitNovLens[r];
+            if (nLen > 0) {
+                System.arraycopy(unitNovSlices[r], 0, noveltySuper, novDst, nLen);
+                novDst += nLen;
             }
-            rankMosaics[r] = null; // release per-unit novelty buffer before CRM encoding!
+            unitNovSlices[r] = null; // release per-unit novelty buffer incrementally!
         }
+        unitNovSlices = null;
+        unitNovLens = null;
 
-        int crmThreads = bounded ? Math.min(threads, 4) : threads;
-        byte[] noveltyComp = FastNoveltyCoder.encode(noveltySuper, totalNovelty, crmThreads, bounded);
+        byte[] noveltyComp = FastNoveltyCoder.encode(noveltySuper, totalNovelty, threads, bounded);
         noveltySuper = null;
 
         out.writeVarInt(totalNovelty);
@@ -619,7 +649,7 @@ public final class HyperGraSSFusionEngine {
     public static void decompressFile(Path archivePath, Path outputPath, Path referencePanel)
             throws IOException {
         byte[] archive = Files.readAllBytes(archivePath);
-        try (OutputStream out = Files.newOutputStream(outputPath)) {
+        try (OutputStream out = new BufferedOutputStream(Files.newOutputStream(outputPath), 65536)) {
             decompressToStream(archive, referencePanel, out);
         }
     }
@@ -756,8 +786,18 @@ public final class HyperGraSSFusionEngine {
                 int idx = 0;
                 while (idx < len) {
                     int take = Math.min(ioBuf.length, len - idx);
-                    for (int j = 0; j < take; j++) {
+                    int j = 0;
+                    while (j + 32 <= take) {
+                        long w = decodedBank.word32Forward(start + idx + j);
+                        for (int b = 0; b < 32; b++) {
+                            ioBuf[j + b] = map[(int) (w & 3L)];
+                            w >>>= 2;
+                        }
+                        j += 32;
+                    }
+                    while (j < take) {
                         ioBuf[j] = map[decodedBank.baseAt(start + idx + j)];
+                        j++;
                     }
                     outStream.write(ioBuf, 0, take);
                     crc.update(ioBuf, 0, take);
@@ -1197,32 +1237,74 @@ public final class HyperGraSSFusionEngine {
     }
 
     private static List<InputUnit> partitionFactorizedCollectionUnits(
-            byte[] raw, int targetBasesPerUnit) {
+            byte[] raw, int targetBasesPerUnit, int threads, boolean bounded) {
         List<int[]> recSlices = splitRawIntoRecordByteRanges(raw, targetBasesPerUnit);
-        List<InputUnit> units = new ArrayList<>();
-        int curRecIdx = 0;
+        List<int[]> unitByteRanges = new ArrayList<>();
 
         int i = 0;
         while (i < recSlices.size()) {
             int startByte = recSlices.get(i)[0];
             int endByte = recSlices.get(i)[1];
-            int groupedRecs = recSlices.get(i)[2];
             i++;
             // Group small contigs (e.g. draft assembly contigs) up to targetBasesPerUnit
             while (i < recSlices.size()
                     && (endByte - startByte) + (recSlices.get(i)[1] - recSlices.get(i)[0])
                             <= targetBasesPerUnit + 524_288) {
                 endByte = recSlices.get(i)[1];
-                groupedRecs += recSlices.get(i)[2];
                 i++;
             }
-            FactorizedChunk chunk = FastaStreamFactorizer.factorize(raw, startByte, endByte);
-            int actualRecs = chunk.getRecordSpans().length;
-            groupedRecs &= 0;
-            Packed2BitSequence seq =
-                    Packed2BitSequence.fromTwoBitBytes(chunk.dnaBases, chunk.dnaLen);
-            units.add(new InputUnit(seq, chunk, curRecIdx, actualRecs));
-            curRecIdx += actualRecs;
+            unitByteRanges.add(new int[] {startByte, endByte});
+        }
+
+        int numUnits = unitByteRanges.size();
+        Packed2BitSequence[] seqs = new Packed2BitSequence[numUnits];
+        FactorizedChunk[] chunks = new FactorizedChunk[numUnits];
+        int[] recCounts = new int[numUnits];
+
+        int factThreads = bounded ? 1 : Math.min(threads, numUnits);
+        if (factThreads <= 1) {
+            for (int u = 0; u < numUnits; u++) {
+                int[] rng = unitByteRanges.get(u);
+                FactorizedChunk chunk = FastaStreamFactorizer.factorize(raw, rng[0], rng[1]);
+                recCounts[u] = chunk.getRecordSpans().length;
+                seqs[u] = Packed2BitSequence.fromTwoBitBytes(chunk.dnaBases, chunk.dnaLen);
+                chunk.dnaBases = null; // Free 1-byte-per-base array immediately!
+                chunks[u] = chunk;
+            }
+        } else {
+            ForkJoinPool pool = new ForkJoinPool(factThreads);
+            try {
+                pool.submit(
+                                () ->
+                                        IntStream.range(0, numUnits)
+                                                .parallel()
+                                                .forEach(
+                                                        u -> {
+                                                            int[] rng = unitByteRanges.get(u);
+                                                            FactorizedChunk chunk =
+                                                                    FastaStreamFactorizer.factorize(
+                                                                            raw, rng[0], rng[1]);
+                                                            recCounts[u] =
+                                                                    chunk.getRecordSpans().length;
+                                                            seqs[u] =
+                                                                    Packed2BitSequence
+                                                                            .fromTwoBitBytes(
+                                                                                    chunk.dnaBases,
+                                                                                    chunk.dnaLen);
+                                                            chunk.dnaBases = null;
+                                                            chunks[u] = chunk;
+                                                        }))
+                        .join();
+            } finally {
+                pool.shutdown();
+            }
+        }
+
+        List<InputUnit> units = new ArrayList<>(numUnits);
+        int curRecIdx = 0;
+        for (int u = 0; u < numUnits; u++) {
+            units.add(new InputUnit(seqs[u], chunks[u], curRecIdx, recCounts[u]));
+            curRecIdx += recCounts[u];
         }
         return units;
     }

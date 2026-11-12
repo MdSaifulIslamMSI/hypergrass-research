@@ -938,6 +938,8 @@ public final class FastaStreamFactorizer {
             return 0L;
         }
         byte[] seqChars = reconstructSequenceChars(chunk, dnaBases);
+        byte[] ioBuf = new byte[65536];
+        int ioPos = 0;
         long written = 0L;
         int h = 0;
         int seqLine = 0;
@@ -947,47 +949,77 @@ public final class FastaStreamFactorizer {
 
         while (h < chunk.numHeaders || seqLine < chunk.numSeqLines) {
             while (h < chunk.numHeaders && chunk.headerSeqLineDeltas[h] == seqSinceLastHeader) {
-                out.write('>');
-                crc.update('>');
-                written++;
                 byte[] hb = chunk.headerBytes[h];
-                out.write(hb);
-                crc.update(hb, 0, hb.length);
+                if (ioPos + 1 + hb.length + 2 > ioBuf.length) {
+                    if (ioPos > 0) {
+                        out.write(ioBuf, 0, ioPos);
+                        crc.update(ioBuf, 0, ioPos);
+                        ioPos = 0;
+                    }
+                }
+                ioBuf[ioPos++] = (byte) '>';
+                written++;
+                if (hb.length <= ioBuf.length - ioPos - 2) {
+                    System.arraycopy(hb, 0, ioBuf, ioPos, hb.length);
+                    ioPos += hb.length;
+                } else {
+                    out.write(ioBuf, 0, ioPos);
+                    crc.update(ioBuf, 0, ioPos);
+                    ioPos = 0;
+                    out.write(hb, 0, hb.length);
+                    crc.update(hb, 0, hb.length);
+                }
                 written += hb.length;
-                written += writeEol(out, crc, chunk.lineEolTypes[lineIdx++]);
+                byte eol = chunk.lineEolTypes[lineIdx++];
+                if (eol == 2) {
+                    ioBuf[ioPos++] = (byte) '\r';
+                    ioBuf[ioPos++] = (byte) '\n';
+                    written += 2;
+                } else if (eol == 1) {
+                    ioBuf[ioPos++] = (byte) '\n';
+                    written += 1;
+                }
                 h++;
                 seqSinceLastHeader = 0;
             }
             if (seqLine < chunk.numSeqLines) {
                 int len = chunk.seqLineLengths[seqLine];
+                if (ioPos + len + 2 > ioBuf.length) {
+                    if (ioPos > 0) {
+                        out.write(ioBuf, 0, ioPos);
+                        crc.update(ioBuf, 0, ioPos);
+                        ioPos = 0;
+                    }
+                }
                 if (len > 0) {
-                    out.write(seqChars, seqCharPos, len);
-                    crc.update(seqChars, seqCharPos, len);
+                    if (len <= ioBuf.length - 2) {
+                        System.arraycopy(seqChars, seqCharPos, ioBuf, ioPos, len);
+                        ioPos += len;
+                    } else {
+                        out.write(seqChars, seqCharPos, len);
+                        crc.update(seqChars, seqCharPos, len);
+                    }
                     seqCharPos += len;
                     written += len;
                 }
-                written += writeEol(out, crc, chunk.lineEolTypes[lineIdx++]);
+                byte eol = chunk.lineEolTypes[lineIdx++];
+                if (eol == 2) {
+                    ioBuf[ioPos++] = (byte) '\r';
+                    ioBuf[ioPos++] = (byte) '\n';
+                    written += 2;
+                } else if (eol == 1) {
+                    ioBuf[ioPos++] = (byte) '\n';
+                    written += 1;
+                }
                 seqLine++;
                 seqSinceLastHeader++;
             }
         }
+        if (ioPos > 0) {
+            out.write(ioBuf, 0, ioPos);
+            crc.update(ioBuf, 0, ioPos);
+        }
         return written;
-    }
-
-    private static int writeEol(OutputStream out, CRC32 crc, byte eol) throws IOException {
-        if (eol == 2) {
-            out.write('\r');
-            out.write('\n');
-            crc.update('\r');
-            crc.update('\n');
-            return 2;
-        }
-        if (eol == 1) {
-            out.write('\n');
-            crc.update('\n');
-            return 1;
-        }
-        return 0;
     }
     public static byte[] extractRecordOrSlice(
             FactorizedChunk chunk, byte[] dnaBases, int localRecordIdx, int qStart, int qEnd) {

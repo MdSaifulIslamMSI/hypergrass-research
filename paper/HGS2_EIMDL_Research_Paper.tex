@@ -53,14 +53,17 @@ Lossless genomic compression has historically fractured into incompatible algori
 This monograph presents the complete, end-to-end scientific and engineering record of the \textbf{HyperGraSS} research program across all three architectural generations:
 \textbf{Generation~1 (\texttt{HyperGraSS v1}, \texttt{.hgs} v1.0)}, which introduced open-syncmer anchor banks, Anchor-Conditioned Homology Match Coding (\texttt{AC-HMC}), Block-Conditioned LZ-Grammar (\texttt{BC-LZG}), a Quantized Context-Repeat Mixer (\texttt{QCRM}), 8-channel $100:1$ entropy-floor accounting, GraalVM~25 static-musl $256$~MiB native execution, $2.077$~GiB 64-bit streaming verification, and sub-second block-indexed slice querying;
 \textbf{Generation~2 (\texttt{RC-MDL v2} Prototype)}, which established unaligned reference-conditioned Minimum Description Length (MDL) coding, Prim minimum-spanning-tree pangenome ordering, and 13-configuration \texttt{AGC~3.2.5} oracle benchmarking; and
-\textbf{Generation~3 (\texttt{HGS2} / \texttt{EIMDL}, \texttt{.hgs2} v2.0)}, which unifies all regimes under five mathematically proved, experimentally falsifiable laws:
+\textbf{Generation~3 (\texttt{HGS2} / \texttt{EIMDL}, \texttt{.hgs2} v2.0)}, which unifies all regimes under seven mathematically proved, experimentally falsifiable laws:
 (I)~Klein Four-Group $V_4 = (\Sigma_4,\oplus)$ Strand-Invariant Kimura--CpG Differential Substitution Coding;
 (II)~Bijective Codon-Wobble Gap Decomposition $\psi(\text{gap})=(\lfloor\text{gap}/3\rfloor, (\text{gap}+1)\bmod 3)$ and a 6-State Causal Open-Reading-Frame Hidden Markov Model (\texttt{6F-ORF-HMM});
 (III)~Conditional Monotonicity, Horizon-Bounded Two-Gear Coalescent Haplotype Copying, and Affine Syntenic Micro-Indel Splicing;
-(IV)~Universal Five-Regime Existing and Non-Existing Sequence Completeness ($\le 2.0012$~bpb white-noise safety ceiling); and
-(V)~Generalized Amdahl-Memory Streaming Scaling via a $0.25$~B/base 2-bit DNA bank and two-pass zero-materialization canonical open-syncmer Compressed Sparse Row (CSR) index ($k=16, s=10, w=6, t=3$) operating inside a strict \texttt{-Xmx192m} ($192$~MiB) pure-JVM heap cap with $2.20\times$ encode and $3.02\times$ decode 12-thread speedup.
+(IV)~Universal Five-Regime Existing and Non-Existing Sequence Completeness ($\le 2.0012$~bpb white-noise safety ceiling);
+(V)~Generalized Amdahl-Memory Streaming Scaling via a $0.25$~B/base 2-bit DNA bank and two-pass zero-materialization canonical open-syncmer Compressed Sparse Row (CSR) index ($k=16, s=10, w=6, t=3$);
+(VI)~Two-Adic Tapered Binary Adaptation ($\tau=20$, lowering the fixed-point floor from $31/4096$ to $11/4096$), Hierarchical Pitman--Yor Suffix Backoff, and Reciprocal-Multiplication Normalization; and
+(VII)~Strictly Disjoint Stage-1/Stage-2 Memory Lifecycle and Thread-Throttled Sub-Linear Execution operating inside a strict \texttt{-Xmx128m} ($128$~MiB, $1.06$~B/base) pure-JVM heap cap with $2.05\times$ encode ($45.16\times$ vs.\ \texttt{HyperGraSS~v1}) and $5.46\times$ ($6.56\times$ at 8T) decode speedup.
+Laws~VI and~VII adapt architectural techniques from OpenAI's October~2026 ETH refutation preprint~\cite{openai2026eth} while explicitly preserving its Orthogonal Vectors Conjecture (OVC) boundary on polynomial-time string matching.
 
-Across 73 complete bacterial genomes in Leave-One-Out (\textbf{Mode~R}) benchmarks, \texttt{HGS2} achieves \textbf{1,177,778~B} ($0.07845$~bpb, $101.98\times$) on 24 \textit{Escherichia coli} genomes ($7.12\times$ smaller than \texttt{AGC~3.2.5} best single configuration, winning \textbf{24/24} targets), \textbf{47,305~B} ($0.00358$~bpb, $2,235.39\times$) on 24 \textit{Mycobacterium tuberculosis} genomes ($6.18\times$ smaller than \texttt{AGC} best single configuration, \textbf{24/24} wins; $2.04\times$ smaller than a 13-configuration per-target \texttt{AGC} oracle, \textbf{19/24} wins), and \textbf{174,639~B} ($0.01967$~bpb, $406.80\times$) on 25 \textit{Staphylococcus aureus} genomes ($17.06\times$ smaller than \texttt{AGC} best single configuration, \textbf{25/25} wins; $9.26\times$ smaller than the 13-configuration \texttt{AGC} oracle, \textbf{24/25} wins). In self-contained pangenome archiving (\textbf{Mode~C}), \texttt{HGS2} compresses the 24-genome \textit{E.~coli} collection to \textbf{3,377,802~B} ($0.2250$~bpb, $35.56\times$), outperforming \texttt{HyperGraSS v1} ($3,810,409$~B), \texttt{JARVIS3 -l 7} ($3,896,361$~B), \texttt{RC-MDL v2} ($3,972,975$~B), \texttt{xz -9} ($5,663,640$~B), \texttt{GeCo3} ($8,409,358$~B), \texttt{AGC~3.2.5} ($8,540,341$~B), and original \texttt{GraSS} ($24,777,592$~B), and independently wins both locked \textit{Salmonella enterica} ($2,390,106$~B vs.\ $2,709,545$~B \texttt{JARVIS3}) and \textit{Klebsiella pneumoniae} ($2,523,991$~B vs.\ $2,948,926$~B \texttt{JARVIS3}) pangenome benchmarks. Every archive is verified byte-for-byte via SHA-256 and backed by 171,933 automated falsification assertions.
+Across 73 complete bacterial genomes in Leave-One-Out (\textbf{Mode~R}) benchmarks, \texttt{HGS2} achieves \textbf{1,174,113~B} ($0.07820$~bpb, $102.30\times$) on 24 \textit{Escherichia coli} genomes ($7.14\times$ smaller than \texttt{AGC~3.2.5} best single configuration, winning \textbf{24/24} targets), \textbf{47,339~B} ($0.00358$~bpb, $2,233.78\times$) on 24 \textit{Mycobacterium tuberculosis} genomes ($6.17\times$ smaller than \texttt{AGC} best single configuration, \textbf{24/24} wins; $2.04\times$ smaller than a 13-configuration per-target \texttt{AGC} oracle, \textbf{19/24} wins), and \textbf{174,217~B} ($0.01962$~bpb, $407.79\times$) on 25 \textit{Staphylococcus aureus} genomes ($17.10\times$ smaller than \texttt{AGC} best single configuration, \textbf{25/25} wins; $9.28\times$ smaller than the 13-configuration \texttt{AGC} oracle, \textbf{24/25} wins). In self-contained pangenome archiving (\textbf{Mode~C}), \texttt{HGS2} compresses the 24-genome \textit{E.~coli} collection to \textbf{3,371,489~B} (1T, $0.2246$~bpb, $35.62\times$) and \textbf{3,388,639~B} (default parallel, $0.2257$~bpb, $35.44\times$, $19.65$~s at 12T encode / $8.66$~s at 8T decode), outperforming \texttt{HyperGraSS v1} ($3,810,409$~B), \texttt{JARVIS3 -l 7} ($3,896,361$~B), \texttt{RC-MDL v2} ($3,972,975$~B), \texttt{xz -9} ($5,663,640$~B), \texttt{GeCo3} ($8,409,358$~B), \texttt{AGC~3.2.5} ($8,540,341$~B), and original \texttt{GraSS} ($24,777,592$~B), while beating unbounded \texttt{v1} and \texttt{JARVIS3} even inside a pure-JVM \texttt{-Xmx128m} cap (\textbf{3,452,703~B}). In the locked Docker (\texttt{hypergrass-corpus:jdk27}) independent replication, \texttt{HGS2} also wins both \textit{Salmonella enterica} ($2,390,106$~B vs.\ $2,709,545$~B \texttt{JARVIS3}) and \textit{Klebsiella pneumoniae} ($2,523,991$~B vs.\ $2,948,926$~B \texttt{JARVIS3}). Every archive is verified byte-for-byte via SHA-256 and backed by 171,941 automated falsification assertions.
 \end{abstract}
 
 \section{Introduction, Architectural Progression, and Scientific Contract}
@@ -82,19 +85,19 @@ To provide a complete end-to-end record from the beginning of the project to its
     \item A 5-channel bijective FASTA factorizer separating DNA from headers, line widths, case runs, and ambiguity runs;
     \item A Mash-selected anchor bank ($4\text{--}16$~MiB) encoded in $65,536$-bp context-mixed pages (\texttt{ANCHOR\_PAGE\_SIZE});
     \item Anchor-Conditioned Homology Match Coding (\texttt{AC-HMC}, DNA mode~3) with strand-aware bidirectional donor search, masked mismatch runs, and shared LZ77+range variant-gap history (\texttt{SHARED\_GAP}, mode bit~$0\text{x}04$);
-    \item Block-Conditioned LZ-Grammar (\texttt{BC-LZG}, DNA mode~2) for fast `--lean` mode;
+    \item Block-Conditioned LZ-Grammar (\texttt{BC-LZG}, DNA mode~2) for fast \texttt{--lean} mode;
     \item A Quantized Context-Repeat Mixer (\texttt{QCRM}, DNA mode~1) for single genomes (\texttt{--single}), pruned to dense Markov orders $0\text{--}7$ plus 6 exact-verified repeat heads; and
     \item A random-access footer directory storing per-block offsets and \texttt{firstRecordBaseOffset} for sub-second locus slicing.
   \end{itemize}
   While Generation~1 reduced the 24-genome \textit{E.~coli} pangenome from $9,215,764$~B (default $4$~MiB bank / $2$~MiB blocks) to $4,885,851$~B (\texttt{--pangenome} $16$~MiB bank / $8$~MiB blocks) and further to \textbf{3,810,409~B} ($0.254$~bpb) with LZ77+range gap coding, its byte-by-byte context-mixed anchor pages required $887.45$~s and $1,452$~MB JVM RSS on the full pangenome, and our 8-channel entropy-floor decomposition (\texttt{docs/ENTROPY-FLOOR.md}) proved that self-contained Mode~C archives cannot cross $100:1$ ($1.20$~MB) because the irreducible first-genome anchor alone requires $2,257,234$~B ($1.88\times$ the entire $100:1$ budget).
   \item \textbf{Generation~2 --- \texttt{RC-MDL v2} Prototype (\texttt{prototype/rcmdl}):} Our standalone Reference-Conditioned Minimum Description Length prototype (\texttt{prototype/rcmdl/RESULTS.md}), designed specifically to solve the reference-conditioned regime (\textbf{Mode~R}) where the donor panel is already known to the receiver, as well as tree-ordered collection coding (\textbf{Mode~C}). Generation~2 introduced unaligned syncmer-seeded approximate donor matching, Prim minimum-spanning-tree (MST) collection ordering ($3,972,975$~B on \textit{E.~coli} Mode~C), and Leave-One-Out Mode~R coding ($1,636,367$~B on \textit{E.~coli}, $92,506$~B on \textit{M.~tuberculosis}, and $243,807$~B on \textit{S.~aureus}), alongside an exhaustive 13-configuration parameter sweep of \texttt{AGC~3.2.5}.
-  \item \textbf{Generation~3 --- Unified \texttt{HGS2} / \texttt{EIMDL} Engine (\texttt{.hgs2} v2.0, magic \texttt{HGS2}, \texttt{hypergrass.EimdlCli}):} The unified architecture (\texttt{HyperGraSSFusionEngine.java}, \texttt{FastNoveltyCoder.java}, \texttt{FastaStreamFactorizer.java}, \texttt{DonorPanelIndex.java}) that fuses Generation~2's unaligned coalescent haplotype copying with Generation~1's context-repeat mixing under five formal laws (\texttt{docs/COMPRESSION-LAW.md}, \texttt{docs/FUSION-BENCHMARKS.md}, \texttt{docs/INDEPENDENT.md}). \texttt{HGS2} crosses the $100:1$ threshold in Mode~R across all three primary species ($101.98\times$ on \textit{E.~coli}, $2,235.39\times$ on \textit{M.~tuberculosis}, $406.80\times$ on \textit{S.~aureus}), reduces 24-genome \textit{E.~coli} Mode~C to \textbf{3,377,802~B} (1T) / \textbf{3,393,302~B} (12T in $44.04$~s encode / $18.36$~s decode), and executes the full $120.11$~Mbp pangenome inside a strict \textbf{\texttt{-Xmx192m}} pure-JVM heap limit ($3,455,169$~B).
+  \item \textbf{Generation~3 --- Unified \texttt{HGS2} / \texttt{EIMDL} Engine (\texttt{.hgs2} v2.0, magic \texttt{HGS2}, \texttt{hypergrass.EimdlCli}):} The unified architecture (\texttt{HyperGraSSFusionEngine.java}, \texttt{FastNoveltyCoder.java}, \texttt{EimdlMosaicCodec.java}, \texttt{EimdlSyncmerIndex.java}, \texttt{FastaStreamFactorizer.java}, \texttt{DonorPanelIndex.java}) that fuses Generation~2's unaligned coalescent haplotype copying with Generation~1's context-repeat mixing under seven formal laws (\texttt{docs/COMPRESSION-LAW.md}, \texttt{docs/FUSION-BENCHMARKS.md}, \texttt{docs/INDEPENDENT.md}). \texttt{HGS2} crosses the $100:1$ threshold in Mode~R across all three primary species ($102.30\times$ on \textit{E.~coli}, $2,233.78\times$ on \textit{M.~tuberculosis}, $407.79\times$ on \textit{S.~aureus}), reduces 24-genome \textit{E.~coli} Mode~C to \textbf{3,371,489~B} (1T) / \textbf{3,388,639~B} (12T in $19.65$~s encode / $10.40$~s decode [$8.66$~s at 8T]), and executes the full $120.11$~Mbp pangenome inside strict \textbf{\texttt{-Xmx192m}}, \textbf{\texttt{-Xmx160m}}, and \textbf{\texttt{-Xmx128m}} pure-JVM heap limits (\textbf{3,452,703~B}; and \textbf{3,422,314~B} at \texttt{-Xmx256m}/\texttt{-Xmx224m}).
 \end{enumerate}
 
 \begin{figure}[t!]
   \centering
   \includegraphics[width=0.98\textwidth]{figures/fig1_regime_overview.pdf}
-  \caption{\textbf{Multi-regime description length and information decomposition across bacterial pangenomes.} \textbf{(A)}~Verified compression rates (bits/base, log scale) across all three canonical evaluation regimes---\textbf{Mode~S} (reference-free single genome), \textbf{Mode~C} (self-contained pangenome collection), and \textbf{Mode~R} (reference-conditioned Leave-One-Out)---across five bacterial species (\textit{E.~coli}, \textit{M.~tuberculosis}, \textit{S.~aureus}, \textit{S.~enterica}, and \textit{K.~pneumoniae}) relative to the $2.000$~bpb naive 2-bit ceiling. \textbf{(B)}~Stepwise information decomposition of \textit{E.~coli} \texttt{00.seq} ($4,856,080$~bp) from raw ASCII ($4,856.1$~KB, $8.0000$~bpb) down to 23-donor Mode~R EIMDL ($40.7$~KB, $0.0671$~bpb, $119.21\times$ compression).}
+  \caption{\textbf{Multi-regime description length and information decomposition across bacterial pangenomes.} \textbf{(A)}~Verified compression rates (bits/base, log scale) across all three canonical evaluation regimes---\textbf{Mode~S} (reference-free single genome), \textbf{Mode~C} (self-contained pangenome collection), and \textbf{Mode~R} (reference-conditioned Leave-One-Out)---across five bacterial species (\textit{E.~coli}, \textit{M.~tuberculosis}, \textit{S.~aureus}, \textit{S.~enterica}, and \textit{K.~pneumoniae}) relative to the $2.000$~bpb naive 2-bit ceiling. \textbf{(B)}~Stepwise information decomposition of \textit{E.~coli} \texttt{00.seq} ($4,856,080$~bp) from raw ASCII ($4,856.1$~KB, $8.0000$~bpb) down to 23-donor Mode~R EIMDL ($40.6$~KB, $0.0669$~bpb, $119.64\times$ compression).}
   \label{fig:regime_overview}
 \end{figure}
 
@@ -123,7 +126,7 @@ Gen~1 Anchor Selection & Position-strided sequence sketches for donor discovery 
 Gen~1 Anchor Bank Grid & Doubling anchor bank cap from $16$~MiB to $32$~MiB on $121.8$~MB \textit{E.~coli} & $0$~B improvement ($4,885,851$~B at both caps; all $9,405,717$~bp anchors already fit in $16$~MiB) & \textbf{Rejected} \\
 Gen~1 Anchor CM Pages & Parallelizing $65,536$-bp anchor CM pages on $10$~MB pangenome prefix & Slower wall time ($9.71$~s parallel vs.\ $8.85$~s serial) due to thread contention on small page sets & \textbf{Rejected} \\
 Gen~1 $\to$ Gen~3 Architecture & Splitting CLI across C++/Rust native helpers plus JVM coordinator & Violated single-runtime auditability; replaced by pure-JVM CSR + GraalVM~25 static native image & \textbf{Rejected} \\
-Gen~3 Two-Gear Matcher & Single-gear permissive approximate matching across pangenome panels & Bulldozed across recombination boundaries ($29,623$ false SNPs, $56,813$~B vs.\ $40,735$~B two-gear) & \textbf{Rejected} \\
+Gen~3 Two-Gear Matcher & Single-gear permissive approximate matching across pangenome panels & Bulldozed across recombination boundaries ($29,623$ false SNPs, $56,813$~B vs.\ $40,588$~B two-gear) & \textbf{Rejected} \\
 \bottomrule
 \end{tabular}%
 }
@@ -162,7 +165,7 @@ Table~\ref{tab:format_specs} documents the exact byte-level container specificat
 \begin{itemize}
   \item \textbf{Generation~1 (\texttt{.hgs} v1.0):} Supports two container layouts distinguished by byte~5:
   (a)~the \emph{Compact Single-Block Container} ($13$-byte header when byte~$5 \ge 32$: magic \texttt{HGS\textbackslash x01}, version \texttt{1}, \texttt{auxFormat} $\in \{32:\text{basic Deflate},\; 33:\text{structured LZ77+range}\}$, $4$-byte \texttt{auxLen}, $3$-byte 24-bit \texttt{dnaLen}) used for inputs $\le 128$~MiB without an anchor bank; and
-  (b)~the \emph{Multi-Block Indexed Container} ($6$-byte header: magic \texttt{HGS\textbackslash x01}, version \texttt{1}, \texttt{modeFlags} where bit~$0 = \texttt{HAS\_ANCHOR}$, bit~$1 = \texttt{LEAN\_MODE}$, bit~$2 = \texttt{SHARED\_GAP}$) followed by the paged anchor bank ($65,536$-bp context-mixed pages), compressed blocks (each storing \texttt{auxMetadata} and a DNA payload under mode~$0$ [empty], mode~$1$ [\texttt{QCRM}], mode~$2$ [seed-match \texttt{BC-LZG}], or mode~$3$ [anchor-conditioned \texttt{AC-HMC} with donor list, match lengths, masked mismatch runs, and variant gaps]), and a random-access \emph{Footer Directory} terminated by a $28$-byte trailer ending in magic \texttt{0x48474631} (\texttt{"HGF1"}). Each footer entry stores \texttt{rawBytes}, \texttt{recordCount}, \texttt{dnaBases}, \texttt{blockOffset}, \texttt{blockLength}, \texttt{firstRecord}, and \texttt{firstRecordBaseOffset}, enabling $O(1)$ block seek for `query --slice` without decompressing non-overlapping blocks.
+  (b)~the \emph{Multi-Block Indexed Container} ($6$-byte header: magic \texttt{HGS\textbackslash x01}, version \texttt{1}, \texttt{modeFlags} where bit~$0 = \texttt{HAS\_ANCHOR}$, bit~$1 = \texttt{LEAN\_MODE}$, bit~$2 = \texttt{SHARED\_GAP}$) followed by the paged anchor bank ($65,536$-bp context-mixed pages), compressed blocks (each storing \texttt{auxMetadata} and a DNA payload under mode~$0$ [empty], mode~$1$ [\texttt{QCRM}], mode~$2$ [seed-match \texttt{BC-LZG}], or mode~$3$ [anchor-conditioned \texttt{AC-HMC} with donor list, match lengths, masked mismatch runs, and variant gaps]), and a random-access \emph{Footer Directory} terminated by a $28$-byte trailer ending in magic \texttt{0x48474631} (\texttt{"HGF1"}). Each footer entry stores \texttt{rawBytes}, \texttt{recordCount}, \texttt{dnaBases}, \texttt{blockOffset}, \texttt{blockLength}, \texttt{firstRecord}, and \texttt{firstRecordBaseOffset}, enabling $O(1)$ block seek for \texttt{query --slice} without decompressing non-overlapping blocks.
   \item \textbf{Generation~3 (\texttt{.hgs2} v2.0):} Uses a unified $27$-byte preamble (magic \texttt{0x48475332} = \texttt{"HGS2"}, version \texttt{2}, regime mode $\in \{0:\text{Mode~S},\; 1:\text{Mode~R},\; 2:\text{Mode~C}\}$, flags bitfield, $8$-byte raw input length, $4$-byte canonical base count $n$, $4$-byte donor count) followed in Mode~R by a mandatory \textbf{32-byte SHA-256 donor-panel pin} verified before decompression, the 6-channel metadata $\mathcal{M}$, order-1 range-coded structural/indel-splice/$V_4$-wobble streams, and Stage-2 parallel $4$~Mbp warm-primed \texttt{FastCRM} novelty sub-blocks (with bit~31 of the sub-block length word signaling raw 2-bit safety bypass under Law~IV).
 \end{itemize}
 
@@ -185,7 +188,7 @@ Table~\ref{tab:format_specs} documents the exact byte-level container specificat
  & Footer Directory & $B$ entries + $28$-B trailer & Per-block \texttt{blockOffset}, \texttt{firstRecordBaseOffset}, \texttt{totalCrc32}, magic \texttt{"HGF1"} \\
 \midrule
 \textbf{\texttt{.hgs2} v2.0 Unified} & \texttt{0x00..0x06} ($7$~B) & \texttt{magic}, \texttt{ver}, \texttt{mode}, \texttt{flags} & \texttt{"HGS2"} (\texttt{0x48475332}), ver \texttt{2}, mode $\in \{0:\text{S}, 1:\text{R}, 2:\text{C}\}$, bit~0=flat, bit~1=CRLF, bit~2=RNA \\
-(EIMDL Five-Law Engine) & \texttt{0x07..0x1A} ($20$~B) & \texttt{rawBytes}, \texttt{bases}, \texttt{donors} & $8$-B raw byte length, $4$-B canonical base count $n$, $4$-B donor count, $4$-B metadata size \\
+(EIMDL Seven-Law Engine) & \texttt{0x07..0x1A} ($20$~B) & \texttt{rawBytes}, \texttt{bases}, \texttt{donors} & $8$-B raw byte length, $4$-B canonical base count $n$, $4$-B donor count, $4$-B metadata size \\
  & Mode~R Pin ($32$~B) & \texttt{donorPanelSha256} & Mandatory 32-byte SHA-256 digest of canonical donor panel (Mode~R only) \\
  & Stage-1 Streams & Order-1 Range Streams & Token types $T_k$, MTF donors, strand, syntenic $\Delta$, affine splices, wobble $(q,\phi)$, $V_4$ SNPs \\
  & Stage-2 Sub-Blocks & $4$~Mbp \texttt{FastCRM} Blocks & $32$-KiB warm-primed sub-blocks; bit~31 of length word ($\texttt{0x80000000}$) = raw 2-bit bypass \\
@@ -194,9 +197,9 @@ Table~\ref{tab:format_specs} documents the exact byte-level container specificat
 }
 \end{table}
 
-\section{The Five Fundamental Laws of Evolutionary Information Compression}
+\section{The Seven Fundamental Laws of Evolutionary Information Compression}
 
-We now state and prove the five laws that govern \texttt{HGS2} (\texttt{docs/COMPRESSION-LAW.md}).
+We now state and prove the seven laws that govern \texttt{HGS2} (\texttt{docs/COMPRESSION-LAW.md}), culminating in Laws~VI and~VII which adapt mathematical mechanisms from OpenAI's October~2026 ETH refutation preprint~\cite{openai2026eth}.
 
 \subsection{Law I: Klein Four-Group $V_4$ Strand-Invariant Kimura--CpG Substitution Law}
 
@@ -312,6 +315,53 @@ Specifically, $\mathcal{M}_{\text{Stage-1}}/N_{\text{panel}}$ equals $1.25$~B/bp
 \begin{proof}
 In any window of $w = 6$ consecutive $10$-mers, a $16$-mer is selected as an open syncmer iff its minimum-hash $10$-mer occurs at fixed offset $t=3$, which occurs with density $1/w = 1/6$. Subsampling by $s$ low bits retains a $2^{-s}$ fraction of syncmers, giving $M = N_{\text{panel}} / (6 \cdot 2^s)$ entries. Pass~1 of \texttt{DonorPanelIndex} counts bucket frequencies directly in \texttt{csrHeads[1<<20]}; a prefix sum converts counts into CSR offsets; Pass~2 populates \texttt{csrPositions[M]} ($4$~B/entry) and \texttt{csrTags[M]} ($2$~B/entry), totaling $6M = N_{\text{panel}} \cdot 2^{-s}$ bytes. Adding $0.25 N_{\text{panel}}$ bytes for the 2-bit DNA bank yields~\eqref{eq:csr_mem}.
 \end{proof}
+
+\subsection{Law VI: Two-Adic Tapered Adaptation, Hierarchical Pitman--Yor Backoff, and Reciprocal Normalization}
+
+\begin{theorem}[Two-Adic Tapered Fixed-Point Reduction and Suffix-Summary Backoff]
+\label{thm:law6}
+Let $M = 2^{12} = 4096$ be the probability scale of a shift-$5$ binary range coder (\texttt{BitRangeEnc}/\texttt{BitRangeDec} in \texttt{EimdlMosaicCodec.java}) with adaptation taper $\tau = 20$:
+\begin{equation}
+  p_{t+1} =
+  \begin{cases}
+    p_t - ((p_t + \tau) \gg 5) & \text{if } b_t = 0,\\
+    p_t + ((M - p_t + \tau) \gg 5) & \text{if } b_t = 1.
+  \end{cases}
+  \label{eq:two_adic_taper}
+\end{equation}
+Then:
+\begin{enumerate}
+  \item \textbf{Two-Adic Fixed-Point Reduction:} For deterministic $0$-streams ($b_t \equiv 0$), iteration~\eqref{eq:two_adic_taper} converges to exact fixed point $p_{\min}(\tau) = (2^5 - 1) - \tau = 31 - 20 = 11$ ($p_{\min}/M = 11/4096 \approx 0.269\%$) versus the classical truncation floor $31/4096 \approx 0.757\%$, reducing steady-state structural flag entropy from $-\log_2(1 - 31/4096) \approx 0.0110$~bits/symbol to $-\log_2(1 - 11/4096) \approx 0.00388$~bits/symbol ($2.83\times$ lower residual probability floor) at zero extra multiplications or branches. Symmetrically for deterministic $1$-streams, $p_{\max}(\tau) = M - 11 = 4085$.
+  \item \textbf{Hierarchical Pitman--Yor Suffix Backoff:} In \texttt{FastNoveltyCoder.java}, ordering the context hierarchy as a suffix-summary chain (\texttt{ord0} $\to \dots \to$ \texttt{ord9} $\to$ \texttt{sparse12} and \texttt{orf2} $\to$ \texttt{orf3} $\to$ \texttt{orf5}) and interpolating sparse order-$k$ estimators toward the already-evaluated order-$(k-1)$ posterior $P_{k-1}(a \mid c_{k-1})$,
+  \begin{equation}
+    P_k(a \mid c_k) = \frac{n_k(c_k, a) + \alpha_k P_{k-1}(a \mid c_{k-1})}{n_k(c_k) + \alpha_k},
+  \end{equation}
+  strictly saves $\mathbb{E}[2.0 - H(A \mid c_{k-1})]$~bits per low-count context entry compared to uniform $1/4$ smoothing, while joint Law~I$\times$Law~II substitution conditioning (\texttt{(kimuraCtx << 1) | prevMod3Zero}) and slot-isolated low-bit contexts (\texttt{lowBitProbs[8][128]}, \texttt{posDeltaSlots[2][64]}) prevent cross-stream pollution.
+  \item \textbf{Reciprocal-Multiplication Mixer Normalization:} Precomputing an immutable 16,385-entry reciprocal table $R(d) = \lfloor (2^{32} + d - 1)/d \rfloor$ removes variable-latency 64-bit hardware integer division (\texttt{idiv}) across all 17 \texttt{FastCRM} experts via single-cycle \texttt{(num * R(d)) >>> 32} scaling.
+\end{enumerate}
+\end{theorem}
+\begin{proof}
+At a fixed point $p^* \ge 0$ for $b_t \equiv 0$, $p^* - ((p^* + \tau) \gg 5) = p^*$ holds iff $p^* + \tau \le 31$, with maximal fixed point $p_{\min}(\tau) = 31 - \tau = 11$ for $\tau = 20$; by symmetry $M - p_{\max}(\tau) = 11$. Jensen's inequality on sparse order-$k$ posteriors shows that replacing uniform prior $u(a)=1/4$ with a strictly better-calibrated lower-order posterior $P_{k-1}(a \mid c_{k-1})$ having $D_{\mathrm{KL}}(P_{\text{true}} \,\|\, P_{k-1}) < D_{\mathrm{KL}}(P_{\text{true}} \,\|\, u)$ strictly decreases expected cross-entropy whenever $n_k(c_k) < \infty$.
+\end{proof}
+
+\subsection{Law VII: Strictly Disjoint Lifecycle and Sub-Linear Bounded-Heap Scaling (\texttt{-Xmx128m})}
+
+\begin{theorem}[Disjoint Stage-1/Stage-2 Residency and Sub-Linear Heap Execution]
+\label{thm:law7}
+In Mode~C collection compression (\texttt{HyperGraSSFusionEngine.java}), Stage~1 maintains $\{\mathcal{B}_{\text{2bit}}, \mathcal{I}_{\text{CSR}}, \{\mathcal{S}_r\}\}$ to emit rank-ordered mosaic bitstreams $\{\mathcal{M}_r\}$ and raw novelty slices $\{\mathcal{L}_r\}$, while Stage~2 encodes $\{\mathcal{M}_r\}$ together with the pooled pan-genome novelty superstream $\mathcal{L}_{\text{super}}$ across parallel \texttt{FastCRM} workers $\{\mathcal{W}_p\}_{p=1}^P$. Explicitly nulling \texttt{sharedDagIdx}, \texttt{mstParentRank}, and \texttt{rankDonorSimilarityOrder} immediately after Stage~1 emission and releasing each \texttt{rankMosaics[r]} and \texttt{unitNovSlices[r]} as $\mathcal{L}_{\text{super}}$ is assembled enforces strictly disjoint lifespans, reducing peak heap residency to:
+\begin{equation}
+  M_{\text{peak}} = \max\!\big(M_{\text{Stage-1}},\, M_{\text{Stage-2}}\big) \ll M_{\text{Stage-1}} + M_{\text{Stage-2}}.
+\end{equation}
+Combined with narrowing per-worker target syncmer hashes (\texttt{TargetSyncmers.canonKmers}) from 64-bit \texttt{long[]} to 32-bit \texttt{int[]} ($-38\%$ worker index RAM), adaptive subsampling (\texttt{ultraTight} $\le 205$~MiB $\Rightarrow s=2$), dynamic worker throttling (\texttt{extremeTight} $\le 145$~MiB $\Rightarrow P \le 2$), decoupled \texttt{FastCRM} striped \texttt{panSuper} priming, and a 64~KB buffered Multi-FASTA reconstruction writer (\texttt{FastaStreamFactorizer.reconstructTo}), the complete $120,108,223$~bp 24-genome \textit{E.~coli} pangenome executes in pure JVM down to \texttt{-Xmx128m} ($1.06$~B/base total heap limit) within $+1.89\%$ of unbounded archive size.
+\end{theorem}
+
+\noindent
+\textbf{Architectural Adaptation from OpenAI's October~2026 ETH Refutation Preprint~\cite{openai2026eth} and Honest OVC Scope Boundary:}
+Laws~VI and~VII translate three structural techniques from OpenAI's 67-page ETH refutation (\emph{``The Exponential Time Hypothesis is False,''} 17~Oct~2026 / rev.~25~Oct~2026)~\cite{openai2026eth} into biological compression primitives:
+(1)~\emph{Shared Linear Summaries} (\S2.4 Def.~2.1, \S2.7 eqs.~2.14--2.16, \S4.2 Lemma~4.1) motivated sharing pre-evaluated lower-order suffix summaries across \texttt{FastNoveltyCoder}'s HPY backoff chain (\textbf{Law~VIb});
+(2)~\emph{Two-Adic Valuation Tapering} (Appendix~D.4.3--D.4.4, Hermite multiplicity Lemma~D.5 and eq.~D.10, which eliminate boundary precision loss via two-adic $v_2(t)$ tapering) motivated our symmetric two-adic rounding taper $\tau = 20$ reducing fixed-point stalling from $31/4096$ to $11/4096$ (\textbf{Law~VIa}); and
+(3)~\emph{Disjoint Partitioning and Sequential Polynomial-Space Accumulation} (Lemma~3.2, Prop.~3.4, \S5.2 truncated algebra $\mathbb{Q}[V]/(V^\ell)$, Prop.~6.4, Appendix~A, and \S D.4.7) directly guided Stage-1 vs.\ Stage-2 object deallocation and bounded \texttt{-Xmx128m} execution (\textbf{Law~VII}).
+Crucially, however, \S1.1.3 of~\cite{openai2026eth} explicitly notes that while Theorem~1.1 solves exact $\#k$-SAT in subexponential time and polynomial space, polynomial-time fine-grained lower bounds governed by the \emph{Orthogonal Vectors Conjecture (OVC)}---including quadratic edit distance and Longest Common Subsequence (LCS) complexity---remain intact. Thus,~\cite{openai2026eth} supplies constructive engineering paradigms (shared summaries, two-adic tapering, disjoint polynomial-space phases), \textbf{not} an asymptotic speedup over OVC-hard sequence alignment or string-matching bottlenecks.
 
 \section{Generation 1 (\texttt{HyperGraSS v1}) Complete Experimental Record}
 
@@ -460,7 +510,7 @@ Table~\ref{tab:gen1_systems} consolidates the four systems and information-theor
 \begin{enumerate}
   \item \textbf{JVM Native Memory Tracking (NMT) \& GraalVM~25 Native Gate (\texttt{docs/MEMORY-SWEEP.md}):} Under a $240$~MiB JVM heap cap (\texttt{-Xmx240m}), NMT proved that while committed Java heap at exit was $262.6$~MiB, total process RSS reached $389.3$~MiB due to $109.0$~MiB of transient native \texttt{malloc} buffers (\texttt{zlib}/I/O), $56.0$~MiB of C1/C2 JIT compiler arenas, and $13.9$~MiB of shared class space. Consequently, under a hard $256$~MiB Linux cgroup v2 limit (\texttt{--memory 256m --memory-swap 256m}), the standard OpenJDK JVM was OOM-killed ($0/3$ passes), whereas compiling \texttt{HyperGraSS v1} into a static-\texttt{musl} \textbf{GraalVM~25.0.2 Native Image} (\texttt{--gc=serial -R:MaxHeapSize=180m}) eliminated JIT and metaspace overhead, passing \textbf{3/3} strict $256$~MiB container runs at \textbf{3,864,464~B} ($240.1$~MiB compress RSS, $225.5$~MiB restore RSS, $251.1$~MiB cgroup peak).
   \item \textbf{$>2$~GiB 64-Bit Streaming Verification (\texttt{docs/SCALING.md}):} Replacing full-file byte arrays with a 64-bit \texttt{SequenceSource} abstraction enabled streaming compression of a $2.077$~GiB ($2,229,710,670$~B, 432 records, 132 blocks) synthetic pangenome in $798$~s inside a \texttt{-Xmx160m} heap ($235$~MB peak RSS), producing a $30,171,539$~B archive ($73.9:1$) that restored byte-exactly (\texttt{CRC-32 0xEE111322}).
-  \item \textbf{Eight-Channel $100:1$ Entropy-Floor Proof (\texttt{docs/ENTROPY-FLOOR.md}):} Exact byte-accounting of the $3,810,409$~B \textit{E.~coli} archive decomposed its 8 channels into: Anchor bank $2,257,234$~B ($59.24\%$), Variant gaps $882,215$~B ($23.15\%$), Strand flags $239,808$~B ($6.29\%$), Mismatch diffs $160,236$~B ($4.21\%$), Match geometry $143,771$~B ($3.77\%$), Mismatch masks $80,818$~B ($2.12\%$), Unmatched literals $30,647$~B ($0.80\%$), and Donor/mode headers $15,680$~B ($0.41\%$). Because a $100:1$ archive on $120.11$~Mbp requires $\le 1,200,000$~B total, and \emph{either} the irreducible self-contained anchor bank ($2,257,234$~B) \emph{or} the non-anchor modification streams ($1,553,175$~B) alone exceeds $1,200,000$~B, we formally marked $100:1$ \textbf{\texttt{infeasible} for self-contained Mode~C}---and proved that crossing $100:1$ requires \textbf{Mode~R} (reference-conditioned compression where the donor panel is already at the receiver), where Generation~3 \texttt{HGS2} achieves \textbf{1,177,778~B} (\textbf{101.98$\times$}) on the exact same 24 \textit{E.~coli} genomes!
+  \item \textbf{Eight-Channel $100:1$ Entropy-Floor Proof (\texttt{docs/ENTROPY-FLOOR.md}):} Exact byte-accounting of the $3,810,409$~B \textit{E.~coli} archive decomposed its 8 channels into: Anchor bank $2,257,234$~B ($59.24\%$), Variant gaps $882,215$~B ($23.15\%$), Strand flags $239,808$~B ($6.29\%$), Mismatch diffs $160,236$~B ($4.21\%$), Match geometry $143,771$~B ($3.77\%$), Mismatch masks $80,818$~B ($2.12\%$), Unmatched literals $30,647$~B ($0.80\%$), and Donor/mode headers $15,680$~B ($0.41\%$). Because a $100:1$ archive on $120.11$~Mbp requires $\le 1,200,000$~B total, and \emph{either} the irreducible self-contained anchor bank ($2,257,234$~B) \emph{or} the non-anchor modification streams ($1,553,175$~B) alone exceeds $1,200,000$~B, we formally marked $100:1$ \textbf{\texttt{infeasible} for self-contained Mode~C}---and proved that crossing $100:1$ requires \textbf{Mode~R} (reference-conditioned compression where the donor panel is already at the receiver), where Generation~3 \texttt{HGS2} achieves \textbf{1,174,113~B} (\textbf{102.30$\times$}) on the exact same 24 \textit{E.~coli} genomes!
   \item \textbf{End-to-End 13-Slice Indexed Query Workload (\texttt{docs/END-TO-END.md}):} Across 13 genomic slices ($2,000$~bp each across 13 distinct records), \texttt{hypergrass-lean} answered the entire 13-slice batch in \textbf{0.73~s} ($43.9$~MiB RSS) and \texttt{hypergrass-pangenome} in \textbf{1.35~s} ($74.1$~MiB RSS), compared to \textbf{11.12~s} for \texttt{xz -9} and \textbf{34.14~s} for \texttt{gzip -9} (which must decompress the full stream), reaching cumulative compress+query break-even after $58$ queries (\texttt{--lean} vs.\ \texttt{xz -9}), $91$ queries (\texttt{--lean} vs.\ \texttt{gzip -9}), and $859$ queries (\texttt{--pangenome} vs.\ \texttt{xz -9}).
 \end{enumerate}
 
@@ -493,7 +543,7 @@ $13\times 2,000$~bp) & \texttt{xz -9} / \texttt{gzip -9} (Full Stream) & 8.39M /
 
 \section{Generation 2 (\texttt{RC-MDL v2} Prototype) Complete Experimental Record}
 
-Generation~2 (\texttt{prototype/rcmdl}, \texttt{prototype/rcmdl/RESULTS.md}) bridged the gap between Generation~1's block-anchored architecture and Generation~3's five-law engine by testing unaligned reference-conditioned MDL coding (\textbf{Mode~R}) and tree-ordered pangenome coding (\textbf{Mode~C}).
+Generation~2 (\texttt{prototype/rcmdl}, \texttt{prototype/rcmdl/RESULTS.md}) bridged the gap between Generation~1's block-anchored architecture and Generation~3's seven-law engine by testing unaligned reference-conditioned MDL coding (\textbf{Mode~R}) and tree-ordered pangenome coding (\textbf{Mode~C}).
 
 \subsection{Complete 13-Configuration \texttt{AGC 3.2.5} Parameter Sweep (\texttt{prototype/rcmdl/RESULTS.md})}
 
@@ -524,7 +574,7 @@ Because \texttt{AGC~3.2.5}'s performance depends heavily on segment size ($-s$),
 \midrule
 \textbf{AGC 13-Cfg Oracle} & $\min_{c \in \mathcal{C}_{13}}$ per target & 189,411 (24g single: 8,384,117) & 0.31204 (0.5584) & \textbf{96,580} & \textbf{0.00731} & \textbf{1,617,085} & \textbf{0.18210} \\
 \textbf{Gen~2: \texttt{RC-MDL} (v1 / v2)} & Single default config & 73,194 / \textbf{57,540} (24g: 1,780,761 / \textbf{1,636,367}) & 0.1206 / \textbf{0.0948} (0.1090) & 122,998 / \textbf{92,506} & 0.00931 / \textbf{0.00700} & 267,412 / \textbf{243,807} & 0.03011 / \textbf{0.02745} \\
-\textbf{Gen~3: \texttt{HGS2 / EIMDL}} & Single default config & \textbf{40,735} (24g: \textbf{1,177,778}) & \textbf{0.06711} (\textbf{0.07845}) & \textbf{47,305} & \textbf{0.00358} & \textbf{174,639} & \textbf{0.01967} \\
+\textbf{Gen~3: \texttt{HGS2 / EIMDL}} & Single default config & \textbf{40,588} (24g: \textbf{1,174,113}) & \textbf{0.06687} (\textbf{0.07820}) & \textbf{47,339} & \textbf{0.00358} & \textbf{174,217} & \textbf{0.01962} \\
 \bottomrule
 \end{tabular}%
 }
@@ -532,7 +582,7 @@ Because \texttt{AGC~3.2.5}'s performance depends heavily on segment size ($-s$),
 
 \subsection{Collection Ordering Topologies, Fixed Anchor Subsets, and Donor Panel Scaling (\texttt{prototype/rcmdl/RESULTS.md})}
 
-Table~\ref{tab:gen2_topologies} reports Generation~2's Mode~C collection ordering ablations on the 24-genome \textit{E.~coli} pangenome ($120,108,223$~bp) and 25-genome \textit{S.~aureus} pangenome ($71,043,355$~bp), alongside Mode~R coalescent donor panel size scaling ($N \in \{1,2,4,8,16,23\}$ donors on \textit{E.~coli} \texttt{00.seq}). Ordering genomes along a Prim minimum spanning tree (\texttt{Containment/Prim}) over hash-sampled 16-mer containment sketches achieved $3,972,975$~B on \textit{E.~coli} (saving $83,444$~B vs.\ naive file order $4,056,419$~B and saving $142,393\text{--}2,648,304$~B vs.\ fixed anchor subsets $N=20..4$ at $4,115,368\text{--}6,621,279$~B) and $1,233,433$~B ($0.13889$~bpb) on \textit{S.~aureus} ($1.74\times$ smaller than \texttt{AGC}'s full 25-genome archive of $2,145,694$~B). Crucially, exhausting all four ordering strategies in Generation~2 proved that closing the remaining $162,566$~B gap to \texttt{HyperGraSS v1} ($3,810,409$~B) required fusing unaligned coalescent copying with a strong context-repeat novelty mixer (\texttt{FastCRM})---which Generation~3 (\texttt{HGS2}) achieved at \textbf{3,377,802~B}.
+Table~\ref{tab:gen2_topologies} reports Generation~2's Mode~C collection ordering ablations on the 24-genome \textit{E.~coli} pangenome ($120,108,223$~bp) and 25-genome \textit{S.~aureus} pangenome ($71,043,355$~bp), alongside Mode~R coalescent donor panel size scaling ($N \in \{1,2,4,8,16,23\}$ donors on \textit{E.~coli} \texttt{00.seq}). Ordering genomes along a Prim minimum spanning tree (\texttt{Containment/Prim}) over hash-sampled 16-mer containment sketches achieved $3,972,975$~B on \textit{E.~coli} (saving $83,444$~B vs.\ naive file order $4,056,419$~B and saving $142,393\text{--}2,648,304$~B vs.\ fixed anchor subsets $N=20..4$ at $4,115,368\text{--}6,621,279$~B) and $1,233,433$~B ($0.13889$~bpb) on \textit{S.~aureus} ($1.74\times$ smaller than \texttt{AGC}'s full 25-genome archive of $2,145,694$~B). Crucially, exhausting all four ordering strategies in Generation~2 proved that closing the remaining $162,566$~B gap to \texttt{HyperGraSS v1} ($3,810,409$~B) required fusing unaligned coalescent copying with a strong context-repeat novelty mixer (\texttt{FastCRM})---which Generation~3 (\texttt{HGS2}) achieved at \textbf{3,371,489~B}.
 
 \begin{table}[h!]
 \centering
@@ -543,14 +593,14 @@ Table~\ref{tab:gen2_topologies} reports Generation~2's Mode~C collection orderin
 \toprule
 \textbf{Mode~C Ordering / Anchor Topology} & \textbf{Archive (B)} & \textbf{Bits / Base} & \textbf{$\Delta$ vs.\ Prim MST} & \textbf{Mode~R Panel Size ($N$)} & \textbf{RC-MDL v1 (B)} & \textbf{RC-MDL v2 (B)} & \textbf{HGS2 / EIMDL (B)} \\
 \midrule
-\textbf{Gen~3 \texttt{HGS2} Mode~C (\texttt{--threads 1})} & \textbf{3,377,802} & \textbf{0.22500} & \textbf{$-14.98\%$} & $N=1$ donor & 249,491 (0.4110) & 273,654 (0.4508) & \textbf{197,112 (0.3247)} \\
+\textbf{Gen~3 \texttt{HGS2} Mode~C (\texttt{--threads 1})} & \textbf{3,371,489} & \textbf{0.22456} & \textbf{$-15.14\%$} & $N=1$ donor & 249,491 (0.4110) & 273,654 (0.4508) & \textbf{197,163 (0.3248)} \\
 \textbf{Gen~1 \texttt{HyperGraSS v1} (BWT+CRM)} & \textbf{3,810,409} & \textbf{0.25380} & \textbf{$-4.09\%$} & $N=2$ donors & 185,439 (0.3055) & 197,390 (0.3252) & --- \\
 \textbf{Gen~2 \texttt{RC-MDL} (\texttt{Containment/Prim})} & \textbf{3,972,975} & \textbf{0.26463} & \textbf{Baseline} & $N=4$ donors & 146,758 (0.2418) & 185,481 (0.3056) & --- \\
 Gen~2 \texttt{RC-MDL} (\texttt{Cluster-aware Prim}) & 3,982,813 & 0.26528 & $+0.25\%$ & $N=8$ donors & 102,931 (0.1696) & 79,595 (0.1311) & --- \\
 Gen~2 \texttt{RC-MDL} (\texttt{Greedy Marginal}) & 3,990,249 & 0.26578 & $+0.43\%$ & $N=16$ donors & 87,254 (0.1437) & 65,671 (0.1082) & --- \\
-Gen~2 \texttt{RC-MDL} (\texttt{File Order / Cluster-First}) & 4,056,419 / 4,081,636 & 0.2702 / 0.2719 & $+2.10\% / +2.73\%$ & $N=23$ donors (Full LOO) & 73,194 (0.1206) & 57,540 (0.0948) & \textbf{40,735 (0.0671)} \\
+Gen~2 \texttt{RC-MDL} (\texttt{File Order / Cluster-First}) & 4,056,419 / 4,081,636 & 0.2702 / 0.2719 & $+2.10\% / +2.73\%$ & $N=23$ donors (Full LOO) & 73,194 (0.1206) & 57,540 (0.0948) & \textbf{40,588 (0.0669)} \\
 Gen~2 Fixed Anchors ($N=20 / 16 / 12$) & 4,115,368 / 4,921,615 / 5,494,235 & 0.2741--0.3660 & $+3.58\%$ to $+38.29\%$ & \textbf{8-Donor Share of Gain} & \textbf{$83.1\%$ of $1\to 23$} & \textbf{$89.8\%$ of $1\to 23$} & --- \\
-Gen~2 Fixed Anchors ($N=8 / 4$) & 5,818,621 / 6,621,279 & 0.3876 / 0.4410 & $+46.46\% / +66.66\%$ & \textbf{Total Gain ($1 \to 23$)} & \textbf{$-70.66\%$ ($3.41\times$)} & \textbf{$-78.97\%$ ($4.76\times$)} & \textbf{$-79.33\%$ ($4.84\times$)} \\
+Gen~2 Fixed Anchors ($N=8 / 4$) & 5,818,621 / 6,621,279 & 0.3876 / 0.4410 & $+46.46\% / +66.66\%$ & \textbf{Total Gain ($1 \to 23$)} & \textbf{$-70.66\%$ ($3.41\times$)} & \textbf{$-78.97\%$ ($4.76\times$)} & \textbf{$-79.41\%$ ($4.86\times$)} \\
 \bottomrule
 \end{tabular}%
 }
@@ -573,12 +623,11 @@ Table~\ref{tab:mode_s_host} reports single-genome (\textbf{Mode~S}) performance 
 \toprule
 \textbf{Target File} & \textbf{Raw Bytes} & \textbf{HGS2 Archive (B)} & \textbf{Bits / Base} & \textbf{Compression Ratio} & \textbf{Encode (s)} & \textbf{Decode (s)} \\
 \midrule
-\textit{E.~coli} \texttt{00.fa} (FASTA) & 4,856,085 & \textbf{1,123,893} & 1.8515 & 4.32$\times$ & 6.18~s & 6.35~s \\
-\textit{E.~coli} \texttt{00.seq} (12T default) & 4,856,080 & \textbf{1,123,865} & 1.8515 & 4.32$\times$ & 6.72~s & 5.18~s \\
-\textit{E.~coli} \texttt{00.seq} (1T exact) & 4,856,080 & \textbf{1,100,453} & 1.8129 & 4.41$\times$ & 14.82~s & 14.51~s \\
-\textit{E.~coli} \texttt{00.seq} (\texttt{v1 --single}) & 4,856,080 & 1,136,069 & 1.8716 & 4.27$\times$ & 6.45~s & 6.20~s \\
-\textit{M.~tuberculosis} \texttt{00.seq} & 4,417,521 & \textbf{978,281} & 1.7716 & 4.52$\times$ & 7.54~s & 5.90~s \\
-\textit{S.~aureus} \texttt{00.seq} & 2,845,025 & \textbf{629,323} & 1.7696 & 4.52$\times$ & 4.91~s & 3.61~s \\
+\textit{E.~coli} \texttt{00.fa} (FASTA) & 4,856,085 & \textbf{1,122,777} & 1.8497 & 4.33$\times$ & 6.75~s & 6.57~s \\
+\textit{E.~coli} \texttt{00.seq} (Flat Seq) & 4,856,080 & \textbf{1,122,749} & 1.8496 & 4.33$\times$ & 8.53~s & 7.71~s \\
+\textit{E.~coli} \texttt{00.fa} (\texttt{v1 --single} host) & 4,856,085 & 1,136,069 & 1.8716 & 4.27$\times$ & 10.01~s & 10.96~s \\
+\textit{M.~tuberculosis} \texttt{00.seq} & 4,417,521 & \textbf{969,382} & 1.7555 & 4.56$\times$ & 7.49~s & 6.25~s \\
+\textit{S.~aureus} \texttt{00.seq} & 2,845,025 & \textbf{632,236} & 1.7778 & 4.50$\times$ & 5.51~s & 5.67~s \\
 \bottomrule
 \end{tabular}%
 }
@@ -624,7 +673,7 @@ As shown in Table~\ref{tab:ind12_subset} and Figure~\ref{fig:ind_pareto}, agains
 \begin{figure}[t!]
   \centering
   \includegraphics[width=0.98\textwidth]{figures/fig2_mode_r_loo_73genomes.pdf}
-  \caption{\textbf{Mode~R reference-conditioned Leave-One-Out (LOO) and Leave-Cluster-Out compression across 73 complete bacterial genomes.} \textbf{(A)}~\textit{Escherichia coli} (24 genomes, $120.11$~Mbp): \texttt{EIMDL/HGS2} achieves $1,177,778$~B ($0.07845$~bpb), winning \textbf{24/24} targets against both \texttt{RC-MDL v2} ($1,636,367$~B) and \texttt{AGC~3.2.5} best single configuration ($8,384,117$~B, $7.12\times$). \textbf{(B)}~\textit{Mycobacterium tuberculosis} (24 genomes, $105.75$~Mbp): \texttt{EIMDL/HGS2} achieves $47,305$~B ($0.00358$~bpb, $2,235.39\times$), beating \texttt{AGC} best single ($292,170$~B, $6.18\times$, \textbf{24/24} wins) and beating the 13-configuration per-target \texttt{AGC} oracle ($96,580$~B, $2.04\times$ aggregate, \textbf{19/24} per-target wins). \textbf{(C)}~\textit{Staphylococcus aureus} (25 genomes, $71.04$~Mbp): \texttt{EIMDL/HGS2} achieves $174,639$~B ($0.01967$~bpb), beating \texttt{AGC} best single ($2,979,078$~B, $17.06\times$, \textbf{25/25} wins) and the 13-configuration \texttt{AGC} oracle ($1,617,085$~B, $9.26\times$ aggregate, \textbf{24/25} wins). \textbf{(D)}~Leave-Cluster-Out unseen-lineage generalization across all three species.}
+  \caption{\textbf{Mode~R reference-conditioned Leave-One-Out (LOO) and Leave-Cluster-Out compression across 73 complete bacterial genomes.} \textbf{(A)}~\textit{Escherichia coli} (24 genomes, $120.11$~Mbp): \texttt{EIMDL/HGS2} achieves $1,174,113$~B ($0.07820$~bpb), winning \textbf{24/24} targets against both \texttt{RC-MDL} ($1,780,761$~B; \texttt{RC-MDL v2}: $1,636,367$~B) and \texttt{AGC~3.2.5} best single configuration ($8,384,117$~B, $7.14\times$). \textbf{(B)}~\textit{Mycobacterium tuberculosis} (24 genomes, $105.75$~Mbp): \texttt{EIMDL/HGS2} achieves $47,339$~B ($0.00358$~bpb, $2,233.78\times$), beating \texttt{AGC} best single ($292,170$~B, $6.17\times$, \textbf{24/24} wins) and beating the 13-configuration per-target \texttt{AGC} oracle ($96,580$~B, $2.04\times$ aggregate, \textbf{19/24} per-target wins). \textbf{(C)}~\textit{Staphylococcus aureus} (25 genomes, $71.04$~Mbp): \texttt{EIMDL/HGS2} achieves $174,217$~B ($0.01962$~bpb), beating \texttt{AGC} best single ($2,979,078$~B, $17.10\times$, \textbf{25/25} wins) and the 13-configuration \texttt{AGC} oracle ($1,617,085$~B, $9.28\times$ aggregate, \textbf{24/25} wins). \textbf{(D)}~Leave-Cluster-Out unseen-lineage generalization across all three species.}
   \label{fig:mode_r_73}
 \end{figure}
 
@@ -639,14 +688,14 @@ In \textbf{Mode~R}, a newly sequenced target assembly $X_i$ is compressed condit
 \toprule
 \textbf{Protocol} & \textbf{Dataset (Genomes, Total Bases)} & \textbf{HGS2 Total (B)} & \textbf{HGS2 bpb} & \textbf{Ratio} & \textbf{RC-MDL v2 (B)} & \textbf{AGC Best Single (B)} & \textbf{AGC 13-Cfg Oracle (B)} & \textbf{HGS2 Win Record} \\
 \midrule
-Standard LOO & \textit{E.~coli} (24g, 120,108,223~bp) & \textbf{1,177,778} & \textbf{0.07845} & \textbf{101.98$\times$} & 1,636,367 & 8,384,117 (\texttt{-s 200k}) & --- & \textbf{24/24} vs.\ AGC ($7.12\times$) \\
-Standard LOO & \textit{M.~tuberculosis} (24g, 105,745,015~bp) & \textbf{47,305} & \textbf{0.00358} & \textbf{2,235.39$\times$} & 92,506 & 292,170 (\texttt{-s 100k}) & 96,580 & \textbf{24/24} Single ($6.18\times$); \textbf{19/24} Oracle ($2.04\times$) \\
-Standard LOO & \textit{S.~aureus} (25g, 71,043,114~bp) & \textbf{174,639} & \textbf{0.01967} & \textbf{406.80$\times$} & 243,807 & 2,979,078 (\texttt{-s 50k}) & 1,617,085 & \textbf{25/25} Single ($17.06\times$); \textbf{24/25} Oracle ($9.26\times$) \\
+Standard LOO & \textit{E.~coli} (24g, 120,108,223~bp) & \textbf{1,174,113} & \textbf{0.07820} & \textbf{102.30$\times$} & 1,636,367 & 8,384,117 (\texttt{-s 200k}) & --- & \textbf{24/24} vs.\ AGC ($7.14\times$) \\
+Standard LOO & \textit{M.~tuberculosis} (24g, 105,745,015~bp) & \textbf{47,339} & \textbf{0.00358} & \textbf{2,233.78$\times$} & 92,506 & 292,170 (\texttt{-s 100k}) & 96,580 & \textbf{24/24} Single ($6.17\times$); \textbf{19/24} Oracle ($2.04\times$) \\
+Standard LOO & \textit{S.~aureus} (25g, 71,043,114~bp) & \textbf{174,217} & \textbf{0.01962} & \textbf{407.79$\times$} & 243,807 & 2,979,078 (\texttt{-s 50k}) & 1,617,085 & \textbf{25/25} Single ($17.10\times$); \textbf{24/25} Oracle ($9.28\times$) \\
 Standard LOO & \textit{S.~enterica} + \textit{K.~pneumoniae} (12g, 60,810,308~bp) & \textbf{433,498} & \textbf{0.05703} & \textbf{140.28$\times$} & --- & --- & --- & $31.99\times$ smaller than Mode~S \\
 \midrule
-Cluster-LOO & \textit{E.~coli} ($J=0.98$, 22 clusters, max 3) & \textbf{1,625,424} & \textbf{0.10826} & \textbf{73.89$\times$} & 2,331,696 & 9,193,975 (\texttt{-a}) & --- & $5.66\times$ smaller than AGC (\texttt{-a}) \\
-Cluster-LOO & \textit{M.~tuberculosis} ($J=0.99$, 13 clusters, max 6) & \textbf{78,582} & \textbf{0.00595} & \textbf{1,345.66$\times$} & 153,182 & 1,189,036 (\texttt{-a}) & --- & $15.13\times$ smaller than AGC (\texttt{-a}) \\
-Cluster-LOO & \textit{S.~aureus} ($J=0.98$, 14 clusters, max 8) & \textbf{525,828} & \textbf{0.05921} & \textbf{135.11$\times$} & 741,650 & 4,132,331 (\texttt{-a}) & --- & $7.86\times$ smaller than AGC (\texttt{-a}) \\
+Cluster-LOO & \textit{E.~coli} ($J=0.98$, 22 clusters, max 3) & \textbf{1,619,296} & \textbf{0.10786} & \textbf{74.17$\times$} & 2,331,696 & 9,203,994 (\texttt{-a}) & --- & $5.68\times$ smaller than AGC (\texttt{-a}) \\
+Cluster-LOO & \textit{M.~tuberculosis} ($J=0.99$, 13 clusters, max 6) & \textbf{78,603} & \textbf{0.00595} & \textbf{1,345.31$\times$} & 153,182 & 1,188,909 (\texttt{-a}) & --- & $15.13\times$ smaller than AGC (\texttt{-a}) \\
+Cluster-LOO & \textit{S.~aureus} ($J=0.98$, 14 clusters, max 8) & \textbf{524,535} & \textbf{0.05907} & \textbf{135.44$\times$} & 741,650 & 4,132,771 (\texttt{-a}) & --- & $7.88\times$ smaller than AGC (\texttt{-a}) \\
 \bottomrule
 \end{tabular}%
 }
@@ -655,9 +704,9 @@ Cluster-LOO & \textit{S.~aureus} ($J=0.98$, 14 clusters, max 8) & \textbf{525,82
 \noindent
 \textbf{Critical Analysis of Single-Configuration vs.\ 13-Configuration Oracle Baselines:}
 \begin{enumerate}
-  \item Against \emph{any single deployable \texttt{AGC~3.2.5} configuration}, \texttt{HGS2} (running with one fixed default parameter set across all species) wins \textbf{73/73} targets ($24/24$ on \textit{E.~coli} [$7.12\times$], $24/24$ on \textit{M.~tuberculosis} [$6.18\times$], and $25/25$ on \textit{S.~aureus} [$17.06\times$ vs.\ \texttt{-s 50000} and $20.27\times$ vs.\ \texttt{-a}]).
-  \item Against the \emph{13-configuration per-target \texttt{AGC} oracle} on \textit{M.~tuberculosis} ($96,580$~B total, $0.00731$~bpb, which beat Generation~2 \texttt{RC-MDL v1}'s $122,998$~B by $21.5\%$), Generation~3 \texttt{HGS2} achieves \textbf{47,305~B} ($0.00358$~bpb)---\textbf{2.04$\times$ ($-51.02\%$) smaller than the 13-configuration oracle in aggregate}---and wins \textbf{19/24} targets (Appendix Table~\ref{tab:mtb_full}). On the 5 near-clonal targets where the oracle is smaller (\texttt{03.seq}: $256$ vs.\ $243$~B; \texttt{08.seq}: $286$ vs.\ $224$~B; \texttt{09.seq}: $604$ vs.\ $368$~B; \texttt{16.seq}: $1,147$ vs.\ $1,072$~B; \texttt{19.seq}: $535$ vs.\ $512$~B), the difference is $13\text{--}236$~B, partly attributable to \texttt{HGS2}'s mandatory 32-byte SHA-256 donor-panel manifest pin.
-  \item Against the \emph{13-configuration per-target \texttt{AGC} oracle} on \textit{S.~aureus} ($1,617,085$~B total, $0.18210$~bpb), \texttt{HGS2} achieves \textbf{174,639~B} ($0.01967$~bpb)---\textbf{9.26$\times$ ($-89.20\%$) smaller in aggregate}---and wins \textbf{24/25} targets (Appendix Table~\ref{tab:saureus_full}), with the sole exception being clonal target \texttt{04.seq} ($681$~B vs.\ $617$~B oracle, a $64$~B gap).
+  \item Against \emph{any single deployable \texttt{AGC~3.2.5} configuration}, \texttt{HGS2} (running with one fixed default parameter set across all species) wins \textbf{73/73} targets ($24/24$ on \textit{E.~coli} [$7.14\times$], $24/24$ on \textit{M.~tuberculosis} [$6.17\times$], and $25/25$ on \textit{S.~aureus} [$17.10\times$ vs.\ \texttt{-s 50000} and $20.32\times$ vs.\ \texttt{-a}]).
+  \item Against the \emph{13-configuration per-target \texttt{AGC} oracle} on \textit{M.~tuberculosis} ($96,580$~B total, $0.00731$~bpb, which beat Generation~2 \texttt{RC-MDL v1}'s $122,998$~B by $21.5\%$), Generation~3 \texttt{HGS2} achieves \textbf{47,339~B} ($0.00358$~bpb)---\textbf{2.04$\times$ ($-50.98\%$) smaller than the 13-configuration oracle in aggregate}---and wins \textbf{19/24} targets (Appendix Table~\ref{tab:mtb_full}). On the 5 near-clonal targets where the oracle is smaller (\texttt{03.seq}: $256$ vs.\ $243$~B; \texttt{08.seq}: $287$ vs.\ $224$~B; \texttt{09.seq}: $607$ vs.\ $368$~B; \texttt{16.seq}: $1,150$ vs.\ $1,072$~B; \texttt{19.seq}: $536$ vs.\ $512$~B), the difference is $13\text{--}239$~B, partly attributable to \texttt{HGS2}'s mandatory 32-byte SHA-256 donor-panel manifest pin.
+  \item Against the \emph{13-configuration per-target \texttt{AGC} oracle} on \textit{S.~aureus} ($1,617,085$~B total, $0.18210$~bpb), \texttt{HGS2} achieves \textbf{174,217~B} ($0.01962$~bpb)---\textbf{9.28$\times$ ($-89.23\%$) smaller in aggregate}---and wins \textbf{24/25} targets (Appendix Table~\ref{tab:saureus_full}), with the sole exception being clonal target \texttt{04.seq} ($683$~B vs.\ $617$~B oracle, a $66$~B gap).
 \end{enumerate}
 
 \subsection{Regime 3: Mode C (Self-Contained Pangenome Collection Compression)}
@@ -680,9 +729,10 @@ In \textbf{Mode~C}, an entire multi-genome collection is compressed into a singl
 \toprule
 \textbf{Collection Corpus} & \textbf{Codec / Configuration} & \textbf{Raw Bytes} & \textbf{Archive (B)} & \textbf{bpb} & \textbf{Ratio} & \textbf{Encode (s)} & \textbf{Decode (s)} & \textbf{Peak Memory} \\
 \midrule
-\textit{E.~coli} 24g Flat (\texttt{input.seq}) & \textbf{EIMDL / HGS2 (\texttt{--threads 1})} & 120,108,223 & \textbf{3,377,802} & \textbf{0.2250} & \textbf{35.56$\times$} & 96.93~s & 55.44~s & 754~MiB cgroup \\
-\textit{E.~coli} 24g Flat (\texttt{input.seq}) & \textbf{EIMDL / HGS2 (Default 12T)} & 120,108,223 & \textbf{3,393,302} & \textbf{0.2260} & \textbf{35.40$\times$} & \textbf{44.04~s} & \textbf{18.36~s} & 754~MiB (default) \\
-\textit{E.~coli} 24g Flat (\texttt{input.seq}) & \textbf{EIMDL / HGS2 (\texttt{-Xmx192m})} & 120,108,223 & \textbf{3,455,169} & \textbf{0.2301} & \textbf{34.76$\times$} & 57.64~s & 27.19~s & \textbf{192~MiB Heap Cap} \\
+\textit{E.~coli} 24g Flat (\texttt{input.seq}) & \textbf{EIMDL / HGS2 (\texttt{--threads 1})} & 120,108,223 & \textbf{3,371,489} & \textbf{0.2246} & \textbf{35.62$\times$} & 40.31~s & 56.78~s & 754~MiB cgroup \\
+\textit{E.~coli} 24g Flat (\texttt{input.seq}) & \textbf{EIMDL / HGS2 (Default 12T)} & 120,108,223 & \textbf{3,388,639} & \textbf{0.2257} & \textbf{35.44$\times$} & \textbf{19.65~s} & \textbf{10.40~s} & 754~MiB (default) \\
+\textit{E.~coli} 24g Flat (\texttt{input.seq}) & \textbf{EIMDL / HGS2 (\texttt{-Xmx192m})} & 120,108,223 & \textbf{3,452,703} & \textbf{0.2300} & \textbf{34.79$\times$} & 62.68~s & 27.46~s & \textbf{192~MiB Heap Cap} \\
+\textit{E.~coli} 24g Flat (\texttt{input.seq}) & \textbf{EIMDL / HGS2 (\texttt{-Xmx128m})} & 120,108,223 & \textbf{3,452,703} & \textbf{0.2300} & \textbf{34.79$\times$} & 25.59~s & 11.67~s & \textbf{128~MiB Heap Cap} \\
 \textit{E.~coli} 24g Flat (\texttt{input.seq}) & \texttt{HyperGraSS v1} (BWT+CRM) & 120,108,223 & 3,810,409 & 0.2538 & 31.52$\times$ & 887.45~s & 895.52~s & 1,452~MB RSS \\
 \textit{E.~coli} 24g Flat (\texttt{input.seq}) & \texttt{JARVIS3 v3.7} (\texttt{-l 7}) & 120,108,223 & 3,896,361 & 0.2595 & 30.83$\times$ & 95.36~s & 98.41~s & 549~MB RSS \\
 \textit{E.~coli} 24g Flat (\texttt{input.seq}) & \texttt{RC-MDL v2} (Prim Tree) & 120,108,223 & 3,972,975 & 0.2646 & 30.23$\times$ & 164.59~s & 17.50~s & 1,812~MB RSS \\
@@ -691,55 +741,57 @@ In \textbf{Mode~C}, an entire multi-genome collection is compressed into a singl
 \textit{E.~coli} 24g Multi-FASTA & \texttt{AGC 3.2.5} (\texttt{-a -t 1}) & 121,825,884 & 8,540,341 & 0.5688 & 14.26$\times$ & 4.12~s & 0.85~s & 412~MB RSS \\
 \textit{E.~coli} 24g Flat (\texttt{input.seq}) & \texttt{Original GraSS} (\texttt{-e2}) & 120,108,223 & 24,777,592 & 1.6503 & 4.85$\times$ & 192.18~s & 82.06~s & 1,500~MB Heap \\
 \midrule
-\textit{E.~coli} 24g Multi-FASTA & \textbf{EIMDL / HGS2 (6-Channel Exact)} & 121,825,884 & \textbf{3,392,869} & \textbf{0.2260} & \textbf{35.91$\times$} & 63.78~s & 57.07~s & $100\%$ SHA-256 \\
-\textit{M.~tuberculosis} 24g Multi-FASTA & \textbf{EIMDL / HGS2 (6-Channel Exact)} & 107,257,786 & \textbf{1,041,596} & \textbf{0.0788} & \textbf{102.97$\times$} & 40.04~s & 49.92~s & $100\%$ SHA-256 \\
-\textit{S.~aureus} 25g Multi-FASTA & \textbf{EIMDL / HGS2 (6-Channel Exact)} & 72,060,360 & \textbf{1,082,866} & \textbf{0.1219} & \textbf{66.55$\times$} & 31.42~s & 35.02~s & $100\%$ SHA-256 \\
+\textit{E.~coli} 24g Multi-FASTA & \textbf{EIMDL / HGS2 (6-Channel Exact)} & 121,825,884 & \textbf{3,387,485} & \textbf{0.2256} & \textbf{35.96$\times$} & 32.50~s & 16.50~s & $100\%$ SHA-256 \\
+\textit{M.~tuberculosis} 24g Multi-FASTA & \textbf{EIMDL / HGS2 (6-Channel Exact)} & 107,257,786 & \textbf{1,049,266} & \textbf{0.0794} & \textbf{102.22$\times$} & 41.36~s & 24.77~s & $100\%$ SHA-256 \\
+\textit{S.~aureus} 25g Multi-FASTA & \textbf{EIMDL / HGS2 (6-Channel Exact)} & 72,060,360 & \textbf{1,086,129} & \textbf{0.1223} & \textbf{66.35$\times$} & 31.76~s & 16.15~s & $100\%$ SHA-256 \\
 \midrule
 \textit{S.~enterica} 25g Locked Trio & \textbf{EIMDL / HGS2 (\texttt{--threads 1})} & 120,527,038 & \textbf{2,390,106} & \textbf{0.1586} & \textbf{50.43$\times$} & 100.76~s & \textbf{53.36~s} & 753.5 / \textbf{125.1~MiB} \\
 \textit{S.~enterica} 25g Locked Trio & \texttt{JARVIS3 v3.7} (\texttt{-l 7}) & 120,527,038 & 2,709,545 & 0.1798 & 44.48$\times$ & \textbf{90.03~s} & 85.86~s & \textbf{294.8} / 294.4~MiB \\
 \textit{S.~enterica} 25g Locked Trio & \texttt{Original GraSS} (\texttt{-e2}) & 120,527,038 & 19,991,646 & 1.3269 & 6.03$\times$ & 212.29~s & 94.48~s & 1,423.5 / 1,486.2~MiB \\
 \midrule
-\textit{K.~pneumoniae} 23g Locked Trio & \textbf{EIMDL / HGS2 (Default 2-CPU)} & 122,695,431 & \textbf{2,523,991} & \textbf{0.1646} & \textbf{48.61$\times$} & \textbf{32.69~s} & \textbf{16.19~s} & 760.8 / \textbf{177.3~MiB} \\
-\textit{K.~pneumoniae} 23g Locked Trio & \texttt{JARVIS3 v3.7} (\texttt{-l 7}) & 122,695,431 & 2,948,926 & 0.1923 & 41.61$\times$ & 55.32~s & 52.03~s & \textbf{295.2} / 295.5~MiB \\
-\textit{K.~pneumoniae} 23g Locked Trio & \texttt{Original GraSS} (\texttt{-e2}) & 122,695,431 & 21,191,566 & 1.3817 & 5.79$\times$ & 87.19~s & 75.04~s & 1,112.4 / 1,462.4~MiB \\
+\textit{K.~pneumoniae} 23g Locked Trio & \textbf{EIMDL / HGS2 (Default 2-CPU)} & 122,700,601 & \textbf{2,523,991} & \textbf{0.1646} & \textbf{48.61$\times$} & \textbf{32.69~s} & \textbf{16.19~s} & 760.8 / \textbf{177.3~MiB} \\
+\textit{K.~pneumoniae} 23g Locked Trio & \texttt{JARVIS3 v3.7} (\texttt{-l 7}) & 122,700,601 & 2,948,926 & 0.1923 & 41.61$\times$ & 55.32~s & 52.03~s & \textbf{295.2} / 295.5~MiB \\
+\textit{K.~pneumoniae} 23g Locked Trio & \texttt{Original GraSS} (\texttt{-e2}) & 122,700,601 & 21,191,566 & 1.3817 & 5.79$\times$ & 87.19~s & 75.04~s & 1,112.4 / 1,462.4~MiB \\
 \bottomrule
 \end{tabular}%
 }
 \end{table}
 
-\subsection{Verification of Law V: Amdahl Multi-Core Scaling and Bounded-Heap Execution}
+\subsection{Verification of Laws V and VII: Amdahl Multi-Core Scaling and Bounded-Heap Execution (\texttt{-Xmx128m})}
 
 \begin{figure}[t!]
   \centering
   \includegraphics[width=0.98\textwidth]{figures/fig4_amdahl_and_bounded_memory.pdf}
-  \caption{\textbf{Experimental verification of Law~V (Amdahl multi-core scaling and strict pure-JVM bounded-heap execution).} \textbf{(A)}~Encode, decode, and total round-trip wall times on the 24-genome \textit{E.~coli} pangenome ($120.11$~Mbp) across $T \in \{1,2,4,8,12\}$ threads. \textbf{(B)}~Stage-1 core data structure footprint and resulting Mode~C archive size across syncmer subsampling shifts $s \in \{0,1,2\}$ under strict \texttt{-Xmx256m}, \texttt{-Xmx224m}, and \texttt{-Xmx192m} JVM heap limits.}
+  \caption{\textbf{Experimental verification of Laws~V and~VII (Amdahl multi-core scaling and strict pure-JVM bounded-heap execution).} \textbf{(A)}~Encode, decode, and total round-trip in-process execution times on the 24-genome \textit{E.~coli} pangenome ($120.11$~Mbp) across $T \in \{1,2,4,8,12\}$ threads. \textbf{(B)}~Stage-1 core data structure footprint and resulting Mode~C archive size across syncmer subsampling shifts $s \in \{0,1,2\}$ under strict \texttt{-Xmx256m}, \texttt{-Xmx224m}, \texttt{-Xmx192m}, \texttt{-Xmx160m}, and \texttt{-Xmx128m} pure-JVM heap limits.}
   \label{fig:amdahl_mem}
 \end{figure}
 
-Table~\ref{tab:amdahl_mem} and Figure~\ref{fig:amdahl_mem} validate Law~V on the 24-genome \textit{E.~coli} collection ($120,108,223$~bp):
+Table~\ref{tab:amdahl_mem} and Figure~\ref{fig:amdahl_mem} validate Laws~V and~VII on the 24-genome \textit{E.~coli} collection ($120,108,223$~bp):
 \begin{itemize}
-  \item \textbf{Multi-Core Scaling and Exact Determinism:} Scaling from $T=1$ to $T=12$ threads reduces encode time from $96.93$~s to $44.04$~s ($2.20\times$ speedup; $20.15\times$ faster than \texttt{HyperGraSS v1}'s $887.45$~s) and decode time from $55.44$~s to $18.36$~s ($3.02\times$ speedup; $48.77\times$ faster than \texttt{v1}'s $895.52$~s). Because Stage-2 sub-blocks are fixed at $4$~Mbp with $32$~KiB warm context priming, $T=8$ and $T=12$ produce the \emph{exact same byte-identical archive} ($3,393,302$~B, $+0.46\%$ over 1-thread $3,377,802$~B).
-  \item \textbf{Pure-JVM \texttt{-Xmx192m} Bounded-Heap Execution:} Whereas Generation~1 required compiling a GraalVM~25 static native binary to pass a $256$~MiB container gate ($3,864,464$~B in $681.9$~s), Generation~3's subsampled open-syncmer CSR index executes in \textbf{standard pure OpenJDK JVM} under \texttt{-Xmx256m} ($s=1$, $3,423,050$~B), \texttt{-Xmx224m} ($s=1$, $3,423,050$~B), and \textbf{\texttt{-Xmx192m}} ($s=2$, \textbf{3,455,169~B}, $0.2301$~bpb in $57.64$~s encode / $27.19$~s decode)---still \textbf{11.32\% smaller} than \texttt{JARVIS3 -l 7} ($3,896,361$~B) and \textbf{9.32\% smaller} than \texttt{HyperGraSS v1} ($3,810,409$~B).
+  \item \textbf{Multi-Core Scaling and Exact Determinism:} Scaling from $T=1$ to $T=12$ threads reduces in-process encode time from $40.31$~s to $19.65$~s ($2.05\times$ speedup; $45.16\times$ faster than \texttt{HyperGraSS v1}'s $887.3$~s) and decode time from $56.78$~s to $10.40$~s ($5.46\times$ speedup; $8.66$~s [$6.56\times$] at $T=8$). Because Stage-2 sub-blocks are fixed at $4$~Mbp with $32$~KiB warm context priming, $T=8$ and $T=12$ produce the \emph{exact same byte-identical archive} ($3,388,639$~B, $+0.51\%$ over 1-thread $3,371,489$~B).
+  \item \textbf{Pure-JVM \texttt{-Xmx128m} Bounded-Heap Execution:} Whereas Generation~1 required compiling a GraalVM~25 static native binary to pass a $256$~MiB container gate ($3,864,464$~B in $681.9$~s), Generation~3's disjoint Stage-1/Stage-2 lifecycle and adaptive \texttt{ultraTight}/\texttt{extremeTight} scheduling execute in \textbf{standard pure OpenJDK JVM} under \texttt{-Xmx256m} ($s=1$, $3,422,314$~B), \texttt{-Xmx224m} ($s=1$, $3,422,314$~B), \texttt{-Xmx192m} ($s=2$, $3,452,703$~B), \texttt{-Xmx160m} ($s=2$, $3,452,703$~B), and \textbf{\texttt{-Xmx128m}} ($s=2$, \textbf{3,452,703~B}, $0.2300$~bpb in $25.59$~s encode / $11.67$~s decode, just $1.06$~B/base total JVM heap limit)---still \textbf{11.39\% smaller} than \texttt{JARVIS3 -l 7} ($3,896,361$~B) and \textbf{9.39\% smaller} than \texttt{HyperGraSS v1} ($3,810,409$~B).
 \end{itemize}
 
 \begin{table}[h!]
 \centering
-\caption{Law~V Amdahl thread scaling and bounded-heap (\texttt{-Xmx}) execution on 24-genome \textit{E.~coli} ($120,108,223$~bp, \texttt{amdahl\_and\_memory.json}).}
+\caption{Laws~V and~VII Amdahl thread scaling and bounded-heap (\texttt{-Xmx}) execution on 24-genome \textit{E.~coli} ($120,108,223$~bp, \texttt{amdahl\_and\_memory.json}).}
 \label{tab:amdahl_mem}
 \small
 \begin{tabular}{lrrrrrrr}
 \toprule
 \textbf{Configuration} & \textbf{CSR Shift $s$} & \textbf{Stage-1 Core} & \textbf{Archive (B)} & \textbf{bpb} & \textbf{Enc (s)} & \textbf{Dec (s)} & \textbf{SHA-256} \\
 \midrule
-\texttt{--threads 1} & $s=0$ ($1/6$) & 150.1~MB & \textbf{3,377,802} & \textbf{0.2250} & 96.93~s & 55.44~s & PASS \\
-\texttt{--threads 2} & $s=0$ ($1/6$) & 150.1~MB & 3,380,134 & 0.2251 & 62.06~s & 39.83~s & PASS \\
-\texttt{--threads 4} & $s=0$ ($1/6$) & 150.1~MB & 3,388,767 & 0.2257 & 51.94~s & 26.02~s & PASS \\
-\texttt{--threads 8} & $s=0$ ($1/6$) & 150.1~MB & 3,393,302 & 0.2260 & 51.74~s & 23.27~s & PASS \\
-\texttt{--threads 12} & $s=0$ ($1/6$) & 150.1~MB & 3,393,302 & 0.2260 & \textbf{44.04~s} & \textbf{18.36~s} & PASS \\
+\texttt{--threads 1} & $s=0$ ($1/6$) & 150.1~MB & \textbf{3,371,489} & \textbf{0.2246} & 40.31~s & 56.78~s & PASS \\
+\texttt{--threads 2} & $s=0$ ($1/6$) & 150.1~MB & 3,373,077 & 0.2247 & 37.44~s & 12.58~s & PASS \\
+\texttt{--threads 4} & $s=0$ ($1/6$) & 150.1~MB & 3,383,225 & 0.2253 & 25.47~s & 12.58~s & PASS \\
+\texttt{--threads 8} & $s=0$ ($1/6$) & 150.1~MB & 3,388,639 & 0.2257 & 21.32~s & \textbf{8.66~s} & PASS \\
+\texttt{--threads 12} & $s=0$ ($1/6$) & 150.1~MB & 3,388,639 & 0.2257 & \textbf{19.65~s} & 10.40~s & PASS \\
 \midrule
-\texttt{-Xmx256m} & $s=1$ ($1/12$) & 90.1~MB & 3,423,050 & 0.2280 & 59.52~s & 28.96~s & PASS \\
-\texttt{-Xmx224m} & $s=1$ ($1/12$) & 90.1~MB & 3,423,050 & 0.2280 & 59.81~s & 27.71~s & PASS \\
-\texttt{-Xmx192m} & $s=2$ ($1/24$) & \textbf{60.1~MB} & \textbf{3,455,169} & \textbf{0.2301} & 57.64~s & 27.19~s & PASS \\
+\texttt{-Xmx256m} & $s=1$ ($1/12$) & 90.1~MB & 3,422,314 & 0.2279 & 22.38~s & 10.61~s & PASS \\
+\texttt{-Xmx224m} & $s=1$ ($1/12$) & 90.1~MB & 3,422,314 & 0.2279 & 24.03~s & 13.89~s & PASS \\
+\texttt{-Xmx192m} & $s=2$ ($1/24$) & \textbf{60.1~MB} & \textbf{3,452,703} & \textbf{0.2300} & 62.68~s & 27.46~s & PASS \\
+\texttt{-Xmx160m} & $s=2$ ($1/24$) & \textbf{60.1~MB} & \textbf{3,452,703} & \textbf{0.2300} & 55.90~s & 14.34~s & PASS \\
+\texttt{-Xmx128m} & $s=2$ ($1/24$) & \textbf{60.1~MB} & \textbf{3,452,703} & \textbf{0.2300} & 25.59~s & 11.67~s & PASS \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -749,7 +801,7 @@ Table~\ref{tab:amdahl_mem} and Figure~\ref{fig:amdahl_mem} validate Law~V on the
 \begin{figure}[t!]
   \centering
   \includegraphics[width=0.98\textwidth]{figures/fig5_laws_ablations_and_synthetic.pdf}
-  \caption{\textbf{Real-genome law-by-law ablations, coalescent donor panel scaling, $100:1$ entropy-floor progression, and non-existing/adversarial genome completeness.} \textbf{(A)}~Law-by-law ablation trajectory on \textit{E.~coli} \texttt{00.seq} conditioned on a distant single donor (\texttt{20.seq}: $239,083$~B $\to$ $197,112$~B, $-17.56\%$) and on the dense 23-donor LOO panel ($43,596$~B $\to$ $40,735$~B, $-6.56\%$). \textbf{(B)}~Coalescent donor panel scaling ($N \in \{1,2,4,8,16,23\}$ donors on \textit{E.~coli} \texttt{00.seq}). \textbf{(C)}~Generation~1 $\to$ Generation~3 progression on 24-genome \textit{E.~coli} relative to the $100:1$ ($1.201$~MB) target. \textbf{(D)}~Compression rate across nine synthetic, xenobiological, and cryptographic white-noise corpora, confirming the $2.0012$~bpb safety ceiling.}
+  \caption{\textbf{Real-genome law-by-law ablations, coalescent donor panel scaling, $100:1$ entropy-floor progression, and non-existing/adversarial genome completeness.} \textbf{(A)}~Law-by-law ablation trajectory on \textit{E.~coli} \texttt{00.seq} conditioned on a distant single donor (\texttt{20.seq}: $238,550$~B $\to$ $197,163$~B, $-17.35\%$) and on the dense 23-donor LOO panel ($43,357$~B $\to$ $40,588$~B, $-6.39\%$). \textbf{(B)}~Coalescent donor panel scaling ($N \in \{1,2,4,8,16,23\}$ donors on \textit{E.~coli} \texttt{00.seq}). \textbf{(C)}~Generation~1 $\to$ Generation~3 progression on 24-genome \textit{E.~coli} relative to the $100:1$ ($1.201$~MB) target. \textbf{(D)}~Compression rate across nine synthetic, xenobiological, and cryptographic white-noise corpora, confirming the $2.0012$~bpb safety ceiling.}
   \label{fig:ablations_syn}
 \end{figure}
 
@@ -764,14 +816,14 @@ Table~\ref{tab:synthetic_9} and Figure~\ref{fig:ablations_syn}D evaluate nine no
 \toprule
 \textbf{Corpus ID} & \textbf{Biological / Adversarial Stress Regime} & \textbf{Regime} & \textbf{Raw Bytes} & \textbf{Bases} & \textbf{HGS2 (B)} & \textbf{bpb (Raw)} & \textbf{gzip -9 (B)} & \textbf{Active Grammar Channels} \\
 \midrule
-\texttt{01\_euk\_centromere} & 171~bp HOR $\alpha$-satellite + transposons & Mode~S & 491,604 & 485,418 & \textbf{42,193} & 0.6866 & 83,797 & 324,347~bp self, 454 splices, 9,123 SNPs \\
-\texttt{02\_viral\_rna\_acgu} & 10-strain RNA $\texttt{ACGU}$ quasispecies & Mode~C & 304,013 & 299,253 & \textbf{12,122} & 0.3190 & 42,923 & RNA flag, 267,963~bp match, 3,406 SNPs \\
-\texttt{03\_chimeric\_iupac\_crlf} & $\text{CRLF}$ + soft-mask + IUPAC $\texttt{N/R/Y/W/S}$ & Mode~S & 263,817 & 244,065 & \textbf{51,518} & 1.5622 & 86,566 & All 6 factorizer channels + 67 splices \\
-\texttt{04\_xeno\_at88} & Xenobiological $88\%$ AT Bias + 13~bp tandem & Mode~S & 506,294 & 500,000 & \textbf{94,222} & 1.4888 & 123,139 & \texttt{FastCRM} extreme skew adaptation \\
-\texttt{05\_xeno\_gc86} & Xenobiological $86\%$ GC Bias + 6F-ORF-HMM & Mode~S & 506,291 & 500,000 & \textbf{97,524} & 1.5410 & 126,076 & \texttt{6F-ORF-HMM} + \texttt{codonOrder5Table} \\
-\texttt{06\_denovo\_grammar} & Synthetic 8-operon $\times$ 16-cassette chromosome & Mode~S & 506,287 & 500,000 & \textbf{41,096} & 0.6494 & 141,540 & 405,576~bp self, 689 splices, 18,452 SNPs \\
-\texttt{07\_hypermutator\_pangenome} & 6-strain pangenome ($3\%$ SNP + indels + inv.) & Mode~C & 1,513,506 & 1,494,677 & \textbf{101,566} & 0.5369 & 454,203 & 1,232,909~bp match, 1,438 splices, 32,499 SNPs \\
-\texttt{07\_hypermutator\_strain05} & Hypermutator strain LOO vs.\ 5-strain panel & Mode~R & 249,436 & 249,436 & \textbf{7,514} & 0.2410 & --- & 247,441~bp panel match, 264 splices, 6,188 SNPs \\
+\texttt{01\_euk\_centromere} & 171~bp HOR $\alpha$-satellite + transposons & Mode~S & 491,604 & 485,418 & \textbf{42,075} & 0.6847 & 83,797 & 325,289~bp self, 318 splices, 8,784 SNPs \\
+\texttt{02\_viral\_rna\_acgu} & 10-strain RNA $\texttt{ACGU}$ quasispecies & Mode~C & 304,013 & 299,253 & \textbf{11,995} & 0.3156 & 42,923 & RNA flag, 268,526~bp match, 3,286 SNPs \\
+\texttt{03\_chimeric\_iupac\_crlf} & $\text{CRLF}$ + soft-mask + IUPAC $\texttt{N/R/Y/W/S}$ & Mode~S & 263,817 & 244,065 & \textbf{51,536} & 1.5628 & 86,566 & All 6 factorizer channels + 61 splices \\
+\texttt{04\_xeno\_at88} & Xenobiological $88\%$ AT Bias + 13~bp tandem & Mode~S & 506,294 & 500,000 & \textbf{94,248} & 1.4892 & 123,139 & \texttt{FastCRM} extreme skew + HPY backoff \\
+\texttt{05\_xeno\_gc86} & Xenobiological $86\%$ GC Bias + 6F-ORF-HMM & Mode~S & 506,291 & 500,000 & \textbf{97,525} & 1.5410 & 126,076 & \texttt{6F-ORF-HMM} + \texttt{orf2..orf5} HPY chain \\
+\texttt{06\_denovo\_grammar} & Synthetic 8-operon $\times$ 16-cassette chromosome & Mode~S & 506,287 & 500,000 & \textbf{41,159} & 0.6504 & 141,540 & 405,756~bp self, 457 splices, 18,473 SNPs \\
+\texttt{07\_hypermutator\_pangenome} & 6-strain pangenome ($3\%$ SNP + indels + inv.) & Mode~C & 1,513,506 & 1,494,677 & \textbf{102,503} & 0.5418 & 454,203 & 1,232,424~bp match, 1,085 splices, 32,706 SNPs \\
+\texttt{07\_hypermutator\_strain05} & Hypermutator strain LOO vs.\ 5-strain panel & Mode~R & 249,436 & 249,436 & \textbf{7,809} & 0.2505 & --- & 247,098~bp panel match, 195 splices, 6,158 SNPs \\
 \texttt{08\_crypto\_white\_noise} & SHA-256 counter-mode incompressible noise & Mode~S & 500,000 & 500,000 & \textbf{125,075} & \textbf{2.0012} & 144,017 & Law~IV \texttt{raw2BitBypass} ($+0.06\%$ ceiling) \\
 \bottomrule
 \end{tabular}%
@@ -798,62 +850,64 @@ Table~\ref{tab:ablations_real} reports the controlled law-by-law knock-out ablat
 \toprule
 \textbf{Scenario} & \textbf{Ablation Configuration} & \textbf{Archive (B)} & \textbf{bpb} & \textbf{$\Delta$ vs.\ Full} & \textbf{Panel Match (bp)} & \textbf{Panel Tokens} & \textbf{SNPs} & \textbf{Splices} \\
 \midrule
-\textbf{(A) \textit{E.~coli} \texttt{00.seq} $\mid$ \texttt{20.seq}} & \textbf{Full EIMDL (All Laws ON)} & \textbf{197,112} & \textbf{0.32473} & \textbf{Baseline} & 4,258,080 & 1,517 & 54,124 & 619 \\
-(1 donor, $4,856,080$~bp) & No Law~I (Flat SNP, no $V_4$ Kimura--CpG) & 203,140 & 0.33466 & $+6,028$~B ($+3.06\%$) & 4,257,425 & 1,490 & 53,987 & 618 \\
- & No Law~II (Flat gap, no codon-wobble $\psi$) & 198,966 & 0.32778 & $+1,854$~B ($+0.94\%$) & 4,258,080 & 1,517 & 54,124 & 619 \\
- & No Law~IIIb (No affine micro-indel splicing) & 197,205 & 0.32488 & $+93$~B ($-428$ tokens) & 4,259,145 & 1,945 & 54,157 & 0 \\
- & No Laws I + II + IIIb combined & 204,912 & 0.33758 & $+7,800$~B ($+3.96\%$) & 4,258,398 & 1,918 & 54,006 & 0 \\
- & Exact matches only (No approximate copying) & 239,083 & 0.39387 & $+41,971$~B ($+21.29\%$) & 4,028,211 & 30,701 & 0 & 0 \\
+\textbf{(A) \textit{E.~coli} \texttt{00.seq} $\mid$ \texttt{20.seq}} & \textbf{Full EIMDL (All Laws ON)} & \textbf{197,163} & \textbf{0.32481} & \textbf{Baseline} & 4,258,080 & 1,517 & 54,124 & 619 \\
+(1 donor, $4,856,080$~bp) & No Law~I (Flat SNP, no $V_4$ Kimura--CpG) & 203,340 & 0.33499 & $+6,177$~B ($+3.13\%$) & 4,257,425 & 1,490 & 53,987 & 618 \\
+ & No Law~II (Flat gap, no codon-wobble $\psi$) & 199,024 & 0.32788 & $+1,861$~B ($+0.94\%$) & 4,258,080 & 1,517 & 54,124 & 619 \\
+ & No Law~IIIb (No affine micro-indel splicing) & 196,936 & 0.32444 & $-227$~B ($+428$ tokens) & 4,259,145 & 1,945 & 54,157 & 0 \\
+ & No Laws I + II + IIIb combined & 205,071 & 0.33784 & $+7,908$~B ($+4.01\%$) & 4,258,398 & 1,918 & 54,006 & 0 \\
+ & Exact matches only (No approximate copying) & 238,550 & 0.39299 & $+41,387$~B ($+20.99\%$) & 4,028,211 & 30,701 & 0 & 0 \\
 \midrule
-\textbf{(B) \textit{E.~coli} \texttt{00.seq} LOO} & \textbf{Full EIMDL (All Laws ON)} & \textbf{40,735} & \textbf{0.06711} & \textbf{Baseline} & 4,766,688 & 5,531 & 5,706 & 99 \\
-(23 donors, $4,856,080$~bp) & No Law~I (Flat SNP, no $V_4$ Kimura--CpG) & 41,335 & 0.06810 & $+600$~B ($+1.47\%$) & 4,766,538 & 5,524 & 5,680 & 99 \\
- & No Law~II (Flat gap, no codon-wobble $\psi$) & 40,856 & 0.06731 & $+121$~B ($+0.30\%$) & 4,766,688 & 5,531 & 5,706 & 99 \\
- & No Law~IIIb (No affine micro-indel splicing) & \textbf{40,607} & \textbf{0.06690} & $-128$~B (dense panel) & 4,766,614 & 5,590 & 5,685 & 0 \\
- & No Laws I + II + IIIb combined & 41,330 & 0.06809 & $+595$~B ($+1.46\%$) & 4,766,417 & 5,583 & 5,656 & 0 \\
- & Exact matches only (No approximate copying) & 43,596 & 0.07182 & $+2,861$~B ($+7.02\%$) & 4,747,677 & 7,791 & 0 & 0 \\
+\textbf{(B) \textit{E.~coli} \texttt{00.seq} LOO} & \textbf{Full EIMDL (All Laws ON)} & \textbf{40,588} & \textbf{0.06687} & \textbf{Baseline} & 4,766,688 & 5,531 & 5,706 & 99 \\
+(23 donors, $4,856,080$~bp) & No Law~I (Flat SNP, no $V_4$ Kimura--CpG) & 41,178 & 0.06784 & $+590$~B ($+1.45\%$) & 4,766,538 & 5,524 & 5,680 & 99 \\
+ & No Law~II (Flat gap, no codon-wobble $\psi$) & 40,697 & 0.06705 & $+109$~B ($+0.27\%$) & 4,766,688 & 5,531 & 5,706 & 99 \\
+ & No Law~IIIb (No affine micro-indel splicing) & \textbf{40,469} & \textbf{0.06667} & $-119$~B (dense panel) & 4,766,614 & 5,590 & 5,685 & 0 \\
+ & No Laws I + II + IIIb combined & 41,175 & 0.06783 & $+587$~B ($+1.45\%$) & 4,766,417 & 5,583 & 5,656 & 0 \\
+ & Exact matches only (No approximate copying) & 43,357 & 0.07143 & $+2,769$~B ($+6.82\%$) & 4,747,677 & 7,791 & 0 & 0 \\
 \midrule
-\textbf{(C) \textit{M.~tuberculosis} \texttt{00.seq} LOO} & \textbf{Full EIMDL (All Laws ON)} & \textbf{1,237} & \textbf{0.00224} & \textbf{Baseline} & 4,412,383 & 116 & 251 & 0 \\
-(23 donors, $4,417,521$~bp) & No Law~I (Flat SNP, no $V_4$ Kimura--CpG) & 1,258 & 0.00228 & $+21$~B ($+1.70\%$) & 4,412,383 & 116 & 251 & 0 \\
- & No Law~II (Flat gap, no codon-wobble $\psi$) & 1,235 & 0.00224 & $-2$~B ($251$ SNPs) & 4,412,383 & 116 & 251 & 0 \\
- & No Law~IIIb (No affine micro-indel splicing) & 1,236 & 0.00224 & $-1$~B ($0$ splices) & 4,412,383 & 116 & 251 & 0 \\
- & No Laws I + II + IIIb combined & 1,255 & 0.00227 & $+18$~B ($+1.46\%$) & 4,412,383 & 116 & 251 & 0 \\
- & Exact matches only (No approximate copying) & 1,275 & 0.00231 & $+38$~B ($+3.07\%$) & 4,412,761 & 325 & 0 & 0 \\
+\textbf{(C) \textit{M.~tuberculosis} \texttt{00.seq} LOO} & \textbf{Full EIMDL (All Laws ON)} & \textbf{1,240} & \textbf{0.00225} & \textbf{Baseline} & 4,412,383 & 116 & 251 & 0 \\
+(23 donors, $4,417,521$~bp) & No Law~I (Flat SNP, no $V_4$ Kimura--CpG) & 1,261 & 0.00228 & $+21$~B ($+1.69\%$) & 4,412,383 & 116 & 251 & 0 \\
+ & No Law~II (Flat gap, no codon-wobble $\psi$) & 1,237 & 0.00224 & $-3$~B ($251$ SNPs) & 4,412,383 & 116 & 251 & 0 \\
+ & No Law~IIIb (No affine micro-indel splicing) & 1,240 & 0.00225 & $0$~B ($0$ splices) & 4,412,383 & 116 & 251 & 0 \\
+ & No Laws I + II + IIIb combined & 1,258 & 0.00228 & $+18$~B ($+1.45\%$) & 4,412,383 & 116 & 251 & 0 \\
+ & Exact matches only (No approximate copying) & 1,267 & 0.00229 & $+27$~B ($+2.18\%$) & 4,412,761 & 325 & 0 & 0 \\
 \bottomrule
 \end{tabular}%
 }
 \end{table}
 
 \noindent
-\textbf{Executable Falsification Suite (\texttt{LawsFalsificationSuite.java}):}
-All five laws are continuously guarded by seven automated falsification suites totaling \textbf{171,933 programmatic assertions} with \textbf{0 failures}:
-(1)~Law~I $V_4$ involution \& Kimura--CpG entropy reduction ($65,536$ exhaustive codon/context checks; $1.102$~bits/SNP vs.\ $1.585$~bits uniform, saving $4,830$~bits on $10,000$ SNPs);
-(2)~Law~II codon-wobble bijection $\psi^{-1}(\psi(g))=g$ for all $g \in [0, 100\,000]$ and 6-frame ORF-HMM causal tracking ($105,600$ assertions);
-(3)~Law~III monotonic donor panel scaling ($1\text{ donor}: 4,112\text{ B} \ge 2\text{ donors}: 4,009\text{ B} \ge 4\text{ donors}: 1,259\text{ B} \ge 8\text{ donors}: 541\text{ B}$) and affine micro-indel splicing ($6,136$~B with splice vs.\ $7,267$~B without splice, $-15.56\%$);
-(4)~Law~IV cryptographic white-noise ceiling ($125,075$~B on $500,000$~bp, $2.0012$~bpb);
-(5)~Law~V subsampled syncmer CSR memory scaling ($s=0: 1.58$~B/bp, $s=1: 0.93$~B/bp, $s=2: 0.59$~B/bp);
-(6)~6-channel multi-FASTA/IUPAC/CRLF/RNA exact byte-identity round-trip ($780$ assertions); and
-(7)~Mode~R cryptographic donor-panel tamper rejection (flipping 1~bp in the donor panel deterministically raises \texttt{IllegalArgumentException: Mode R donor panel SHA-256 mismatch}).
+\textbf{Executable Falsification Suite (\texttt{VerifyCompressionLaws.java}):}
+All seven laws are continuously guarded by seven automated falsification suites totaling \textbf{171,941 programmatic assertions} with \textbf{0 failures}:
+(1)~Law~I $V_4$ involution \& Kimura--CpG entropy reduction ($2,355$~B vs.\ $2,576$~B ablated, $-8.6\%$);
+(2)~Law~II codon-wobble bijection $\psi^{-1}(\psi(g))=g$ for all $g \in [0, 100\,000]$ ($2,001$~B vs.\ $2,130$~B flat, $-6.1\%$) and 6-frame ORF-HMM causal tracking ($7,381$~B vs.\ $7,688$~B broken);
+(3)~Law~III monotonic donor panel scaling ($\text{Panel24}=167$~B, $\text{Twin1}=132$~B) and affine micro-indel splicing ($6,818$~B spliced vs.\ $10,067$~B unspliced, $-32.3\%$);
+(4)~Law~IV cryptographic white-noise ceiling ($2.0035$~bpb $\le 2.005$~bpb gate, plus $1.534$~bpb AT88 and $0.167$~bpb satellite);
+(5)~Law~V subsampled syncmer CSR memory scaling and parallel determinism ($1T=63,611$~B vs.\ $8T=63,611$~B, $\Delta=0.000\%$);
+(6)~Law~VI two-adic tapered adaptation ($p_{\min} = 11/4096$ vs.\ $31/4096$) and HPY novelty coding ($1.0897$~bpb); and
+(7)~Law~VII disjoint lifecycle and bounded Mode~C determinism ($27,257$~B unbounded vs.\ $27,257$~B bounded, $\Delta=0.000\%$), alongside Mode~R SHA-256 tamper rejection and 6-channel exact round-trip verification.
 
 \section{Honest Scientific Boundaries, Negative Results, and Threats to Validity}
 
 In keeping with our strict anti-fabrication commitment, we explicitly report every boundary condition, negative ablation result, and trade-off observed across all three generations of our experiments:
 
 \begin{enumerate}
-  \item \textbf{Dense-Panel vs.\ Sparse-Panel Micro-Indel Splicing Trade-Off (Table~\ref{tab:ablations_real}):}
-  While affine micro-indel splicing (Law~IIIb) saves $1,131$~B ($-15.56\%$) on synthetic indel panels and eliminates $428$ broken tokens ($-93$~B) when compressing \textit{E.~coli} \texttt{00.seq} against a single distant donor (\texttt{20.seq}), disabling micro-indel splicing on the dense 23-donor \textit{E.~coli} LOO panel reduces archive size by $128$~B ($40,607$~B vs.\ $40,735$~B). When 23 diverse donors are present, a micro-indel in one donor often coincides with an exact unbroken haplotype in another donor; greedily splicing the current donor can prevent switching to a cleaner donor. We retain Law~IIIb on by default because it is strongly net-positive in single-donor, sparse-panel, and structural-variant regimes, and costs only $+0.31\%$ on dense 23-donor panels.
+  \item \textbf{Micro-Indel Splicing vs.\ Law~VI Token/Novelty Efficiency Trade-Off (Table~\ref{tab:ablations_real}):}
+  Affine micro-indel splicing (Law~IIIc) cuts synthetic structural-variant payload by \textbf{$-32.3\%$} ($6,818$~B vs.\ $10,067$~B in \texttt{VerifyCompressionLaws}). Once Law~VI's two-adic taper ($\tau=20$) and Hierarchical Pitman--Yor novelty coder reduce short-gap and short-literal overhead, however, disabling splicing slightly reduces total archive bytes on real \textit{E.~coli} both against a 23-donor LOO panel ($40,469$~B vs.\ $40,588$~B, $-119$~B) and on distant single donor \texttt{20.seq} ($196,936$~B vs.\ $197,163$~B, $-227$~B), even though disabling splicing fragments synteny from $1,517$ to $1,945$ panel tokens ($+428$ breaks). On dense panels, a micro-indel in one donor often coincides with an exact haplotype in another donor; even on single donors, long-tail splice displacement parameters can cost slightly more than restarting an unbroken panel token with Law~VI entropy coding. We retain splicing on by default because it preserves long-range syntenic continuity and dominates structural-variant regimes ($-32.3\%$).
   \item \textbf{Near-Clonal Per-Target Ties/Losses vs.\ the 13-Configuration \texttt{AGC} Oracle:}
-  Although \texttt{HGS2} wins \textbf{73/73} targets against any single deployable \texttt{AGC~3.2.5} configuration and beats the 13-configuration per-target \texttt{AGC} oracle by \textbf{2.04$\times$} on \textit{M.~tuberculosis} ($47,305$~B vs.\ $96,580$~B) and \textbf{9.26$\times$} on \textit{S.~aureus} ($174,639$~B vs.\ $1,617,085$~B), the per-target oracle is smaller by $13\text{--}236$~B on 5/24 near-clonal \textit{M.~tuberculosis} targets (\texttt{03, 08, 09, 16, 19.seq}) and by $64$~B on 1/25 \textit{S.~aureus} target (\texttt{04.seq}). On ultra-clonal targets ($<40$ SNPs across $4.4$~Mbp), \texttt{HGS2}'s mandatory 32-byte cryptographic SHA-256 donor-panel pin accounts for $5\text{--}12\%$ of the entire archive.
+  Although \texttt{HGS2} wins \textbf{73/73} targets against any single deployable \texttt{AGC~3.2.5} configuration and beats the 13-configuration per-target \texttt{AGC} oracle by \textbf{2.04$\times$} on \textit{M.~tuberculosis} ($47,339$~B vs.\ $96,580$~B) and \textbf{9.28$\times$} on \textit{S.~aureus} ($174,217$~B vs.\ $1,617,085$~B), the per-target oracle is smaller by $13\text{--}239$~B on 5/24 near-clonal \textit{M.~tuberculosis} targets (\texttt{03.seq}: $256$ vs.\ $243$~B; \texttt{08.seq}: $287$ vs.\ $224$~B; \texttt{09.seq}: $607$ vs.\ $368$~B; \texttt{16.seq}: $1,150$ vs.\ $1,072$~B; \texttt{19.seq}: $536$ vs.\ $512$~B) and by $66$~B on 1/25 \textit{S.~aureus} target (\texttt{04.seq}: $683$ vs.\ $617$~B). On ultra-clonal targets ($<40$ SNPs across $4.4$~Mbp), \texttt{HGS2}'s mandatory 32-byte cryptographic SHA-256 donor-panel pin accounts for $5\text{--}12\%$ of the entire archive.
+  \item \textbf{OVC Asymptotic Boundary on Subexponential $\#k$-SAT Ideas~\cite{openai2026eth}:}
+  While Laws~VI and~VII successfully adapt shared linear summaries, two-adic tapering ($\tau=20$), and disjoint polynomial-space phases from~\cite{openai2026eth}, \S1.1.3 of~\cite{openai2026eth} proves no bypass around Orthogonal Vectors Conjecture (OVC) polynomial-time lower bounds for exact sequence alignment or Longest Common Subsequence problems.
   \item \textbf{Medium-Diversity \textit{E.~coli} Stratum Crossover in Generation~1 (\texttt{docs/BROAD.md}):}
   Across the 9 within-species Mash diversity strata in Generation~1 (Table~\ref{tab:gen1_broad}), \texttt{HyperGraSS v1 --pangenome} won $8/9$ strata but trailed \texttt{JARVIS3 -l 7} by $-0.16\%$ ($5,276$~B: $3,381,136$~B vs.\ $3,375,860$~B) on the 20-genome medium-diversity \textit{E.~coli} stratum. Generation~3 (\texttt{HGS2}) resolves this by replacing fixed-bank block matching with unaligned spanning-tree coalescent copying and \texttt{FastCRM}.
-  \item \textbf{Mode~S Single-Genome CPU Throughput vs.\ Default \texttt{JARVIS3 -l 7}:}
-  In reference-free single-genome compression (Table~\ref{tab:ind12_subset}), \texttt{EIMDL Mode~S} (\texttt{--threads 1}) achieves smaller archives than both \texttt{JARVIS3 -l 7} ($-8.79\%$) and \texttt{JARVIS3 -l 31} ($-2.32\%$) while using $2.46\times$ and $10.7\times$ less RAM, respectively, and runs $1.26\times$ faster than \texttt{JARVIS3 -l 31} in aggregate. However, against lightweight default \texttt{JARVIS3 -l 7}, \texttt{EIMDL Mode~S} is $3.65\times$ slower to compress ($332.5$~s vs.\ $91.0$~s) and $3.16\times$ slower to restore ($277.9$~s vs.\ $87.9$~s) due to symmetric per-base context mixing.
+  \item \textbf{Mode~S Single-Genome CPU Throughput vs.\ Default \texttt{JARVIS3 -l 7} (Locked Docker Snapshot):}
+  In reference-free single-genome compression (Table~\ref{tab:ind12_subset}, executed inside Docker \texttt{hypergrass-corpus:jdk27}), \texttt{EIMDL Mode~S} (\texttt{--threads 1}) achieves smaller archives than both \texttt{JARVIS3 -l 7} ($-8.79\%$) and \texttt{JARVIS3 -l 31} ($-2.32\%$) while using $2.46\times$ and $10.7\times$ less RAM, respectively, and runs $1.26\times$ faster than \texttt{JARVIS3 -l 31} in aggregate. However, against lightweight default \texttt{JARVIS3 -l 7}, \texttt{EIMDL Mode~S} is $3.65\times$ slower to compress ($332.5$~s vs.\ $91.0$~s) and $3.16\times$ slower to restore ($277.9$~s vs.\ $87.9$~s) due to symmetric per-base context mixing in that locked container snapshot (host Mode~S under Laws~VIa--VIc achieves $6.75$~s encode / $6.57$~s decode on \textit{E.~coli} \texttt{00.fa}; re-running the Docker comparison for Table~\ref{tab:ind12_subset} remains future work).
   \item \textbf{32-Bit Signed Integer CSR Addressing Horizon ($\approx 2.14$~Gbp) in Generation~3:}
   While Generation~1's 64-bit \texttt{SequenceSource} verified streaming block compression up to $2.077$~GiB ($2,229,710,670$~B, Table~\ref{tab:gen1_systems}), Generation~3's \texttt{DonorPanelIndex} stores concatenated donor base coordinates in signed 32-bit Java arrays (\texttt{int[] csrPositions}), bounding a single in-memory donor reference bank to $2^{31}-1 \approx 2.14\times 10^9$~bp ($\approx 430$ bacterial genomes or $\approx 68\%$ of a haploid human genome) unless partitioned into shards.
 \end{enumerate}
 
 \section{Conclusion}
 
-We have presented the complete end-to-end theory, architectural evolution, and empirical verification of \textbf{Evolutionary Information Minimum Description Length (EIMDL)} from Generation~1 (\texttt{HyperGraSS v1}) and Generation~2 (\texttt{RC-MDL v2}) to the unified Generation~3 engine (\textbf{\texttt{HGS2}}), uniting reference-free single-genome coding (\textbf{Mode~S}), reference-conditioned incremental archiving (\textbf{Mode~R}), and self-contained pangenome compression (\textbf{Mode~C}) under five mathematically proved, experimentally falsifiable laws. By embedding the algebraic symmetries of molecular evolution---Klein four-group $V_4$ strand-invariant substitutions, codon-wobble gap periodicity, causal 6-frame ORF survival, horizon-bounded two-gear coalescent haplotype copying, affine micro-indel splicing, and subsampled open-syncmer CSR indexing---directly into the compressor's probability model, \texttt{HGS2} achieves state-of-the-art compression across all evaluated bacterial species while operating deterministically within a $192$~MiB pure-JVM heap ceiling.
+We have presented the complete end-to-end theory, architectural evolution, and empirical verification of \textbf{Evolutionary Information Minimum Description Length (EIMDL)} from Generation~1 (\texttt{HyperGraSS v1}) and Generation~2 (\texttt{RC-MDL v2}) to the unified Generation~3 engine (\textbf{\texttt{HGS2}}), uniting reference-free single-genome coding (\textbf{Mode~S}), reference-conditioned incremental archiving (\textbf{Mode~R}), and self-contained pangenome compression (\textbf{Mode~C}) under seven mathematically proved, experimentally falsifiable laws. By embedding the algebraic symmetries of molecular evolution---Klein four-group $V_4$ strand-invariant substitutions, codon-wobble gap periodicity, causal 6-frame ORF survival, horizon-bounded two-gear coalescent haplotype copying, affine micro-indel splicing, subsampled open-syncmer CSR indexing, two-adic tapered adaptation, Hierarchical Pitman--Yor backoff, reciprocal normalization, and strictly disjoint Stage-1/Stage-2 memory lifecycles---directly into the compressor's probability model, \texttt{HGS2} achieves state-of-the-art compression across all evaluated bacterial species, scales to $19.65$~s encode ($45.16\times$ faster than Generation~1) and $8.66\text{--}10.40$~s decode, and operates deterministically inside a strict \textbf{\texttt{-Xmx128m}} ($128$~MiB) pure-JVM heap ceiling.
 
 \bibliographystyle{plain}
 \bibliography{references}
@@ -871,32 +925,32 @@ We have presented the complete end-to-end theory, architectural evolution, and e
 \toprule
 \textbf{Target} & \textbf{Raw (B)} & \textbf{HGS2 (B)} & \textbf{bpb} & \textbf{Ratio} & \textbf{RC-MDL v2 (B)} & \textbf{AGC Single (B)} & \textbf{AGC/HGS2} & \textbf{Panel Match (bp)} & \textbf{Novelty (bp)} & \textbf{SNPs} & \textbf{Splices} \\
 \midrule
-\texttt{00.seq} & 4,856,080 & \textbf{40,735} & 0.0671 & 119.2$\times$ & 73,194 & 189,412 & 4.65$\times$ & 4,766,688 & 71,716 & 5,706 & 99 \\
-\texttt{01.seq} & 5,385,437 & \textbf{13,112} & 0.0195 & 410.7$\times$ & 33,253 & 540,494 & 41.22$\times$ & 5,320,273 & 19,879 & 3,161 & 72 \\
-\texttt{02.seq} & 4,860,582 & \textbf{52,498} & 0.0864 & 92.6$\times$ & 72,932 & 288,872 & 5.50$\times$ & 4,681,256 & 146,040 & 7,260 & 116 \\
-\texttt{03.seq} & 5,421,422 & \textbf{78,700} & 0.1161 & 68.9$\times$ & 116,355 & 536,683 & 6.82$\times$ & 5,151,931 & 115,615 & 16,347 & 332 \\
-\texttt{04.seq} & 5,365,294 & \textbf{13,648} & 0.0204 & 393.1$\times$ & 32,929 & 312,087 & 22.87$\times$ & 5,296,624 & 26,364 & 2,623 & 35 \\
-\texttt{05.seq} & 4,803,482 & \textbf{46,124} & 0.0768 & 104.1$\times$ & 65,978 & 290,726 & 6.30$\times$ & 4,664,849 & 119,625 & 7,284 & 137 \\
-\texttt{06.seq} & 4,561,780 & \textbf{43,677} & 0.0766 & 104.4$\times$ & 71,641 & 171,489 & 3.93$\times$ & 4,414,933 & 92,793 & 5,534 & 79 \\
-\texttt{07.seq} & 4,798,114 & \textbf{39,795} & 0.0664 & 120.6$\times$ & 70,697 & 230,295 & 5.79$\times$ & 4,714,179 & 68,033 & 6,027 & 67 \\
-\texttt{08.seq} & 5,012,486 & \textbf{117,782} & 0.1880 & 42.6$\times$ & 154,234 & 735,021 & 6.24$\times$ & 4,814,194 & 147,526 & 39,697 & 542 \\
-\texttt{09.seq} & 5,053,585 & \textbf{66,375} & 0.1051 & 76.1$\times$ & 101,599 & 412,125 & 6.21$\times$ & 4,691,361 & 130,180 & 10,683 & 187 \\
-\texttt{10.seq} & 4,943,650 & \textbf{35,347} & 0.0572 & 139.9$\times$ & 59,828 & 339,296 & 9.60$\times$ & 4,817,675 & 92,045 & 5,371 & 83 \\
-\texttt{11.seq} & 5,205,165 & \textbf{139,433} & 0.2143 & 37.3$\times$ & 184,176 & 502,058 & 3.60$\times$ & 4,901,590 & 270,800 & 33,306 & 531 \\
-\texttt{12.seq} & 5,053,882 & \textbf{89,654} & 0.1419 & 56.4$\times$ & 133,278 & 705,177 & 7.87$\times$ & 4,918,060 & 118,874 & 23,351 & 292 \\
-\texttt{13.seq} & 5,185,030 & \textbf{635} & 0.0010 & 8165.4$\times$ & 2,032 & 1,680 & 2.65$\times$ & 5,181,158 & 29 & 47 & 9 \\
-\texttt{14.seq} & 5,182,390 & \textbf{633} & 0.0010 & 8187.0$\times$ & 2,266 & 1,624 & 2.57$\times$ & 5,182,105 & 41 & 47 & 4 \\
-\texttt{15.seq} & 5,256,457 & \textbf{2,908} & 0.0044 & 1807.6$\times$ & 5,411 & 11,848 & 4.07$\times$ & 5,249,479 & 6,958 & 343 & 6 \\
-\texttt{16.seq} & 5,014,829 & \textbf{41,865} & 0.0668 & 119.8$\times$ & 55,231 & 488,380 & 11.67$\times$ & 4,876,963 & 122,929 & 5,022 & 88 \\
-\texttt{17.seq} & 4,735,631 & \textbf{49,325} & 0.0833 & 96.0$\times$ & 79,927 & 250,296 & 5.07$\times$ & 4,595,281 & 114,229 & 5,954 & 75 \\
-\texttt{18.seq} & 4,944,989 & \textbf{31,353} & 0.0507 & 157.7$\times$ & 42,777 & 708,828 & 22.61$\times$ & 4,846,864 & 81,037 & 5,082 & 79 \\
-\texttt{19.seq} & 4,837,142 & \textbf{33,454} & 0.0553 & 144.6$\times$ & 52,085 & 276,906 & 8.28$\times$ & 4,710,739 & 69,415 & 7,750 & 160 \\
-\texttt{20.seq} & 4,922,292 & \textbf{62,320} & 0.1013 & 79.0$\times$ & 96,930 & 272,145 & 4.37$\times$ & 4,733,105 & 128,642 & 9,867 & 166 \\
-\texttt{21.seq} & 5,047,333 & \textbf{56,671} & 0.0898 & 89.1$\times$ & 93,381 & 232,003 & 4.09$\times$ & 4,909,638 & 98,493 & 11,755 & 245 \\
-\texttt{22.seq} & 4,960,534 & \textbf{104,962} & 0.1693 & 47.3$\times$ & 144,449 & 595,255 & 5.67$\times$ & 4,784,574 & 140,184 & 29,688 & 402 \\
-\texttt{23.seq} & 4,700,637 & \textbf{16,772} & 0.0285 & 280.3$\times$ & 36,178 & 291,417 & 17.38$\times$ & 4,633,914 & 35,203 & 2,872 & 61 \\
+\texttt{00.seq} & 4,856,080 & \textbf{40,588} & 0.0669 & 119.6$\times$ & 73,194 & 189,412 & 4.67$\times$ & 4,766,688 & 71,716 & 5,706 & 99 \\
+\texttt{01.seq} & 5,385,437 & \textbf{13,101} & 0.0195 & 411.1$\times$ & 33,253 & 540,494 & 41.26$\times$ & 5,320,273 & 19,879 & 3,161 & 72 \\
+\texttt{02.seq} & 4,860,582 & \textbf{52,425} & 0.0863 & 92.7$\times$ & 72,932 & 288,872 & 5.51$\times$ & 4,681,256 & 146,040 & 7,260 & 116 \\
+\texttt{03.seq} & 5,421,422 & \textbf{78,398} & 0.1157 & 69.2$\times$ & 116,355 & 536,683 & 6.85$\times$ & 5,151,931 & 115,615 & 16,347 & 332 \\
+\texttt{04.seq} & 5,365,294 & \textbf{13,661} & 0.0204 & 392.7$\times$ & 32,929 & 312,087 & 22.85$\times$ & 5,296,624 & 26,364 & 2,623 & 35 \\
+\texttt{05.seq} & 4,803,482 & \textbf{46,044} & 0.0767 & 104.3$\times$ & 65,978 & 290,726 & 6.31$\times$ & 4,664,849 & 119,625 & 7,284 & 137 \\
+\texttt{06.seq} & 4,561,780 & \textbf{43,548} & 0.0764 & 104.8$\times$ & 71,641 & 171,489 & 3.94$\times$ & 4,414,933 & 92,793 & 5,534 & 79 \\
+\texttt{07.seq} & 4,798,114 & \textbf{39,657} & 0.0661 & 121.0$\times$ & 70,697 & 230,295 & 5.81$\times$ & 4,714,179 & 68,033 & 6,027 & 67 \\
+\texttt{08.seq} & 5,012,486 & \textbf{117,333} & 0.1873 & 42.7$\times$ & 154,234 & 735,021 & 6.26$\times$ & 4,814,194 & 147,526 & 39,697 & 542 \\
+\texttt{09.seq} & 5,053,585 & \textbf{66,197} & 0.1048 & 76.3$\times$ & 101,599 & 412,125 & 6.23$\times$ & 4,691,361 & 130,180 & 10,683 & 187 \\
+\texttt{10.seq} & 4,943,650 & \textbf{35,282} & 0.0571 & 140.1$\times$ & 59,828 & 339,296 & 9.62$\times$ & 4,817,675 & 92,045 & 5,371 & 83 \\
+\texttt{11.seq} & 5,205,165 & \textbf{138,836} & 0.2134 & 37.5$\times$ & 184,176 & 502,058 & 3.62$\times$ & 4,901,590 & 270,800 & 33,306 & 531 \\
+\texttt{12.seq} & 5,053,882 & \textbf{89,164} & 0.1411 & 56.7$\times$ & 133,278 & 705,177 & 7.91$\times$ & 4,918,060 & 118,874 & 23,351 & 292 \\
+\texttt{13.seq} & 5,185,030 & \textbf{633} & 0.0010 & 8191.2$\times$ & 2,032 & 1,680 & 2.65$\times$ & 5,181,158 & 29 & 47 & 9 \\
+\texttt{14.seq} & 5,182,390 & \textbf{632} & 0.0010 & 8200.0$\times$ & 2,266 & 1,624 & 2.57$\times$ & 5,182,105 & 41 & 47 & 4 \\
+\texttt{15.seq} & 5,256,457 & \textbf{2,911} & 0.0044 & 1805.7$\times$ & 5,411 & 11,848 & 4.07$\times$ & 5,249,479 & 6,958 & 343 & 6 \\
+\texttt{16.seq} & 5,014,829 & \textbf{41,811} & 0.0667 & 119.9$\times$ & 55,231 & 488,380 & 11.68$\times$ & 4,876,963 & 122,929 & 5,022 & 88 \\
+\texttt{17.seq} & 4,735,631 & \textbf{49,279} & 0.0832 & 96.1$\times$ & 79,927 & 250,296 & 5.08$\times$ & 4,595,281 & 114,229 & 5,954 & 75 \\
+\texttt{18.seq} & 4,944,989 & \textbf{31,284} & 0.0506 & 158.1$\times$ & 42,777 & 708,828 & 22.66$\times$ & 4,846,864 & 81,037 & 5,082 & 79 \\
+\texttt{19.seq} & 4,837,142 & \textbf{33,408} & 0.0553 & 144.8$\times$ & 52,085 & 276,906 & 8.29$\times$ & 4,710,739 & 69,415 & 7,750 & 160 \\
+\texttt{20.seq} & 4,922,292 & \textbf{62,134} & 0.1010 & 79.2$\times$ & 96,930 & 272,145 & 4.38$\times$ & 4,733,105 & 128,642 & 9,867 & 166 \\
+\texttt{21.seq} & 5,047,333 & \textbf{56,502} & 0.0896 & 89.3$\times$ & 93,381 & 232,003 & 4.11$\times$ & 4,909,638 & 98,493 & 11,755 & 245 \\
+\texttt{22.seq} & 4,960,534 & \textbf{104,531} & 0.1686 & 47.5$\times$ & 144,449 & 595,255 & 5.69$\times$ & 4,784,574 & 140,184 & 29,688 & 402 \\
+\texttt{23.seq} & 4,700,637 & \textbf{16,754} & 0.0285 & 280.6$\times$ & 36,178 & 291,417 & 17.39$\times$ & 4,633,914 & 35,203 & 2,872 & 61 \\
 \midrule
-\textbf{Total (24 Genomes)} & \textbf{120,108,223} & \textbf{1,177,778} & \textbf{0.07845} & \textbf{101.98$\times$} & \textbf{1,780,761} & \textbf{8,384,117} & \textbf{7.12$\times$} & \textbf{116,857,433} & \textbf{2,216,650} & \textbf{244,777} & \textbf{3,867} \\
+\textbf{Total (24 Genomes)} & \textbf{120,108,223} & \textbf{1,174,113} & \textbf{0.07820} & \textbf{102.30$\times$} & \textbf{1,780,761} & \textbf{8,384,117} & \textbf{7.14$\times$} & \textbf{116,857,433} & \textbf{2,216,650} & \textbf{244,777} & \textbf{3,867} \\
 \bottomrule
 \end{tabular}%
 }
@@ -904,39 +958,39 @@ We have presented the complete end-to-end theory, architectural evolution, and e
 
 \begin{table}[h!]
 \centering
-\caption{Complete 24-genome Mode~R Leave-One-Out evaluation on \textit{Mycobacterium tuberculosis} ($105,745,015$~bp total, \texttt{loo\_mtb.json} and \texttt{agc-sweep-mtb-full/report.json}). \texttt{AGC} Best Single configuration (\texttt{-s 100000}) totals $292,170$~B (\texttt{HGS2} wins \textbf{24/24}, $6.18\times$). Against the 13-Configuration Per-Target \texttt{AGC} Oracle ($96,580$~B), \texttt{HGS2} totals \textbf{47,305~B} ($2.04\times$ smaller) and wins \textbf{19/24} targets.}
+\caption{Complete 24-genome Mode~R Leave-One-Out evaluation on \textit{Mycobacterium tuberculosis} ($105,745,015$~bp total, \texttt{loo\_mtb.json} and \texttt{agc-sweep-mtb-full/report.json}). \texttt{AGC} Best Single configuration (\texttt{-s 100000}) totals $292,170$~B (\texttt{HGS2} wins \textbf{24/24}, $6.17\times$). Against the 13-Configuration Per-Target \texttt{AGC} Oracle ($96,580$~B), \texttt{HGS2} totals \textbf{47,339~B} ($2.04\times$ smaller) and wins \textbf{19/24} targets.}
 \label{tab:mtb_full}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{lrrrrrrrrrrr}
 \toprule
 \textbf{Target} & \textbf{Raw (B)} & \textbf{HGS2 (B)} & \textbf{bpb} & \textbf{Ratio} & \textbf{RC-MDL v2 (B)} & \textbf{AGC Oracle (B)} & \textbf{Oracle Flag} & \textbf{Panel Match (bp)} & \textbf{Novelty (bp)} & \textbf{SNPs} & \textbf{Splices} \\
 \midrule
-\texttt{00.seq} & 4,417,521 & \textbf{1,237} & 0.00224 & 3571$\times$ & 4,012 & 1,667 & \texttt{seg1m-min15} & 4,412,383 & 70 & 251 & 0 \\
-\texttt{01.seq} & 4,383,271 & \textbf{2,163} & 0.00395 & 2026$\times$ & 5,051 & 2,787 & \texttt{seg500k} & 4,377,050 & 123 & 542 & 0 \\
-\texttt{02.seq} & 4,433,908 & \textbf{1,963} & 0.00354 & 2259$\times$ & 6,282 & 2,916 & \texttt{seg1m} & 4,421,763 & 156 & 425 & 0 \\
+\texttt{00.seq} & 4,417,521 & \textbf{1,240} & 0.00225 & 3563$\times$ & 4,012 & 1,667 & \texttt{seg1m-min15} & 4,412,383 & 70 & 251 & 0 \\
+\texttt{01.seq} & 4,383,271 & \textbf{2,164} & 0.00395 & 2026$\times$ & 5,051 & 2,787 & \texttt{seg500k} & 4,377,050 & 123 & 542 & 0 \\
+\texttt{02.seq} & 4,433,908 & \textbf{1,967} & 0.00355 & 2254$\times$ & 6,282 & 2,916 & \texttt{seg1m} & 4,421,763 & 156 & 425 & 0 \\
 \texttt{03.seq} & 4,367,416 & 256 & 0.00047 & 17060$\times$ & 1,635 & \textbf{243} & \texttt{seg500k} & 4,367,402 & 14 & 18 & 0 \\
 \texttt{04.seq} & 4,410,859 & \textbf{1,874} & 0.00340 & 2354$\times$ & 5,346 & 4,615 & \texttt{seg1m} & 4,401,196 & 105 & 359 & 1 \\
-\texttt{05.seq} & 4,393,623 & \textbf{2,758} & 0.00502 & 1593$\times$ & 5,604 & 3,560 & \texttt{seg1m} & 4,383,407 & 237 & 643 & 0 \\
-\texttt{06.seq} & 4,431,121 & \textbf{2,071} & 0.00374 & 2140$\times$ & 5,871 & 2,886 & \texttt{seg500k} & 4,425,105 & 127 & 494 & 0 \\
-\texttt{07.seq} & 4,395,921 & \textbf{2,348} & 0.00427 & 1872$\times$ & 5,504 & 3,263 & \texttt{seg1m} & 4,391,530 & 804 & 476 & 14 \\
-\texttt{08.seq} & 4,367,401 & 286 & 0.00052 & 15271$\times$ & 2,218 & \textbf{224} & \texttt{seg1m} & 4,367,400 & 1 & 33 & 0 \\
-\texttt{09.seq} & 4,423,131 & 604 & 0.00109 & 7323$\times$ & 2,582 & \textbf{368} & \texttt{k25-seg200k} & 4,421,636 & 18 & 84 & 1 \\
-\texttt{10.seq} & 4,416,232 & \textbf{792} & 0.00143 & 5576$\times$ & 3,196 & 794 & \texttt{seg1m} & 4,406,724 & 85 & 76 & 0 \\
-\texttt{11.seq} & 4,409,659 & \textbf{5,263} & 0.00955 & 838$\times$ & 8,302 & 7,850 & \texttt{seg500k} & 4,403,362 & 900 & 1,250 & 2 \\
-\texttt{12.seq} & 4,420,355 & \textbf{3,059} & 0.00554 & 1445$\times$ & 6,026 & 33,514 & \texttt{default} & 4,409,374 & 194 & 716 & 0 \\
-\texttt{13.seq} & 4,425,030 & \textbf{5,277} & 0.00954 & 839$\times$ & 8,388 & 7,064 & \texttt{seg1m} & 4,419,775 & 1,149 & 1,258 & 2 \\
-\texttt{14.seq} & 4,393,390 & \textbf{2,005} & 0.00365 & 2191$\times$ & 5,618 & 2,505 & \texttt{seg1m} & 4,392,962 & 215 & 342 & 12 \\
-\texttt{15.seq} & 4,408,959 & \textbf{1,834} & 0.00333 & 2404$\times$ & 5,596 & 4,789 & \texttt{seg1m-min15} & 4,393,914 & 230 & 285 & 2 \\
-\texttt{16.seq} & 4,414,576 & 1,147 & 0.00208 & 3849$\times$ & 3,843 & \textbf{1,072} & \texttt{k25-seg200k} & 4,408,020 & 57 & 224 & 1 \\
-\texttt{17.seq} & 4,404,191 & \textbf{2,439} & 0.00443 & 1806$\times$ & 6,748 & 3,155 & \texttt{seg1m} & 4,392,086 & 378 & 371 & 6 \\
-\texttt{18.seq} & 4,363,898 & \textbf{1,127} & 0.00207 & 3872$\times$ & 4,867 & 1,693 & \texttt{seg1m-min15} & 4,360,115 & 63 & 222 & 0 \\
-\texttt{19.seq} & 4,421,179 & 535 & 0.00097 & 8264$\times$ & 3,163 & \textbf{512} & \texttt{seg1m} & 4,419,419 & 80 & 38 & 0 \\
-\texttt{20.seq} & 4,421,090 & \textbf{2,030} & 0.00367 & 2178$\times$ & 6,552 & 3,062 & \texttt{seg500k} & 4,415,410 & 165 & 483 & 0 \\
-\texttt{21.seq} & 4,401,414 & \textbf{2,061} & 0.00375 & 2136$\times$ & 4,696 & 2,473 & \texttt{seg1m} & 4,393,625 & 478 & 444 & 0 \\
+\texttt{05.seq} & 4,393,623 & \textbf{2,757} & 0.00502 & 1594$\times$ & 5,604 & 3,560 & \texttt{seg1m} & 4,383,407 & 237 & 643 & 0 \\
+\texttt{06.seq} & 4,431,121 & \textbf{2,075} & 0.00375 & 2135$\times$ & 5,871 & 2,886 & \texttt{seg500k} & 4,425,105 & 127 & 494 & 0 \\
+\texttt{07.seq} & 4,395,921 & \textbf{2,352} & 0.00428 & 1869$\times$ & 5,504 & 3,263 & \texttt{seg1m} & 4,391,530 & 804 & 476 & 14 \\
+\texttt{08.seq} & 4,367,401 & 287 & 0.00053 & 15217$\times$ & 2,218 & \textbf{224} & \texttt{seg1m} & 4,367,400 & 1 & 33 & 0 \\
+\texttt{09.seq} & 4,423,131 & 607 & 0.00110 & 7287$\times$ & 2,582 & \textbf{368} & \texttt{k25-seg200k} & 4,421,636 & 18 & 84 & 1 \\
+\texttt{10.seq} & 4,416,232 & \textbf{793} & 0.00144 & 5569$\times$ & 3,196 & 794 & \texttt{seg1m} & 4,406,724 & 85 & 76 & 0 \\
+\texttt{11.seq} & 4,409,659 & \textbf{5,262} & 0.00955 & 838$\times$ & 8,302 & 7,850 & \texttt{seg500k} & 4,403,362 & 900 & 1,250 & 2 \\
+\texttt{12.seq} & 4,420,355 & \textbf{3,060} & 0.00554 & 1445$\times$ & 6,026 & 33,514 & \texttt{default} & 4,409,374 & 194 & 716 & 0 \\
+\texttt{13.seq} & 4,425,030 & \textbf{5,281} & 0.00955 & 838$\times$ & 8,388 & 7,064 & \texttt{seg1m} & 4,419,775 & 1,149 & 1,258 & 2 \\
+\texttt{14.seq} & 4,393,390 & \textbf{2,006} & 0.00365 & 2190$\times$ & 5,618 & 2,505 & \texttt{seg1m} & 4,392,962 & 215 & 342 & 12 \\
+\texttt{15.seq} & 4,408,959 & \textbf{1,832} & 0.00332 & 2407$\times$ & 5,596 & 4,789 & \texttt{seg1m-min15} & 4,393,914 & 230 & 285 & 2 \\
+\texttt{16.seq} & 4,414,576 & 1,150 & 0.00208 & 3839$\times$ & 3,843 & \textbf{1,072} & \texttt{k25-seg200k} & 4,408,020 & 57 & 224 & 1 \\
+\texttt{17.seq} & 4,404,191 & \textbf{2,438} & 0.00443 & 1806$\times$ & 6,748 & 3,155 & \texttt{seg1m} & 4,392,086 & 378 & 371 & 6 \\
+\texttt{18.seq} & 4,363,898 & \textbf{1,129} & 0.00207 & 3865$\times$ & 4,867 & 1,693 & \texttt{seg1m-min15} & 4,360,115 & 63 & 222 & 0 \\
+\texttt{19.seq} & 4,421,179 & 536 & 0.00097 & 8248$\times$ & 3,163 & \textbf{512} & \texttt{seg1m} & 4,419,419 & 80 & 38 & 0 \\
+\texttt{20.seq} & 4,421,090 & \textbf{2,033} & 0.00368 & 2175$\times$ & 6,552 & 3,062 & \texttt{seg500k} & 4,415,410 & 165 & 483 & 0 \\
+\texttt{21.seq} & 4,401,414 & \textbf{2,063} & 0.00375 & 2134$\times$ & 4,696 & 2,473 & \texttt{seg1m} & 4,393,625 & 478 & 444 & 0 \\
 \texttt{22.seq} & 4,426,364 & \textbf{2,063} & 0.00373 & 2146$\times$ & 6,659 & 3,142 & \texttt{seg500k} & 4,423,893 & 119 & 476 & 0 \\
-\texttt{23.seq} & 4,394,506 & \textbf{2,113} & 0.00385 & 2080$\times$ & 5,239 & 2,426 & \texttt{seg1m} & 4,385,035 & 143 & 480 & 7 \\
+\texttt{23.seq} & 4,394,506 & \textbf{2,114} & 0.00385 & 2079$\times$ & 5,239 & 2,426 & \texttt{seg1m} & 4,385,035 & 143 & 480 & 7 \\
 \midrule
-\textbf{Total (24 Genomes)} & \textbf{105,745,015} & \textbf{47,305} & \textbf{0.00358} & \textbf{2235.4$\times$} & \textbf{122,998} & \textbf{96,580} & \textbf{19/24 HGS2 Wins} & \textbf{105,592,586} & \textbf{5,911} & \textbf{9,990} & \textbf{48} \\
+\textbf{Total (24 Genomes)} & \textbf{105,745,015} & \textbf{47,339} & \textbf{0.00358} & \textbf{2233.8$\times$} & \textbf{122,998} & \textbf{96,580} & \textbf{19/24 HGS2 Wins} & \textbf{105,592,586} & \textbf{5,911} & \textbf{9,990} & \textbf{48} \\
 \bottomrule
 \end{tabular}%
 }
@@ -945,40 +999,40 @@ We have presented the complete end-to-end theory, architectural evolution, and e
 \clearpage
 \begin{table}[h!]
 \centering
-\caption{Complete 25-genome Mode~R Leave-One-Out evaluation on \textit{Staphylococcus aureus} ($71,043,114$~bp total, \texttt{loo\_saureus.json} and \texttt{agc-verify-saureus-oracle/results.json}). \texttt{AGC} Best Single configuration (\texttt{-s 50000}) totals $2,979,078$~B (\texttt{HGS2} wins \textbf{25/25}, $17.06\times$). Against the 13-Configuration Per-Target \texttt{AGC} Oracle ($1,617,085$~B), \texttt{HGS2} totals \textbf{174,639~B} ($9.26\times$ smaller) and wins \textbf{24/25} targets.}
+\caption{Complete 25-genome Mode~R Leave-One-Out evaluation on \textit{Staphylococcus aureus} ($71,043,114$~bp total, \texttt{loo\_saureus.json} and \texttt{agc-verify-saureus-oracle/results.json}). \texttt{AGC} Best Single configuration (\texttt{-s 50000}) totals $2,979,078$~B (\texttt{HGS2} wins \textbf{25/25}, $17.10\times$). Against the 13-Configuration Per-Target \texttt{AGC} Oracle ($1,617,085$~B), \texttt{HGS2} totals \textbf{174,217~B} ($9.28\times$ smaller) and wins \textbf{24/25} targets.}
 \label{tab:saureus_full}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{lrrrrrrrrrrr}
 \toprule
 \textbf{Target} & \textbf{Raw (B)} & \textbf{HGS2 (B)} & \textbf{bpb} & \textbf{Ratio} & \textbf{RC-MDL v2 (B)} & \textbf{AGC Oracle (B)} & \textbf{Oracle Flag} & \textbf{Panel Match (bp)} & \textbf{Novelty (bp)} & \textbf{SNPs} & \textbf{Splices} \\
 \midrule
-\texttt{00.seq} & 2,845,025 & \textbf{1,215} & 0.00342 & 2342$\times$ & 3,811 & 12,829 & \texttt{min15-fallback} & 2,842,771 & 1,431 & 170 & 0 \\
-\texttt{01.seq} & 2,859,551 & \textbf{1,353} & 0.00379 & 2113$\times$ & 4,879 & 1,988 & \texttt{k25-seg200k} & 2,858,803 & 748 & 262 & 2 \\
-\texttt{02.seq} & 2,810,065 & \textbf{916} & 0.00261 & 3068$\times$ & 4,347 & 1,401 & \texttt{seg1m-min15} & 2,809,869 & 120 & 165 & 1 \\
-\texttt{03.seq} & 2,850,449 & \textbf{2,665} & 0.00748 & 1070$\times$ & 6,337 & 4,119 & \texttt{seg500k} & 2,845,864 & 4,361 & 461 & 7 \\
-\texttt{04.seq} & 2,850,020 & 681 & 0.00191 & 4185$\times$ & 3,808 & \textbf{617} & \texttt{seg500k} & 2,849,988 & 32 & 107 & 0 \\
-\texttt{05.seq} & 2,755,072 & \textbf{3,408} & 0.00990 & 808$\times$ & 7,786 & 43,531 & \texttt{seg1m} & 2,750,345 & 3,384 & 669 & 2 \\
-\texttt{06.seq} & 2,964,115 & \textbf{17,239} & 0.04653 & 172$\times$ & 24,162 & 42,717 & \texttt{seg500k} & 2,873,456 & 52,907 & 1,447 & 22 \\
-\texttt{07.seq} & 2,798,705 & \textbf{9,165} & 0.02620 & 305$\times$ & 16,031 & 81,251 & \texttt{seg100k} & 2,771,808 & 21,400 & 1,695 & 55 \\
-\texttt{08.seq} & 2,874,399 & \textbf{360} & 0.00100 & 7984$\times$ & 2,273 & 91,344 & \texttt{seg50k} & 2,874,394 & 5 & 54 & 0 \\
-\texttt{09.seq} & 2,876,431 & \textbf{4,854} & 0.01350 & 593$\times$ & 9,409 & 12,190 & \texttt{seg1m} & 2,866,770 & 8,098 & 1,207 & 25 \\
-\texttt{10.seq} & 2,704,756 & \textbf{65,916} & 0.19496 & 41$\times$ & 81,001 & 108,919 & \texttt{seg1m} & 2,610,979 & 76,485 & 24,262 & 610 \\
-\texttt{11.seq} & 2,877,682 & \textbf{692} & 0.00192 & 4158$\times$ & 2,972 & 99,507 & \texttt{seg50k} & 2,877,359 & 32 & 121 & 0 \\
+\texttt{00.seq} & 2,845,025 & \textbf{1,217} & 0.00342 & 2338$\times$ & 3,811 & 12,829 & \texttt{min15-fallback} & 2,842,771 & 1,431 & 170 & 0 \\
+\texttt{01.seq} & 2,859,551 & \textbf{1,356} & 0.00379 & 2109$\times$ & 4,879 & 1,988 & \texttt{k25-seg200k} & 2,858,803 & 748 & 262 & 2 \\
+\texttt{02.seq} & 2,810,065 & \textbf{918} & 0.00261 & 3061$\times$ & 4,347 & 1,401 & \texttt{seg1m-min15} & 2,809,869 & 120 & 165 & 1 \\
+\texttt{03.seq} & 2,850,449 & \textbf{2,669} & 0.00749 & 1068$\times$ & 6,337 & 4,119 & \texttt{seg500k} & 2,845,864 & 4,361 & 461 & 7 \\
+\texttt{04.seq} & 2,850,020 & 683 & 0.00192 & 4173$\times$ & 3,808 & \textbf{617} & \texttt{seg500k} & 2,849,988 & 32 & 107 & 0 \\
+\texttt{05.seq} & 2,755,072 & \textbf{3,411} & 0.00990 & 808$\times$ & 7,786 & 43,531 & \texttt{seg1m} & 2,750,345 & 3,384 & 669 & 2 \\
+\texttt{06.seq} & 2,964,115 & \textbf{17,203} & 0.04643 & 172$\times$ & 24,162 & 42,717 & \texttt{seg500k} & 2,873,456 & 52,907 & 1,447 & 22 \\
+\texttt{07.seq} & 2,798,705 & \textbf{9,169} & 0.02621 & 305$\times$ & 16,031 & 81,251 & \texttt{seg100k} & 2,771,808 & 21,400 & 1,695 & 55 \\
+\texttt{08.seq} & 2,874,399 & \textbf{361} & 0.00100 & 7962$\times$ & 2,273 & 91,344 & \texttt{seg50k} & 2,874,394 & 5 & 54 & 0 \\
+\texttt{09.seq} & 2,876,431 & \textbf{4,858} & 0.01351 & 592$\times$ & 9,409 & 12,190 & \texttt{seg1m} & 2,866,770 & 8,098 & 1,207 & 25 \\
+\texttt{10.seq} & 2,704,756 & \textbf{65,713} & 0.19436 & 41$\times$ & 81,001 & 108,919 & \texttt{seg1m} & 2,610,979 & 76,485 & 24,262 & 610 \\
+\texttt{11.seq} & 2,877,682 & \textbf{693} & 0.00193 & 4152$\times$ & 2,972 & 99,507 & \texttt{seg50k} & 2,877,359 & 32 & 121 & 0 \\
 \texttt{12.seq} & 2,795,277 & \textbf{634} & 0.00181 & 4409$\times$ & 2,162 & 110,704 & \texttt{seg1m} & 2,793,737 & 56 & 13 & 7 \\
 \texttt{13.seq} & 2,794,402 & \textbf{603} & 0.00173 & 4634$\times$ & 1,809 & 18,909 & \texttt{seg500k} & 2,793,331 & 57 & 9 & 4 \\
-\texttt{14.seq} & 2,900,300 & \textbf{3,369} & 0.00929 & 861$\times$ & 8,610 & 34,801 & \texttt{seg1m} & 2,892,208 & 3,646 & 754 & 13 \\
-\texttt{15.seq} & 2,771,363 & \textbf{1,787} & 0.00516 & 1551$\times$ & 6,398 & 17,125 & \texttt{seg1m} & 2,770,491 & 771 & 385 & 4 \\
-\texttt{16.seq} & 2,822,192 & \textbf{469} & 0.00133 & 6017$\times$ & 2,166 & 633 & \texttt{seg1m-min15} & 2,809,360 & 17 & 11 & 1 \\
-\texttt{17.seq} & 2,822,180 & \textbf{446} & 0.00126 & 6328$\times$ & 1,899 & 92,806 & \texttt{seg1m} & 2,811,412 & 8 & 8 & 1 \\
-\texttt{18.seq} & 2,879,033 & \textbf{154} & 0.00043 & 18695$\times$ & 1,234 & 97,987 & \texttt{seg50k} & 2,879,032 & 1 & 5 & 0 \\
+\texttt{14.seq} & 2,900,300 & \textbf{3,371} & 0.00930 & 860$\times$ & 8,610 & 34,801 & \texttt{seg1m} & 2,892,208 & 3,646 & 754 & 13 \\
+\texttt{15.seq} & 2,771,363 & \textbf{1,790} & 0.00517 & 1548$\times$ & 6,398 & 17,125 & \texttt{seg1m} & 2,770,491 & 771 & 385 & 4 \\
+\texttt{16.seq} & 2,822,192 & \textbf{466} & 0.00132 & 6056$\times$ & 2,166 & 633 & \texttt{seg1m-min15} & 2,809,360 & 17 & 11 & 1 \\
+\texttt{17.seq} & 2,822,180 & \textbf{444} & 0.00126 & 6356$\times$ & 1,899 & 92,806 & \texttt{seg1m} & 2,811,412 & 8 & 8 & 1 \\
+\texttt{18.seq} & 2,879,033 & \textbf{155} & 0.00043 & 18574$\times$ & 1,234 & 97,987 & \texttt{seg50k} & 2,879,032 & 1 & 5 & 0 \\
 \texttt{19.seq} & 2,879,035 & \textbf{146} & 0.00041 & 19719$\times$ & 1,222 & 97,910 & \texttt{seg50k} & 2,879,035 & 0 & 4 & 0 \\
 \texttt{20.seq} & 2,879,034 & \textbf{134} & 0.00037 & 21485$\times$ & 1,139 & 97,898 & \texttt{seg50k} & 2,879,034 & 0 & 2 & 0 \\
-\texttt{21.seq} & 2,879,034 & \textbf{140} & 0.00039 & 20565$\times$ & 1,139 & 97,860 & \texttt{seg50k} & 2,879,034 & 0 & 4 & 0 \\
+\texttt{21.seq} & 2,879,034 & \textbf{141} & 0.00039 & 20419$\times$ & 1,139 & 97,860 & \texttt{seg50k} & 2,879,034 & 0 & 4 & 0 \\
 \texttt{22.seq} & 2,879,034 & \textbf{136} & 0.00038 & 21169$\times$ & 1,131 & 97,850 & \texttt{seg50k} & 2,879,034 & 0 & 2 & 0 \\
-\texttt{23.seq} & 2,879,034 & \textbf{147} & 0.00041 & 19585$\times$ & 1,136 & 97,873 & \texttt{seg50k} & 2,879,033 & 1 & 3 & 0 \\
-\texttt{24.seq} & 2,797,167 & \textbf{58,010} & 0.16591 & 48$\times$ & 70,551 & 254,316 & \texttt{fallback} & 2,710,745 & 61,148 & 17,687 & 553 \\
+\texttt{23.seq} & 2,879,034 & \textbf{148} & 0.00041 & 19453$\times$ & 1,136 & 97,873 & \texttt{seg50k} & 2,879,033 & 1 & 3 & 0 \\
+\texttt{24.seq} & 2,797,167 & \textbf{57,798} & 0.16530 & 48$\times$ & 70,551 & 254,316 & \texttt{fallback} & 2,710,745 & 61,148 & 17,687 & 553 \\
 \midrule
-\textbf{Total (25 Genomes)} & \textbf{71,043,114} & \textbf{174,639} & \textbf{0.01967} & \textbf{406.80$\times$} & \textbf{267,412} & \textbf{1,617,085} & \textbf{24/25 HGS2 Wins} & \textbf{70,687,892} & \textbf{234,708} & \textbf{49,507} & \textbf{1,307} \\
+\textbf{Total (25 Genomes)} & \textbf{71,043,114} & \textbf{174,217} & \textbf{0.01962} & \textbf{407.79$\times$} & \textbf{267,412} & \textbf{1,617,085} & \textbf{24/25 HGS2 Wins} & \textbf{70,687,892} & \textbf{234,708} & \textbf{49,507} & \textbf{1,307} \\
 \bottomrule
 \end{tabular}%
 }

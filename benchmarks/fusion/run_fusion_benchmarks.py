@@ -492,9 +492,9 @@ def run_amdahl_and_bounded_memory(java_exe: str, tmp_dir: Path) -> dict:
         r["speedup_vs_1t"] = round(t1_sec / max(1e-6, r["compress_inproc_seconds"]), 2)
         r["speedup_vs_v1_887s"] = round(887.3 / max(1e-6, r["compress_inproc_seconds"]), 2)
 
-    # Strict End-to-End Bounded Memory Runs (-Xmx256m, -Xmx224m, and -Xmx192m on 120.1 MB ecoli/input.seq!)
+    # Strict End-to-End Bounded Memory Runs (-Xmx256m, -Xmx224m, -Xmx192m, -Xmx160m, and -Xmx128m on 120.1 MB ecoli/input.seq!)
     bounded_runs = []
-    for heap_cap in ["256m", "224m", "192m"]:
+    for heap_cap in ["256m", "224m", "192m", "160m", "128m"]:
         r = run_eimdl_roundtrip(
             java_exe=java_exe,
             target=ecoli_seq,
