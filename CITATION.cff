@@ -1,0 +1,40 @@
+cff-version: 1.2.0
+message: "If you use HyperGraSS / HGS2 / EIMDL or the accompanying 25-page research monograph in your work, please cite the software and monograph using this metadata."
+title: "Evolutionary Information Minimum Description Length (EIMDL): Unified Seven-Law Lossless Genomic Compressor (HGS2 / HyperGraSS)"
+version: "2.0.0"
+date-released: 2026-11-14
+license: "Apache-2.0"
+type: software
+authors:
+  - family-names: "Islam"
+    given-names: "Md Saiful"
+repository-code: "https://github.com/MdSaifulIslamMSI/hypergrass-research"
+url: "https://github.com/MdSaifulIslamMSI/hypergrass-research/blob/master/paper/HGS2_EIMDL_Research_Paper.pdf"
+abstract: >-
+  Open-source zero-dependency Java 21+ research engine (HGS2 / EIMDL, .hgs2 v2.0)
+  uniting Generation 1 (HyperGraSS v1) and Generation 2 (RC-MDL v2) under Seven
+  Formal Mathematical and Biological Laws (Laws I-VII) for lossless single-genome
+  (Mode S), reference-conditioned (Mode R), and pangenome collection (Mode C)
+  compression with exact 6-channel FASTA reconstruction. Includes the 25-page
+  research monograph, 8 publication figures, 1,693-assertion automated audit,
+  and reproducible Kaggle 15-codec cloud verification suite (winning 15/15
+  bacterial tracks and compressing all 24 T2T-CHM13v2.0 | GRCh38 human
+  chromosomes by 89.47x from 3.156 GB to 35.28 MB).
+keywords:
+  - genomics
+  - pangenome
+  - lossless-compression
+  - minimum-description-length
+  - arithmetic-coding
+  - bioinformatics
+  - java
+  - chm13
+  - data-compression
+preferred-citation:
+  type: article
+  title: "Evolutionary Information Minimum Description Length (EIMDL): A Unified Seven-Law Theory and Bounded-Memory Architecture for Single-Genome, Reference-Conditioned, and Pangenome Compression"
+  authors:
+    - family-names: "Islam"
+      given-names: "Md Saiful"
+  year: 2026
+  url: "https://github.com/MdSaifulIslamMSI/hypergrass-research/blob/master/paper/HGS2_EIMDL_Research_Paper.pdf"

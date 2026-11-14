@@ -2,11 +2,14 @@
 
 **Lossless Genomic, Reference-Conditioned, and Pangenomic Sequence Compression under Evolutionary-Information Minimum Description Length (EIMDL) & Generalized Amdahl-Memory Scaling**
 
+[![Release](https://img.shields.io/github/v/release/MdSaifulIslamMSI/hypergrass-research?label=Release&color=blue)](https://github.com/MdSaifulIslamMSI/hypergrass-research/releases/tag/v2.0.0)
 [![Java](https://img.shields.io/badge/Java-21%2B%20%7C%20JDK%2025%2F27-blue.svg)](src/hypergrass/)
 [![Container](https://img.shields.io/badge/Formats-.hgs2%20v2.0%20%7C%20.hgs%20v1.0-success.svg)](docs/HGS-FORMAT.md)
 [![Paper](https://img.shields.io/badge/Monograph-25%20Pages%20PDF%20%2B%20LaTeX-critical.svg)](paper/HGS2_EIMDL_Research_Paper.pdf)
 [![Kaggle E2E](https://img.shields.io/badge/Kaggle%20E2E-15--Codec%20Shootout%20%2B%20T4%20GPU-20BEFF.svg)](benchmarks/kaggle/README.md)
 [![Audit](https://img.shields.io/badge/Automated%20Audit-1%2C693%20%2F%201%2C693%20PASS-brightgreen.svg)](paper/audit_paper_numbers.py)
+[![License](https://img.shields.io/badge/License-Apache_2.0-green.svg)](LICENSE)
+[![CI](https://github.com/MdSaifulIslamMSI/hypergrass-research/actions/workflows/ci.yml/badge.svg)](https://github.com/MdSaifulIslamMSI/hypergrass-research/actions/workflows/ci.yml)
 
 > **About:** Complete open-source research repository for **Evolutionary Information Minimum Description Length (`EIMDL`)** and its unified zero-dependency Java 21+ engine **`HGS2`** (uniting Gen 1 [`HyperGraSS v1`](docs/BENCHMARKS.md) and Gen 2 [`RC-MDL v2`](prototype/rcmdl/RESULTS.md) under Formal Laws I–VII). Achieves **`#1`** across **`15/15`** bacterial pangenome shootout tracks (*E. coli*, *S. enterica*, *K. pneumoniae* across Modes S, R, and C with 100% byte-for-byte FASTA SHA-256 identity), **`89.47x`** on all 24 **`T2T-CHM13v2.0 | GRCh38`** human chromosomes (`3.156 GB` $\to$ `35.28 MB`), **`#1`** archive size on human diploid `Chr21`/`Chr22`/`Chr1`/`Chr1..4`, **`43.2x–50.77x`** Tesla T4 CUDA sketch acceleration, and strict **`-Xmx128m`** pure-JVM execution—verified across `1,693/1,693` automated numerical assertions and Kaggle E2E cloud harnesses.
 
@@ -24,6 +27,8 @@
 | **Locked Independent Replication** | Independent *Salmonella enterica* (25 genomes) and *Klebsiella pneumoniae* (23 genomes) Mode C, Mode S, Mode R, and tuned `JARVIS3 -l 31` evaluation | [`docs/INDEPENDENT.md`](docs/INDEPENDENT.md) |
 | **Archive Container Specification** | Byte-exact binary format specification for `.hgs2` v2.0 (`0x48475332`) and legacy `.hgs` v1.0 (`0x48475301`) | [`docs/HGS-FORMAT.md`](docs/HGS-FORMAT.md) |
 | **Foundational Invariants & Gen 1/2 Docs** | Scientific contract ([`FOUNDATIONS.md`](docs/FOUNDATIONS.md)), specialized panels ([`SPECIALIZED.md`](docs/SPECIALIZED.md)), broad panels ([`BROAD.md`](docs/BROAD.md)), ablations ([`ABLATION.md`](docs/ABLATION.md)), entropy floor ([`ENTROPY-FLOOR.md`](docs/ENTROPY-FLOOR.md)), scaling ([`SCALING.md`](docs/SCALING.md)), RC-MDL v2 ([`RESULTS.md`](prototype/rcmdl/RESULTS.md)), handoff ([`HANDOFF.md`](HANDOFF.md)) | [`docs/`](docs/) |
+| **Latest Release (`v2.0.0`)** | Zero-dependency Java 21+ executable JAR (`hypergrass-hgs2-v2.0.0.jar`), 25-page PDF monograph, Fig. 8 (300 DPI), clean source tarball & `SHA256SUMS.txt` | [`releases/tag/v2.0.0`](https://github.com/MdSaifulIslamMSI/hypergrass-research/releases/tag/v2.0.0) |
+| **Citation & License** | GitHub Citation File Format 1.2.0 metadata ([`CITATION.cff`](CITATION.cff)) powering the sidebar citation widget & Apache License 2.0 ([`LICENSE`](LICENSE)) | [`CITATION.cff`](CITATION.cff) |
 
 ![Figure 1 — Cross-Regime Executive Synthesis of the Unified HGS2 / EIMDL Engine](paper/figures/fig1_regime_overview.png)
 

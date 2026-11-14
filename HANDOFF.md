@@ -2,7 +2,7 @@
 
 Snapshot: **2026-11-14**
 Repository: `https://github.com/MdSaifulIslamMSI/hypergrass-research`
-Release asset: `hypergrass-handoff-v1.tar.gz`
+Release assets: [`v2.0.0`](https://github.com/MdSaifulIslamMSI/hypergrass-research/releases/tag/v2.0.0) (`hypergrass-hgs2-v2.0.0.jar`, `HGS2_EIMDL_Research_Paper.pdf`, `hypergrass-research-v2.0.0.tar.gz`; prior `handoff-v1`: `hypergrass-handoff-v1.tar.gz`)
 Research Monograph (25-Page PDF): [`paper/HGS2_EIMDL_Research_Paper.pdf`](paper/HGS2_EIMDL_Research_Paper.pdf) (`0` overfull boxes, `1,693 / 1,693` automated numerical audit checks PASS via [`paper/audit_paper_numbers.py`](paper/audit_paper_numbers.py))
 Research Monograph (Markdown): [`docs/PAPER-DRAFT.md`](docs/PAPER-DRAFT.md)
 
