@@ -5,7 +5,10 @@
 [![Java](https://img.shields.io/badge/Java-21%2B%20%7C%20JDK%2025%2F27-blue.svg)](src/hypergrass/)
 [![Container](https://img.shields.io/badge/Formats-.hgs2%20v2.0%20%7C%20.hgs%20v1.0-success.svg)](docs/HGS-FORMAT.md)
 [![Paper](https://img.shields.io/badge/Monograph-25%20Pages%20PDF%20%2B%20LaTeX-critical.svg)](paper/HGS2_EIMDL_Research_Paper.pdf)
+[![Kaggle E2E](https://img.shields.io/badge/Kaggle%20E2E-15--Codec%20Shootout%20%2B%20T4%20GPU-20BEFF.svg)](benchmarks/kaggle/README.md)
 [![Audit](https://img.shields.io/badge/Automated%20Audit-1%2C693%20%2F%201%2C693%20PASS-brightgreen.svg)](paper/audit_paper_numbers.py)
+
+> **About:** Complete open-source research repository for **Evolutionary Information Minimum Description Length (`EIMDL`)** and its unified zero-dependency Java 21+ engine **`HGS2`** (uniting Gen 1 [`HyperGraSS v1`](docs/BENCHMARKS.md) and Gen 2 [`RC-MDL v2`](prototype/rcmdl/RESULTS.md) under Formal Laws I–VII). Achieves **`#1`** across **`15/15`** bacterial pangenome shootout tracks (*E. coli*, *S. enterica*, *K. pneumoniae* across Modes S, R, and C with 100% byte-for-byte FASTA SHA-256 identity), **`89.47x`** on all 24 **`T2T-CHM13v2.0 | GRCh38`** human chromosomes (`3.156 GB` $\to$ `35.28 MB`), **`#1`** archive size on human diploid `Chr21`/`Chr22`/`Chr1`/`Chr1..4`, **`43.2x–50.77x`** Tesla T4 CUDA sketch acceleration, and strict **`-Xmx128m`** pure-JVM execution—verified across `1,693/1,693` automated numerical assertions and Kaggle E2E cloud harnesses.
 
 ---
 
@@ -40,7 +43,7 @@ $$L_{\text{total}}(\text{file} \mid \mathcal{R}) = L_{\text{meta}}(\mathcal{M}) 
 
 ### Master Cross-Regime Benchmark Summary (100% SHA-256 Verified)
 
-Every measurement below is backed by committed JSON reports in [`benchmarks/fusion/results/`](benchmarks/fusion/results/) and [`benchmarks/independent/runs/`](benchmarks/independent/runs/) and audited automatically by [`paper/audit_paper_numbers.py`](paper/audit_paper_numbers.py).
+Every measurement below is backed by committed JSON reports in [`benchmarks/fusion/results/`](benchmarks/fusion/results/), [`benchmarks/independent/runs/`](benchmarks/independent/runs/), and [`benchmarks/kaggle/results/`](benchmarks/kaggle/results/), and audited automatically by [`paper/audit_paper_numbers.py`](paper/audit_paper_numbers.py).
 
 | Regime | Dataset / Panel | Raw DNA Bases | External / Prior Baseline | **`HGS2` / `EIMDL` Archive** | **`EIMDL` bpb** | **Ratio** | Key Margin & Operational Milestone |
 |---|---|---:|---|---|---:|---:|---|
