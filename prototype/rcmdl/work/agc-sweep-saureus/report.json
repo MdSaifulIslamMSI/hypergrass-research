@@ -1,0 +1,243 @@
+{
+  "targets": 25,
+  "target_bases": 71043355,
+  "rc_bytes": 267412,
+  "best_single": {
+    "config": "seg50k",
+    "bytes": 2979078,
+    "bpb": 0.33546591373675977,
+    "ratio": 11.1404050678354
+  },
+  "oracle": {
+    "bytes": 1617085,
+    "bpb": 0.18209556685491557,
+    "ratio": 6.047166918462896
+  },
+  "config_totals": {
+    "seg50k": 2979078,
+    "default": 3539729,
+    "fallback": 3541988,
+    "min15": 3560914,
+    "min15-fallback": 3596087,
+    "seg100k": 3737764,
+    "k25-seg200k": 3744704,
+    "seg1m": 3849024,
+    "seg1m-min15": 3956000,
+    "seg200k": 4188783,
+    "plain-seg200k": 4188783,
+    "seg200k-min15-fallback": 4235561,
+    "seg500k": 4458726
+  },
+  "config_wins": {
+    "seg50k": 8,
+    "seg1m": 7,
+    "seg500k": 4,
+    "seg1m-min15": 2,
+    "min15-fallback": 1,
+    "k25-seg200k": 1,
+    "seg100k": 1,
+    "fallback": 1
+  },
+  "targets_detail": [
+    {
+      "target": "00.seq",
+      "target_bytes": 2845025,
+      "rc_bytes": 3811,
+      "best_config": "min15-fallback",
+      "best_bytes": 12829,
+      "ratio": 3.366308055628444
+    },
+    {
+      "target": "01.seq",
+      "target_bytes": 2859551,
+      "rc_bytes": 4879,
+      "best_config": "k25-seg200k",
+      "best_bytes": 1988,
+      "ratio": 0.40746054519368724
+    },
+    {
+      "target": "02.seq",
+      "target_bytes": 2810065,
+      "rc_bytes": 4347,
+      "best_config": "seg1m-min15",
+      "best_bytes": 1401,
+      "ratio": 0.3222912353347136
+    },
+    {
+      "target": "03.seq",
+      "target_bytes": 2850449,
+      "rc_bytes": 6337,
+      "best_config": "seg500k",
+      "best_bytes": 4119,
+      "ratio": 0.6499921098311504
+    },
+    {
+      "target": "04.seq",
+      "target_bytes": 2850020,
+      "rc_bytes": 3808,
+      "best_config": "seg500k",
+      "best_bytes": 617,
+      "ratio": 0.16202731092436976
+    },
+    {
+      "target": "05.seq",
+      "target_bytes": 2755072,
+      "rc_bytes": 7786,
+      "best_config": "seg1m",
+      "best_bytes": 43531,
+      "ratio": 5.590932442846134
+    },
+    {
+      "target": "06.seq",
+      "target_bytes": 2964115,
+      "rc_bytes": 24162,
+      "best_config": "seg500k",
+      "best_bytes": 42717,
+      "ratio": 1.7679413955798362
+    },
+    {
+      "target": "07.seq",
+      "target_bytes": 2798705,
+      "rc_bytes": 16031,
+      "best_config": "seg100k",
+      "best_bytes": 81251,
+      "ratio": 5.068367537895328
+    },
+    {
+      "target": "08.seq",
+      "target_bytes": 2874399,
+      "rc_bytes": 2273,
+      "best_config": "seg50k",
+      "best_bytes": 91344,
+      "ratio": 40.186537615486145
+    },
+    {
+      "target": "09.seq",
+      "target_bytes": 2876431,
+      "rc_bytes": 9409,
+      "best_config": "seg1m",
+      "best_bytes": 12190,
+      "ratio": 1.2955680731214794
+    },
+    {
+      "target": "10.seq",
+      "target_bytes": 2704756,
+      "rc_bytes": 81001,
+      "best_config": "seg1m",
+      "best_bytes": 108919,
+      "ratio": 1.3446624115751658
+    },
+    {
+      "target": "11.seq",
+      "target_bytes": 2877682,
+      "rc_bytes": 2972,
+      "best_config": "seg50k",
+      "best_bytes": 99507,
+      "ratio": 33.48149394347241
+    },
+    {
+      "target": "12.seq",
+      "target_bytes": 2795277,
+      "rc_bytes": 2162,
+      "best_config": "seg1m",
+      "best_bytes": 110704,
+      "ratio": 51.204440333024976
+    },
+    {
+      "target": "13.seq",
+      "target_bytes": 2794402,
+      "rc_bytes": 1809,
+      "best_config": "seg500k",
+      "best_bytes": 18909,
+      "ratio": 10.45273631840796
+    },
+    {
+      "target": "14.seq",
+      "target_bytes": 2900300,
+      "rc_bytes": 8610,
+      "best_config": "seg1m",
+      "best_bytes": 34801,
+      "ratio": 4.041927990708478
+    },
+    {
+      "target": "15.seq",
+      "target_bytes": 2771363,
+      "rc_bytes": 6398,
+      "best_config": "seg1m",
+      "best_bytes": 17125,
+      "ratio": 2.6766176930290717
+    },
+    {
+      "target": "16.seq",
+      "target_bytes": 2822192,
+      "rc_bytes": 2166,
+      "best_config": "seg1m-min15",
+      "best_bytes": 633,
+      "ratio": 0.2922437673130194
+    },
+    {
+      "target": "17.seq",
+      "target_bytes": 2822180,
+      "rc_bytes": 1899,
+      "best_config": "seg1m",
+      "best_bytes": 92806,
+      "ratio": 48.870984728804636
+    },
+    {
+      "target": "18.seq",
+      "target_bytes": 2879033,
+      "rc_bytes": 1234,
+      "best_config": "seg50k",
+      "best_bytes": 97987,
+      "ratio": 79.40599675850892
+    },
+    {
+      "target": "19.seq",
+      "target_bytes": 2879035,
+      "rc_bytes": 1222,
+      "best_config": "seg50k",
+      "best_bytes": 97910,
+      "ratio": 80.1227495908347
+    },
+    {
+      "target": "20.seq",
+      "target_bytes": 2879034,
+      "rc_bytes": 1139,
+      "best_config": "seg50k",
+      "best_bytes": 97898,
+      "ratio": 85.95083406496927
+    },
+    {
+      "target": "21.seq",
+      "target_bytes": 2879034,
+      "rc_bytes": 1139,
+      "best_config": "seg50k",
+      "best_bytes": 97860,
+      "ratio": 85.91747146619842
+    },
+    {
+      "target": "22.seq",
+      "target_bytes": 2879034,
+      "rc_bytes": 1131,
+      "best_config": "seg50k",
+      "best_bytes": 97850,
+      "ratio": 86.51635720601237
+    },
+    {
+      "target": "23.seq",
+      "target_bytes": 2879034,
+      "rc_bytes": 1136,
+      "best_config": "seg50k",
+      "best_bytes": 97873,
+      "ratio": 86.15580985915493
+    },
+    {
+      "target": "24.seq",
+      "target_bytes": 2797167,
+      "rc_bytes": 70551,
+      "best_config": "fallback",
+      "best_bytes": 254316,
+      "ratio": 3.6047114853085
+    }
+  ]
+}
