@@ -6,11 +6,11 @@
 
   <groupId>org.hypergrass</groupId>
   <artifactId>hypergrass</artifactId>
-  <version>1.0.0</version>
+  <version>2.0.0</version>
   <packaging>jar</packaging>
 
   <name>HyperGraSS</name>
-  <description>Lossless genomic and pangenomic sequence compression engine</description>
+  <description>Evolutionary Information Minimum Description Length (EIMDL / HGS2) lossless genomic and pangenomic sequence compression engine</description>
 
   <licenses>
     <license>
@@ -22,10 +22,11 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.release>27</maven.compiler.release>
+    <maven.compiler.release>21</maven.compiler.release>
   </properties>
 
   <build>
+    <sourceDirectory>src</sourceDirectory>
     <finalName>hypergrass</finalName>
     <plugins>
       <plugin>
@@ -33,7 +34,7 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.13.0</version>
         <configuration>
-          <release>27</release>
+          <release>21</release>
           <compilerArgs>
             <arg>-Xlint:all</arg>
           </compilerArgs>

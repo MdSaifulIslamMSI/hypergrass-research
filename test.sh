@@ -7,7 +7,9 @@ if [ "${CI:-}" != "true" ] || [ "${GITHUB_ACTIONS:-}" != "true" ]; then
   exit 1
 fi
 cd "$(dirname "$0")"
-./build.sh
+if [ "${SKIP_BUILD:-0}" != "1" ]; then
+  ./build.sh
+fi
 
 echo "== VerifyAllEdgeCases =="
 java -cp bin hypergrass.VerifyAllEdgeCases
