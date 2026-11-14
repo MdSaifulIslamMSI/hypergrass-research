@@ -1,5 +1,11 @@
 #!/usr/bin/env sh
 set -eu
+if [ "${CI:-}" != "true" ] || [ "${GITHUB_ACTIONS:-}" != "true" ]; then
+  echo "MANDATORY POLICY: Never run tests locally." >&2
+  echo "Run all verification suites and world-compressor tests end-to-end on Kaggle:" >&2
+  echo "  python benchmarks/kaggle/run_kaggle_e2e.py" >&2
+  exit 1
+fi
 cd "$(dirname "$0")"
 ./build.sh
 

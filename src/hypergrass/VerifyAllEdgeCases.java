@@ -14,8 +14,9 @@ import java.util.Random;
  */
 public final class VerifyAllEdgeCases {
 
-    private static final Path GRASS_SRC = Path.of(
-            "C:/Users/mdsai/.gemini/antigravity/brain/92f6b277-dea3-42a9-b123-90c65fe25a1c/scratch/GraSS/src");
+    private static final Path GRASS_SRC = Path.of(System.getProperty(
+            "grass.src",
+            "C:/Users/mdsai/.gemini/antigravity/brain/92f6b277-dea3-42a9-b123-90c65fe25a1c/scratch/GraSS/src"));
 
     public static void main(String[] args) throws Exception {
         System.out.println("=== HyperGraSS Exhaustive SHA-256 Lossless Verification Suite ===");
@@ -31,20 +32,24 @@ public final class VerifyAllEdgeCases {
         passed += checkRoundTrip("Raw5BasesCRLF", "ACGTA\r\n".getBytes(StandardCharsets.UTF_8), tmpDir);
 
         // 2. Bundled GraSS files (In.fa, BuEb, GCF_001884535.1.fna CRLF + Linux LF)
-        byte[] inFa = Files.readAllBytes(GRASS_SRC.resolve("In.fa"));
-        passed += checkRoundTrip("GraSS In.fa (RNA + zy)", inFa, tmpDir);
+        byte[] bueb18940 = null;
+        byte[] gcfLf = null;
+        if (Files.isDirectory(GRASS_SRC)) {
+            byte[] inFa = Files.readAllBytes(GRASS_SRC.resolve("In.fa"));
+            passed += checkRoundTrip("GraSS In.fa (RNA + zy)", inFa, tmpDir);
 
-        byte[] buebRaw = Files.readAllBytes(GRASS_SRC.resolve("BuEb"));
-        String buebStr = new String(buebRaw, StandardCharsets.US_ASCII).replace("\r", "").replace("\n", "");
-        byte[] bueb18940 = buebStr.getBytes(StandardCharsets.US_ASCII);
-        passed += checkRoundTrip("Table 2 BuEb (18,940 B exact)", bueb18940, tmpDir);
+            byte[] buebRaw = Files.readAllBytes(GRASS_SRC.resolve("BuEb"));
+            String buebStr = new String(buebRaw, StandardCharsets.US_ASCII).replace("\r", "").replace("\n", "");
+            bueb18940 = buebStr.getBytes(StandardCharsets.US_ASCII);
+            passed += checkRoundTrip("Table 2 BuEb (18,940 B exact)", bueb18940, tmpDir);
 
-        byte[] gcfCrlf = Files.readAllBytes(GRASS_SRC.resolve("GCF_001884535.1.fna"));
-        passed += checkRoundTrip("Table 1 GCF_001884535.1 (CRLF disk)", gcfCrlf, tmpDir);
+            byte[] gcfCrlf = Files.readAllBytes(GRASS_SRC.resolve("GCF_001884535.1.fna"));
+            passed += checkRoundTrip("Table 1 GCF_001884535.1 (CRLF disk)", gcfCrlf, tmpDir);
 
-        byte[] gcfLf = new String(gcfCrlf, StandardCharsets.US_ASCII).replace("\r\n", "\n")
-                .getBytes(StandardCharsets.US_ASCII);
-        passed += checkRoundTrip("Table 1 GCF_001884535.1 (Linux LF 50,654 B)", gcfLf, tmpDir);
+            gcfLf = new String(gcfCrlf, StandardCharsets.US_ASCII).replace("\r\n", "\n")
+                    .getBytes(StandardCharsets.US_ASCII);
+            passed += checkRoundTrip("Table 1 GCF_001884535.1 (Linux LF 50,654 B)", gcfLf, tmpDir);
+        }
 
         // 3. Adversarial torture test (cases where GraSS fails/corrupts!)
         StringBuilder adv = new StringBuilder();
@@ -63,14 +68,18 @@ public final class VerifyAllEdgeCases {
         passed += checkRoundTrip("Adversarial Chimeric/Ragged/IUPAC/100k-N/EmptyRecs",
                 adv.toString().getBytes(StandardCharsets.UTF_8), tmpDir);
 
-        // 4. Multi-strain homologous + reverse-complement + SNP + indel + query test
-        passed += verifyPangenomeAndRandomAccess(gcfLf, tmpDir);
+        if (gcfLf != null) {
+            // 4. Multi-strain homologous + reverse-complement + SNP + indel + query test
+            passed += verifyPangenomeAndRandomAccess(gcfLf, tmpDir);
+        }
 
-        // 5. Giant multi-block single-chromosome slice query test
-        passed += verifyMultiBlockChromosomeQuery(bueb18940, tmpDir);
+        if (bueb18940 != null) {
+            // 5. Giant multi-block single-chromosome slice query test
+            passed += verifyMultiBlockChromosomeQuery(bueb18940, tmpDir);
 
-        // 6. Multi-record input whose blocks start inside long records
-        passed += verifyMultiRecordMidBlockQueries(bueb18940, tmpDir);
+            // 6. Multi-record input whose blocks start inside long records
+            passed += verifyMultiRecordMidBlockQueries(bueb18940, tmpDir);
+        }
 
         // 7. Bounded file path: streamed archive assembly + parallel block window
         passed += verifyBoundedFilePaths(tmpDir);

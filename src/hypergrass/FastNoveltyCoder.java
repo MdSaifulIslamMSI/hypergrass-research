@@ -35,6 +35,9 @@ public final class FastNoveltyCoder {
     private static final int P_SCALE = 1 << P_BITS; // 16384
 
     private static final int PAN_SUPER_THRESHOLD = 6_000_000;
+    private static final int TURBO_THRESHOLD = 8_000_000;
+    private static final int TURBO_SEG_BASES = 4_000_000;
+    private static final int FLAG_TURBO_NOVELTY = 4;
 
     private static final byte SEG_RAW_2BIT = 0;
     private static final byte SEG_CRM = 1;
@@ -119,6 +122,10 @@ public final class FastNoveltyCoder {
             ByteOut empty = new ByteOut(4);
             empty.writeVarInt(0);
             return empty.toByteArray();
+        }
+
+        if (len >= TURBO_THRESHOLD) {
+            return encodeTurbo(bases, len, threads, boundedMem);
         }
 
         boolean panSuper = len > PAN_SUPER_THRESHOLD;
@@ -234,11 +241,12 @@ public final class FastNoveltyCoder {
             throw new IllegalStateException("Malformed novelty segment count: " + totalSegs);
         }
         int modelFlags = in.readByte() & 0xFF;
-        if ((modelFlags & ~3) != 0) {
+        if ((modelFlags & ~7) != 0) {
             throw new IllegalStateException("Unsupported novelty model flags: " + modelFlags);
         }
         boolean encodedBounded = (modelFlags & 1) != 0;
         boolean encodedPanSuper = (modelFlags & 2) != 0;
+        boolean encodedTurbo = (modelFlags & FLAG_TURBO_NOVELTY) != 0;
 
         int[] segLens = new int[totalSegs];
         int sumLen = 0;
@@ -263,6 +271,10 @@ public final class FastNoveltyCoder {
         }
 
         byte[] out = new byte[expectedLen];
+        if (encodedTurbo) {
+            decodeTurbo(payloads, out, segLens, threads, boundedMem);
+            return out;
+        }
         if (totalSegs == 1) {
             FastCrmModel model =
                     new FastCrmModel(null, encodedBounded, encodedPanSuper, 0, expectedLen, 1);
@@ -360,6 +372,12 @@ public final class FastNoveltyCoder {
         if (crmOut.size() <= 1 + rawBytesLen) {
             return crmOut.toByteArray();
         }
+        return packRaw2BitSegment(bases, start, len);
+    }
+
+    private static byte[] packRaw2BitSegment(byte[] bases, int start, int len) {
+        int rawBytesLen = (len + 3) >>> 2;
+        int end = start + len;
         byte[] raw = new byte[1 + rawBytesLen];
         raw[0] = SEG_RAW_2BIT;
         int full = len >>> 2;
@@ -383,6 +401,336 @@ public final class FastNoveltyCoder {
             raw[1 + full] = (byte) v;
         }
         return raw;
+    }
+
+    private static byte[] encodeTurbo(byte[] bases, int len, int threads, boolean boundedMem) {
+        int totalSegs = (len + TURBO_SEG_BASES - 1) / TURBO_SEG_BASES;
+        int[] segStarts = new int[totalSegs];
+        int[] segLens = new int[totalSegs];
+        for (int i = 0; i < totalSegs; i++) {
+            segStarts[i] = i * TURBO_SEG_BASES;
+            segLens[i] = Math.min(TURBO_SEG_BASES, len - segStarts[i]);
+        }
+        byte[][] encoded = new byte[totalSegs][];
+        int workers = Math.max(1, Math.min(threads, Math.min(totalSegs, boundedMem ? 4 : 16)));
+        if (workers <= 1) {
+            for (int i = 0; i < totalSegs; i++) {
+                encoded[i] = encodeTurboSegment(bases, segStarts[i], segLens[i]);
+            }
+        } else {
+            ForkJoinPool pool = new ForkJoinPool(workers);
+            try {
+                pool.submit(
+                                () ->
+                                        IntStream.range(0, totalSegs)
+                                                .parallel()
+                                                .forEach(
+                                                        i ->
+                                                                encoded[i] =
+                                                                        encodeTurboSegment(
+                                                                                bases,
+                                                                                segStarts[i],
+                                                                                segLens[i])))
+                        .join();
+            } finally {
+                pool.shutdown();
+            }
+        }
+        int totalComp = 0;
+        for (byte[] e : encoded) {
+            totalComp += e.length;
+        }
+        int modelFlags = (boundedMem ? 1 : 0) | FLAG_TURBO_NOVELTY;
+        ByteOut out = new ByteOut(totalComp + totalSegs * 8 + 16);
+        out.writeVarInt(totalSegs);
+        out.writeByte(modelFlags);
+        for (int i = 0; i < totalSegs; i++) {
+            out.writeVarInt(segLens[i]);
+        }
+        for (int i = 0; i < totalSegs; i++) {
+            out.writeVarInt(encoded[i].length);
+        }
+        for (int i = 0; i < totalSegs; i++) {
+            out.writeBytes(encoded[i]);
+        }
+        return out.toByteArray();
+    }
+
+    private static void decodeTurbo(
+            byte[][] payloads, byte[] out, int[] segLens, int threads, boolean boundedMem) {
+        int totalSegs = payloads.length;
+        int[] segStarts = new int[totalSegs];
+        int cur = 0;
+        for (int i = 0; i < totalSegs; i++) {
+            segStarts[i] = cur;
+            cur += segLens[i];
+        }
+        int workers = Math.max(1, Math.min(threads, Math.min(totalSegs, boundedMem ? 4 : 16)));
+        if (workers <= 1) {
+            for (int i = 0; i < totalSegs; i++) {
+                decodeTurboSegment(payloads[i], out, segStarts[i], segLens[i]);
+            }
+        } else {
+            ForkJoinPool pool = new ForkJoinPool(workers);
+            try {
+                pool.submit(
+                                () ->
+                                        IntStream.range(0, totalSegs)
+                                                .parallel()
+                                                .forEach(
+                                                        i ->
+                                                                decodeTurboSegment(
+                                                                        payloads[i],
+                                                                        out,
+                                                                        segStarts[i],
+                                                                        segLens[i])))
+                        .join();
+            } finally {
+                pool.shutdown();
+            }
+        }
+    }
+
+    /**
+     * L2-cache-resident Turbo SWAR Order-4/6/8 + Fuzzy Repeat context model (~401 KiB/worker),
+     * fusing prediction, 4-symbol range coding, and count adaptation in one tight loop.
+     */
+    private static byte[] encodeTurboSegment(byte[] bases, int start, int len) {
+        int rawBytesLen = (len + 3) >>> 2;
+        ByteOut crmOut = new ByteOut(rawBytesLen + 64);
+        crmOut.writeByte(SEG_CRM);
+        RangeEnc rc = new RangeEnc(crmOut);
+
+        int[] tab4 = new int[256];
+        int[] tab6 = new int[4096];
+        int[] tab8 = new int[65536];
+        int[] repTab = new int[32768];
+        int ctx4 = 0, ctx6 = 0, ctx8 = 0, ctx12 = 0;
+        int repPos = -1, repStreak = 0, repMisses = 0;
+
+        for (int r = 0; r < len; r++) {
+            int c4 = tab4[ctx4];
+            int c6 = tab6[ctx6];
+            int c8 = tab8[ctx8];
+            int w0 = 2 + (c4 & 0x7F) + ((c6 & 0x7F) << 1) + ((c8 & 0x7F) << 2);
+            int w1 = 2 + ((c4 >>> 8) & 0x7F) + (((c6 >>> 8) & 0x7F) << 1) + (((c8 >>> 8) & 0x7F) << 2);
+            int w2 = 2 + ((c4 >>> 16) & 0x7F) + (((c6 >>> 16) & 0x7F) << 1) + (((c8 >>> 16) & 0x7F) << 2);
+            int w3 = 2 + ((c4 >>> 24) & 0x7F) + (((c6 >>> 24) & 0x7F) << 1) + (((c8 >>> 24) & 0x7F) << 2);
+            int repPred = -1;
+            if (repPos >= 0) {
+                repPred = bases[start + repPos] & 3;
+                int boost = Math.min(2048, repStreak << 6);
+                switch (repPred) {
+                    case 0 -> w0 += boost;
+                    case 1 -> w1 += boost;
+                    case 2 -> w2 += boost;
+                    default -> w3 += boost;
+                }
+            }
+
+            int tot = w0 + w1 + w2 + w3;
+            long inv = RECIP[tot];
+            int f0 = (int) ((w0 * inv) >>> 15);
+            int f1 = (int) ((w1 * inv) >>> 15);
+            int f2 = (int) ((w2 * inv) >>> 15);
+            int f3 = TOT - f0 - f1 - f2;
+
+            int sym = bases[start + r] & 3;
+            int cumLow;
+            int freq;
+            switch (sym) {
+                case 0 -> { cumLow = 0; freq = f0; }
+                case 1 -> { cumLow = f0; freq = f1; }
+                case 2 -> { cumLow = f0 + f1; freq = f2; }
+                default -> { cumLow = f0 + f1 + f2; freq = f3; }
+            }
+            rc.encodeSymbol(cumLow, freq);
+
+            int shift = sym << 3;
+            int nv4 = c4 + (1 << shift);
+            tab4[ctx4] = ((nv4 & 0x80808080) != 0) ? ((nv4 & 0xFEFEFEFE) >>> 1) : nv4;
+            int nv6 = c6 + (1 << shift);
+            tab6[ctx6] = ((nv6 & 0x80808080) != 0) ? ((nv6 & 0xFEFEFEFE) >>> 1) : nv6;
+            int nv8 = c8 + (1 << shift);
+            tab8[ctx8] = ((nv8 & 0x80808080) != 0) ? ((nv8 & 0xFEFEFEFE) >>> 1) : nv8;
+
+            if (repPos >= 0) {
+                if (sym == repPred) {
+                    repStreak++;
+                    repMisses = 0;
+                    repPos++;
+                } else {
+                    repMisses++;
+                    if (repMisses > 2) {
+                        repPos = -1;
+                        repStreak = 0;
+                    } else {
+                        repPos++;
+                    }
+                }
+            }
+            if (r >= 12) {
+                int h12 = ((ctx12 * 0x9E3779B1) >>> 17) & 0x7FFF;
+                if (repPos < 0) {
+                    int cand = repTab[h12] - 1;
+                    if (cand >= 12
+                            && (r - cand) > 16
+                            && (bases[start + cand] & 3) == sym
+                            && bases[start + cand - 1] == bases[start + r - 1]
+                            && bases[start + cand - 2] == bases[start + r - 2]
+                            && bases[start + cand - 3] == bases[start + r - 3]) {
+                        repPos = cand + 1;
+                        repStreak = 4;
+                        repMisses = 0;
+                    }
+                }
+                repTab[h12] = r + 1;
+            }
+
+            ctx4 = ((ctx4 << 2) | sym) & 0xFF;
+            ctx6 = ((ctx6 << 2) | sym) & 0xFFF;
+            ctx8 = ((ctx8 << 2) | sym) & 0xFFFF;
+            ctx12 = ((ctx12 << 2) | sym) & 0xFFFFFF;
+        }
+        rc.flush();
+
+        if (crmOut.size() <= 1 + rawBytesLen) {
+            return crmOut.toByteArray();
+        }
+        return packRaw2BitSegment(bases, start, len);
+    }
+
+    private static void decodeTurboSegment(byte[] payload, byte[] dst, int dstStart, int len) {
+        if (payload.length == 0) {
+            throw new IllegalStateException("Empty turbo novelty segment payload");
+        }
+        byte mode = payload[0];
+        if (mode == SEG_RAW_2BIT) {
+            int expectedBytes = 1 + ((len + 3) >>> 2);
+            if (payload.length != expectedBytes) {
+                throw new IllegalStateException("Malformed raw 2-bit novelty payload length");
+            }
+            int idx = dstStart;
+            int end = dstStart + len;
+            for (int b = 1; b < payload.length && idx < end; b++) {
+                int v = payload[b] & 0xFF;
+                for (int j = 0; j < 4 && idx < end; j++) {
+                    dst[idx++] = (byte) (v & 3);
+                    v >>>= 2;
+                }
+            }
+            return;
+        }
+        if (mode != SEG_CRM) {
+            throw new IllegalStateException("Unknown turbo novelty segment mode: " + mode);
+        }
+        ByteIn in = new ByteIn(payload, 1, payload.length - 1);
+        RangeDec rd = new RangeDec(in);
+
+        int[] tab4 = new int[256];
+        int[] tab6 = new int[4096];
+        int[] tab8 = new int[65536];
+        int[] repTab = new int[32768];
+        int ctx4 = 0, ctx6 = 0, ctx8 = 0, ctx12 = 0;
+        int repPos = -1, repStreak = 0, repMisses = 0;
+
+        for (int r = 0; r < len; r++) {
+            int c4 = tab4[ctx4];
+            int c6 = tab6[ctx6];
+            int c8 = tab8[ctx8];
+            int w0 = 2 + (c4 & 0x7F) + ((c6 & 0x7F) << 1) + ((c8 & 0x7F) << 2);
+            int w1 = 2 + ((c4 >>> 8) & 0x7F) + (((c6 >>> 8) & 0x7F) << 1) + (((c8 >>> 8) & 0x7F) << 2);
+            int w2 = 2 + ((c4 >>> 16) & 0x7F) + (((c6 >>> 16) & 0x7F) << 1) + (((c8 >>> 16) & 0x7F) << 2);
+            int w3 = 2 + ((c4 >>> 24) & 0x7F) + (((c6 >>> 24) & 0x7F) << 1) + (((c8 >>> 24) & 0x7F) << 2);
+            int repPred = -1;
+            if (repPos >= 0) {
+                repPred = dst[dstStart + repPos] & 3;
+                int boost = Math.min(2048, repStreak << 6);
+                switch (repPred) {
+                    case 0 -> w0 += boost;
+                    case 1 -> w1 += boost;
+                    case 2 -> w2 += boost;
+                    default -> w3 += boost;
+                }
+            }
+
+            int tot = w0 + w1 + w2 + w3;
+            long inv = RECIP[tot];
+            int f0 = (int) ((w0 * inv) >>> 15);
+            int f1 = (int) ((w1 * inv) >>> 15);
+            int f2 = (int) ((w2 * inv) >>> 15);
+            int f3 = TOT - f0 - f1 - f2;
+
+            int target = rd.getThreshold();
+            int cum;
+            int freq;
+            int sym;
+            if (target < f0) {
+                sym = 0;
+                cum = 0;
+                freq = f0;
+            } else if (target < f0 + f1) {
+                sym = 1;
+                cum = f0;
+                freq = f1;
+            } else if (target < f0 + f1 + f2) {
+                sym = 2;
+                cum = f0 + f1;
+                freq = f2;
+            } else {
+                sym = 3;
+                cum = f0 + f1 + f2;
+                freq = f3;
+            }
+            rd.decodeSymbol(cum, freq);
+            dst[dstStart + r] = (byte) sym;
+
+            int shift = sym << 3;
+            int nv4 = c4 + (1 << shift);
+            tab4[ctx4] = ((nv4 & 0x80808080) != 0) ? ((nv4 & 0xFEFEFEFE) >>> 1) : nv4;
+            int nv6 = c6 + (1 << shift);
+            tab6[ctx6] = ((nv6 & 0x80808080) != 0) ? ((nv6 & 0xFEFEFEFE) >>> 1) : nv6;
+            int nv8 = c8 + (1 << shift);
+            tab8[ctx8] = ((nv8 & 0x80808080) != 0) ? ((nv8 & 0xFEFEFEFE) >>> 1) : nv8;
+
+            if (repPos >= 0) {
+                if (sym == repPred) {
+                    repStreak++;
+                    repMisses = 0;
+                    repPos++;
+                } else {
+                    repMisses++;
+                    if (repMisses > 2) {
+                        repPos = -1;
+                        repStreak = 0;
+                    } else {
+                        repPos++;
+                    }
+                }
+            }
+            if (r >= 12) {
+                int h12 = ((ctx12 * 0x9E3779B1) >>> 17) & 0x7FFF;
+                if (repPos < 0) {
+                    int cand = repTab[h12] - 1;
+                    if (cand >= 12
+                            && (r - cand) > 16
+                            && (dst[dstStart + cand] & 3) == sym
+                            && dst[dstStart + cand - 1] == dst[dstStart + r - 1]
+                            && dst[dstStart + cand - 2] == dst[dstStart + r - 2]
+                            && dst[dstStart + cand - 3] == dst[dstStart + r - 3]) {
+                        repPos = cand + 1;
+                        repStreak = 4;
+                        repMisses = 0;
+                    }
+                }
+                repTab[h12] = r + 1;
+            }
+
+            ctx4 = ((ctx4 << 2) | sym) & 0xFF;
+            ctx6 = ((ctx6 << 2) | sym) & 0xFFF;
+            ctx8 = ((ctx8 << 2) | sym) & 0xFFFF;
+            ctx12 = ((ctx12 << 2) | sym) & 0xFFFFFF;
+        }
     }
 
     private static void decodeSegmentWithSafety(

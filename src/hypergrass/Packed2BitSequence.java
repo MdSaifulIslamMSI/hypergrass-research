@@ -41,22 +41,152 @@ public final class Packed2BitSequence {
     }
 
     /**
-     * Little-endian 2-bit lanes: base {@code i} resides in {@code words[i >>> 5]} at bit offset
-     * {@code (i & 31) << 1}. Padded with at least two trailing zero words for branchless unaligned
-     * 32-base loads.
+     * 256 KiB page geometry ({@code 32,768} 64-bit words = {@code 1,048,576} 2-bit bases per page).
+     * Staying strictly below G1GC's {@code 512 KiB} minimum humongous threshold prevents region
+     * fragmentation waste under tight {@code -Xmx128m .. -Xmx1g} heaps while preserving zero-branch
+     * {@link #word32Forward} loads via a 1-word overlap sentinel {@code pages[p][PAGE_WORDS]}.
      */
-    public final long[] words;
+    public static final int PAGE_WORD_SHIFT = 15;
+    public static final int PAGE_WORDS = 1 << PAGE_WORD_SHIFT; // 32,768 words = 256 KiB
+    public static final int PAGE_WORD_MASK = PAGE_WORDS - 1;
+    public static final int PAGE_BASES = PAGE_WORDS << 5; // 1,048,576 bases per page
+
+    private long[][] pages;
     public final int length;
 
     public Packed2BitSequence(long[] words, int length) {
-        this.words = words;
         this.length = length;
+        int totalWords = (length + 31) >>> 5;
+        if (totalWords <= PAGE_WORDS) {
+            long[] p0 =
+                    (words.length >= totalWords + 2 && words.length <= PAGE_WORDS + 2)
+                            ? words
+                            : Arrays.copyOf(words, totalWords + 2);
+            this.pages = new long[][] {p0};
+        } else {
+            int numPages = (totalWords + PAGE_WORD_MASK) >>> PAGE_WORD_SHIFT;
+            long[][] pg = new long[numPages][];
+            for (int p = 0; p < numPages; p++) {
+                int baseW = p << PAGE_WORD_SHIFT;
+                if (p < numPages - 1) {
+                    long[] arr = new long[PAGE_WORDS + 1];
+                    int avail = Math.min(PAGE_WORDS + 1, words.length - baseW);
+                    if (avail > 0) {
+                        System.arraycopy(words, baseW, arr, 0, avail);
+                    }
+                    pg[p] = arr;
+                } else {
+                    int tailW = totalWords - baseW;
+                    long[] arr = new long[tailW + 2];
+                    int avail = Math.min(tailW, words.length - baseW);
+                    if (avail > 0) {
+                        System.arraycopy(words, baseW, arr, 0, avail);
+                    }
+                    pg[p] = arr;
+                }
+            }
+            linkPageSentinels(pg);
+            this.pages = pg;
+        }
+    }
+
+    private Packed2BitSequence(long[][] pages, int length) {
+        this.pages = pages;
+        this.length = length;
+    }
+
+    /** Allocates a zero-initialized paged 2-bit bank of {@code length} bases with zero humongous arrays. */
+    public static Packed2BitSequence allocatePaged(int length) {
+        int totalWords = (length + 31) >>> 5;
+        return new Packed2BitSequence(allocatePages(totalWords), length);
+    }
+
+    private static long[][] allocatePages(int totalWords) {
+        if (totalWords == 0) {
+            return new long[][] {new long[2]};
+        }
+        int numPages = (totalWords + PAGE_WORD_MASK) >>> PAGE_WORD_SHIFT;
+        long[][] pg = new long[numPages][];
+        for (int p = 0; p < numPages - 1; p++) {
+            pg[p] = new long[PAGE_WORDS + 1];
+        }
+        int tailW = totalWords - ((numPages - 1) << PAGE_WORD_SHIFT);
+        pg[numPages - 1] = new long[tailW + 2];
+        return pg;
+    }
+
+    private static void linkPageSentinels(long[][] pg) {
+        for (int p = 0; p + 1 < pg.length; p++) {
+            pg[p][PAGE_WORDS] = pg[p + 1][0];
+        }
+    }
+
+    /** Streaming paged writer allocating 256 KiB pages lazily while scanning flat {@code .seq} files. */
+    public static final class PageBuilder {
+        private final long[][] pages;
+        private final int totalLen;
+        private int wIdx = 0;
+        private long curWord = 0L;
+        private int curShift = 0;
+        private int basesWritten = 0;
+
+        public PageBuilder(int expectedLen) {
+            this.totalLen = expectedLen;
+            int totalWords = (expectedLen + 31) >>> 5;
+            int numPages = totalWords == 0 ? 1 : ((totalWords + PAGE_WORD_MASK) >>> PAGE_WORD_SHIFT);
+            this.pages = new long[numPages][];
+        }
+
+        public void appendBase(int twoBitCode) {
+            curWord |= ((long) (twoBitCode & 3)) << curShift;
+            curShift += 2;
+            basesWritten++;
+            if (curShift == 64) {
+                emitWord(curWord);
+                curWord = 0L;
+                curShift = 0;
+            }
+        }
+
+        private void emitWord(long word) {
+            int p = wIdx >>> PAGE_WORD_SHIFT;
+            int off = wIdx & PAGE_WORD_MASK;
+            long[] pg = pages[p];
+            if (pg == null) {
+                pg = allocBuildPage(p);
+                pages[p] = pg;
+            }
+            pg[off] = word;
+            if (off == 0 && p > 0) {
+                pages[p - 1][PAGE_WORDS] = word;
+            }
+            wIdx++;
+        }
+
+        private long[] allocBuildPage(int p) {
+            int totalWords = (totalLen + 31) >>> 5;
+            int tailLen = totalWords - (p << PAGE_WORD_SHIFT);
+            return (p < pages.length - 1) ? new long[PAGE_WORDS + 1] : new long[tailLen + 2];
+        }
+
+        public Packed2BitSequence build() {
+            if (curShift > 0) {
+                emitWord(curWord);
+                curWord = 0L;
+                curShift = 0;
+            }
+            if (pages.length == 1 && pages[0] == null) {
+                pages[0] = new long[2];
+            }
+            linkPageSentinels(pages);
+            return new Packed2BitSequence(pages, basesWritten);
+        }
     }
 
     /** Packs an array of already-factorized 2-bit values ({@code 0..3} per byte). */
     public static Packed2BitSequence fromTwoBitBytes(byte[] bases, int len) {
-        int numWords = ((len + 31) >>> 5) + 2;
-        long[] words = new long[numWords];
+        int totalWords = (len + 31) >>> 5;
+        long[][] pg = allocatePages(totalWords);
         int fullWords = len >>> 5;
         int idx = 0;
         for (int w = 0; w < fullWords; w++) {
@@ -64,7 +194,7 @@ public final class Packed2BitSequence {
             for (int j = 0; j < 32; j++) {
                 acc |= ((long) (bases[idx++] & 3)) << (j << 1);
             }
-            words[w] = acc;
+            pg[w >>> PAGE_WORD_SHIFT][w & PAGE_WORD_MASK] = acc;
         }
         if (idx < len) {
             long acc = 0L;
@@ -73,9 +203,10 @@ public final class Packed2BitSequence {
                 acc |= ((long) (bases[idx++] & 3)) << shift;
                 shift += 2;
             }
-            words[fullWords] = acc;
+            pg[fullWords >>> PAGE_WORD_SHIFT][fullWords & PAGE_WORD_MASK] = acc;
         }
-        return new Packed2BitSequence(words, len);
+        linkPageSentinels(pg);
+        return new Packed2BitSequence(pg, len);
     }
 
     /**
@@ -84,8 +215,8 @@ public final class Packed2BitSequence {
      * so; returns {@code null} otherwise so the caller can run full 6-channel factorization.
      */
     public static Packed2BitSequence tryFromFlatUppercaseAcgt(byte[] raw, int len) {
-        int numWords = ((len + 31) >>> 5) + 2;
-        long[] words = new long[numWords];
+        int totalWords = (len + 31) >>> 5;
+        long[][] pg = allocatePages(totalWords);
         int fullWords = len >>> 5;
         int idx = 0;
         for (int w = 0; w < fullWords; w++) {
@@ -100,7 +231,7 @@ public final class Packed2BitSequence {
                 else return null;
                 acc |= ((long) v) << (j << 1);
             }
-            words[w] = acc;
+            pg[w >>> PAGE_WORD_SHIFT][w & PAGE_WORD_MASK] = acc;
         }
         if (idx < len) {
             long acc = 0L;
@@ -116,9 +247,10 @@ public final class Packed2BitSequence {
                 acc |= ((long) v) << shift;
                 shift += 2;
             }
-            words[fullWords] = acc;
+            pg[fullWords >>> PAGE_WORD_SHIFT][fullWords & PAGE_WORD_MASK] = acc;
         }
-        return new Packed2BitSequence(words, len);
+        linkPageSentinels(pg);
+        return new Packed2BitSequence(pg, len);
     }
 
     /** Concatenates multiple {@link Packed2BitSequence} instances into one contiguous bank. */
@@ -127,8 +259,8 @@ public final class Packed2BitSequence {
     }
 
     /**
-     * Concatenates {@code seqs} into one contiguous 2-bit bank while clearing {@code seqs[i] = null}
-     * as each unit is copied so peak heap never duplicates the 2-bit bank under {@code -Xmx192m}.
+     * Concatenates {@code seqs} into one paged 2-bit bank while stealing full aligned pages or
+     * freeing each consumed source page lazily so peak heap never duplicates the 2-bit bank.
      */
     public static Packed2BitSequence concatenateAndConsume(
             Packed2BitSequence[] seqs, int[] outOffsets) {
@@ -147,53 +279,140 @@ public final class Packed2BitSequence {
         }
         outOffsets[seqs.length] = (int) total;
         int totalLen = (int) total;
-        long[] words = new long[((totalLen + 31) >>> 5) + 2];
-        int dstBitPos = 0;
+        if (totalLen == 0) {
+            if (consume) {
+                Arrays.fill(seqs, null);
+            }
+            return new Packed2BitSequence(new long[][] {new long[2]}, 0);
+        }
+
+        int totalWords = (totalLen + 31) >>> 5;
+        int numOutPages = (totalWords + PAGE_WORD_MASK) >>> PAGE_WORD_SHIFT;
+        long[][] outPages = new long[numOutPages][];
+
+        long dstBitPos = 0L;
         for (int i = 0; i < seqs.length; i++) {
             Packed2BitSequence s = seqs[i];
-            int rem = s.length;
-            int srcPos = 0;
-            while (rem > 0) {
-                int take = Math.min(32, rem);
-                long chunk = s.word32Forward(srcPos);
-                if (take < 32) {
-                    chunk &= (1L << (take << 1)) - 1L;
+            if (s.length == 0) {
+                if (consume) {
+                    seqs[i] = null;
                 }
-                int wIdx = dstBitPos >>> 6;
-                int bOff = dstBitPos & 63;
-                words[wIdx] |= chunk << bOff;
-                if (bOff + (take << 1) > 64) {
-                    words[wIdx + 1] |= chunk >>> (64 - bOff);
+                continue;
+            }
+
+            // Zero-copy page transfer when dstBitPos & length align to 256 KiB page boundaries
+            if (consume
+                    && (dstBitPos & ((1L << 21) - 1L)) == 0L
+                    && (s.length & (PAGE_BASES - 1)) == 0) {
+                int outP = (int) (dstBitPos >>> 21);
+                long[][] srcPages = s.pages;
+                for (int q = 0; q < srcPages.length; q++) {
+                    long[] sp = srcPages[q];
+                    srcPages[q] = null;
+                    if (outP == numOutPages - 1 && sp.length > PAGE_WORDS + 1) {
+                        sp[PAGE_WORDS] = 0L;
+                        sp[PAGE_WORDS + 1] = 0L;
+                    }
+                    outPages[outP++] = sp;
                 }
-                dstBitPos += take << 1;
-                srcPos += take;
-                rem -= take;
+                s.pages = null;
+                seqs[i] = null;
+                dstBitPos += ((long) s.length) << 1;
+                continue;
+            }
+
+            int srcWords = (s.length + 31) >>> 5;
+            int tailRem = s.length & 31;
+            long lastMask = tailRem == 0 ? -1L : ((1L << (tailRem << 1)) - 1L);
+            long[][] srcPages = s.pages;
+            int wGlobal = 0;
+
+            for (int q = 0; q < srcPages.length && wGlobal < srcWords; q++) {
+                long[] sp = srcPages[q];
+                int wordsInQ = Math.min(PAGE_WORDS, srcWords - wGlobal);
+                for (int u = 0; u < wordsInQ; u++) {
+                    long chunk = sp[u];
+                    int takeBits = 64;
+                    if (wGlobal + u == srcWords - 1 && tailRem > 0) {
+                        chunk &= lastMask;
+                        takeBits = tailRem << 1;
+                    }
+                    int wIdx = (int) (dstBitPos >>> 6);
+                    int bOff = (int) (dstBitPos & 63L);
+
+                    int op0 = wIdx >>> PAGE_WORD_SHIFT;
+                    int oo0 = wIdx & PAGE_WORD_MASK;
+                    long[] dp0 = outPages[op0];
+                    if (dp0 == null) {
+                        dp0 = allocConcPage(op0, numOutPages, totalWords);
+                        outPages[op0] = dp0;
+                    }
+                    dp0[oo0] |= chunk << bOff;
+
+                    if (bOff + takeBits > 64) {
+                        int wNext = wIdx + 1;
+                        int op1 = wNext >>> PAGE_WORD_SHIFT;
+                        int oo1 = wNext & PAGE_WORD_MASK;
+                        long[] dp1 = outPages[op1];
+                        if (dp1 == null) {
+                            dp1 = allocConcPage(op1, numOutPages, totalWords);
+                            outPages[op1] = dp1;
+                        }
+                        dp1[oo1] |= chunk >>> (64 - bOff);
+                    }
+                    dstBitPos += takeBits;
+                }
+                wGlobal += wordsInQ;
+                if (consume) {
+                    srcPages[q] = null;
+                }
             }
             if (consume) {
+                s.pages = null;
                 seqs[i] = null;
             }
         }
-        return new Packed2BitSequence(words, totalLen);
+        for (int p = 0; p < numOutPages; p++) {
+            if (outPages[p] == null) {
+                outPages[p] = allocConcPage(p, numOutPages, totalWords);
+            }
+        }
+        linkPageSentinels(outPages);
+        return new Packed2BitSequence(outPages, totalLen);
+    }
+
+    private static long[] allocConcPage(int p, int numPages, int totalWords) {
+        if (p < numPages - 1) {
+            return new long[PAGE_WORDS + 1];
+        }
+        int tailW = totalWords - ((numPages - 1) << PAGE_WORD_SHIFT);
+        return new long[tailW + 2];
     }
 
     /** Extracts a 2-bit {@link Packed2BitSequence} sub-slice without allocating intermediate bytes. */
     public Packed2BitSequence sliceSeq(int startBase, int sliceLen) {
-        long[] subWords = new long[((sliceLen + 31) >>> 5) + 2];
+        int totalWords = (sliceLen + 31) >>> 5;
+        long[][] subPages = allocatePages(totalWords);
         int fullWords = sliceLen >>> 5;
         for (int w = 0; w < fullWords; w++) {
-            subWords[w] = word32Forward(startBase + (w << 5));
+            subPages[w >>> PAGE_WORD_SHIFT][w & PAGE_WORD_MASK] =
+                    word32Forward(startBase + (w << 5));
         }
         int rem = sliceLen & 31;
         if (rem > 0) {
-            subWords[fullWords] =
+            subPages[fullWords >>> PAGE_WORD_SHIFT][fullWords & PAGE_WORD_MASK] =
                     word32Forward(startBase + (fullWords << 5)) & ((1L << (rem << 1)) - 1L);
         }
-        return new Packed2BitSequence(subWords, sliceLen);
+        linkPageSentinels(subPages);
+        return new Packed2BitSequence(subPages, sliceLen);
     }
 
     /** Returns the single 2-bit base ({@code 0..3}) at {@code pos}. */
     public int baseAt(int pos) {
-        return (int) ((words[pos >>> 5] >>> ((pos & 31) << 1)) & 3L);
+        int wIdx = pos >>> 5;
+        return (int)
+                ((pages[wIdx >>> PAGE_WORD_SHIFT][wIdx & PAGE_WORD_MASK] >>> ((pos & 31) << 1))
+                        & 3L);
     }
 
     /**
@@ -215,12 +434,14 @@ public final class Packed2BitSequence {
      */
     public long word32Forward(int pos) {
         int wIdx = pos >>> 5;
+        long[] pg = pages[wIdx >>> PAGE_WORD_SHIFT];
+        int off = wIdx & PAGE_WORD_MASK;
         int rem = pos & 31;
         if (rem == 0) {
-            return words[wIdx];
+            return pg[off];
         }
         int shift = rem << 1;
-        return (words[wIdx] >>> shift) | (words[wIdx + 1] << (64 - shift));
+        return (pg[off] >>> shift) | (pg[off + 1] << (64 - shift));
     }
 
     /**
@@ -324,8 +545,10 @@ public final class Packed2BitSequence {
         while (i < len && ((dstPos + i) & 31) != 0) {
             int p = dstPos + i;
             int wIdx = p >>> 5;
+            long[] pg = pages[wIdx >>> PAGE_WORD_SHIFT];
+            int off = wIdx & PAGE_WORD_MASK;
             int shift = (p & 31) << 1;
-            words[wIdx] = (words[wIdx] & ~(3L << shift)) | (((long) (src[i] & 3)) << shift);
+            pg[off] = (pg[off] & ~(3L << shift)) | (((long) (src[i] & 3)) << shift);
             i++;
         }
         int wIdx = (dstPos + i) >>> 5;
@@ -334,16 +557,20 @@ public final class Packed2BitSequence {
             for (int j = 0; j < 32; j++) {
                 w |= ((long) (src[i + j] & 3)) << (j << 1);
             }
-            words[wIdx++] = w;
+            pages[wIdx >>> PAGE_WORD_SHIFT][wIdx & PAGE_WORD_MASK] = w;
+            wIdx++;
             i += 32;
         }
         while (i < len) {
             int p = dstPos + i;
             int remW = p >>> 5;
+            long[] pg = pages[remW >>> PAGE_WORD_SHIFT];
+            int off = remW & PAGE_WORD_MASK;
             int shift = (p & 31) << 1;
-            words[remW] = (words[remW] & ~(3L << shift)) | (((long) (src[i] & 3)) << shift);
+            pg[off] = (pg[off] & ~(3L << shift)) | (((long) (src[i] & 3)) << shift);
             i++;
         }
+        linkPageSentinels(pages);
     }
 
     /** Extracts {@code [srcPos .. srcPos + len)} into a 2-bit byte array ({@code 0..3}). */
@@ -372,14 +599,14 @@ public final class Packed2BitSequence {
         int fullWords = length >>> 5;
         int idx = 0;
         for (int w = 0; w < fullWords; w++) {
-            long word = words[w];
+            long word = pages[w >>> PAGE_WORD_SHIFT][w & PAGE_WORD_MASK];
             for (int j = 0; j < 32; j++) {
                 out[idx++] = map[(int) (word & 3L)];
                 word >>>= 2;
             }
         }
         if (idx < length) {
-            long word = words[fullWords];
+            long word = pages[fullWords >>> PAGE_WORD_SHIFT][fullWords & PAGE_WORD_MASK];
             while (idx < length) {
                 out[idx++] = map[(int) (word & 3L)];
                 word >>>= 2;

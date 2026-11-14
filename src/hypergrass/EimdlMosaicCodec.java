@@ -4,6 +4,8 @@ import hypergrass.VarIntCodec.ByteIn;
 import hypergrass.VarIntCodec.ByteOut;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.concurrent.ForkJoinPool;
+import java.util.stream.IntStream;
 
 /**
  * Evolutionary-Information Minimum Description Length (EIMDL) Mosaic Parser, Pricer, Encoder, and
@@ -140,6 +142,48 @@ public final class EimdlMosaicCodec {
                 new MosaicStats(n, 0, 0, 0, n, 0, 0, 0, 1, 0, 0));
     }
 
+    private static final class ParsedRegion {
+        final ArrayList<ParsedToken> tokens;
+        byte[] noveltyBuf;
+        final int noveltyLen;
+        final int statPanelBases;
+        final int statSelfBases;
+        final int statTandemBases;
+        final int statPanelTok;
+        final int statSelfTok;
+        final int statTandemTok;
+        final int statLitRuns;
+        final int statSplices;
+        final int statSnps;
+
+        ParsedRegion(
+                ArrayList<ParsedToken> tokens,
+                byte[] noveltyBuf,
+                int noveltyLen,
+                int statPanelBases,
+                int statSelfBases,
+                int statTandemBases,
+                int statPanelTok,
+                int statSelfTok,
+                int statTandemTok,
+                int statLitRuns,
+                int statSplices,
+                int statSnps) {
+            this.tokens = tokens;
+            this.noveltyBuf = noveltyBuf;
+            this.noveltyLen = noveltyLen;
+            this.statPanelBases = statPanelBases;
+            this.statSelfBases = statSelfBases;
+            this.statTandemBases = statTandemBases;
+            this.statPanelTok = statPanelTok;
+            this.statSelfTok = statSelfTok;
+            this.statTandemTok = statTandemTok;
+            this.statLitRuns = statLitRuns;
+            this.statSplices = statSplices;
+            this.statSnps = statSnps;
+        }
+    }
+
     /**
      * Parses and encodes {@code target} against optional {@code panelIdx} (restricted to donors
      * {@code [0, maxDonorExclusive)}) plus bidirectional self-prefix and tandem periodicity.
@@ -151,6 +195,19 @@ public final class EimdlMosaicCodec {
             int preferredTwinDonor,
             int[] donorOrderBySimilarity,
             MosaicConfig cfg) {
+        return encodeMosaic(
+                target, panelIdx, maxDonorExclusive, preferredTwinDonor, donorOrderBySimilarity, cfg, 1);
+    }
+
+    /** Parallelizable Stage-1 mosaic encoder preserving identical single-stream {@code .hgs2} wire format. */
+    public static EncodedMosaic encodeMosaic(
+            Packed2BitSequence target,
+            EimdlSyncmerIndex panelIdx,
+            int maxDonorExclusive,
+            int preferredTwinDonor,
+            int[] donorOrderBySimilarity,
+            MosaicConfig cfg,
+            int threads) {
         final int n = target.length;
         final boolean hasPanel = panelIdx != null && maxDonorExclusive > 0;
 
@@ -189,192 +246,125 @@ public final class EimdlMosaicCodec {
             }
         }
 
-        int selfSetBits = (!hasPanel && n >= 1_000_000) ? 17 : 15;
-        EimdlSyncmerIndex.SelfSyncmerTable selfTable =
-                cfg.allowSelfMatch ? new EimdlSyncmerIndex.SelfSyncmerTable(selfSetBits) : null;
+        int numChunks =
+                (threads > 1 && n >= 16_000_000)
+                        ? Math.min(threads, Math.min(16, n / 4_000_000))
+                        : 1;
 
-        // Parse into tokens first so we know exact noveltyLen before writing header varint
-        ArrayList<ParsedToken> tokens = new ArrayList<>(Math.max(16, n / 2048));
-        byte[] noveltyBuf = new byte[Math.min(n, Math.max(1024, n / 8))];
-        int noveltyLen = 0;
+        ArrayList<ParsedToken> tokens;
+        byte[] noveltyBuf;
+        int noveltyLen;
+        int statPanelBases = 0, statSelfBases = 0, statTandemBases = 0;
+        int statPanelTok = 0, statSelfTok = 0, statTandemTok = 0;
+        int statLitRuns = 0, statSplices = 0, statSnps = 0;
 
-        int[] mtf = initMtf(maxDonorExclusive);
-        int[] lastRefEnd = hasPanel ? new int[maxDonorExclusive * 2] : null;
-        int[] lastTgtEnd = hasPanel ? new int[maxDonorExclusive * 2] : null;
-        if (hasPanel) {
-            Arrays.fill(lastRefEnd, -1);
-            Arrays.fill(lastTgtEnd, -1);
-            if (preferredTwinDonor >= 0 && preferredTwinDonor < maxDonorExclusive) {
-                promoteMtf(mtf, preferredTwinDonor << 1);
-            }
-        }
-
-        int sync16Cursor = 0;
-        int sync13Cursor = 0;
-        int selfInsertedUpTo = 0;
-
-        int litStart = 0;
-        int pos = 0;
-
-        int statPanelBases = 0;
-        int statSelfBases = 0;
-        int statTandemBases = 0;
-        int statPanelTok = 0;
-        int statSelfTok = 0;
-        int statTandemTok = 0;
-        int statLitRuns = 0;
-        int statSplices = 0;
-        int statSnps = 0;
-
-        int[] scratchSnpBuf = new int[4096];
-        int[] horizonCache = new int[] {-1, n};
-
-        while (pos < n) {
-            // Advance self syncmer table up to current cursor pos - K_PRIMARY
-            if (selfTable != null) {
-                while (selfInsertedUpTo < tgtSync16.count
-                        && tgtSync16.positions[selfInsertedUpTo] + Packed2BitSequence.K_PRIMARY
-                                <= pos) {
-                    selfTable.insert(
-                            tgtSync16.canonKmers[selfInsertedUpTo] & 0xFFFFFFFFL,
-                            tgtSync16.positions[selfInsertedUpTo],
-                            tgtSync16.strands[selfInsertedUpTo]);
-                    selfInsertedUpTo++;
-                }
-            }
-
-            // Advance syncmer cursors BEFORE candidate lookup so cursors are never stale!
-            while (sync16Cursor < tgtSync16.count && tgtSync16.positions[sync16Cursor] < pos) {
-                sync16Cursor++;
-            }
-            if (tgtSync13 != null) {
-                while (sync13Cursor < tgtSync13.count && tgtSync13.positions[sync13Cursor] < pos) {
-                    sync13Cursor++;
-                }
-            }
-
-            CandidateChain best =
-                    findBestChainAt(
-                            pos,
-                            litStart,
+        if (numChunks <= 1) {
+            int selfSetBits = (!hasPanel && n >= 1_000_000) ? 17 : 15;
+            ParsedRegion reg =
+                    parseRegion(
                             target,
+                            0,
+                            n,
                             panelIdx,
                             maxDonorExclusive,
+                            preferredTwinDonor,
                             donorRank,
-                            mtf,
-                            lastRefEnd,
-                            lastTgtEnd,
-                            selfTable,
                             tgtSync16,
-                            sync16Cursor,
                             tgtSync13,
-                            sync13Cursor,
                             cfg,
-                            scratchSnpBuf,
-                            horizonCache);
+                            selfSetBits);
+            tokens = reg.tokens;
+            noveltyBuf = reg.noveltyBuf;
+            noveltyLen = reg.noveltyLen;
+            statPanelBases = reg.statPanelBases;
+            statSelfBases = reg.statSelfBases;
+            statTandemBases = reg.statTandemBases;
+            statPanelTok = reg.statPanelTok;
+            statSelfTok = reg.statSelfTok;
+            statTandemTok = reg.statTandemTok;
+            statLitRuns = reg.statLitRuns;
+            statSplices = reg.statSplices;
+            statSnps = reg.statSnps;
+        } else {
+            int selfSetBits = !hasPanel ? 16 : 15;
+            ParsedRegion[] regions = new ParsedRegion[numChunks];
+            final int[] finalDonorRank = donorRank;
+            final TargetSyncmers finalSync16 = tgtSync16;
+            final TargetSyncmers finalSync13 = tgtSync13;
+            ForkJoinPool pool = new ForkJoinPool(numChunks);
+            try {
+                pool.submit(
+                                () ->
+                                        IntStream.range(0, numChunks)
+                                                .parallel()
+                                                .forEach(
+                                                        c -> {
+                                                            int cStart =
+                                                                    (int) (((long) n * c) / numChunks);
+                                                            int cEnd =
+                                                                    (int) (((long) n * (c + 1L)) / numChunks);
+                                                            regions[c] =
+                                                                    parseRegion(
+                                                                            target,
+                                                                            cStart,
+                                                                            cEnd,
+                                                                            panelIdx,
+                                                                            maxDonorExclusive,
+                                                                            preferredTwinDonor,
+                                                                            finalDonorRank,
+                                                                            finalSync16,
+                                                                            finalSync13,
+                                                                            cfg,
+                                                                            selfSetBits);
+                                                        }))
+                        .join();
+            } finally {
+                pool.shutdown();
+            }
 
-            // 1-Step Lazy Syncmer Lookahead when match is short/medium (< 256 bp)
-            if (best != null && best.totalTgtSpan < 256 && pos + 8 + MIN_MATCH_LEN < n) {
-                int nextPos = findNextSyncmerPos(tgtSync16, sync16Cursor, pos + 1, pos + 7);
-                if (nextPos > pos) {
-                    CandidateChain lazy =
-                            findBestChainAt(
-                                    nextPos,
-                                    litStart,
-                                    target,
-                                    panelIdx,
-                                    maxDonorExclusive,
-                                    donorRank,
-                                    mtf,
-                                    lastRefEnd,
-                                    lastTgtEnd,
-                                    selfTable,
-                                    tgtSync16,
-                                    sync16Cursor,
-                                    tgtSync13,
-                                    sync13Cursor,
-                                    cfg,
-                                    scratchSnpBuf,
-                                    horizonCache);
-                    if (lazy != null
-                            && lazy.mdlNetBits > best.mdlNetBits + 14.0
-                            && lazy.totalTgtSpan > best.totalTgtSpan + 24) {
-                        // Defer to the much stronger match at nextPos
-                        pos = nextPos;
-                        continue;
+            int totalNov = 0;
+            int totalTokCap = 16;
+            for (ParsedRegion r : regions) {
+                totalNov += r.noveltyLen;
+                totalTokCap += r.tokens.size();
+                statPanelBases += r.statPanelBases;
+                statSelfBases += r.statSelfBases;
+                statTandemBases += r.statTandemBases;
+                statPanelTok += r.statPanelTok;
+                statSelfTok += r.statSelfTok;
+                statTandemTok += r.statTandemTok;
+                statLitRuns += r.statLitRuns;
+                statSplices += r.statSplices;
+                statSnps += r.statSnps;
+            }
+            noveltyLen = totalNov;
+            noveltyBuf = new byte[totalNov];
+            tokens = new ArrayList<>(totalTokCap);
+            int novOutOff = 0;
+            ParsedToken prevTok = null;
+            for (ParsedRegion r : regions) {
+                if (r.noveltyLen > 0) {
+                    System.arraycopy(r.noveltyBuf, 0, noveltyBuf, novOutOff, r.noveltyLen);
+                    novOutOff += r.noveltyLen;
+                }
+                r.noveltyBuf = null;
+                for (ParsedToken tok : r.tokens) {
+                    if (prevTok != null && prevTok.kind == 0 && tok.kind == 0) {
+                        ParsedToken merged = ParsedToken.literal(prevTok.litLen + tok.litLen);
+                        tokens.set(tokens.size() - 1, merged);
+                        prevTok = merged;
+                        statLitRuns--;
+                    } else {
+                        tokens.add(tok);
+                        prevTok = tok;
                     }
                 }
             }
-
-            if (best == null) {
-                // Only take multi-base jumps when the next syncmer's launch window is still ahead!
-                int step = 1;
-                if (pos - litStart >= 32) {
-                    int nextS16 =
-                            (sync16Cursor < tgtSync16.count)
-                                    ? tgtSync16.positions[sync16Cursor]
-                                    : n;
-                    int safeJump = nextS16 - (pos + Packed2BitSequence.W_PRIMARY - 1);
-                    if (safeJump > 1) {
-                        step = Math.min(safeJump, cfg.allowTandem ? 4 : 8);
-                    }
-                }
-                pos = Math.min(n, pos + step);
-                continue;
-            }
-
-            // Flush preceding literal run [litStart .. pos)
-            if (pos > litStart) {
-                int litLen = pos - litStart;
-                noveltyBuf = appendNovelBases(noveltyBuf, noveltyLen, target, litStart, litLen);
-                noveltyLen += litLen;
-                tokens.add(ParsedToken.literal(litLen));
-                statLitRuns++;
-            }
-
-            // Append any inserted splice bases in subblocks to noveltyBuf in exact decode order
-            int curT = pos;
-            for (int b = 0; b < best.numSubblocks; b++) {
-                Subblock sb = best.subblocks[b];
-                curT += sb.len;
-                if (sb.dTgtAfter > 0) {
-                    noveltyBuf =
-                            appendNovelBases(noveltyBuf, noveltyLen, target, curT, sb.dTgtAfter);
-                    noveltyLen += sb.dTgtAfter;
-                    curT += sb.dTgtAfter;
-                }
-            }
-
-            tokens.add(ParsedToken.fromChain(pos, best));
-
-            if (best.kind == 1) {
-                int ds = (best.donorId << 1) | best.strand;
-                promoteMtf(mtf, ds);
-                lastRefEnd[ds] = best.startRefPos + best.totalRefSpan;
-                lastTgtEnd[ds] = pos + best.totalTgtSpan;
-                statPanelBases += best.totalTgtSpan - best.totalNovelSpliceBases;
-                statPanelTok++;
-            } else if (best.kind == 2) {
-                statSelfBases += best.totalTgtSpan - best.totalNovelSpliceBases;
-                statSelfTok++;
-            } else {
-                statTandemBases += best.totalTgtSpan;
-                statTandemTok++;
-            }
-            statSplices += Math.max(0, best.numSubblocks - 1);
-            statSnps += best.totalSnps;
-
-            pos += best.totalTgtSpan;
-            litStart = pos;
         }
 
-        if (litStart < n) {
-            int litLen = n - litStart;
-            noveltyBuf = appendNovelBases(noveltyBuf, noveltyLen, target, litStart, litLen);
-            noveltyLen += litLen;
-            tokens.add(ParsedToken.literal(litLen));
-            statLitRuns++;
-        }
+        tgtSync16 = null;
+        tgtSync13 = null;
+        donorRank = null;
 
         headerAndBody.writeVarInt(noveltyLen);
 
@@ -513,6 +503,238 @@ public final class EimdlMosaicCodec {
                         : Arrays.copyOf(noveltyBuf, noveltyLen),
                 noveltyLen,
                 stats);
+    }
+
+    private static int lowerBoundPos(TargetSyncmers ts, int minPos) {
+        int lo = 0;
+        int hi = ts.count;
+        while (lo < hi) {
+            int mid = (lo + hi) >>> 1;
+            if (ts.positions[mid] < minPos) {
+                lo = mid + 1;
+            } else {
+                hi = mid;
+            }
+        }
+        return lo;
+    }
+
+    private static ParsedRegion parseRegion(
+            Packed2BitSequence target,
+            int regionStart,
+            int regionEnd,
+            EimdlSyncmerIndex panelIdx,
+            int maxDonorExclusive,
+            int preferredTwinDonor,
+            int[] donorRank,
+            TargetSyncmers tgtSync16,
+            TargetSyncmers tgtSync13,
+            MosaicConfig cfg,
+            int selfSetBits) {
+        final boolean hasPanel = panelIdx != null && maxDonorExclusive > 0;
+        final int regionLen = regionEnd - regionStart;
+        EimdlSyncmerIndex.SelfSyncmerTable selfTable =
+                cfg.allowSelfMatch ? new EimdlSyncmerIndex.SelfSyncmerTable(selfSetBits) : null;
+
+        ArrayList<ParsedToken> tokens = new ArrayList<>(Math.max(16, regionLen / 2048));
+        byte[] noveltyBuf = new byte[Math.min(regionLen, Math.max(1024, Math.min(65536, regionLen / 8)))];
+        int noveltyLen = 0;
+
+        int[] mtf = initMtf(maxDonorExclusive);
+        int[] lastRefEnd = hasPanel ? new int[maxDonorExclusive * 2] : null;
+        int[] lastTgtEnd = hasPanel ? new int[maxDonorExclusive * 2] : null;
+        if (hasPanel) {
+            Arrays.fill(lastRefEnd, -1);
+            Arrays.fill(lastTgtEnd, -1);
+            if (preferredTwinDonor >= 0 && preferredTwinDonor < maxDonorExclusive) {
+                promoteMtf(mtf, preferredTwinDonor << 1);
+            }
+        }
+
+        int sync16Cursor = regionStart > 0 ? lowerBoundPos(tgtSync16, regionStart) : 0;
+        int sync13Cursor =
+                (tgtSync13 != null && regionStart > 0) ? lowerBoundPos(tgtSync13, regionStart) : 0;
+        int selfInsertedUpTo =
+                (selfTable != null && regionStart > 2_000_000)
+                        ? lowerBoundPos(tgtSync16, regionStart - 2_000_000)
+                        : 0;
+
+        int litStart = regionStart;
+        int pos = regionStart;
+
+        int statPanelBases = 0, statSelfBases = 0, statTandemBases = 0;
+        int statPanelTok = 0, statSelfTok = 0, statTandemTok = 0;
+        int statLitRuns = 0, statSplices = 0, statSnps = 0;
+
+        int[] scratchSnpBuf = new int[4096];
+        int[] horizonCache = new int[] {-1, regionEnd};
+        int[] scanCache = new int[] {-1, -1, -1}; // deadPanelPIdx, deadSecS13, deadSelfSIdx
+        int[] bucketScratch = new int[MAX_BUCKET_PROBES * 4 + 1];
+
+        while (pos < regionEnd) {
+            if (selfTable != null) {
+                int inserted = 0;
+                while (selfInsertedUpTo < tgtSync16.count
+                        && tgtSync16.positions[selfInsertedUpTo] + Packed2BitSequence.K_PRIMARY
+                                <= pos) {
+                    selfTable.insert(
+                            tgtSync16.canonKmers[selfInsertedUpTo] & 0xFFFFFFFFL,
+                            tgtSync16.positions[selfInsertedUpTo],
+                            tgtSync16.strands[selfInsertedUpTo]);
+                    selfInsertedUpTo++;
+                    inserted++;
+                }
+                if (inserted > 0) {
+                    scanCache[2] = -1;
+                }
+            }
+
+            while (sync16Cursor < tgtSync16.count && tgtSync16.positions[sync16Cursor] < pos) {
+                sync16Cursor++;
+            }
+            if (tgtSync13 != null) {
+                while (sync13Cursor < tgtSync13.count && tgtSync13.positions[sync13Cursor] < pos) {
+                    sync13Cursor++;
+                }
+            }
+
+            CandidateChain best =
+                    findBestChainAt(
+                            pos,
+                            litStart,
+                            regionEnd,
+                            target,
+                            panelIdx,
+                            maxDonorExclusive,
+                            donorRank,
+                            mtf,
+                            lastRefEnd,
+                            lastTgtEnd,
+                            selfTable,
+                            tgtSync16,
+                            sync16Cursor,
+                            tgtSync13,
+                            sync13Cursor,
+                            cfg,
+                            scratchSnpBuf,
+                            horizonCache,
+                            scanCache,
+                            bucketScratch);
+
+            if (best != null && best.totalTgtSpan < 256 && pos + 8 + MIN_MATCH_LEN < regionEnd) {
+                int nextPos = findNextSyncmerPos(tgtSync16, sync16Cursor, pos + 1, pos + 7);
+                if (nextPos > pos) {
+                    CandidateChain lazy =
+                            findBestChainAt(
+                                    nextPos,
+                                    litStart,
+                                    regionEnd,
+                                    target,
+                                    panelIdx,
+                                    maxDonorExclusive,
+                                    donorRank,
+                                    mtf,
+                                    lastRefEnd,
+                                    lastTgtEnd,
+                                    selfTable,
+                                    tgtSync16,
+                                    sync16Cursor,
+                                    tgtSync13,
+                                    sync13Cursor,
+                                    cfg,
+                                    scratchSnpBuf,
+                                    horizonCache,
+                                    scanCache,
+                                    bucketScratch);
+                    if (lazy != null
+                            && lazy.mdlNetBits > best.mdlNetBits + 14.0
+                            && lazy.totalTgtSpan > best.totalTgtSpan + 24) {
+                        pos = nextPos;
+                        continue;
+                    }
+                }
+            }
+
+            if (best == null) {
+                int step = 1;
+                if (pos - litStart >= 32) {
+                    int nextS16 =
+                            (sync16Cursor < tgtSync16.count)
+                                    ? tgtSync16.positions[sync16Cursor]
+                                    : regionEnd;
+                    int safeJump = nextS16 - (pos + Packed2BitSequence.W_PRIMARY - 1);
+                    if (safeJump > 1) {
+                        step = Math.min(safeJump, cfg.allowTandem ? 4 : 8);
+                    }
+                }
+                pos = Math.min(regionEnd, pos + step);
+                continue;
+            }
+
+            if (pos > litStart) {
+                int litLen = pos - litStart;
+                noveltyBuf = appendNovelBases(noveltyBuf, noveltyLen, target, litStart, litLen);
+                noveltyLen += litLen;
+                tokens.add(ParsedToken.literal(litLen));
+                statLitRuns++;
+            }
+
+            int curT = pos;
+            for (int b = 0; b < best.numSubblocks; b++) {
+                Subblock sb = best.subblocks[b];
+                curT += sb.len;
+                if (sb.dTgtAfter > 0) {
+                    noveltyBuf =
+                            appendNovelBases(noveltyBuf, noveltyLen, target, curT, sb.dTgtAfter);
+                    noveltyLen += sb.dTgtAfter;
+                    curT += sb.dTgtAfter;
+                }
+            }
+
+            tokens.add(ParsedToken.fromChain(pos, best));
+
+            if (best.kind == 1) {
+                int ds = (best.donorId << 1) | best.strand;
+                promoteMtf(mtf, ds);
+                lastRefEnd[ds] = best.startRefPos + best.totalRefSpan;
+                lastTgtEnd[ds] = pos + best.totalTgtSpan;
+                statPanelBases += best.totalTgtSpan - best.totalNovelSpliceBases;
+                statPanelTok++;
+            } else if (best.kind == 2) {
+                statSelfBases += best.totalTgtSpan - best.totalNovelSpliceBases;
+                statSelfTok++;
+            } else {
+                statTandemBases += best.totalTgtSpan;
+                statTandemTok++;
+            }
+            statSplices += Math.max(0, best.numSubblocks - 1);
+            statSnps += best.totalSnps;
+
+            pos += best.totalTgtSpan;
+            litStart = pos;
+        }
+
+        if (litStart < regionEnd) {
+            int litLen = regionEnd - litStart;
+            noveltyBuf = appendNovelBases(noveltyBuf, noveltyLen, target, litStart, litLen);
+            noveltyLen += litLen;
+            tokens.add(ParsedToken.literal(litLen));
+            statLitRuns++;
+        }
+
+        return new ParsedRegion(
+                tokens,
+                noveltyBuf,
+                noveltyLen,
+                statPanelBases,
+                statSelfBases,
+                statTandemBases,
+                statPanelTok,
+                statSelfTok,
+                statTandemTok,
+                statLitRuns,
+                statSplices,
+                statSnps);
     }
 
     /** Inspects just the header of {@code mosaicBytes} to read {@code (targetLen, noveltyLen)}. */
@@ -696,6 +918,7 @@ public final class EimdlMosaicCodec {
     private static CandidateChain findBestChainAt(
             int pos,
             int litStart,
+            int tgtLimit,
             Packed2BitSequence target,
             EimdlSyncmerIndex panelIdx,
             int maxDonorExclusive,
@@ -710,31 +933,98 @@ public final class EimdlMosaicCodec {
             int sync13Cursor,
             MosaicConfig cfg,
             int[] scratchSnpBuf,
-            int[] horizonCache) {
-        final int n = target.length;
+            int[] horizonCache,
+            int[] scanCache,
+            int[] bucketScratch) {
+        final int n = tgtLimit;
         if (pos + MIN_TANDEM_LEN > n) {
             return null;
         }
 
         CandidateChain best = null;
 
-        // 1. Fast O(1) Tandem Periodicity Check (periods 1..64)
+        // 1. Fast O(1) Tandem Periodicity Check (periods 1..64 via 4-word SWAR shifts)
         if (cfg.allowTandem && pos >= 1) {
             int maxP = Math.min(MAX_TANDEM_PERIOD, pos);
             int bestP = -1;
             int bestTLen = 0;
             int tgt16 = (int) target.word32Forward(pos);
-            for (int p = 1; p <= maxP; p++) {
-                if (((int) target.word32Forward(pos - p)) != tgt16) {
-                    continue;
+            if (maxP == MAX_TANDEM_PERIOD) {
+                long w1 = target.word32Forward(pos - 13);
+                for (int j = 12; j >= 0; j--) {
+                    if (((int) (w1 >>> (j << 1))) == tgt16) {
+                        int p = 13 - j;
+                        int tLen =
+                                Packed2BitSequence.countExactMatch(
+                                        target, 0, n, 0, pos - p, target, pos, n - pos);
+                        if (tLen >= MIN_TANDEM_LEN && tLen > bestTLen) {
+                            bestTLen = tLen;
+                            bestP = p;
+                            if (tLen >= 4096) break;
+                        }
+                    }
                 }
-                int tLen =
-                        Packed2BitSequence.countExactMatch(
-                                target, 0, n, 0, pos - p, target, pos, n - pos);
-                if (tLen >= MIN_TANDEM_LEN && tLen > bestTLen) {
-                    bestTLen = tLen;
-                    bestP = p;
-                    if (tLen >= 4096) break;
+                if (bestTLen < 4096) {
+                    long w2 = target.word32Forward(pos - 30);
+                    for (int j = 16; j >= 0; j--) {
+                        if (((int) (w2 >>> (j << 1))) == tgt16) {
+                            int p = 30 - j;
+                            int tLen =
+                                    Packed2BitSequence.countExactMatch(
+                                            target, 0, n, 0, pos - p, target, pos, n - pos);
+                            if (tLen >= MIN_TANDEM_LEN && tLen > bestTLen) {
+                                bestTLen = tLen;
+                                bestP = p;
+                                if (tLen >= 4096) break;
+                            }
+                        }
+                    }
+                }
+                if (bestTLen < 4096) {
+                    long w3 = target.word32Forward(pos - 47);
+                    for (int j = 16; j >= 0; j--) {
+                        if (((int) (w3 >>> (j << 1))) == tgt16) {
+                            int p = 47 - j;
+                            int tLen =
+                                    Packed2BitSequence.countExactMatch(
+                                            target, 0, n, 0, pos - p, target, pos, n - pos);
+                            if (tLen >= MIN_TANDEM_LEN && tLen > bestTLen) {
+                                bestTLen = tLen;
+                                bestP = p;
+                                if (tLen >= 4096) break;
+                            }
+                        }
+                    }
+                }
+                if (bestTLen < 4096) {
+                    long w4 = target.word32Forward(pos - 64);
+                    for (int j = 16; j >= 0; j--) {
+                        if (((int) (w4 >>> (j << 1))) == tgt16) {
+                            int p = 64 - j;
+                            int tLen =
+                                    Packed2BitSequence.countExactMatch(
+                                            target, 0, n, 0, pos - p, target, pos, n - pos);
+                            if (tLen >= MIN_TANDEM_LEN && tLen > bestTLen) {
+                                bestTLen = tLen;
+                                bestP = p;
+                                if (tLen >= 4096) break;
+                            }
+                        }
+                    }
+                }
+            } else {
+                for (int p = 1; p <= maxP; p++) {
+                    if (((int) target.word32Forward(pos - p)) != tgt16) {
+                        continue;
+                    }
+                    int tLen =
+                            Packed2BitSequence.countExactMatch(
+                                    target, 0, n, 0, pos - p, target, pos, n - pos);
+                    if (tLen >= MIN_TANDEM_LEN && tLen > bestTLen) {
+                        bestTLen = tLen;
+                        bestP = p;
+                        if (tLen >= 4096) break;
+                    }
                 }
             }
             int minTandem = (panelIdx != null && maxDonorExclusive > 0) ? MIN_TANDEM_LEN : 36;
@@ -863,7 +1153,7 @@ public final class EimdlMosaicCodec {
                                 && tgtSync16.positions[pIdx] + Packed2BitSequence.K_PRIMARY <= n
                                 && panelIdx.acceptsPrimary(tgtSync16.canonKmers[pIdx] & 0xFFFFFFFFL);
             }
-            if (hasNearPanelSync16) {
+            if (hasNearPanelSync16 && pIdx != scanCache[0]) {
                 int syncOff = tgtSync16.positions[pIdx] - pos;
                 long qCanon = tgtSync16.canonKmers[pIdx] & 0xFFFFFFFFL;
                 int qStrand = tgtSync16.strands[pIdx];
@@ -872,7 +1162,9 @@ public final class EimdlMosaicCodec {
 
                 int bStart = panelIdx.bucketStart(bucket);
                 int bEnd = panelIdx.bucketEnd(bucket);
-                if (bStart < bEnd) {
+                if (bStart >= bEnd) {
+                    scanCache[0] = pIdx;
+                } else {
                     best =
                             probePanelBucket(
                                     pos,
@@ -894,7 +1186,11 @@ public final class EimdlMosaicCodec {
                                     cfg,
                                     multiDonor,
                                     scratchSnpBuf,
+                                    bucketScratch,
                                     best);
+                    if (bucketScratch[MAX_BUCKET_PROBES * 4] == 0) {
+                        scanCache[0] = pIdx;
+                    }
                     if (best != null
                             && best.totalTgtSpan >= 2048
                             && (multiDonor
@@ -903,10 +1199,11 @@ public final class EimdlMosaicCodec {
                         return best;
                     }
                     // Gear 2 (Horizon-Bounded Diverged Homolog Gear): never bulldoze downstream clonal blocks!
-                    if (multiDonor && (best == null || best.totalTgtSpan < 96)) {
+                    if (multiDonor && pIdx != scanCache[0] && (best == null || best.totalTgtSpan < 96)) {
                         gear2Limit =
                                 findClonalReentryHorizon(
                                         pos,
+                                        n,
                                         sIdx,
                                         target,
                                         tgtSync16,
@@ -962,6 +1259,7 @@ public final class EimdlMosaicCodec {
                                             cfg,
                                             false,
                                             scratchSnpBuf,
+                                            bucketScratch,
                                             best);
                         }
                     }
@@ -979,6 +1277,7 @@ public final class EimdlMosaicCodec {
                 gear2Limit =
                         findClonalReentryHorizon(
                                 pos,
+                                n,
                                 sIdx,
                                 target,
                                 tgtSync16,
@@ -993,16 +1292,21 @@ public final class EimdlMosaicCodec {
                     s13++;
                 }
                 if (s13 < tgtSync13.count
+                        && s13 != scanCache[1]
                         && tgtSync13.positions[s13] < pos + Packed2BitSequence.W_SECONDARY
                         && tgtSync13.positions[s13] + Packed2BitSequence.K_SECONDARY <= secLimit) {
                     int syncOff = tgtSync13.positions[s13] - pos;
                     long qCanon13 = tgtSync13.canonKmers[s13] & 0xFFFFFFFFL;
                     int b13 = panelIdx.secBucketFor(qCanon13);
-                    if (b13 >= 0) {
+                    if (b13 < 0) {
+                        scanCache[1] = s13;
+                    } else {
                         short qSig13 = panelIdx.secSigFor(qCanon13);
                         int bStart = panelIdx.secBucketStart(b13);
                         int bEnd = panelIdx.secBucketEnd(b13);
-                        if (bStart < bEnd) {
+                        if (bStart >= bEnd) {
+                            scanCache[1] = s13;
+                        } else {
                             best =
                                     probePanelBucket(
                                             pos,
@@ -1024,7 +1328,11 @@ public final class EimdlMosaicCodec {
                                             cfg,
                                             false,
                                             scratchSnpBuf,
+                                            bucketScratch,
                                             best);
+                            if (bucketScratch[MAX_BUCKET_PROBES * 4] == 0) {
+                                scanCache[1] = s13;
+                            }
                         }
                     }
                 }
@@ -1032,11 +1340,12 @@ public final class EimdlMosaicCodec {
         }
 
         // 5. Bidirectional (+/-) Exact & Approximate Self-Homology Lookup
-        if (selfTable != null && hasNearSync16 && pos >= MIN_MATCH_LEN) {
+        if (selfTable != null && hasNearSync16 && sIdx != scanCache[2] && pos >= MIN_MATCH_LEN) {
             if (multiDonor && gear2Limit < 0 && (best == null || best.totalTgtSpan < 96)) {
                 gear2Limit =
                         findClonalReentryHorizon(
                                 pos,
+                                n,
                                 sIdx,
                                 target,
                                 tgtSync16,
@@ -1056,6 +1365,7 @@ public final class EimdlMosaicCodec {
             int setBase = selfTable.setBase(qCanon);
             short qSig = selfTable.sigFor(qCanon);
 
+            boolean anySelfSeedHit = false;
             for (int w = 0; w < EimdlSyncmerIndex.SelfSyncmerTable.WAYS; w++) {
                 int slot = setBase + w;
                 int packed = selfTable.slotPackedPosStrand(slot);
@@ -1087,6 +1397,7 @@ public final class EimdlMosaicCodec {
                         < Packed2BitSequence.K_PRIMARY) {
                     continue;
                 }
+                anySelfSeedHit = true;
 
                 // Left-adjust if syncOff > 0 had leading mismatches
                 int adjShift = 0;
@@ -1126,6 +1437,9 @@ public final class EimdlMosaicCodec {
                     best = sc;
                 }
             }
+            if (!anySelfSeedHit) {
+                scanCache[2] = sIdx;
+            }
         }
 
         return best;
@@ -1138,13 +1452,14 @@ public final class EimdlMosaicCodec {
      */
     private static int findClonalReentryHorizon(
             int pos,
+            int tgtLimit,
             int sync16Cursor,
             Packed2BitSequence target,
             TargetSyncmers tgtSync16,
             EimdlSyncmerIndex panelIdx,
             int maxDonorExclusive,
             int[] horizonCache) {
-        final int n = target.length;
+        final int n = tgtLimit;
         if (pos < horizonCache[0]) {
             return horizonCache[1];
         }
@@ -1307,18 +1622,19 @@ public final class EimdlMosaicCodec {
             MosaicConfig cfg,
             boolean clonalGear,
             int[] scratchSnpBuf,
+            int[] bucketScratch,
             CandidateChain best) {
+        bucketScratch[MAX_BUCKET_PROBES * 4] = 1; // conservative default unless we prove zero seed match
         if (pos + MIN_MATCH_LEN > tgtLimit || pos + syncOff + seedK > tgtLimit) {
             return best;
         }
-        // Collect up to MAX_BUCKET_PROBES matching entries, prioritizing distinct closest-twin donors!
-        int[] candIdx = new int[MAX_BUCKET_PROBES];
-        int[] candScoreRank = new int[MAX_BUCKET_PROBES];
+        // Single-pass zero-alloc collection: [0..48)=candIdx, [48..96)=candScoreRank, [96..144)=dupIdx, [144..192)=dupRank
+        final int[] candIdx = bucketScratch;
         int candCount = 0;
+        int dupCount = 0;
         long seenDonorBitsLo = 0L;
         long seenDonorBitsHi = 0L;
 
-        // Pass 1: One representative per distinct donor (guarantees twin donor is NEVER starved!)
         for (int idx = bStart; idx < bEnd; idx++) {
             short eSig = secondary ? panelIdx.secEntrySig(idx) : panelIdx.entrySig(idx);
             if (eSig != qSig) continue;
@@ -1334,7 +1650,15 @@ public final class EimdlMosaicCodec {
                     (dId < 64)
                             ? ((seenDonorBitsLo & (1L << dId)) != 0L)
                             : (dId < 128 && (seenDonorBitsHi & (1L << (dId - 64))) != 0L);
-            if (alreadySeen) continue;
+            if (alreadySeen) {
+                if (dupCount < MAX_BUCKET_PROBES) {
+                    candIdx[MAX_BUCKET_PROBES * 2 + dupCount] = idx;
+                    candIdx[MAX_BUCKET_PROBES * 3 + dupCount] =
+                            (donorRank != null ? donorRank[dId] : dId) + 1000;
+                    dupCount++;
+                }
+                continue;
+            }
             if (dId < 64) seenDonorBitsLo |= (1L << dId);
             else if (dId < 128) seenDonorBitsHi |= (1L << (dId - 64));
 
@@ -1344,61 +1668,49 @@ public final class EimdlMosaicCodec {
             }
             if (candCount < MAX_BUCKET_PROBES) {
                 candIdx[candCount] = idx;
-                candScoreRank[candCount] = r;
+                candIdx[MAX_BUCKET_PROBES + candCount] = r;
                 candCount++;
             } else {
-                // Replace worst-ranked candidate if this donor has higher similarity priority
                 int worstSlot = 0;
                 for (int u = 1; u < candCount; u++) {
-                    if (candScoreRank[u] > candScoreRank[worstSlot]) worstSlot = u;
+                    if (candIdx[MAX_BUCKET_PROBES + u] > candIdx[MAX_BUCKET_PROBES + worstSlot]) {
+                        worstSlot = u;
+                    }
                 }
-                if (r < candScoreRank[worstSlot]) {
+                if (r < candIdx[MAX_BUCKET_PROBES + worstSlot]) {
                     candIdx[worstSlot] = idx;
-                    candScoreRank[worstSlot] = r;
+                    candIdx[MAX_BUCKET_PROBES + worstSlot] = r;
                 }
             }
         }
 
-        // Pass 2: If room remains in candIdx, include multi-copy paralog hits from top donors
-        if (candCount < MAX_BUCKET_PROBES) {
-            for (int idx = bStart; idx < bEnd && candCount < MAX_BUCKET_PROBES; idx++) {
-                short eSig = secondary ? panelIdx.secEntrySig(idx) : panelIdx.entrySig(idx);
-                if (eSig != qSig) continue;
-                int packed =
-                        secondary
-                                ? panelIdx.secEntryPackedPosAndStrand(idx)
-                                : panelIdx.entryPackedPosAndStrand(idx);
-                int dId = panelIdx.donorOfGlobalPos(packed & 0x7FFFFFFF);
-                if (dId >= maxDonorExclusive) break;
-                boolean dup = false;
-                for (int u = 0; u < candCount; u++) {
-                    if (candIdx[u] == idx) {
-                        dup = true;
-                        break;
-                    }
-                }
-                if (!dup) {
-                    candIdx[candCount] = idx;
-                    candScoreRank[candCount] = (donorRank != null ? donorRank[dId] : dId) + 1000;
-                    candCount++;
-                }
-            }
+        // Fill remaining candidate slots from single-pass paralog backup buffer without re-scanning CSR
+        for (int p = 0; p < dupCount && candCount < MAX_BUCKET_PROBES; p++) {
+            candIdx[candCount] = candIdx[MAX_BUCKET_PROBES * 2 + p];
+            candIdx[MAX_BUCKET_PROBES + candCount] = candIdx[MAX_BUCKET_PROBES * 3 + p];
+            candCount++;
+        }
+
+        if (candCount == 0) {
+            bucketScratch[MAX_BUCKET_PROBES * 4] = 0;
+            return best;
         }
 
         // Insertion-sort small candidate list by priority rank so twin donor evaluates FIRST!
         for (int i = 1; i < candCount; i++) {
             int kIdx = candIdx[i];
-            int kRank = candScoreRank[i];
+            int kRank = candIdx[MAX_BUCKET_PROBES + i];
             int j = i - 1;
-            while (j >= 0 && candScoreRank[j] > kRank) {
+            while (j >= 0 && candIdx[MAX_BUCKET_PROBES + j] > kRank) {
                 candIdx[j + 1] = candIdx[j];
-                candScoreRank[j + 1] = candScoreRank[j];
+                candIdx[MAX_BUCKET_PROBES + j + 1] = candIdx[MAX_BUCKET_PROBES + j];
                 j--;
             }
             candIdx[j + 1] = kIdx;
-            candScoreRank[j + 1] = kRank;
+            candIdx[MAX_BUCKET_PROBES + j + 1] = kRank;
         }
 
+        boolean anySeedVerified = false;
         for (int u = 0; u < candCount; u++) {
             int idx = candIdx[u];
             int packed =
@@ -1423,6 +1735,7 @@ public final class EimdlMosaicCodec {
                     < seedK) {
                 continue;
             }
+            anySeedVerified = true;
 
             // If syncOff > 0 and base at pos itself doesn't match (and !allowApprox or >1 mismatch), skip until pos+adj
             if (syncOff > 0
@@ -1461,6 +1774,9 @@ public final class EimdlMosaicCodec {
                     return best;
                 }
             }
+        }
+        if (!anySeedVerified) {
+            bucketScratch[MAX_BUCKET_PROBES * 4] = 0;
         }
         return best;
     }
@@ -1802,49 +2118,55 @@ public final class EimdlMosaicCodec {
 
         final int anchorMask = 0xFFFFFF; // 12-base (24-bit) syntenic anchor
 
-        // 1. Pure target deletion: dTgt = 0, dRef in [1 .. 192]
+        // 1. Pure target deletion: dTgt = 0, dRef in [1 .. 192] via SWAR 64-bit word shifts
         int maxDel = Math.min(192, remRef - MIN_SPLICE_ANCHOR);
+        long tgtWord0 = target.word32Forward(endTgt);
+        int tgtAnchor12 = ((int) tgtWord0) & anchorMask;
         if (maxDel >= 1) {
-            int tgtAnchor12 = ((int) target.word32Forward(endTgt)) & anchorMask;
-            for (int dRef = 1; dRef <= maxDel; dRef++) {
-                int ref12 =
-                        ((int) refBank.word32Strand(refOffset, refLen, strand, endRef + dRef))
-                                & anchorMask;
-                if (ref12 == tgtAnchor12) {
-                    return new int[] {0, dRef};
+            for (int baseRef = 1; baseRef <= maxDel; baseRef += 21) {
+                int span = Math.min(21, maxDel - baseRef + 1);
+                long rChunk = refBank.word32Strand(refOffset, refLen, strand, endRef + baseRef);
+                for (int j = 0; j < span; j++) {
+                    if ((((int) rChunk) & anchorMask) == tgtAnchor12) {
+                        return new int[] {0, baseRef + j};
+                    }
+                    rChunk >>>= 2;
                 }
             }
         }
 
         // 2. Pure target insertion: dRef = 0, dTgt in [1 .. 12]
         int maxIns = Math.min(12, remTgt - MIN_SPLICE_ANCHOR);
+        int maxCT = Math.min(6, remTgt - MIN_SPLICE_ANCHOR);
+        int maxCR = Math.min(12, remRef - MIN_SPLICE_ANCHOR);
+        if (maxIns < 1 && (maxCT < 1 || maxCR < 1)) {
+            return null;
+        }
+        long refWord0 = refBank.word32Strand(refOffset, refLen, strand, endRef);
         if (maxIns >= 1) {
-            int refAnchor12 =
-                    ((int) refBank.word32Strand(refOffset, refLen, strand, endRef)) & anchorMask;
+            int refAnchor12 = ((int) refWord0) & anchorMask;
+            long tShifted = tgtWord0 >>> 2;
             for (int dTgt = 1; dTgt <= maxIns; dTgt++) {
-                if ((((int) target.word32Forward(endTgt + dTgt)) & anchorMask) == refAnchor12) {
+                if ((((int) tShifted) & anchorMask) == refAnchor12) {
                     return new int[] {dTgt, 0};
                 }
+                tShifted >>>= 2;
             }
         }
 
         // 3. Compound micro-indel / substitution cluster: dTgt in [1..6], dRef in [1..12]
-        int maxCT = Math.min(6, remTgt - MIN_SPLICE_ANCHOR);
-        int maxCR = Math.min(12, remRef - MIN_SPLICE_ANCHOR);
         if (maxCT >= 1 && maxCR >= 1) {
-            int[] refAnchors = new int[maxCR + 1];
-            for (int dr = 1; dr <= maxCR; dr++) {
-                refAnchors[dr] =
-                        ((int) refBank.word32Strand(refOffset, refLen, strand, endRef + dr))
-                                & anchorMask;
-            }
+            long tWord = tgtWord0 >>> 2;
             for (int dt = 1; dt <= maxCT; dt++) {
-                int t12 = ((int) target.word32Forward(endTgt + dt)) & anchorMask;
+                int t12 = ((int) tWord) & anchorMask;
+                long rWord = refWord0 >>> 2;
                 for (int dr = 1; dr <= maxCR; dr++) {
-                    if (refAnchors[dr] == t12) {
+                    if ((((int) rWord) & anchorMask) == t12) {
                         return new int[] {dt, dr};
                     }
+                    rWord >>>= 2;
                 }
+                tWord >>>= 2;
             }
         }
         return null;

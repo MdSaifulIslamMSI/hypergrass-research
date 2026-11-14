@@ -146,8 +146,17 @@ public final class EimdlSyncmerIndex {
                         1024L,
                         (indexedBases / Packed2BitSequence.W_PRIMARY) >>> primarySubsampleShift);
         int estPrimary = (int) Math.min(Integer.MAX_VALUE, estPrimaryLong);
+        long maxMemory = Runtime.getRuntime().maxMemory();
+        int heapCapBits =
+                maxMemory >= 3L * 1024 * 1024 * 1024
+                        ? 24
+                        : (maxMemory >= 1536L * 1024 * 1024
+                                ? 22
+                                : (maxMemory > 180L * 1024 * 1024 ? 20 : 18));
         int maxPrimaryBits =
-                primarySubsampleShift == 0 ? 20 : Math.max(16, 20 - primarySubsampleShift);
+                primarySubsampleShift == 0
+                        ? heapCapBits
+                        : Math.max(16, Math.min(20, heapCapBits) - primarySubsampleShift);
         int bucketBits = chooseBucketBits(estPrimary, 12, maxPrimaryBits);
 
         CsrTables primary =
@@ -214,8 +223,30 @@ public final class EimdlSyncmerIndex {
             int bucketBits,
             int subsampleShift,
             int threads) {
-        boolean ampleHeap = Runtime.getRuntime().maxMemory() > 512L * 1024 * 1024;
-        if (ampleHeap && threads > 1 && donorOffsets.length - 1 > 1) {
+        long maxMemory = Runtime.getRuntime().maxMemory();
+        long indexedBases = 0L;
+        if (indexedDonorMask == null) {
+            indexedBases = bank.length;
+        } else {
+            for (int i = 0; i < indexedDonorMask.length; i++) {
+                if (indexedDonorMask[i]) {
+                    indexedBases += (donorOffsets[i + 1] - donorOffsets[i]);
+                }
+            }
+        }
+        int windowSpan = Math.max(1, k - s + 1);
+        long estEntries = Math.max(1024L, (indexedBases / windowSpan) >>> subsampleShift);
+        long bankBytes = (bank.length + 3L) >>> 2;
+        long bucketBytes = (1L << bucketBits) << 2;
+        long csrBytes = bucketBytes + estEntries * 8L;
+        long parallelPeakBytes =
+                bankBytes + csrBytes + estEntries * 18L + bucketBytes * Math.max(1, threads);
+        boolean ampleHeap =
+                maxMemory > 512L * 1024 * 1024
+                        && threads > 1
+                        && donorOffsets.length - 1 > 1
+                        && parallelPeakBytes <= (long) (maxMemory * 0.65);
+        if (ampleHeap) {
             return buildCsrPassParallel(
                     bank, donorOffsets, indexedDonorMask, k, s, t, bucketBits, subsampleShift, threads);
         }

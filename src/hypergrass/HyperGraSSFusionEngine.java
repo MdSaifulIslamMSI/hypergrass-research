@@ -61,8 +61,8 @@ public final class HyperGraSSFusionEngine {
     private static final int FLAG_RAW_FLAT_ACGT = 1 << 2;
     private static final int FLAG_RAW_RNA_U = 1 << 3;
 
-    /** Default target DNA size (~4.5 Mbp) when slicing giant headerless/concatenated collection streams. */
-    private static final int TARGET_COLLECTION_UNIT_BASES = 4_500_000;
+    /** Default target DNA size (4 MiB bases = 4 aligned 256 KiB pages) for headerless streams. */
+    private static final int TARGET_COLLECTION_UNIT_BASES = Packed2BitSequence.PAGE_BASES * 4;
 
     private HyperGraSSFusionEngine() {}
 
@@ -376,12 +376,19 @@ public final class HyperGraSSFusionEngine {
         EncodedMosaic[] rankMosaics = new EncodedMosaic[numUnits];
         long panelBasesTotal = 0L;
         int panelGenomeCount = 0;
+        long maxMemAtStart = Runtime.getRuntime().maxMemory();
+        int safeStage1Threads =
+                (maxMemAtStart <= 145L * 1024 * 1024)
+                        ? 1
+                        : (maxMemAtStart <= 205L * 1024 * 1024
+                                ? Math.min(threads, 2)
+                                : (bounded ? Math.min(threads, 4) : threads));
 
         if (mode == MODE_SINGLE) {
             InputUnit u0 = units.get(0);
             rankMosaics[0] =
                     EimdlMosaicCodec.encodeMosaic(
-                            u0.seq, null, 0, -1, null, opts.mosaicConfig);
+                            u0.seq, null, 0, -1, null, opts.mosaicConfig, safeStage1Threads);
         } else if (mode == MODE_REF) {
             panelGenomeCount = loadedPanel.seqs.length;
             panelBasesTotal = loadedPanel.totalBases;
@@ -435,7 +442,8 @@ public final class HyperGraSSFusionEngine {
                                 panelIdx != null ? panelIdx.numDonors : 0,
                                 bestTwin,
                                 simOrder,
-                                opts.mosaicConfig);
+                                opts.mosaicConfig,
+                                safeStage1Threads);
                 units.get(u).seq = null;
             }
             panelIdx = null;
@@ -452,33 +460,66 @@ public final class HyperGraSSFusionEngine {
             units.clear();
             units = null;
 
-            // Under bounded memory (-Xmx128m..-Xmx256m), index ALL donors via subsampled canonical
-            // open syncmers + zero-materialization 2-pass CSR while consuming per-unit sequences into
-            // the single 2-bit bank (0.25 B/base), eliminating unindexed blind spots!
+            // Compute subsampling dynamically from (totalBankBases, maxMemory) so CSR + bank + workers
+            // fit strictly inside tight heaps (-Xmx128m .. -Xmx1g) even at 300 Mbp .. 1 Gbp+!
             long maxMemBytes = Runtime.getRuntime().maxMemory();
+            long totalBankBases = 0L;
+            for (Packed2BitSequence seq : orderedDonors) {
+                if (seq != null) {
+                    totalBankBases += seq.length;
+                }
+            }
+            long bankBytes = (totalBankBases + 3L) >>> 2;
             boolean ultraTight = maxMemBytes <= 205L * 1024 * 1024;
             boolean extremeTight = maxMemBytes <= 145L * 1024 * 1024;
+            boolean bankHeavy = bankBytes * 5L > maxMemBytes * 2L;
+            boolean memPressured = bounded || (bankBytes * 5L > maxMemBytes);
+
+            int maxMosaicWorkers =
+                    (extremeTight || bankHeavy)
+                            ? 1
+                            : (ultraTight
+                                    ? Math.min(threads, 2)
+                                    : (bounded ? Math.min(threads, 4) : threads));
+            int workerThreads = Math.min(maxMosaicWorkers, numUnits);
+            long workerReserve = (long) workerThreads * 6L * 1024 * 1024 + (4L << 20);
+            long csrBudget =
+                    Math.max(6L << 20, (long) (maxMemBytes * 0.72) - bankBytes - workerReserve);
+
             int subsampleShift = bounded ? (ultraTight ? 2 : 1) : 0;
+            if (memPressured) {
+                long estRawEntries =
+                        Math.max(1024L, totalBankBases / Packed2BitSequence.W_PRIMARY);
+                while (subsampleShift < 6) {
+                    long ent = Math.max(1024L, estRawEntries >>> subsampleShift);
+                    long estBucketBytes = Math.min(8L << 20, Math.max(64L << 10, ent * 2L));
+                    if (ent * 6L + estBucketBytes <= csrBudget) {
+                        break;
+                    }
+                    subsampleShift++;
+                }
+            }
             int buildThreads =
-                    extremeTight ? Math.min(threads, 2) : (bounded ? Math.min(threads, 4) : threads);
+                    (extremeTight || bankHeavy)
+                            ? 1
+                            : (bounded ? Math.min(threads, 4) : threads);
             EimdlSyncmerIndex sharedDagIdx =
                     EimdlSyncmerIndex.buildWithSubsampling(
                             orderedDonors,
                             subsampleShift,
                             true,
-                            !bounded && numUnits <= 16,
+                            !bounded && !memPressured && numUnits <= 16,
                             buildThreads);
             orderedDonors = null;
-
-            int workerThreads =
-                    extremeTight
-                            ? Math.min(threads, 2)
-                            : (ultraTight
-                                    ? Math.min(threads, 3)
-                                    : (bounded
-                                            ? Math.min(threads, 4)
-                                            : Math.min(threads, numUnits)));
-            if (workerThreads <= 1) {
+            boolean useIntraUnitChunking =
+                    maxMosaicWorkers > 1
+                            && (workerThreads <= 1
+                                    || (numUnits <= 4
+                                            && totalBankBases >= 16_000_000L
+                                            && !memPressured
+                                            && !bounded));
+            if (workerThreads <= 1 || useIntraUnitChunking) {
+                int chunkThreads = useIntraUnitChunking ? maxMosaicWorkers : 1;
                 for (int r = 0; r < numUnits; r++) {
                     int dStart = sharedDagIdx.donorOffsets[r];
                     int dLen = sharedDagIdx.donorOffsets[r + 1] - dStart;
@@ -486,7 +527,13 @@ public final class HyperGraSSFusionEngine {
                     if (r == 0) {
                         rankMosaics[0] =
                                 EimdlMosaicCodec.encodeMosaic(
-                                        targetSeq, null, 0, -1, null, opts.mosaicConfig);
+                                        targetSeq,
+                                        null,
+                                        0,
+                                        -1,
+                                        null,
+                                        opts.mosaicConfig,
+                                        chunkThreads);
                     } else {
                         rankMosaics[r] =
                                 EimdlMosaicCodec.encodeMosaic(
@@ -495,7 +542,8 @@ public final class HyperGraSSFusionEngine {
                                         r,
                                         mstParentRank[r],
                                         rankDonorSimilarityOrder[r],
-                                        opts.mosaicConfig);
+                                        opts.mosaicConfig,
+                                        chunkThreads);
                     }
                 }
             } else {
@@ -717,9 +765,7 @@ public final class HyperGraSSFusionEngine {
             rankDnaOffsets[r + 1] = rankDnaOffsets[r] + rankTargetLen[r];
         }
         int totalDnaBases = rankDnaOffsets[hdr.numUnits];
-        Packed2BitSequence decodedBank =
-                new Packed2BitSequence(
-                        new long[((totalDnaBases + 31) >>> 5) + 2], totalDnaBases);
+        Packed2BitSequence decodedBank = Packed2BitSequence.allocatePaged(totalDnaBases);
         int[] unitToRank = new int[hdr.numUnits];
 
         if (hdr.mode == MODE_COLLECTION && hdr.numUnits > 1) {
@@ -918,9 +964,7 @@ public final class HyperGraSSFusionEngine {
                 dOff[r + 1] = dOff[r] + rankTargetLen[r];
             }
             int ancBases = dOff[targetRank];
-            Packed2BitSequence bank =
-                    new Packed2BitSequence(
-                            new long[((ancBases + 31) >>> 5) + 2], ancBases);
+            Packed2BitSequence bank = Packed2BitSequence.allocatePaged(ancBases);
             byte[] latest = null;
             for (int r = 0; r <= targetRank; r++) {
                 byte[] mBytes =
@@ -1159,8 +1203,19 @@ public final class HyperGraSSFusionEngine {
                         : 1;
         int[] sliceLens = new int[numSlices];
         int rem = n;
+        int pageBases = Packed2BitSequence.PAGE_BASES;
         for (int i = 0; i < numSlices; i++) {
-            int len = rem / (numSlices - i);
+            int len;
+            if (i == numSlices - 1) {
+                len = rem;
+            } else {
+                int avg = rem / (numSlices - i);
+                int rounded = (avg + (pageBases >>> 1)) & ~(pageBases - 1);
+                len = Math.min(TARGET_COLLECTION_UNIT_BASES, Math.max(pageBases, rounded));
+                if (rem - len < 1) {
+                    len = rem - (numSlices - 1 - i);
+                }
+            }
             sliceLens[i] = len;
             rem -= len;
         }
@@ -1177,7 +1232,7 @@ public final class HyperGraSSFusionEngine {
 
             for (int s = 0; s < numSlices; s++) {
                 int sLen = sliceLens[s];
-                long[] words = new long[((sLen + 31) >>> 5) + 2];
+                Packed2BitSequence.PageBuilder pb = new Packed2BitSequence.PageBuilder(sLen);
                 int k = 0;
                 while (k < sLen) {
                     if (ioPos >= ioLim) {
@@ -1189,18 +1244,18 @@ public final class HyperGraSSFusionEngine {
                         ioPos = 0;
                     }
                     int b = ioBuf[ioPos++] & 0xFF;
-                    long code;
+                    int code;
                     switch (b) {
-                        case 'A' -> code = 0L;
-                        case 'C' -> code = 1L;
-                        case 'G' -> code = 2L;
+                        case 'A' -> code = 0;
+                        case 'C' -> code = 1;
+                        case 'G' -> code = 2;
                         case 'T' -> {
-                            code = 3L;
+                            code = 3;
                             hasT = true;
                             if (hasU) return null;
                         }
                         case 'U' -> {
-                            code = 3L;
+                            code = 3;
                             hasU = true;
                             if (hasT) return null;
                         }
@@ -1208,10 +1263,10 @@ public final class HyperGraSSFusionEngine {
                             return null;
                         }
                     }
-                    words[k >>> 5] |= code << ((k & 31) << 1);
+                    pb.appendBase(code);
                     k++;
                 }
-                units.add(new InputUnit(new Packed2BitSequence(words, sLen), null, 0, s == 0 ? 1 : 0));
+                units.add(new InputUnit(pb.build(), null, 0, s == 0 ? 1 : 0));
             }
             if (ioPos < ioLim || in.read() != -1) {
                 return null;
