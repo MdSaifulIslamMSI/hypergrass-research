@@ -74,7 +74,7 @@ This repository preserves the complete, auditable trajectory across all three co
 
 ```mermaid
 flowchart TD
-    G0["Baseline: Original GraSS (2017)<br/>Single-Block Lempel-Ziv + Parity Folding + MPC/BSC<br/>E. coli 24-genome collection: 24,777,592 B (1.6503 bpb)"]
+    G0["Baseline: Original GraSS (2025, Roy et al.)<br/>Single-Block Lempel-Ziv + Parity Folding + MPC/BSC<br/>E. coli 24-genome collection: 24,777,592 B (1.6503 bpb)"]
     G1["Generation 1: HyperGraSS v1 (.hgs, 0x48475301)<br/>6-Channel Lossless Factorization + Stride-4 16-mer Anchor Bank + QCRM<br/>E. coli Mode C: 3,810,409 B (0.2538 bpb, 887.3 s) | Mode S: 1,136,083 B<br/>Limitations: 62% serial Amdahl bottleneck, 7.1 B/base hash table (OOM on pure JVM at 256 MiB)"]
     G2["Generation 2: RC-MDL v2 Prototype (Rcmdl.java)<br/>Reference-Conditioned Semi-Markov Mosaic + Prim Collection Ordering<br/>E. coli LOO: 1,780,761 B | M. tuberculosis LOO: 122,998 B | Mode C: 3,972,975 B<br/>Limitations: Lost to AGC 13-cfg oracle on MTB (96,580 B), lost E. coli twins 13 & 14, lost Mode C & S to Gen 1"]
     G3["Generation 3: Unified HGS2 / EIMDL Engine (.hgs2, 0x48475332)<br/>Laws I–VII: Klein V4 Kimura-CpG + 6F-ORF-HMM + Two-Gear Horizon + 2-Pass Zero-Mat CSR + Two-Adic Pitman-Yor + Disjoint -Xmx128m Heap<br/>Mode R LOO: 1,174,113 B (E. coli) / 47,339 B (MTB, 2.04x < AGC oracle) / 174,217 B (S. aureus)<br/>Mode C: 3,371,489 B (1T) / 3,388,639 B (19.65 s 12T) / 3,452,703 B (-Xmx128m pure JVM)<br/>Mode S: 1,122,777 B (E. coli 00.fa, 6.75 s) | Beats tuned JARVIS3 -l 31 (12/12 wins) at 10.7x less RAM"]
