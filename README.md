@@ -4,8 +4,8 @@
 
 [![Java](https://img.shields.io/badge/Java-21%2B%20%7C%20JDK%2025%2F27-blue.svg)](src/hypergrass/)
 [![Container](https://img.shields.io/badge/Formats-.hgs2%20v2.0%20%7C%20.hgs%20v1.0-success.svg)](docs/HGS-FORMAT.md)
-[![Paper](https://img.shields.io/badge/Monograph-23%20Pages%20PDF%20%2B%20LaTeX-critical.svg)](paper/HGS2_EIMDL_Research_Paper.pdf)
-[![Audit](https://img.shields.io/badge/Automated%20Audit-1%2C362%20%2F%201%2C362%20PASS-brightgreen.svg)](paper/audit_paper_numbers.py)
+[![Paper](https://img.shields.io/badge/Monograph-25%20Pages%20PDF%20%2B%20LaTeX-critical.svg)](paper/HGS2_EIMDL_Research_Paper.pdf)
+[![Audit](https://img.shields.io/badge/Automated%20Audit-1%2C693%20%2F%201%2C693%20PASS-brightgreen.svg)](paper/audit_paper_numbers.py)
 
 ---
 
@@ -13,9 +13,9 @@
 
 | Resource | Description | Path |
 |---|---|---|
-| **23-Page Research Monograph (PDF)** | Complete typeset two-column IEEE/ACM research paper covering Generations 1, 2, and 3, Laws I–VII, OpenAI `2026` ETH architectural transfer (+ §1.1.3 OVC scope boundary), 21 tables, and 7 figures (`0` overfull boxes) | [`paper/HGS2_EIMDL_Research_Paper.pdf`](paper/HGS2_EIMDL_Research_Paper.pdf) |
-| **Research Monograph (Markdown)** | Full GitHub-flavored Markdown edition of the 23-page monograph with embedded figures and complete tables | [`docs/PAPER-DRAFT.md`](docs/PAPER-DRAFT.md) |
-| **LaTeX Source & Reproducible Build** | Deterministic generators (`build_latex_paper.py`, `build_markdown_paper.py`, `generate_figures.py`) & `1,362`-assertion audit (`audit_paper_numbers.py`) | [`paper/README.md`](paper/README.md) |
+| **25-Page Research Monograph (PDF)** | Complete typeset single-column LaTeX research paper covering Generations 1, 2, and 3, Laws I–VII, OpenAI `2026` ETH architectural transfer (+ §1.1.3 OVC scope boundary), Kaggle E2E 15-codec shootout, 22 tables, and 8 figures (`0` overfull boxes) | [`paper/HGS2_EIMDL_Research_Paper.pdf`](paper/HGS2_EIMDL_Research_Paper.pdf) |
+| **Research Monograph (Markdown)** | Full GitHub-flavored Markdown edition of the 25-page monograph with embedded figures and complete tables | [`docs/PAPER-DRAFT.md`](docs/PAPER-DRAFT.md) |
+| **LaTeX Source & Reproducible Build** | Deterministic generators (`build_latex_paper.py`, `build_markdown_paper.py`, `generate_figures.py`) & `1,693`-assertion audit (`audit_paper_numbers.py`) | [`paper/README.md`](paper/README.md) |
 | **Mathematical & Biological Laws (I–VII)** | Formal specification of $V_4$ Kimura-CpG algebra, 6-state causal ORF-HMM, Two-Gear coalescent copying, 5-regime MDL, Amdahl-Memory scaling, Law VI two-adic/Pitman-Yor coding, Law VII disjoint `-Xmx128m` heap lifecycle, and `openai2026eth` §1.1.3 OVC boundary | [`docs/COMPRESSION-LAW.md`](docs/COMPRESSION-LAW.md) |
 | **Unified `HGS2` / `EIMDL` Benchmarks** | Complete Mode S, Mode R (LOO + Cluster-LOO), Mode C, Amdahl scaling, `-Xmx128m` bounded-heap, and synthetic/adversarial tables | [`docs/FUSION-BENCHMARKS.md`](docs/FUSION-BENCHMARKS.md) |
 | **Locked Independent Replication** | Independent *Salmonella enterica* (25 genomes) and *Klebsiella pneumoniae* (23 genomes) Mode C, Mode S, Mode R, and tuned `JARVIS3 -l 31` evaluation | [`docs/INDEPENDENT.md`](docs/INDEPENDENT.md) |
@@ -246,6 +246,17 @@ Evaluated across 12 evenly spaced genomes (`6` *Salmonella enterica* + `6` *Kleb
 
 ---
 
+### 4.6 Kaggle E2E Cloud Verification, 15-Codec World Shootout & Human Genome Scaling
+
+![Figure 8 — Kaggle E2E 15-Codec World Shootout, Human Diploid Scaling, Bounded-Heap Sweep & Tesla T4 CUDA](paper/figures/fig8_kaggle_world_shootout_and_human.png)
+
+All 33 Java files compiled cleanly (`javac --release 21 -Xlint:all`) and passed all 7 verification suites across three independent Kaggle cloud environments ([`benchmarks/kaggle/results/`](benchmarks/kaggle/results/)):
+- **`world_shootout_v2_results.json` (`19,088.08 s`, 4 AMD EPYC 7B12 vCPUs):** Compares `HGS2` against 15 open-source leaders (`Original GraSS -e2`, `AGC 3.2.5`, `JARVIS3 -l 7/-l 31`, `GeCo3 -l 5/-r`, `MBGC`, `NAF -l 22`, `libbsc`, `zpaq -m5`, `zstd`, `xz`, `brotli`, `bzip2`, `gzip`; `MFCompress` failed GCC linking). `HGS2` achieves **`2,500,074 B`** (`2.0001 bpb`) on `10,000,000 B` Law IV crypto noise, **`2,673 B`** (`-Xmx4g` & `-Xmx128m` SHA-256 PASS) on `15,574,362 B` pathology FASTA (where `GraSS-e2` & `NAF-l22` fail sequence SHA-256), and sweeps bacterial multi-FASTA Mode C (**`3,479,510 B`** *E. coli*, **`2,417,055 B`** *S. enterica*, **`2,608,659 B`** *K. pneumoniae*, where `MBGC`/`NAF` drop FASTA headers/line-wraps and `GraSS-e2` crashes with `ArrayIndexOutOfBoundsException`) and 1-vs-panel Mode R (**`41,192 B`**, **`45,446 B`**, **`42,164 B`**).
+- **`gpu_v3_largescale_results.json` (`2x Tesla T4` GPUs):** Verifies **`43.2x–50.77x`** CUDA sketch acceleration, neural entropy upper bounds (`949,438 B` / `1.9019 bpb` `Chr22_4MB`; `926,939 B` / `1.8569 bpb` `COVID_4MB`), `GRCh38_chr1_8` (`1,562,097,512 B` $\to$ **`314,875,226 B`**, `4.96x` vs. `zstd-19` `384,873,207 B`), `Diploid_Chr1_to_4` (`1,791,158,556 B` $\to$ **`189,424,047 B`**, `9.46x` vs. `AGC` `213,613,422 B` & `zstd-19` `449,440,145 B`), and `1.41 Gbp` `covid_mega .seq@-Xmx512m` (`1,409,028,147 B` $\to$ **`1,657,005 B`**, `850.35x`, `508.74 MB` RSS; on raw `1.45 GB` `covid_mega.fasta`, `NAF -l 22` `1,862,725 B` and `MBGC -m2` `1,966,421 B` edge `HGS2` `2,152,306 B`).
+- **`tpu_v3_scale_results.json` (All-24 `T2T-CHM13v2.0 | GRCh38` Mode R & `13/13` Heap Matrix):** Full **`3,156,242,851 B` (`3,117,275,501 bp`) $\to$ `35,277,041 B` (`0.0894 bpb`, `89.47x`)** across all 24 human chromosomes (`1,044.69 s` enc / `136.90 s` dec; incl. `chr21` **`938,046 B`** vs. `GeCo3-ref` `8,261,548 B`, `chr22` **`1,213,472 B`** vs. `8,308,207 B`, `chr1` **`2,589,930 B`**), `13/13` bounded-heap cells (`100M@-Xmx128m` `145,974 B` .. `1000M@-Xmx512m` `1,176,101 B` .. `1000M@-Xmx16g` `1,053,431 B`), and `covid_group_22.fasta` Amdahl scaling (`467,386 B`, `56.26 s` 1T $\to$ `25.06 s` 4T). *(Diploid `Chr21`/`22`/`1` Mode C: **`8,878,088`**, **`8,859,549`**, **`50,463,121 B`** vs. `AGC` `10,737,616` / `11,003,578` / `57,748,791 B`; Kaggle TPU worker exposed Xeon CPUs running `jax 0.11.1` on `cpu:0`.)*
+
+---
+
 ## 5. Generation 1 (`HyperGraSS v1`) & Generation 2 (`RC-MDL`) Foundational Archive
 
 Every foundational subsystem, ablation, and cross-taxon benchmark from Generation 1 and Generation 2 remains in the repository and is summarized below (full details in [`docs/PAPER-DRAFT.md`](docs/PAPER-DRAFT.md) Sections 4–5):
@@ -347,19 +358,20 @@ hypergrass/
 │   ├── VerifyAnchorCodecs.java              # 9-suite anchor-bank codec verifier
 │   ├── VerifyArchiveAccounting.java         # 34-suite byte-accounting & 1,721-mutation fuzz rejection verifier
 │   └── [VerifyCostAwareEncoding, VerifyDonorArchives, VerifyDonorCosts, VerifyDonorIndex, AuxPlaneSelfTest, RangeCoderSelfTest].java
-├── paper/                                   # 23-Page Research Monograph, Figures & 1,362-Assertion Automated Audit
-│   ├── HGS2_EIMDL_Research_Paper.pdf        # Compiled 23-page two-column PDF monograph (0 overfull boxes)
+├── paper/                                   # 25-Page Research Monograph, Figures & 1,693-Assertion Automated Audit
+│   ├── HGS2_EIMDL_Research_Paper.pdf        # Compiled 25-page single-column PDF monograph (0 overfull boxes)
 │   ├── HGS2_EIMDL_Research_Paper.tex        # Generated LaTeX source
 │   ├── references.bib                       # BibTeX bibliography (incl. openai2026eth)
-│   ├── figures/                             # 7 publication-grade 300 DPI figures (fig1 .. fig7)
+│   ├── figures/                             # 8 publication-grade 300 DPI figures (fig1 .. fig8)
 │   ├── generate_figures.py                  # Deterministic figure generator from committed JSON results
 │   ├── table_builders.py                    # LaTeX table generator from committed JSON results
 │   ├── build_latex_paper.py                 # Full LaTeX monograph builder
 │   ├── build_markdown_paper.py              # Full Markdown monograph builder (-> docs/PAPER-DRAFT.md)
-│   ├── audit_paper_numbers.py               # Automated 1,362-assertion numerical audit against JSON evidence
+│   ├── audit_paper_numbers.py               # Automated numerical audit against local + Kaggle JSON evidence
 │   └── README.md                            # Paper build & verification instructions
 ├── prototype/rcmdl/                         # Generation 2 RC-MDL prototype, AGC 3.2.5 sweeps & LOO/Cluster-LOO harnesses
-├── benchmarks/                              # Reproducible Docker/Python benchmark harnesses & committed JSON evidence
+├── benchmarks/                              # Reproducible Kaggle/Docker/Python harnesses & committed JSON evidence
+│   ├── kaggle/                              # Mandatory Kaggle E2E cloud kernels, runner, and canonical JSON results (results/)
 │   ├── fusion/                              # HGS2 / EIMDL Mode S, Mode R, Mode C, Amdahl, memory & ablation JSON results
 │   ├── independent/                         # Locked Salmonella & Klebsiella manifests, trio, Mode S/R, and JARVIS3 L31 runs
 │   ├── specialized/                         # 120.1 Mbp E. coli head-to-head vs JARVIS3, GeCo3, NAF, Spring, GraSS, xz
@@ -419,22 +431,22 @@ java -cp bin hypergrass.HyperGraSS query pangenome.hgs2 0 1000 2000
 java -cp bin hypergrass.HyperGraSS decompress pangenome.hgs2 restored.fa
 ```
 
-### 7.4 Running the Automated Verification & Falsification Suites
+### 7.4 Verification Policy (Kaggle Cloud Execution + Local Syntax & Numerical Audit)
+
+> **Mandatory Kaggle-Only Testing Policy:** `test.ps1` and `test.sh` enforce cloud execution on Kaggle (or GitHub Actions CI) rather than local runs. Locally, compile-check with `javac --release 21 -Xlint:all` and audit all paper numbers deterministically:
 
 ```powershell
-# 1. Execute the 7-suite mathematical & biological falsification harness for Laws I–VII (171,941 assertions)
-java -cp bin hypergrass.VerifyCompressionLaws
+# 1. Local syntax compilation only (no local test/benchmark execution)
+javac --release 21 -Xlint:all -d build_check src/hypergrass/*.java; Remove-Item -Recurse -Force build_check
 
-# 2. Execute end-to-end HGS2 Mode S / Mode R / Mode C & corruption-rejection checks
-java -cp bin hypergrass.VerifyFusionEngine
+# 2. Launch end-to-end verification, 15-codec shootout, T4 GPU, and human-scale kernels on Kaggle
+python benchmarks/kaggle/run_kaggle_e2e.py --target shootout
+python benchmarks/kaggle/run_kaggle_e2e.py --target all
 
-# 3. Execute Generation 1 & shared infrastructure verification suites (or run .\test.ps1 for all 7 suites)
-java -cp bin hypergrass.VerifyAllEdgeCases
-java -cp bin hypergrass.VerifyAnchorCodecs
-java -cp bin hypergrass.VerifyArchiveAccounting
-java -cp bin hypergrass.AuxPlaneSelfTest
-java -cp bin hypergrass.RangeCoderSelfTest
+# 3. Inside Kaggle / CI only: the 7 cloud verification suites executed by run_kaggle_e2e.py:
+#    VerifyAllEdgeCases, VerifyDonorIndex, VerifyAnchorCodecs, VerifyArchiveAccounting,
+#    VerifyDonorCosts, VerifyCompressionLaws (171,941 assertions), VerifyFusionEngine
 
-# 4. Run the 1,362-assertion automated numerical audit across the research paper & JSON reports
+# 4. Run the automated numerical audit across the research paper, Kaggle JSONs & docs
 python paper/audit_paper_numbers.py
 ```

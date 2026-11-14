@@ -1,9 +1,9 @@
 # HyperGraSS / RC-MDL / Unified `HGS2` (`EIMDL`) Research Handoff
 
-Snapshot: **2026-11-13**
+Snapshot: **2026-11-14**
 Repository: `https://github.com/MdSaifulIslamMSI/hypergrass-research`
 Release asset: `hypergrass-handoff-v1.tar.gz`
-Research Monograph (23-Page PDF): [`paper/HGS2_EIMDL_Research_Paper.pdf`](paper/HGS2_EIMDL_Research_Paper.pdf) (`0` overfull boxes, `1,362 / 1,362` automated numerical audit checks PASS via [`paper/audit_paper_numbers.py`](paper/audit_paper_numbers.py))
+Research Monograph (25-Page PDF): [`paper/HGS2_EIMDL_Research_Paper.pdf`](paper/HGS2_EIMDL_Research_Paper.pdf) (`0` overfull boxes, `1,693 / 1,693` automated numerical audit checks PASS via [`paper/audit_paper_numbers.py`](paper/audit_paper_numbers.py))
 Research Monograph (Markdown): [`docs/PAPER-DRAFT.md`](docs/PAPER-DRAFT.md)
 
 This package is the compact, byte-exact research state for the three-generation lossless genomic, reference-conditioned, and pangenomic sequence compressor project (**Generation 1 `HyperGraSS v1`** $\to$ **Generation 2 `RC-MDL v2`** $\to$ **Generation 3 `HGS2` / `EIMDL`**). It contains all Java 21+ source files, documentation, result JSONs, manifests, publication figures, and the LaTeX/PDF monograph. The ~29 GB of raw benchmark corpus and run output is regenerable from the locked manifests and scripts; the machine-readable evidence (`benchmarks/fusion/results/*.json`, `benchmarks/independent/runs/*/*.json`, `prototype/rcmdl/work/*/*.json`, `benchmarks/corpus/runs/*/*.json`) is committed in the repository.
@@ -41,6 +41,18 @@ This package is the compact, byte-exact research state for the three-generation 
 | **Mode C (Independent Locked Trio):** *Salmonella* (25) & *Klebsiella* (23) | `JARVIS3 -l 7`: `2,709,545 B` & `2,948,926 B`<br>`GraSS -e2`: `19,991,646 B` & `21,191,566 B` | ***Salmonella***: **2,390,106 B (`0.1586 bpb`, `50.43x`)**<br>***Klebsiella***: **2,523,991 B (`0.1646 bpb`, `48.61x`)** | **`-11.79%`** & **`-14.41%` vs JARVIS3**; **`-88.04%`** & **`-88.09%` vs GraSS** |
 | **Bounded Heap (`-Xmx256m` to `-Xmx128m`):** | `v1` pure JVM OOMed `0/7` at 256 MiB | **3,422,314 B** (`-Xmx256m`/`-Xmx224m`) & **3,452,703 B** (`-Xmx192m`/`-Xmx160m`/`-Xmx128m`; `25.59 s` enc / `11.67 s` dec at `128m`) | Pure JVM **`-Xmx128m`** beats unbounded `v1`, native `v1`, `JARVIS3`, & `RC-MDL` |
 | **Law IV Cryptographic Safety:** `08_crypto_white_noise.seq` (`500,000 B`) | `gzip -9`: `144,017 B` (`2.3043 bpb`) | **125,075 B (`2.0012 bpb`)** | Sub-block 2-bit bypass (`+0.0012 bpb` over $H_0 = 2.0000$) |
+
+---
+
+## Kaggle E2E Cloud Verification & 15-Codec World Shootout (`benchmarks/kaggle/results/`)
+
+Mandatory Kaggle-only testing policy (`test.ps1` / `test.sh` disable local execution outside Kaggle/CI; local checks compile with `javac --release 21 -Xlint:all` only). All 7 Java `Verify*` suites passed across all three cloud workers:
+
+| Kaggle Artifact / Regime | Scope & Hardware | Key Verified `HGS2` / `EIMDL` Results | Honest External & Boundary Notes |
+|---|---|---|---|
+| **`world_shootout_v2_results.json`** | `19,088.08 s`, 4 EPYC vCPUs, 15 codecs | Mode C FA (*E. coli* / *Salm.* / *Kleb.*): **`3,479,510`** / **`2,417,055`** / **`2,608,659 B`**; Mode R: **`41,192`** / **`45,446`** / **`42,164 B`**; Law IV `10M` noise: **`2,500,074 B`** (`2.0001 bpb`); Pathology `15.6M`: **`2,673 B`** (`-Xmx4g` & `-Xmx128m`); Diploid `Chr21`/`Chr22`/`Chr1`: **`8,878,088`** / **`8,859,549`** / **`50,463,121 B`** | `MFCompress` GCC link fail (`unavailable`); `MBGC`/`NAF` `raw_sha256_verified=False` (`NAF` fails seq SHA on pathology; `MBGC -m3` 900s TO on `Diploid_Chr22`); `GraSS-e2` crashes (`AIOOB`) on multi-FASTA & corrupts pathology; `NAF -l 22` (`1,862,725 B`) / `MBGC -m2` (`1,966,421 B`) edge `HGS2` FA (`2,152,306 B`) on `covid_mega`; unpaired `chr1@-Xmx256m` & raw mega FA OOM |
+| **`gpu_v3_largescale_results.json`** | `2x Tesla T4` GPUs (`cuda`), Human & COVID | Sketch CUDA speedup: **`43.2x–50.77x`** (`0.0` err); T4 neural probes: `949,438 B` (`1.9019 bpb`) / `926,939 B` (`1.8569 bpb`); `GRCh38_chr1_8`: **`314,875,226 B`** (`1,562,097,512 B`, `4.96x` vs. `zstd-19` `384,873,207 B`); `Diploid_Chr1_to_4`: **`189,424,047 B`** (`1,791,158,556 B`, `9.46x` vs. `AGC` `213,613,422 B` & `zstd-19` `449,440,145 B`); `covid_mega .seq@-Xmx512m`: **`1,657,005 B`** (`1,409,028,147 B`, `850.35x`, `508.74 MB` RSS) | `ChrX@-Xmx256m`, `Chr1@-Xmx256m`, `Chr1..8@-Xmx1g` OOM; `AGC` encodes `Diploid_Chr1_to_4` faster (`74.8 s` vs `671.6 s`) while `HGS2` is `-11.3%` smaller |
+| **`tpu_v3_scale_results.json`** | All-24 `T2T-CHM13v2.0 \| GRCh38` & `13/13` Heap Matrix | All-24 Mode R: **`3,156,242,851 B` (`3,117,275,501 bp`) $\to$ `35,277,041 B` (`0.0894 bpb`, `89.47x`)**, `24/24` SHA-256 (`chr21`: **`938,046 B`**, `chr22`: **`1,213,472 B`**, `chr1`: **`2,589,930 B`** vs. `GeCo3-ref` `8,261,548` / `8,308,207 B`); `13/13` sweep (`100M@-Xmx128m` **`145,974 B`** .. `1000M@-Xmx512m` **`1,176,101 B`** .. `1000M@-Xmx16g` **`1,053,431 B`**); Amdahl `covid_group_22`: **`467,386 B`** (`56.26 s` 1T $\to$ `25.06 s` 4T) | Kaggle TPU batch runtime exposed 4 Intel Xeon CPUs where `jax 0.11.1` fell back to `cpu:0` (`0.27x–0.31x` vs NumPy) |
 
 ---
 
@@ -96,13 +108,11 @@ python prototype/rcmdl/split_panel.py --fasta prototype/rcmdl/work/mtb/panel.fas
 python prototype/rcmdl/split_panel.py --fasta prototype/rcmdl/work/saureus/panel.fasta --out prototype/rcmdl/work/saureus/genomes
 ```
 
-Compile the unified `HGS2` / `EIMDL` engine, run the verification suites (`Laws I–VII`, `171,941` assertions in `VerifyCompressionLaws`), and execute the `1,362`-assertion automated numerical audit:
+**Mandatory Kaggle-Only Testing Policy:** Local execution of verification suites and benchmarks is disabled (`test.ps1` / `test.sh` delegate to Kaggle cloud / GitHub CI). Locally verify Java syntax compilation only, run the 7 `Verify*` suites on Kaggle, and run the automated numerical audit:
 
 ```powershell
-New-Item -ItemType Directory -Force -Path bin | Out-Null
-javac --release 21 -d bin src/hypergrass/*.java
-java -cp bin hypergrass.VerifyCompressionLaws
-java -cp bin hypergrass.VerifyFusionEngine
+javac --release 21 -Xlint:all -d build_check src/hypergrass/*.java; Remove-Item -Recurse -Force build_check
+python benchmarks/kaggle/run_kaggle_e2e.py --target all
 python paper/audit_paper_numbers.py
 ```
 

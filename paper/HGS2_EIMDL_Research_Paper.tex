@@ -886,6 +886,90 @@ All seven laws are continuously guarded by seven automated falsification suites 
 (6)~Law~VI two-adic tapered adaptation ($p_{\min} = 11/4096$ vs.\ $31/4096$) and HPY novelty coding ($1.0897$~bpb); and
 (7)~Law~VII disjoint lifecycle and bounded Mode~C determinism ($27,257$~B unbounded vs.\ $27,257$~B bounded, $\Delta=0.000\%$), alongside Mode~R SHA-256 tamper rejection and 6-channel exact round-trip verification.
 
+\section{Cloud Verification, 15-Codec World Shootout, and Human Genome Scaling (Kaggle E2E)}
+
+To verify every claim outside the local development host, all 33 Java source files were compiled cleanly (\texttt{javac --release 21 -Xlint:all}) and executed across three independent Kaggle cloud environments (\texttt{benchmarks/kaggle/results/}):
+\begin{enumerate}
+  \item \textbf{\texttt{world\_shootout\_v2\_results.json} (15-Codec CPU Shootout):} 4~AMD EPYC~7B12 vCPUs ($31.3$~GiB RAM, $19,088.08$~s total wall time) pitting \texttt{HGS2} and \texttt{HyperGraSS\_v1} against pinned builds of \texttt{Original GraSS -e2} (\texttt{6d93700}), \texttt{AGC~3.2.5} (\texttt{default} \& \texttt{-a}), \texttt{JARVIS3} (\texttt{-l 7} \& \texttt{-l 31}), \texttt{GeCo3} (\texttt{-l 5} \& \texttt{-r}), \texttt{MBGC}, \texttt{NAF -l 22}, \texttt{libbsc}, \texttt{zpaq -m5}, \texttt{zstd} (\texttt{-19} \& \texttt{-ultra -22}), \texttt{xz} (\texttt{-6} \& \texttt{-9e}), \texttt{brotli -11}, \texttt{bzip2 -9}, and \texttt{gzip -9} (\texttt{MFCompress} failed Linux GCC linking and is reported \texttt{unavailable}).
+  \item \textbf{\texttt{gpu\_v3\_largescale\_results.json} (2$\times$ Tesla T4 GPU \& Human Scale):} $2\times$ NVIDIA Tesla~T4 ($15,360$~MiB VRAM each) executing CUDA sketch acceleration, neural entropy upper probes, multi-chromosome human assemblies (\texttt{GRCh38 Chr1..8} $1.56$~GB and \texttt{Diploid\_Chr1\_to\_4} $1.79$~GB), and bounded COVID-19 cohorts up to $1.41$~Gbp.
+  \item \textbf{\texttt{tpu\_v3\_scale\_results.json} (All-24 Human CHM13v2.0 Mode~R \& Bounded Heap Matrix):} All 24 human \texttt{T2T-CHM13v2.0} chromosomes ($3,156,242,851$~B raw, $3,117,275,501$~bp) conditioned on \texttt{GRCh38}, Amdahl scaling on $308.9$~MB \texttt{covid\_group\_22.fasta}, and a 13-cell $100$~Mbp--$1$~Gbp bounded-heap sweep (noting honestly that Kaggle's TPU-queue batch runtime exposed 4 Intel Xeon CPUs with JAX \texttt{0.11.1} running on \texttt{cpu:0}).
+\end{enumerate}
+
+Across \emph{all three} cloud workers, all 7 Java verification suites passed with zero failures: \texttt{VerifyAllEdgeCases} (16 suites, $27.5\text{--}41.4$~s), \texttt{VerifyDonorIndex} ($10,039$ queries, $1,928,153$ counts), \texttt{VerifyAnchorCodecs} (9 suites), \texttt{VerifyArchiveAccounting} (34 suites, $3,326$ checks, $1,721$ malformed rejected), \texttt{VerifyDonorCosts} ($17,660,527$ checks, $2,880$ randomized cases), \texttt{VerifyCompressionLaws} (all 7 laws, $171,941$ assertions), and \texttt{VerifyFusionEngine} (37 checks).
+
+\begin{figure}[t!]
+  \centering
+  \includegraphics[width=0.98\textwidth]{figures/fig8_kaggle_world_shootout_and_human.pdf}
+  \caption{\textbf{Kaggle E2E 15-codec world shootout, human genome scaling, bounded-heap sweep, and Tesla~T4 CUDA acceleration.} \textbf{(A)}~Bacterial Mode~C archive sizes across \textit{E.~coli}~24g, \textit{S.~enterica}~25g, and \textit{K.~pneumoniae}~23g; \texttt{MBGC} and \texttt{NAF} drop FASTA header/line-wrap fidelity (\texttt{raw=False}), while \texttt{Original GraSS -e2} crashes on multi-FASTA and is plotted on \texttt{.seq}. \textbf{(B)}~Diploid \texttt{CHM13v2.0+GRCh38} Mode~C (\texttt{Chr21}, \texttt{Chr22}, \texttt{Chr1}, \texttt{Chr1..4}) and full $3.156$~GB All-24 \texttt{T2T-CHM13v2.0} Mode~R ($35.28$~MB, $89.47\times$). \textbf{(C)}~Law~VII $100$~Mbp--$1.41$~Gbp bounded-heap sweep (\texttt{13/13} matrix pass plus $1.41$~Gbp \texttt{covid\_mega@-Xmx512m}). \textbf{(D)}~2$\times$ Tesla~T4 CUDA sketch speedup ($43.2\text{--}50.8\times$) and adversarial torture checks.}
+  \label{fig:kaggle_world}
+\end{figure}
+
+\begin{table}[h!]
+\centering
+\caption{15-codec Kaggle World Shootout on bacterial pangenomes, adversarial torture suites, and human diploid chromosomes (\texttt{world\_shootout\_v2\_results.json} and \texttt{gpu\_v3\_largescale\_results.json}). Asterisks ($^*$) mark codecs with \texttt{raw\_sha256=False, seq\_sha256=True}.}
+\label{tab:kaggle_shootout}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llrrrrrrr}
+\toprule
+\textbf{Corpus / Regime} & \textbf{Raw Bytes} & \textbf{HGS2 (B)} & \textbf{Orig.\ GraSS \texttt{-e2}} & \textbf{AGC 3.2.5 (B)} & \textbf{MBGC / NAF (B)} & \textbf{JARVIS3 \texttt{-l 7}} & \textbf{GeCo3 \texttt{-l 5}} & \textbf{xz / zstd-19 (B)} \\
+\midrule
+10~MB White Noise (Law~IV) & 10,000,000 & \textbf{2,500,074} (2.0001) & 2,542,550 & --- & --- / --- & 2,561,558 & 2,501,706 & 2,724,108 (\texttt{-9e}) \\
+15.6~MB Pathology FASTA & 15,574,362 & \textbf{2,673} (\texttt{-Xmx128m} too) & \textit{SHA mismatch} & --- & 6,970$^*$ / \textit{SHA err} & --- & --- & 2,892 / 1,805 (\texttt{-22}) \\
+\midrule
+\textit{E.~coli} 24g Mode~C (FA) & 121,825,884 & \textbf{3,479,510} (\texttt{13.0s}) & \textit{AIOOB crash} & 7,502,190 & 3,708,220$^*$ / 8,683,092$^*$ & 3,896,361 (\texttt{.seq}) & 8,415,216 (\texttt{.seq}) & 8,387,660 / 21,019,659 \\
+\textit{E.~coli} 24g Mode~C (\texttt{.seq}) & 120,108,223 & \textbf{3,473,783} (\texttt{11.2s}) & 24,777,560 & --- & --- / --- & 3,896,361 & 8,415,216 & --- \\
+\textit{S.~enterica} 25g Mode~C (FA) & 122,251,418 & \textbf{2,417,055} (\texttt{21.0s}) & \textit{AIOOB crash} & 4,591,289 & 2,569,344$^*$ / 6,014,668$^*$ & 2,709,545 (\texttt{.seq}) & 6,760,953 (\texttt{.seq}) & 6,008,424 / 12,355,833 \\
+\textit{S.~enterica} 25g Mode~C (\texttt{.seq}) & 120,527,038 & \textbf{2,418,025} (\texttt{23.4s}) & 19,991,664 & --- & --- / --- & 2,709,545 & 6,760,953 & --- \\
+\textit{K.~pneumoniae} 23g Mode~C (FA) & 124,455,339 & \textbf{2,608,659} (\texttt{10.5s}) & \textit{AIOOB crash} & 4,127,745 & 2,712,149$^*$ / 6,958,499$^*$ & 2,948,926 (\texttt{.seq}) & 8,331,907 (\texttt{.seq}) & 6,442,988 / 15,629,724 \\
+\textit{K.~pneumoniae} 23g Mode~C (\texttt{.seq}) & 122,700,601 & \textbf{2,606,234} (\texttt{17.1s}) & 21,191,558 & --- & --- / --- & 2,948,926 & 8,331,907 & --- \\
+Bact.\ Mode~R (\textit{E.c.}/\textit{S.e.}/\textit{K.p.}) & 4.86/4.64/5.19M & \textbf{41,192}/\textbf{45,446}/\textbf{42,164} & --- & 87,337/117,015/65,131 & --- / --- & --- & 1,147,246/1,101,769/1,209,585 & --- \\
+\midrule
+COVID \texttt{group\_19} (FA / \texttt{.seq}) & 1,768,494 & \textbf{10,473} / \textbf{9,533} & 33,756 / 32,780 & 20,487 & 11,523 / 17,784 & 12,008 (\texttt{-l 31}: 11,606) & 11,610 (\texttt{.seq}) & 14,752 / 16,202 (\texttt{-22}) \\
+COVID \texttt{covid\_mega} (1.45~GB FA) & 1,452,793,292 & 2,152,306 (\texttt{-512m .seq}: \textbf{1,657,005}) & --- & --- & 1,966,421 (\texttt{-m2}) / \textbf{1,862,725} & --- & --- & --- / 3,702,147 \\
+\midrule
+Human \texttt{GRCh38\_chr21} (FA / \texttt{.seq}) & 47,488,540 & \textbf{7,918,917} / 7,915,104 & 8,772,034 / 8,744,082 & --- & --- / 8,537,556 & 8,262,279 (\texttt{-l 31}: 7,332,706) & 7,836,142 (\texttt{.seq}) & 9,544,724 / 9,760,344 \\
+Human \texttt{GRCh38\_chr1} (FA) & 253,105,752 & \textbf{47,666,954} (\texttt{61.9s}) & 51,094,154 (\texttt{7.5 GB} RSS) & --- & --- / 50,395,069 & --- & --- & 57,161,552 / 58,069,854 \\
+Human \texttt{GRCh38\_chr1\_8} (\texttt{gpu\_v3}) & 1,562,097,512 & \textbf{314,875,226} (\texttt{4.96$\times$}) & --- & --- & --- / --- & --- & --- & --- / 384,873,207 \\
+\midrule
+Diploid \texttt{Chr21} (CHM13+GRCh38) & 93,142,915 & \textbf{8,878,088} (\texttt{10.49$\times$}) & 18,203,290$^*$ & 10,737,616 & 15,268,718$^*$ / 13,676,395$^*$ & 9,141,024 (\texttt{.seq}) & 13,075,133 (\texttt{.seq}) & --- / 20,434,367 \\
+Diploid \texttt{Chr22} (CHM13+GRCh38) & 103,632,047 & \textbf{8,859,549} (\texttt{11.70$\times$}) & 18,042,952$^*$ & 11,003,578 & \textit{900s TO} / 13,502,078$^*$ & 9,138,687 (\texttt{.seq}) & 12,699,290 (\texttt{.seq}) & --- / 20,128,707 \\
+Diploid \texttt{Chr1} (CHM13+GRCh38) & 504,597,979 & \textbf{50,463,121} (\texttt{10.00$\times$}) & --- & 57,748,791 & 85,020,508$^*$ / 77,461,960$^*$ & --- & --- & --- / 119,513,527 \\
+Diploid \texttt{Chr1\_to\_4} (\texttt{gpu\_v3}) & 1,791,158,556 & \textbf{189,424,047} (\texttt{9.46$\times$}) & --- & 213,613,422 & --- / --- & --- & --- & --- / 449,440,145 \\
+\midrule
+All-24 \texttt{CHM13v2.0|GRCh38} Mode~R & 3,156,242,851 & \textbf{35,277,041} (\textbf{89.47$\times$}) & \multicolumn{6}{l}{All 24 chromosomes (\texttt{0.0894 bpb}, \texttt{1,044.69 s} enc / \texttt{136.90 s} dec, \texttt{chr21}: $938,046$ vs.\ \texttt{GeCo3-ref} $8,261,548$~B)} \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\begin{table}[h!]
+\centering
+\caption{Kaggle \texttt{tpu\_v3} $100$~Mbp--$1$~Gbp Law~VII bounded-heap matrix (\texttt{13/13} PASS, \texttt{tpu\_v3\_scale\_results.json}) and \texttt{gpu\_v3}/\texttt{world\_shootout\_v2} cloud verification highlights.}
+\label{tab:kaggle_heap_cuda}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrr|lrrrr}
+\toprule
+\textbf{COVID Scale / Heap Cap} & \textbf{Raw (B)} & \textbf{HGS2 (B)} & \textbf{bpb} & \textbf{Enc / Dec (s)} & \textbf{Peak RSS} & \textbf{GPU / Mode~R / Scale Check} & \textbf{Dim / Scope} & \textbf{Baseline} & \textbf{HGS2 / CUDA} & \textbf{Speedup / Gain} \\
+\midrule
+\texttt{100M@-Xmx128m} & 100,000,000 & 145,974 & 0.0117 & 17.66 / 1.26 & 151.0~MB & Sketch Matrix & \texttt{512x256} & 81.00~ms CPU & \textbf{1.61~ms} T4 & \textbf{50.45$\times$} \\
+\texttt{100M@-Xmx192m} & 100,000,000 & 145,998 & 0.0117 & 16.33 / 1.38 & 191.7~MB & Sketch Matrix & \texttt{1024x256} & 319.74~ms CPU & \textbf{7.40~ms} T4 & \textbf{43.20$\times$} \\
+\texttt{100M@-Xmx256m} & 100,000,000 & 139,815 & 0.0112 & 16.25 / 1.20 & 216.7~MB & Sketch Matrix & \texttt{2048x256} & 1,280.48~ms & \textbf{25.95~ms} T4 & \textbf{49.34$\times$} \\
+\texttt{300M@-Xmx128m} & 300,000,000 & 394,917 & 0.0105 & 50.13 / 2.24 & 183.2~MB & Sketch Matrix & \texttt{4096x256} & 5,160.00~ms & \textbf{101.64~ms} T4 & \textbf{50.77$\times$} \\
+\texttt{300M@-Xmx256m} & 300,000,000 & 373,166 & 0.0100 & 43.26 / 2.14 & 311.8~MB & T4 Entropy Probe & \texttt{Chr22\_4MB} & --- & 1.9019~bpb & 949,438~B \\
+\texttt{300M@-Xmx512m} & 300,000,000 & 364,036 & 0.0097 & 44.04 / 2.08 & 341.6~MB & T4 Entropy Probe & \texttt{COVID\_4MB} & --- & 1.8569~bpb & 926,939~B \\
+\texttt{500M@-Xmx256m} & 500,000,000 & 615,887 & 0.0099 & 83.84 / 3.26 & 306.0~MB & \textit{E.~coli} Mode~R & 23 donors & 87,337~B (\texttt{AGC}) & \textbf{41,192~B} & \textbf{2.12$\times$} vs.\ AGC \\
+\texttt{500M@-Xmx512m} & 500,000,000 & 569,517 & 0.0091 & 69.86 / 3.00 & 564.0~MB & \textit{S.~enterica} Mode~R & 24 donors & 117,015~B (\texttt{AGC}) & \textbf{45,446~B} & \textbf{2.57$\times$} vs.\ AGC \\
+\texttt{500M@-Xmx1g} & 500,000,000 & 569,517 & 0.0091 & 70.02 / 3.16 & 636.9~MB & \textit{K.~pneumo.} Mode~R & 22 donors & 65,131~B (\texttt{AGC}) & \textbf{42,164~B} & \textbf{1.54$\times$} vs.\ AGC \\
+\texttt{1000M@-Xmx512m} & 1,000,000,000 & 1,176,101 & 0.0094 & 170.61 / 5.19 & 529.8~MB & \texttt{CHM13\_chr21} R & vs.\ \texttt{GRCh38} & 8,261,548~B (\texttt{GeCo3}) & \textbf{938,046~B} & \textbf{8.81$\times$} vs.\ GeCo3 \\
+\texttt{1000M@-Xmx1g} & 1,000,000,000 & 1,096,514 & 0.0088 & 142.11 / 5.24 & 1,010.9~MB & \texttt{CHM13\_chr22} R & vs.\ \texttt{GRCh38} & 8,308,207~B (\texttt{GeCo3}) & \textbf{1,213,472~B} & \textbf{6.85$\times$} vs.\ GeCo3 \\
+\texttt{1000M@-Xmx2g} & 1,000,000,000 & 1,096,514 & 0.0088 & 143.25 / 8.49 & 694.5~MB & \texttt{CHM13\_chr1} R & vs.\ \texttt{GRCh38} & --- & \textbf{2,589,930~B} & \textbf{97.10$\times$} ratio \\
+\texttt{1000M@-Xmx16g} & 1,000,000,000 & \textbf{1,053,431} & \textbf{0.0084} & 80.48 / 5.26 & 3,224.5~MB & \texttt{covid\_group\_22} & \texttt{299.2 Mbp} & 56.26~s (\texttt{1T}) & \textbf{25.06~s} (\texttt{4T}) & \textbf{2.24$\times$} (467,386~B) \\
+\texttt{1409M@-Xmx512m} (\texttt{gpu\_v3}) & 1,409,028,147 & \textbf{1,657,005} & \textbf{0.0094} & 211.78 / 6.00 & \textbf{508.7~MB} & \texttt{GRCh38\_chr1\_8} C & 1.56~GB & 384,873,207~B (\texttt{zstd}) & \textbf{314,875,226~B} & \textbf{4.96$\times$} (\texttt{-18.2\%}) \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
 \section{Honest Scientific Boundaries, Negative Results, and Threats to Validity}
 
 In keeping with our strict anti-fabrication commitment, we explicitly report every boundary condition, negative ablation result, and trade-off observed across all three generations of our experiments:
@@ -903,6 +987,11 @@ In keeping with our strict anti-fabrication commitment, we explicitly report eve
   In reference-free single-genome compression (Table~\ref{tab:ind12_subset}, executed inside Docker \texttt{hypergrass-corpus:jdk27}), \texttt{EIMDL Mode~S} (\texttt{--threads 1}) achieves smaller archives than both \texttt{JARVIS3 -l 7} ($-8.79\%$) and \texttt{JARVIS3 -l 31} ($-2.32\%$) while using $2.46\times$ and $10.7\times$ less RAM, respectively, and runs $1.26\times$ faster than \texttt{JARVIS3 -l 31} in aggregate. However, against lightweight default \texttt{JARVIS3 -l 7}, \texttt{EIMDL Mode~S} is $3.65\times$ slower to compress ($332.5$~s vs.\ $91.0$~s) and $3.16\times$ slower to restore ($277.9$~s vs.\ $87.9$~s) due to symmetric per-base context mixing in that locked container snapshot (host Mode~S under Laws~VIa--VIc achieves $6.75$~s encode / $6.57$~s decode on \textit{E.~coli} \texttt{00.fa}; re-running the Docker comparison for Table~\ref{tab:ind12_subset} remains future work).
   \item \textbf{32-Bit Signed Integer CSR Addressing Horizon ($\approx 2.14$~Gbp) in Generation~3:}
   While Generation~1's 64-bit \texttt{SequenceSource} verified streaming block compression up to $2.077$~GiB ($2,229,710,670$~B, Table~\ref{tab:gen1_systems}), Generation~3's \texttt{DonorPanelIndex} stores concatenated donor base coordinates in signed 32-bit Java arrays (\texttt{int[] csrPositions}), bounding a single in-memory donor reference bank to $2^{31}-1 \approx 2.14\times 10^9$~bp ($\approx 430$ bacterial genomes or $\approx 68\%$ of a haploid human genome) unless partitioned into shards.
+  \item \textbf{Kaggle Shootout Codec Integrity, Ultra-Clonal Viral Cohorts, Bounded-Heap Human OOMs, and TPU Batch Fallback:}
+  (a)~External codecs exhibited non-trivial integrity/build failures in Kaggle's shootout: \texttt{MFCompress} failed GCC linking (\texttt{ld returned 1 exit status}); \texttt{MBGC} and \texttt{NAF} stripped exact FASTA line-wrapping/headers (\texttt{raw\_sha256=False, seq\_sha256=True}) on bacterial collections and diploid chromosomes, with \texttt{NAF -l 22} failing sequence SHA-256 on \texttt{pathology\_fasta} and \texttt{MBGC -m3} timing out ($900$~s) on \texttt{Diploid\_Chr22}; and \texttt{Original GraSS -e2} crashed (\texttt{ArrayIndexOutOfBoundsException: Index 2 out of bounds for length 2}) on every bacterial multi-FASTA while corrupting \texttt{pathology\_fasta} ($14,368,768$~B vs.\ $15,574,362$~B).
+  (b)~On high-redundancy coronavirus FASTA cohorts (\texttt{group\_3} $97.9$~MB, \texttt{group\_22} $308.9$~MB, \texttt{covid\_mega} $1.45$~GB), \texttt{NAF -l 22} ($1,862,725$~B, $4.07$~GB RSS) and \texttt{MBGC -m2} ($1,966,421$~B, $2.28$~s) edge \texttt{HGS2} FASTA ($2,152,306$~B), and on single non-homologous \texttt{GRCh38\_chr21}/\texttt{chr22} \texttt{.seq}, \texttt{GeCo3 -l 5} ($7.84$~MB/$7.40$~MB) and \texttt{JARVIS3 -l 31} ($7.33$~MB/$6.97$~MB, $211\text{--}228$~s) are smaller at $10\times\text{--}150\times$ slower decode.
+  (c)~Although the entire $13/13$ bacterial-redundancy bounded-heap matrix ($100\text{M@-Xmx128m}$ to $1\text{Gbp@-Xmx512m}$) and $1.41$~Gbp \texttt{covid\_mega.seq@-Xmx512m} passed in pure JVM, unpaired high-novelty human chromosomes (\texttt{GRCh38\_chrX}, \texttt{GRCh38\_chr1} at \texttt{-Xmx256m}; \texttt{Chr1..8} at \texttt{-Xmx1g}) and raw multi-GB FASTA (\texttt{covid\_mega.fasta@-Xmx512m}) still hit Java heap OOMs in \texttt{Files.readAllBytes} / Stage-2 \texttt{ForEachOps\$ForEachTask}. Similarly, on \texttt{Diploid\_Chr1\_to\_4} ($1.79$~GB), \texttt{AGC} runs faster ($74.8$~s / $7.88$~GB RSS vs.\ \texttt{HGS2}'s $671.6$~s / $11.86$~GB RSS) while \texttt{HGS2} produces an $11.3\%$ smaller archive ($189.4$~MB vs.\ $213.6$~MB).
+  (d)~Finally, Kaggle's TPU batch container exposed 4 Intel Xeon CPUs (\texttt{jax 0.11.1} fell back to \texttt{cpu:0}, yielding $0.27\times\text{--}0.31\times$ vs.\ vectorized NumPy), so XLA speedup claims are restricted to the verified \texttt{2$\times$ Tesla T4} CUDA benchmarks ($43.2\times\text{--}50.8\times$).
 \end{enumerate}
 
 \section{Conclusion}

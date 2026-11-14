@@ -1070,6 +1070,157 @@ def make_fig7_gen1_gen2_foundations():
     save_fig(fig, "fig7_gen1_gen2_foundations")
 
 
+def make_fig8_kaggle_world_shootout_and_human():
+    ws = load_json("benchmarks/kaggle/results/world_shootout_v2_results.json")
+    tpu = load_json("benchmarks/kaggle/results/tpu_v3_scale_results.json")
+    gpu = load_json("benchmarks/kaggle/results/gpu_v3_largescale_results.json")
+
+    fig = plt.figure(figsize=(14.2, 10.6))
+    gs = GridSpec(2, 2, hspace=0.40, wspace=0.30)
+
+    # Panel A: 15-Codec Bacterial Mode C Shootout (Archive MB, log scale)
+    ax1 = fig.add_subplot(gs[0, 0])
+    bact_list = ws["bacterial_shootout"]
+    sp_names = ["E. coli 24g\n(121.8 MB)", "S. enterica 25g\n(122.3 MB)", "K. pneumoniae 23g\n(124.5 MB)"]
+
+    def get_run(runs, codec, xmx=None):
+        for r in runs:
+            if r.get("codec") == codec and (xmx is None or r.get("xmx") == xmx):
+                return r
+        return None
+
+    codecs_a = [
+        ("HGS2 (-Xmx16g)", lambda b: get_run(b["mode_c_fa"], "HGS2_collection", "-Xmx16g"), PALETTE["eimdl"]),
+        ("HGS2 (-Xmx256m)", lambda b: get_run(b["mode_c_fa"], "HGS2_collection", "-Xmx256m"), PALETTE["eimdl_alt"]),
+        ("MBGC -m3 -L*", lambda b: get_run(b["mode_c_fa"], "MBGC-m3-L") or get_run(b["mode_c_fa"], "MBGC-m3"), PALETTE["rcmdl"]),
+        ("JARVIS3 -l 7 (.seq)", lambda b: get_run(b["mode_c_seq"], "JARVIS3-l7"), PALETTE["jarvis_l7"]),
+        ("AGC 3.2.5", lambda b: get_run(b["mode_c_fa"], "AGC"), PALETTE["agc_single"]),
+        ("xz -9e", lambda b: get_run(b["mode_c_fa"], "xz-9e"), PALETTE["xz"]),
+        ("NAF -l 22*", lambda b: get_run(b["mode_c_fa"], "NAF-l22"), PALETTE["geco"]),
+        ("Orig. GraSS -e2 (.seq)", lambda b: get_run(b["mode_c_seq"], "GraSS-e2"), PALETTE["grass"]),
+    ]
+
+    x_sp = np.arange(len(bact_list))
+    n_c = len(codecs_a)
+    bw = 0.098
+    for idx, (lbl, fn, col) in enumerate(codecs_a):
+        vals = [fn(b)["archive_bytes"] / 1e6 for b in bact_list]
+        offsets = x_sp + (idx - (n_c - 1) / 2.0) * bw
+        bars = ax1.bar(offsets, vals, width=bw * 0.92, color=col, edgecolor="black", linewidth=0.45, label=lbl)
+        if idx in (0, 3, 4, 7):
+            for bar, v in zip(bars, vals):
+                ax1.text(bar.get_x() + bar.get_width() / 2.0, v * 1.07,
+                         f"{v:.2f}", ha="center", va="bottom", fontsize=6.2,
+                         fontweight="bold" if idx == 0 else "normal", rotation=90)
+
+    ax1.set_yscale("log")
+    ax1.set_ylim(1.5, 118.0)
+    ax1.set_xticks(x_sp)
+    ax1.set_xticklabels(sp_names, fontsize=8.4)
+    ax1.set_ylabel("Archive Size (MB, log scale)")
+    ax1.set_title("(A) Bacterial Mode C World Shootout (*seq-only FASTA lossless: NAF/MBGC)")
+    ax1.legend(loc="upper left", ncol=2, frameon=True, facecolor="white", framealpha=0.95, fontsize=6.7)
+
+    # Panel B: Human Diploid Mode C (Chr21, Chr22, Chr1, Chr1..4) & All-24 CHM13 Mode R
+    ax2 = fig.add_subplot(gs[0, 1])
+    dip_groups = gpu["cross_human_chm13_vs_grch38"]["diploid_mode_c"]
+    dip_labels = ["Diploid Chr21\n(93.1 MB)", "Diploid Chr22\n(103.6 MB)", "Diploid Chr1\n(504.6 MB)", "Diploid Chr1..4\n(1,791.2 MB)"]
+    hgs_dip = [get_run(g["runs"], "HGS2_collection", "-Xmx22g")["archive_bytes"] / 1e6 for g in dip_groups]
+    agc_dip = [get_run(g["runs"], "AGC")["archive_bytes"] / 1e6 for g in dip_groups]
+    zst_dip = [get_run(g["runs"], "zstd-19")["archive_bytes"] / 1e6 for g in dip_groups]
+
+    x_d = np.arange(len(dip_labels))
+    w_d = 0.25
+    b_h = ax2.bar(x_d - w_d, hgs_dip, width=w_d, color=PALETTE["eimdl"], edgecolor="black", linewidth=0.5, label="EIMDL / HGS2 (-Xmx22g)")
+    b_a = ax2.bar(x_d, agc_dip, width=w_d, color=PALETTE["agc_single"], edgecolor="black", linewidth=0.5, label="AGC 3.2.5 (Multi-FASTA)")
+    b_z = ax2.bar(x_d + w_d, zst_dip, width=w_d, color=PALETTE["xz"], edgecolor="black", linewidth=0.5, label="zstd -19")
+    for bar, v in zip(b_h, hgs_dip):
+        ax2.text(bar.get_x() + bar.get_width() / 2.0, v * 1.08, f"{v:.1f}M", ha="center", va="bottom", fontsize=6.3, fontweight="bold", color=PALETTE["eimdl"])
+    for bar, v in zip(b_a, agc_dip):
+        ax2.text(bar.get_x() + bar.get_width() / 2.0, v * 1.08, f"{v:.1f}M", ha="center", va="bottom", fontsize=6.1)
+    for bar, v in zip(b_z, zst_dip):
+        ax2.text(bar.get_x() + bar.get_width() / 2.0, v * 1.08, f"{v:.1f}M", ha="center", va="bottom", fontsize=6.1)
+
+    chm_tot = tpu["all24_chm13_given_grch38_mode_r"]["totals"]
+    ax2.text(
+        0.03, 0.96,
+        f"All-24 T2T-CHM13v2.0 | GRCh38 Mode R (tpu_v3):\n"
+        f"{chm_tot['total_chm13_raw_bytes']/1e9:.3f} GB -> {chm_tot['total_archive_bytes']/1e6:.2f} MB "
+        f"({chm_tot['overall_ratio']:.2f}x, {chm_tot['overall_bpb']:.4f} bpb, 24/24 SHA-256)",
+        transform=ax2.transAxes, va="top", ha="left", fontsize=7.2,
+        bbox=dict(boxstyle="round,pad=0.35", facecolor="#F0F8FF", edgecolor=PALETTE["eimdl"], linewidth=0.9),
+    )
+    ax2.set_yscale("log")
+    ax2.set_ylim(5.0, 1450.0)
+    ax2.set_xticks(x_d)
+    ax2.set_xticklabels(dip_labels, fontsize=8.0)
+    ax2.set_ylabel("Archive Size (MB, log scale)")
+    ax2.set_title("(B) Human Diploid Mode C & All-24 CHM13v2.0 Mode R")
+    ax2.legend(loc="lower right", frameon=True, facecolor="white", framealpha=0.95, fontsize=7.2)
+
+    # Panel C: Bounded-Heap Scaling Matrix (100M to 1.41 Gbp)
+    ax3 = fig.add_subplot(gs[1, 0])
+    sweep = [r for r in tpu["heap_floor_scaling_sweep"] if r.get("status") == "ok"]
+    covid_mega_512 = get_run(gpu["covid19_viral_scaling"][-1]["runs"], "HGS2_collection", "-Xmx512m")
+    labels_c = [
+        f"{int(round(r['raw_bytes']/1e6))}M@{r['xmx'].replace('-Xmx','')}" for r in sweep
+    ] + ["1409M@512m\n(COVID Mega)"]
+    bpb_c = [r["bpb"] * 1000.0 for r in sweep] + [covid_mega_512["bpb"] * 1000.0]  # millibits/base
+    rss_c = [r["enc_peak_rss_mb"] for r in sweep] + [covid_mega_512["enc_peak_rss_mb"]]
+
+    x_c = np.arange(len(labels_c))
+    ax3_r = ax3.twinx()
+    bars_r = ax3.bar(x_c - 0.18, bpb_c, width=0.36, color=PALETTE["eimdl"], edgecolor="black", linewidth=0.5, label="Compression Rate (mbpb)")
+    line_rss = ax3_r.plot(x_c + 0.18, rss_c, color=PALETTE["jarvis_l31"], marker="o", linewidth=1.7, markersize=4.5, label="Peak RSS (MB)")
+    ax3.set_xticks(x_c)
+    ax3.set_xticklabels(labels_c, rotation=42, ha="right", fontsize=6.8)
+    ax3.set_ylim(0, 15.5)
+    ax3_r.set_yscale("log")
+    ax3_r.set_ylim(80, 7000)
+    ax3.set_ylabel("Rate (millibits / base)", color=PALETTE["eimdl"])
+    ax3_r.set_ylabel("Encoder Peak RSS (MB, log)", color=PALETTE["jarvis_l31"])
+    ax3.set_title("(C) Law VII Bounded-Heap Scaling Sweep (13/13 Matrix + 1.41 Gbp@-Xmx512m)")
+    h1, l1 = ax3.get_legend_handles_labels()
+    h2, l2 = ax3_r.get_legend_handles_labels()
+    ax3.legend(h1 + h2, l1 + l2, loc="upper left", frameon=True, facecolor="white", framealpha=0.95, fontsize=7.0)
+
+    # Panel D: Tesla T4 CUDA Acceleration & Adversarial Security Checks
+    ax4 = fig.add_subplot(gs[1, 1])
+    cuda_rows = gpu["cuda_gpu_experiments"]["sketch_matrix_bench"]
+    dims = [f"{r['n_units']}x{r['k_dim']}" for r in cuda_rows]
+    cpu_ms = [r["cpu_numpy_ms"] for r in cuda_rows]
+    gpu_ms = [r["gpu_cuda_ms"] for r in cuda_rows]
+    sp_x = [r["gpu_speedup_x"] for r in cuda_rows]
+
+    x_g = np.arange(len(dims))
+    w_g = 0.34
+    b_cpu = ax4.bar(x_g - w_g / 2, cpu_ms, width=w_g, color=PALETTE["jarvis_l7"], edgecolor="black", linewidth=0.5, label="CPU NumPy (ms)")
+    b_gpu = ax4.bar(x_g + w_g / 2, gpu_ms, width=w_g, color=PALETTE["eimdl"], edgecolor="black", linewidth=0.5, label="Tesla T4 CUDA (ms)")
+    for bar, sp in zip(b_gpu, sp_x):
+        ax4.text(bar.get_x() + bar.get_width() / 2.0, bar.get_height() * 1.18, f"{sp:.1f}x", ha="center", va="bottom", fontsize=7.4, fontweight="bold", color=PALETTE["eimdl"])
+    ax4.set_yscale("log")
+    ax4.set_ylim(0.8, 160000)
+    ax4.set_xticks(x_g)
+    ax4.set_xticklabels(dims, fontsize=8.4)
+    ax4.set_ylabel("All-Pairs Sketch Matrix Latency (ms, log)")
+    ax4.set_title("(D) 2x Tesla T4 CUDA Speedup & Adversarial Torture Integrity")
+    ax4.legend(loc="upper left", frameon=True, facecolor="white", framealpha=0.95, fontsize=7.1)
+
+    wn_hgs = get_run(ws["adversarial_and_bounded"]["white_noise_10mb"], "HGS2_single")
+    path_hgs = get_run(ws["adversarial_and_bounded"]["pathology_fasta"], "HGS2_collection", "-Xmx4g")
+    ax4.text(
+        0.98, 0.96,
+        f"Adversarial Torture (world_shootout_v2):\n"
+        f"- 10M White Noise: HGS2 {wn_hgs['archive_bytes']:,} B ({wn_hgs['bpb']:.4f} bpb)\n"
+        f"- 15.6M Pathology FASTA: HGS2 {path_hgs['archive_bytes']:,} B (SHA-256 PASS)\n"
+        f"  GraSS-e2 & NAF-l22: sequence SHA-256 MISMATCH",
+        transform=ax4.transAxes, va="top", ha="right", fontsize=6.6,
+        bbox=dict(boxstyle="round,pad=0.32", facecolor="#FFF9F0", edgecolor=PALETTE["jarvis_l7"], linewidth=0.9),
+    )
+
+    save_fig(fig, "fig8_kaggle_world_shootout_and_human")
+
+
 if __name__ == "__main__":
     make_fig1_regime_overview()
     make_fig2_mode_r_loo_73genomes()
@@ -1078,4 +1229,5 @@ if __name__ == "__main__":
     make_fig5_laws_ablations_and_synthetic()
     make_fig6_independent_modes_pareto()
     make_fig7_gen1_gen2_foundations()
-    print("[ALL 7 FIGURES GENERATED SUCCESSFULLY]")
+    make_fig8_kaggle_world_shootout_and_human()
+    print("[ALL 8 FIGURES GENERATED SUCCESSFULLY]")
