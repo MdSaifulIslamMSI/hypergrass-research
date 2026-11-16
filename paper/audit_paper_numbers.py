@@ -321,7 +321,7 @@ def main():
     require_number(tpu["amdahl_high_core_scaling"][0]["archive_bytes"], "tpu_amdahl_group22")
     require_in_readme_and_handoff(tpu["amdahl_high_core_scaling"][0]["archive_bytes"], "tpu_amdahl_group22")
 
-    # 11. Verify compiled PDF and all 8 figure pairs exist + all 8 figures are embedded in README.md
+    # 11. Verify compiled PDF and all 12 figure pairs (8 data plots + 4 architectural blueprints) exist + are embedded in README.md
     if not os.path.exists(pdf_path) or os.path.getsize(pdf_path) < 100_000:
         failures.append(f"[PDF MISSING OR TOO SMALL]: {pdf_path}")
     checks += 1
@@ -334,6 +334,10 @@ def main():
         "fig6_independent_modes_pareto",
         "fig7_gen1_gen2_foundations",
         "fig8_kaggle_world_shootout_and_human",
+        "arch1_eimdl_system_pipeline",
+        "arch2_mosaic_evolutionary_codec",
+        "arch3_fast_novelty_coder",
+        "arch4_container_and_lineage",
     ]:
         checks += 1
         if f"paper/figures/{fn}.png" not in readme_text:

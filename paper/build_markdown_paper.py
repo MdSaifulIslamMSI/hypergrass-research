@@ -18,7 +18,7 @@ MD_PART1 = r"""# Evolutionary Information Minimum Description Length (EIMDL): A 
 **Author:** Md Saiful Islam  
 **Engine & Container Specification:** HyperGraSS v2 (`HGS2` / `EIMDL`, `.hgs2` v2.0) & HyperGraSS v1 (`.hgs` v1.0)  
 **Repository:** [https://github.com/MdSaifulIslamMSI/hypergrass-research](https://github.com/MdSaifulIslamMSI/hypergrass-research)  
-**Compiled LaTeX Monograph (25-Page PDF):** [HGS2_EIMDL_Research_Paper.pdf](file:///C:/Users/mdsai/.gemini/antigravity/scratch/hypergrass/paper/HGS2_EIMDL_Research_Paper.pdf) · **LaTeX Source:** [HGS2_EIMDL_Research_Paper.tex](file:///C:/Users/mdsai/.gemini/antigravity/scratch/hypergrass/paper/HGS2_EIMDL_Research_Paper.tex)
+**Compiled LaTeX Monograph (28-Page PDF):** [HGS2_EIMDL_Research_Paper.pdf](file:///C:/Users/mdsai/.gemini/antigravity/scratch/hypergrass/paper/HGS2_EIMDL_Research_Paper.pdf) · **LaTeX Source:** [HGS2_EIMDL_Research_Paper.tex](file:///C:/Users/mdsai/.gemini/antigravity/scratch/hypergrass/paper/HGS2_EIMDL_Research_Paper.tex)
 
 ---
 
@@ -46,7 +46,7 @@ This monograph presents the complete, end-to-end theoretical and experimental re
 
 ### 1.1 Executive Empirical Summary Across All Canonical Regimes
 
-Every number in this paper is backed by a committed machine-readable JSON report in [`benchmarks/`](file:///C:/Users/mdsai/.gemini/antigravity/scratch/hypergrass/benchmarks) or [`prototype/rcmdl/work/`](file:///C:/Users/mdsai/.gemini/antigravity/scratch/hypergrass/prototype/rcmdl/work) and verified by [`paper/audit_paper_numbers.py`](file:///C:/Users/mdsai/.gemini/antigravity/scratch/hypergrass/paper/audit_paper_numbers.py) (`1,693 / 1,693` checks PASS).
+Every number in this paper is backed by a committed machine-readable JSON report in [`benchmarks/`](file:///C:/Users/mdsai/.gemini/antigravity/scratch/hypergrass/benchmarks) or [`prototype/rcmdl/work/`](file:///C:/Users/mdsai/.gemini/antigravity/scratch/hypergrass/prototype/rcmdl/work) and verified by [`paper/audit_paper_numbers.py`](file:///C:/Users/mdsai/.gemini/antigravity/scratch/hypergrass/paper/audit_paper_numbers.py) (`1,705 / 1,705` checks PASS).
 
 | Regime | Benchmark Corpus | Total Bases (`bp`) | `HGS2` / `EIMDL` Archive (`B`) | Rate (`bpb`) | Ratio | Strongest External Baseline (`B`) | `HGS2` Advantage & Win Record |
 | :--- | :--- | ---: | ---: | ---: | ---: | ---: | :--- |
@@ -74,6 +74,8 @@ To maintain complete historical and technical clarity across the codebase and do
 2. **Generation 1 — `HyperGraSS v1` ([`Main.java`](file:///C:/Users/mdsai/.gemini/antigravity/scratch/hypergrass/src/hypergrass/Main.java), `.hgs` v1.0 container, [`docs/REPORT.md`](file:///C:/Users/mdsai/.gemini/antigravity/scratch/hypergrass/docs/REPORT.md)):** Our first-generation multi-block archiver combining open-syncmer LZ77, divsufsort Burrows–Wheeler Transform (`BWT`) + `rANS` entropy coding (`--fast`/`--lean`), an anchor-bank pangenome differencing engine (`--pangenome`) with 4-donor anchor bank + bit-packed mismatch mask + order-6 Context-Repeat Mixer (`CRM`), and a single-genome quadratic CRM (`--single`, [`SingleGenomeCoder.java`](file:///C:/Users/mdsai/.gemini/antigravity/scratch/hypergrass/src/hypergrass/SingleGenomeCoder.java)). Generation 1 reduced the 24-genome *E. coli* archive from `24,777,592 B` to `3,810,409 B` (`0.2538 bpb`, `31.52x`), passed a strict `256 MiB` Linux cgroup v2 gate (`3,864,464 B` at `251.1 MiB` peak via GraalVM 25 static-musl native compilation), scaled to `2.077 GiB` (`2,230,000,000 bp`) via 64-bit `SequenceSource` streaming (`30,171,539 B` at `235 MB` RSS), and mathematically proved via an 8-channel information audit ([`docs/ENTROPY-FLOOR.md`](file:///C:/Users/mdsai/.gemini/antigravity/scratch/hypergrass/docs/ENTROPY-FLOOR.md)) why fixed-anchor block architectures hit a hard structural wall above `1.20 MB` (`100:1`).
 3. **Generation 2 — `RC-MDL v2` ([`prototype/rcmdl`](file:///C:/Users/mdsai/.gemini/antigravity/scratch/hypergrass/prototype/rcmdl), [`prototype/rcmdl/RESULTS.md`](file:///C:/Users/mdsai/.gemini/antigravity/scratch/hypergrass/prototype/rcmdl/RESULTS.md)):** Our standalone Reference-Conditioned Minimum Description Length prototype, introducing Mode R (unaligned donor-panel conditioning) and Mode C (Containment/Prim tree-ordered pangenome coding without fixed anchor replication). `RC-MDL v2` broke the Generation 1 anchor floor in Mode R (`1,636,367 B` on 24g *E. coli* LOO; `92,506 B` on 24g *M. tuberculosis* LOO; `243,807 B` on 25g *S. aureus* LOO) and reached `3,972,975 B` in Mode C, while executing a 13-configuration parameter sweep of `AGC 3.2.5`.
 4. **Generation 3 — Unified `HGS2` / `EIMDL` ([`HyperGraSSFusionEngine.java`](file:///C:/Users/mdsai/.gemini/antigravity/scratch/hypergrass/src/hypergrass/HyperGraSSFusionEngine.java), [`FastNoveltyCoder.java`](file:///C:/Users/mdsai/.gemini/antigravity/scratch/hypergrass/src/hypergrass/FastNoveltyCoder.java), [`FastaStreamFactorizer.java`](file:///C:/Users/mdsai/.gemini/antigravity/scratch/hypergrass/src/hypergrass/FastaStreamFactorizer.java), [`EimdlCli.java`](file:///C:/Users/mdsai/.gemini/antigravity/scratch/hypergrass/src/hypergrass/EimdlCli.java), `.hgs2` v2.0 container):** The unified seven-law architecture that replaces Generation 1's slow `CRM` (`887.45 s`) and Generation 2's hash lists (`1,812 MB` RSS) with the seven fundamental laws of EIMDL, achieving **`1,174,113 B` (`102.30x`)** on 24g *E. coli* Mode R LOO, **`47,339 B` (`2,233.78x`)** on 24g *M. tuberculosis* LOO, **`174,217 B` (`407.79x`)** on 25g *S. aureus* LOO, **`3,371,489 B` (`1T`, `35.62x`) / `3,388,639 B` (`12T`, `19.65 s` encode / `10.40 s` decode)** on 24g *E. coli* Mode C, and **`3,452,703 B` (`34.79x`)** inside a **`128 MiB` (`-Xmx128m`) pure-JVM heap**.
+
+![Architecture Blueprint 1: Unified HGS2 / EIMDL System Architecture & Strictly Disjoint Two-Stage Lifecycle](%%FIG_PREFIX%%/arch1_eimdl_system_pipeline.png)
 
 ### 1.3 Four-Part Scientific Contract ([`docs/SCIENTIFIC-CONTRACT.md`](file:///C:/Users/mdsai/.gemini/antigravity/scratch/hypergrass/docs/SCIENTIFIC-CONTRACT.md))
 1. **Regime Hygiene:** Never compare reference-conditioned Mode R byte counts against self-contained Mode C or reference-free Mode S tools without explicit labeling; every Mode R archive embeds a mandatory **32-byte SHA-256 digest** of the canonical donor panel and verifies it prior to decompression.
@@ -123,6 +125,8 @@ The forward bijection $\Phi: \Sigma_{\text{raw}}^* \to \mathcal{M} \times \Sigma
 | **Indexed Random Access** | Block-level (`8 MiB` sub-blocks) | **`HGF1` (`0x48474631`) footer** (`24 B/block` + `16 B` trailer) | Parallel `4 Mbp` Stage-2 `FastCRM` sub-blocks |
 | **Worst-Case Safety Bypass** | Block mode `0` (`RAW`) | Block mode `0` (`RAW`) | Sub-block bit-31 raw 2-bit bypass (`len \| 0x80000000`, `2.0012 bpb`) |
 
+![Architecture Blueprint 4: .hgs2 v2.0 / .hgs v1.0 Binary Wire Specification & Three-Generation Architecture Evolution](%%FIG_PREFIX%%/arch4_container_and_lineage.png)
+
 ---
 
 ## 3. Mathematical Formulation & Proofs of the Seven Fundamental Laws
@@ -168,6 +172,8 @@ Under prefix-free coding of donor switch tokens, expanding a reference panel $D_
 - **Gear 2 (Diverged Syntenic Gear, `clonalGear = false`):** Engaged upon a local SNP burst ($>2$ SNPs in $32\text{ bp}$) **if and only if** the $O(1)$ syncmer lookahead probe `findClonalReentryHorizon` finds no alternative $\ge 192\text{ bp}$ exact clonal match in the donor panel within $4 \times 96 = 384\text{ bp}$. Gear 2 credits `+0.135` bits/bp and penalizes SNPs by `-10.2` bits ($\ge 18\text{ bp}$ tail guard), and immediately yields back to Gear 1 as soon as `findClonalReentryHorizon` detects a clonal donor reentry.
 - **Affine Syntenic Micro-Indel Splicing (`attemptMicroIndelSplice`):** Searches $(\Delta_{\text{ref}}, \Delta_{\text{tgt}}) \in [1, 256] \times [1, 64]$ at match termination for a downstream continuation sharing $\ge 24\text{ bp}$ exact identity, replacing a $\sim 65\text{-bit}$ full token restart with a $\sim 12\text{-bit}$ affine splice descriptor.
 
+![Architecture Blueprint 2: Evolutionary-Information Mosaic Engine Micro-Architecture (Laws I–III, V & VIa)](%%FIG_PREFIX%%/arch2_mosaic_evolutionary_codec.png)
+
 ### 3.4 Law IV: Universal Five-Regime Completeness Law
 
 #### Theorem 4 (Strict Worst-Case Redundancy Bound)
@@ -205,6 +211,8 @@ Laws VI and VII translate three structural techniques from OpenAI's 67-page ETH 
 2. **Two-Adic Valuation Tapering (Appendix D.4.3–D.4.4, Lemma D.5 eq. D.10) $\to$ Law VIa:** Replacing uniform integer degree/step floors with two-adic $v_2(t)$ multiplicity tapering guided the symmetric $\tau = 20$ binary range-coder taper (`p_min = 11/4096` vs. `31/4096`).
 3. **Disjoint Partitioning & Sequential Polynomial-Space Accumulation (Lemma 3.2, Prop. 3.4, §5.2 $\mathbb{Q}[V]/(V^\ell)$, Prop. 6.4, App. A & §D.4.7) $\to$ Law VII:** Decomposing global computation into disjoint polynomial-space phases guided explicit Stage-1 vs. Stage-2 object deallocation and `-Xmx128m` bounded-heap scaling.
 4. **Honest Asymptotic Boundary (§1.1.3 OVC Caveat):** Section 1.1.3 of `openai2026eth` explicitly cautions that while Theorem 1.1 solves exact `#k-SAT` in subexponential time and polynomial space, polynomial-time fine-grained lower bounds governed by the Orthogonal Vectors Conjecture (OVC)—including quadratic edit distance and Longest Common Subsequence (LCS) complexity—remain intact. Thus, `openai2026eth` contributes constructive systems/algebraic paradigms, **not** an asymptotic speedup over OVC-hard string-matching or alignment bottlenecks.
+
+![Architecture Blueprint 3: FastNoveltyCoder & FastCrmModel Micro-Architecture (Laws IIb, IV & VI)](%%FIG_PREFIX%%/arch3_fast_novelty_coder.png)
 
 ---
 

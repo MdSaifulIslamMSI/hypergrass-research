@@ -110,6 +110,13 @@ To provide a complete end-to-end record from the beginning of the project to its
 
 \begin{figure}[t!]
   \centering
+  \includegraphics[width=0.98\textwidth]{figures/arch1_eimdl_system_pipeline.pdf}
+  \caption{\textbf{Unified \texttt{HGS2} / \texttt{EIMDL} system architecture and strictly disjoint two-stage memory lifecycle (Laws~I--VII).} Top-to-bottom pipeline showing 64~KiB streaming \texttt{.seq} ingestion vs.\ six-channel bijective \texttt{FastaStreamFactorizer} ($\Phi$), strict three-regime routing (\textbf{Mode~S}, \textbf{Mode~R} 32-byte SHA-256 panel pin, \textbf{Mode~C} Prim MST causal DAG), Stage-1 zero-materialization two-pass open-syncmer CSR indexing + parallel mosaic parsing, the Law~VII explicit nullification barrier ensuring $M_{\text{peak}} = \max(M_{\text{Stage-1}}, M_{\text{Stage-2}})$ inside \texttt{-Xmx128m}, and Stage-2 warm-primed \texttt{FastNoveltyCoder} stripes gated by Law~IV raw 2-bit safety bypass.}
+  \label{fig:arch_pipeline}
+\end{figure}
+
+\begin{figure}[t!]
+  \centering
   \includegraphics[width=0.98\textwidth]{figures/fig1_regime_overview.pdf}
   \caption{\textbf{Multi-regime description length and information decomposition across bacterial pangenomes.} \textbf{(A)}~Verified compression rates (bits/base, log scale) across all three canonical evaluation regimes---\textbf{Mode~S} (reference-free single genome), \textbf{Mode~C} (self-contained pangenome collection), and \textbf{Mode~R} (reference-conditioned Leave-One-Out)---across five bacterial species (\textit{E.~coli}, \textit{M.~tuberculosis}, \textit{S.~aureus}, \textit{S.~enterica}, and \textit{K.~pneumoniae}) relative to the $2.000$~bpb naive 2-bit ceiling. \textbf{(B)}~Stepwise information decomposition of \textit{E.~coli} \texttt{00.seq} ($4,856,080$~bp) from raw ASCII ($4,856.1$~KB, $8.0000$~bpb) down to 23-donor Mode~R EIMDL ($40.6$~KB, $0.0669$~bpb, $119.64\times$ compression).}
   \label{fig:regime_overview}
@@ -211,6 +218,13 @@ Table~\ref{tab:format_specs} documents the exact byte-level container specificat
 }
 \end{table}
 
+\begin{figure}[t!]
+  \centering
+  \includegraphics[width=0.98\textwidth]{figures/arch4_container_and_lineage.pdf}
+  \caption{\textbf{Physical \texttt{.hgs2} v2.0 / \texttt{.hgs} v1.0 wire container anatomy and three-generation architectural progression.} \textbf{Part~I} specifies every byte offset of the \texttt{"HGS2"} (\texttt{0x48475332}) bitstream---including header flags, 64-bit length + CRC-32, conditional 32-byte SHA-256 Mode~R panel pin, causal Mode~C Prim permutation, 6-channel factorized metadata, rank-ordered mosaic bitstreams, segmented novelty superstream, and legacy \texttt{.hgs} v1.0 (\texttt{"HGS\textbackslash x01"} / \texttt{"HGF1"}) indexing. \textbf{Part~II} traces architectural bottlenecks resolved from original \texttt{GraSS} (2025) through \texttt{HyperGraSS~v1} and \texttt{RC-MDL~v2} to \texttt{HGS2}.}
+  \label{fig:arch_container_lineage}
+\end{figure}
+
 \section{The Seven Fundamental Laws of Evolutionary Information Compression}
 
 We now state and prove the seven laws that govern \texttt{HGS2} (\texttt{docs/COMPRESSION-LAW.md}), culminating in Laws~VI and~VII which adapt mathematical mechanisms from OpenAI's October~2026 ETH refutation preprint~\cite{openai2026eth}.
@@ -302,6 +316,13 @@ Any parse valid over $D_{1:N}$ remains valid over $D_{1:N+1}$ with at most $\Del
   \item \textbf{Affine Syntenic Micro-Indel Splicing:} Before terminating a match at $(r_{\text{end}}, t_{\text{end}})$, \texttt{attemptMicroIndelSplice} searches a bounded 2D displacement grid $(\Delta_{\text{ref}}, \Delta_{\text{tgt}}) \in [1,256] \times [1,64]$ for a downstream continuation sharing $\ge 24$~bp of exact match, encoding the splice displacement in $\approx 10\text{--}18$~bits instead of emitting a new $60\text{--}80$-bit panel token.
 \end{itemize}
 
+\begin{figure}[t!]
+  \centering
+  \includegraphics[width=0.98\textwidth]{figures/arch2_mosaic_evolutionary_codec.pdf}
+  \caption{\textbf{Evolutionary-Information Mosaic Engine micro-architecture (Laws~I--III, V, and~VIa).} \textbf{(A)}~Canonical open-syncmer selection ($k=16, s=10, w=6, t=3$), two-pass zero-materialization CSR indexing (\texttt{csrHeads}, \texttt{csrPositions}, \texttt{csrTags}; $0.50\text{--}1.25$~B/bp raw), and four-tier candidate probing priority. \textbf{(B)}~Horizon-bounded two-gear coalescent state machine separating clonal haplotype copying from clamped diverged synteny (\texttt{findClonalReentryHorizon}) and 2D affine micro-indel splicing. \textbf{(C)}~Klein $V_4$ reverse-complement-invariant Kimura--CpG substitution algebra ($\delta = t \oplus r \in \{1,2,3\}$), bijective codon-wobble gap decomposition, and symmetric $\tau=20$ two-adic binary range-coder tapering ($p_{\min}=11/4096$).}
+  \label{fig:arch_mosaic}
+\end{figure}
+
 \subsection{Law IV: Universal Five-Regime Completeness Law}
 
 \begin{theorem}[Universal Completeness and Cryptographic White-Noise Safety Bound]
@@ -376,6 +397,13 @@ Laws~VI and~VII translate three structural techniques from OpenAI's 67-page ETH 
 (2)~\emph{Two-Adic Valuation Tapering} (Appendix~D.4.3--D.4.4, Hermite multiplicity Lemma~D.5 and eq.~D.10, which eliminate boundary precision loss via two-adic $v_2(t)$ tapering) motivated our symmetric two-adic rounding taper $\tau = 20$ reducing fixed-point stalling from $31/4096$ to $11/4096$ (\textbf{Law~VIa}); and
 (3)~\emph{Disjoint Partitioning and Sequential Polynomial-Space Accumulation} (Lemma~3.2, Prop.~3.4, \S5.2 truncated algebra $\mathbb{Q}[V]/(V^\ell)$, Prop.~6.4, Appendix~A, and \S D.4.7) directly guided Stage-1 vs.\ Stage-2 object deallocation and bounded \texttt{-Xmx128m} execution (\textbf{Law~VII}).
 Crucially, however, \S1.1.3 of~\cite{openai2026eth} explicitly notes that while Theorem~1.1 solves exact $\#k$-SAT in subexponential time and polynomial space, polynomial-time fine-grained lower bounds governed by the \emph{Orthogonal Vectors Conjecture (OVC)}---including quadratic edit distance and Longest Common Subsequence (LCS) complexity---remain intact. Thus,~\cite{openai2026eth} supplies constructive engineering paradigms (shared summaries, two-adic tapering, disjoint polynomial-space phases), \textbf{not} an asymptotic speedup over OVC-hard sequence alignment or string-matching bottlenecks.
+
+\begin{figure}[t!]
+  \centering
+  \includegraphics[width=0.98\textwidth]{figures/arch3_fast_novelty_coder.pdf}
+  \caption{\textbf{\texttt{FastNoveltyCoder} and \texttt{FastCrmModel} micro-architecture (Laws~IIb, IV, and~VI).} \textbf{(A)}~Causal sliding 64-bit histories, 6-frame \texttt{6F-ORF-HMM} tracking sense/antisense stop triplets at codon phase $c=2$, and 32-bit tag-verified repeat seed rings. \textbf{(B)}~Capacity-adaptive $19/22$-expert bank linked by Law~VIb Hierarchical Pitman--Yor suffix summary backoff. \textbf{(C)}~Division-free log-Bayes (\texttt{LN\_LUT}/\texttt{EXP\_NEG\_LUT}) and 8-regime logistic probability mixer using \texttt{RECIP[65600]}, 1,536-bin SSE, and 15-bit carryless \texttt{RangeCoder}. \textbf{(D)}~Warm-primed parallel 4~Mbp stripes with Law~IV raw 2-bit safety bypass (\texttt{SEG\_RAW\_2BIT} vs.\ \texttt{SEG\_CRM}).}
+  \label{fig:arch_novelty}
+\end{figure}
 """
 
 PART2_GEN1_GEN2_TEX = r"""

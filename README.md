@@ -5,13 +5,13 @@
 [![Release](https://img.shields.io/github/v/release/MdSaifulIslamMSI/hypergrass-research?label=Release&color=blue)](https://github.com/MdSaifulIslamMSI/hypergrass-research/releases/tag/v2.0.0)
 [![Java](https://img.shields.io/badge/Java-21%2B%20%7C%20JDK%2025%2F27-blue.svg)](src/hypergrass/)
 [![Container](https://img.shields.io/badge/Formats-.hgs2%20v2.0%20%7C%20.hgs%20v1.0-success.svg)](docs/HGS-FORMAT.md)
-[![Paper](https://img.shields.io/badge/Monograph-25%20Pages%20PDF%20%2B%20LaTeX-critical.svg)](paper/HGS2_EIMDL_Research_Paper.pdf)
+[![Paper](https://img.shields.io/badge/Monograph-28%20Pages%20PDF%20%2B%20LaTeX-critical.svg)](paper/HGS2_EIMDL_Research_Paper.pdf)
 [![Kaggle E2E](https://img.shields.io/badge/Kaggle%20E2E-15--Codec%20Shootout%20%2B%20T4%20GPU-20BEFF.svg)](benchmarks/kaggle/README.md)
-[![Audit](https://img.shields.io/badge/Automated%20Audit-1%2C693%20%2F%201%2C693%20PASS-brightgreen.svg)](paper/audit_paper_numbers.py)
+[![Audit](https://img.shields.io/badge/Automated%20Audit-1%2C705%20%2F%201%2C705%20PASS-brightgreen.svg)](paper/audit_paper_numbers.py)
 [![License](https://img.shields.io/badge/License-Apache_2.0-green.svg)](LICENSE)
 [![CI](https://github.com/MdSaifulIslamMSI/hypergrass-research/actions/workflows/ci.yml/badge.svg)](https://github.com/MdSaifulIslamMSI/hypergrass-research/actions/workflows/ci.yml)
 
-> **About:** Complete open-source research repository for **Evolutionary Information Minimum Description Length (`EIMDL`)** and its unified zero-dependency Java 21+ engine **`HGS2`** (uniting Gen 1 [`HyperGraSS v1`](docs/BENCHMARKS.md) and Gen 2 [`RC-MDL v2`](prototype/rcmdl/RESULTS.md) under Formal Laws I–VII). Achieves **`#1`** across **`15/15`** bacterial pangenome shootout tracks (*E. coli*, *S. enterica*, *K. pneumoniae* across Modes S, R, and C with 100% byte-for-byte FASTA SHA-256 identity), **`89.47x`** on all 24 **`T2T-CHM13v2.0 | GRCh38`** human chromosomes (`3.156 GB` $\to$ `35.28 MB`), **`#1`** archive size on human diploid `Chr21`/`Chr22`/`Chr1`/`Chr1..4`, **`43.2x–50.77x`** Tesla T4 CUDA sketch acceleration, and strict **`-Xmx128m`** pure-JVM execution—verified across `1,693/1,693` automated numerical assertions and Kaggle E2E cloud harnesses.
+> **About:** Complete open-source research repository for **Evolutionary Information Minimum Description Length (`EIMDL`)** and its unified zero-dependency Java 21+ engine **`HGS2`** (uniting Gen 1 [`HyperGraSS v1`](docs/BENCHMARKS.md) and Gen 2 [`RC-MDL v2`](prototype/rcmdl/RESULTS.md) under Formal Laws I–VII). Achieves **`#1`** across **`15/15`** bacterial pangenome shootout tracks (*E. coli*, *S. enterica*, *K. pneumoniae* across Modes S, R, and C with 100% byte-for-byte FASTA SHA-256 identity), **`89.47x`** on all 24 **`T2T-CHM13v2.0 | GRCh38`** human chromosomes (`3.156 GB` $\to$ `35.28 MB`), **`#1`** archive size on human diploid `Chr21`/`Chr22`/`Chr1`/`Chr1..4`, **`43.2x–50.77x`** Tesla T4 CUDA sketch acceleration, and strict **`-Xmx128m`** pure-JVM execution—verified across `1,705/1,705` automated numerical and architectural assertions and Kaggle E2E cloud harnesses.
 
 ---
 
@@ -19,9 +19,9 @@
 
 | Resource | Description | Path |
 |---|---|---|
-| **25-Page Research Monograph (PDF)** | Complete typeset single-column LaTeX research paper covering Generations 1, 2, and 3, Laws I–VII, OpenAI `2026` ETH architectural transfer (+ §1.1.3 OVC scope boundary), Kaggle E2E 15-codec shootout, 22 tables, and 8 figures (`0` overfull boxes) | [`paper/HGS2_EIMDL_Research_Paper.pdf`](paper/HGS2_EIMDL_Research_Paper.pdf) |
-| **Research Monograph (Markdown)** | Full GitHub-flavored Markdown edition of the 25-page monograph with embedded figures and complete tables | [`docs/PAPER-DRAFT.md`](docs/PAPER-DRAFT.md) |
-| **LaTeX Source & Reproducible Build** | Deterministic generators (`build_latex_paper.py`, `build_markdown_paper.py`, `generate_figures.py`) & `1,693`-assertion audit (`audit_paper_numbers.py`) | [`paper/README.md`](paper/README.md) |
+| **28-Page Research Monograph (PDF)** | Complete typeset single-column LaTeX research paper covering Generations 1, 2, and 3, Laws I–VII, OpenAI `2026` ETH architectural transfer (+ §1.1.3 OVC scope boundary), Kaggle E2E 15-codec shootout, 22 tables, 8 data plots, and 4 system/wire architectural blueprints (`0` overfull boxes) | [`paper/HGS2_EIMDL_Research_Paper.pdf`](paper/HGS2_EIMDL_Research_Paper.pdf) |
+| **Research Monograph (Markdown)** | Full GitHub-flavored Markdown edition of the 28-page monograph with embedded figures, architectural blueprints, and complete tables | [`docs/PAPER-DRAFT.md`](docs/PAPER-DRAFT.md) |
+| **LaTeX Source & Reproducible Build** | Deterministic generators (`build_latex_paper.py`, `build_markdown_paper.py`, `generate_figures.py`, `generate_architecture_diagrams.py`) & `1,705`-assertion audit (`audit_paper_numbers.py`) | [`paper/README.md`](paper/README.md) |
 | **Mathematical & Biological Laws (I–VII)** | Formal specification of $V_4$ Kimura-CpG algebra, 6-state causal ORF-HMM, Two-Gear coalescent copying, 5-regime MDL, Amdahl-Memory scaling, Law VI two-adic/Pitman-Yor coding, Law VII disjoint `-Xmx128m` heap lifecycle, and `openai2026eth` §1.1.3 OVC boundary | [`docs/COMPRESSION-LAW.md`](docs/COMPRESSION-LAW.md) |
 | **Unified `HGS2` / `EIMDL` Benchmarks** | Complete Mode S, Mode R (LOO + Cluster-LOO), Mode C, Amdahl scaling, `-Xmx128m` bounded-heap, and synthetic/adversarial tables | [`docs/FUSION-BENCHMARKS.md`](docs/FUSION-BENCHMARKS.md) |
 | **Locked Independent Replication** | Independent *Salmonella enterica* (25 genomes) and *Klebsiella pneumoniae* (23 genomes) Mode C, Mode S, Mode R, and tuned `JARVIS3 -l 31` evaluation | [`docs/INDEPENDENT.md`](docs/INDEPENDENT.md) |
@@ -85,6 +85,8 @@ flowchart TD
     G2 --> G3
 ```
 
+![Architecture Blueprint 1 — Unified HGS2 / EIMDL System Architecture & Strictly Disjoint Two-Stage Lifecycle](paper/figures/arch1_eimdl_system_pipeline.png)
+
 ### How Generation 3 (`HGS2` / `EIMDL`) Resolved Every Generation 1 & Generation 2 Bottleneck
 
 | Failure Mode / Bottleneck in Gen 1 (`HyperGraSS v1`) or Gen 2 (`RC-MDL v2`) | Root Cause Diagnosed | Generation 3 (`HGS2` / `EIMDL`) Architectural Resolution | Measured Verification |
@@ -120,6 +122,8 @@ $$H_{V_4}(Y \mid X, c, Y \neq X) = h_2(p_{\text{ti}}(c)) + (1 - p_{\text{ti}}(c)
 2. **Horizon-Bounded Two-Gear Coalescent Haplotype Copying (Law IIIb):** Bacterial genealogies exhibit a $\sim 20\times$ spectral gap between vertical clonal inheritance ($\theta_{\text{clonal}} \le 5\times 10^{-4}$) and horizontal recombination imports ($\theta_{\text{recomb}} \in [3\times 10^{-3}, 1.2\times 10^{-1}]$). **Gear 1 (`clonalGear`)** prices extension against the clonal baseline (`baseGain = 0.008` bits/bp, `snpPenalty = 11.2` bits/SNP, $\ge 128\text{ bp}$ exact tail guard). When no clonal donor covers `pos`, **Gear 2 (`!clonalGear`)** queries `findClonalReentryHorizon` (`horizonCache`) to find the earliest downstream coordinate `gear2Limit` where any panel donor resumes an exact $\ge 192\text{ bp}$ clonal haplotype, clamping diverged homolog extension to `[pos .. gear2Limit)` so recombination islands never bulldoze downstream clonal runs (cutting *E. coli* `00.seq` LOO false SNPs to `5,706` and archive bytes to **`40,588 B`**).
 3. **Affine Syntenic Micro-Indel Continuity (Law IIIc):** Bounded-window lookahead (`trySyntenicIndelSplice`) re-anchors $(g^*, o^*)$ across deletions ($\Delta_{\text{ref}} \in [1, 256]$), insertions ($\Delta_{\text{tgt}} \in [1, 64]$), and compound micro-indels under an 8-state `(kind, spanBin)` `hasSplice` context prior, paying $12\text{--}18\text{ bits}$ instead of $42\text{--}60\text{ bits}$ for a full match break (saving `+428` broken tokens vs no-splice on syntenic single-donor `00|20` and `-32.3%` on synthetic hypermutator `07`, while trading `-119 B` / `-227 B` on dense real panels).
 
+![Architecture Blueprint 2 — Evolutionary-Information Mosaic Engine Micro-Architecture (Laws I–III, V & VIa)](paper/figures/arch2_mosaic_evolutionary_codec.png)
+
 ### Law IV — Universal 5-Regime Existing & Non-Existing Sequence Completeness Law
 Minimizes total description length across (1) panel syntenic homology, (2) bidirectional self-homology, (3) tandem periodicity ($1 \le P \le 64$), (4) `FastCRM` + `6F-ORF-HMM` context-repeat mixing, and (5) a per-sub-block raw 2-bit safety bypass (bit 31 header flag), guaranteeing non-expansion on arbitrary or cryptographically random sequences.
 
@@ -139,6 +143,8 @@ At full density ($s=0$), the index + 2-bit bank requires `1.58 B/base` (`4.5x` s
 Enforces strict disjoint lifetimes between Stage-1 CSR indexing (`sharedDagIdx`, `mstParentRank`, `rankDonorSimilarityOrder`) and Stage-2 pan-genome superstream coding (`rankMosaics`, `unitNovSlices`, `FastCRM`), narrows per-worker syncmer hashes from `long[]` to 32-bit `int[]` (`-38%` worker RAM), replaces 3.43M per-line FASTA restoration syscalls with 64 KB buffered writes, and decouples `FastCRM` stripe parallelism from thread count under `ultraTight`/`extremeTight` caps so **full `panSuper` (`Order-8`, `Order-9`, `Sparse-12`) context modeling stays active down to `-Xmx128m`** (`1.06 B/base` heap on `120.1 Mbp`, `+1.89%` vs `12T`).
 
 > **Scope & Architectural Transfer from OpenAI's Oct 2026 ETH Refutation (`openai2026eth`):** Laws VI–VII draw concrete algorithmic structure from OpenAI's 67-page *"The Exponential Time Hypothesis is False"* (Oct 2026) — specifically shared linear hierarchical summaries (§2.4, §2.7, §4.2 $\to$ Law VIb), two-adic valuation tapering (App. D.4.3–D.4.4, eq. D.10 $\to$ Law VIa), and disjoint-partition sequential polynomial-space accumulation (Lemma 3.2, Prop. 3.4, §5.2, §D.4.7 $\to$ Law VII). In explicit fidelity to **Section 1.1.3** of that preprint, subexponential `#k-SAT` algebraic reductions do **not** bypass polynomial-time fine-grained complexity barriers tied to the Orthogonal Vectors Conjecture (OVC) — including edit-distance and LCS matching bottlenecks.
+
+![Architecture Blueprint 3 — FastNoveltyCoder & FastCrmModel Micro-Architecture (Laws IIb, IV & VI)](paper/figures/arch3_fast_novelty_coder.png)
 
 ---
 
@@ -335,6 +341,8 @@ Full byte-level specifications for both archive formats are documented in **[`do
 - **`.hgs2` (`"HGS2"`, `0x48475332`, Generation 3 [`HyperGraSSFusionEngine.java`](src/hypergrass/HyperGraSSFusionEngine.java)):** Unified container supporting **Mode S (`0`)**, **Mode R (`1`, with 32-byte SHA-256 donor-panel manifest pin)**, and **Mode C (`2`, with causal phylogenetic Prim rank permutation `rankToUnit[r]` and `maxAncestorRank[r]`)**, per-unit 6-channel factorized metadata $\mathcal{M}$, order-1 range-coded `EimdlMosaicCodec` streams, and parallel `4 Mbp` `FastNoveltyCoder` sub-blocks with bit-31 raw 2-bit safety bypass.
 - **`.hgs` (`"HGS\x01"`, `0x48475301`, Generation 1 [`HyperGraSS.java`](src/hypergrass/HyperGraSS.java)):** Compact single-block (`13 B` header) and multi-block page-indexed random-access container with `HGF1` (`0x31464748`) trailer.
 
+![Architecture Blueprint 4 — .hgs2 v2.0 / .hgs v1.0 Binary Wire Specification & Three-Generation Architecture Evolution](paper/figures/arch4_container_and_lineage.png)
+
 ### Complete Repository Directory Tree
 
 ```text
@@ -366,12 +374,13 @@ hypergrass/
 │   ├── VerifyAnchorCodecs.java              # 9-suite anchor-bank codec verifier
 │   ├── VerifyArchiveAccounting.java         # 34-suite byte-accounting & 1,721-mutation fuzz rejection verifier
 │   └── [VerifyCostAwareEncoding, VerifyDonorArchives, VerifyDonorCosts, VerifyDonorIndex, AuxPlaneSelfTest, RangeCoderSelfTest].java
-├── paper/                                   # 25-Page Research Monograph, Figures & 1,693-Assertion Automated Audit
-│   ├── HGS2_EIMDL_Research_Paper.pdf        # Compiled 25-page single-column PDF monograph (0 overfull boxes)
+├── paper/                                   # 28-Page Research Monograph, Figures & Automated Numerical Audit
+│   ├── HGS2_EIMDL_Research_Paper.pdf        # Compiled 28-page single-column PDF monograph (0 overfull boxes)
 │   ├── HGS2_EIMDL_Research_Paper.tex        # Generated LaTeX source
-│   ├── references.bib                       # BibTeX bibliography (incl. openai2026eth)
-│   ├── figures/                             # 8 publication-grade 300 DPI figures (fig1 .. fig8)
+│   ├── references.bib                       # BibTeX bibliography (incl. openai2026eth & roy2025grass)
+│   ├── figures/                             # 12 publication-grade 300 DPI figures (fig1..fig8 + arch1..arch4)
 │   ├── generate_figures.py                  # Deterministic figure generator from committed JSON results
+│   ├── generate_architecture_diagrams.py    # Publication architectural & wire-format blueprint generator
 │   ├── table_builders.py                    # LaTeX table generator from committed JSON results
 │   ├── build_latex_paper.py                 # Full LaTeX monograph builder
 │   ├── build_markdown_paper.py              # Full Markdown monograph builder (-> docs/PAPER-DRAFT.md)
