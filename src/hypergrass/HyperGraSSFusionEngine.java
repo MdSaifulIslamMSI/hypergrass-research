@@ -11,10 +11,13 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.nio.channels.SeekableByteChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -186,8 +189,9 @@ public final class HyperGraSSFusionEngine {
             if (streamed != null) {
                 return streamed;
             }
+            return tryStreamGeneralFile(inputPath, opts);
         }
-        byte[] raw = (inMemRaw != null) ? inMemRaw : Files.readAllBytes(inputPath);
+        byte[] raw = inMemRaw;
         CRC32 crc = new CRC32();
         crc.update(raw, 0, raw.length);
         int crcVal = (int) crc.getValue();
@@ -332,6 +336,24 @@ public final class HyperGraSSFusionEngine {
 
         final int numUnits = units.size();
 
+        long maxMemAtStart = Runtime.getRuntime().maxMemory();
+        long totalBankBases = 0L;
+        for (int u = 0; u < numUnits; u++) {
+            totalBankBases += units.get(u).seq.length;
+        }
+        long bankBytesPre = (totalBankBases + 3L) >>> 2;
+        int hubCap = numUnits;
+        if (mode == MODE_COLLECTION && numUnits > 1 && bankBytesPre > (long) (maxMemAtStart * 0.45)) {
+            long avgUnitBytes = Math.max(1L, bankBytesPre / numUnits);
+            hubCap =
+                    (int)
+                            Math.max(
+                                    1L,
+                                    Math.min(
+                                            numUnits - 1L,
+                                            Math.min(32L, (maxMemAtStart / 8L) / avgUnitBytes)));
+        }
+
         // Determine rank ordering for Mode C (Prim's MST on canonical open-syncmer bottom sketches)
         int[] rankToUnit = new int[numUnits];
         int[] mstParentRank = new int[numUnits];
@@ -345,7 +367,7 @@ public final class HyperGraSSFusionEngine {
                 out.writeVarInt(rankToUnit[r]);
             }
             for (int r = 0; r < numUnits; r++) {
-                out.writeVarInt(r); // maxAncestorRank = r (strictly causal < r)
+                out.writeVarInt(Math.min(r, hubCap)); // strictly causal maxAncestorRank <= r
             }
         } else {
             for (int u = 0; u < numUnits; u++) {
@@ -359,12 +381,18 @@ public final class HyperGraSSFusionEngine {
                 InputUnit iu = units.get(u);
                 out.writeVarInt(iu.firstRecordIdx);
                 out.writeVarInt(iu.recordCount);
-                ByteOut metaRaw = new ByteOut(256);
-                FastaStreamFactorizer.writeAuxMetadata(metaRaw, iu.chunk);
-                out.writeVarInt(metaRaw.size());
-                out.writeBytes(metaRaw.internalBuffer(), 0, metaRaw.size());
-                // Free bulky chunk arrays now that metadata is serialized & DNA is 2-bit packed!
-                iu.chunk = null;
+                if (iu.compressedAux != null) {
+                    out.writeVarInt(iu.compressedAux.length);
+                    out.writeBytes(iu.compressedAux);
+                    iu.compressedAux = null;
+                } else {
+                    ByteOut metaRaw = new ByteOut(256);
+                    FastaStreamFactorizer.writeAuxMetadata(metaRaw, iu.chunk);
+                    out.writeVarInt(metaRaw.size());
+                    out.writeBytes(metaRaw.internalBuffer(), 0, metaRaw.size());
+                    // Free bulky chunk arrays now that metadata is serialized & DNA is 2-bit packed!
+                    iu.chunk = null;
+                }
             }
         } else {
             for (int u = 0; u < numUnits; u++) {
@@ -376,7 +404,6 @@ public final class HyperGraSSFusionEngine {
         EncodedMosaic[] rankMosaics = new EncodedMosaic[numUnits];
         long panelBasesTotal = 0L;
         int panelGenomeCount = 0;
-        long maxMemAtStart = Runtime.getRuntime().maxMemory();
         int safeStage1Threads =
                 (maxMemAtStart <= 145L * 1024 * 1024)
                         ? 1
@@ -385,10 +412,14 @@ public final class HyperGraSSFusionEngine {
                                 : (bounded ? Math.min(threads, 4) : threads));
 
         if (mode == MODE_SINGLE) {
-            InputUnit u0 = units.get(0);
-            rankMosaics[0] =
-                    EimdlMosaicCodec.encodeMosaic(
-                            u0.seq, null, 0, -1, null, opts.mosaicConfig, safeStage1Threads);
+            for (int u = 0; u < numUnits; u++) {
+                InputUnit iu = units.get(u);
+                rankMosaics[u] =
+                        EimdlMosaicCodec.encodeMosaic(
+                                iu.seq, null, 0, -1, null, opts.mosaicConfig, safeStage1Threads);
+                iu.seq = null;
+            }
+            units = null;
         } else if (mode == MODE_REF) {
             panelGenomeCount = loadedPanel.seqs.length;
             panelBasesTotal = loadedPanel.totalBases;
@@ -462,34 +493,54 @@ public final class HyperGraSSFusionEngine {
 
             // Compute subsampling dynamically from (totalBankBases, maxMemory) so CSR + bank + workers
             // fit strictly inside tight heaps (-Xmx128m .. -Xmx1g) even at 300 Mbp .. 1 Gbp+!
-            long maxMemBytes = Runtime.getRuntime().maxMemory();
-            long totalBankBases = 0L;
-            for (Packed2BitSequence seq : orderedDonors) {
-                if (seq != null) {
-                    totalBankBases += seq.length;
-                }
-            }
-            long bankBytes = (totalBankBases + 3L) >>> 2;
+            long maxMemBytes = maxMemAtStart;
+            long colBankBases = totalBankBases;
+            long bankBytes = (colBankBases + 3L) >>> 2;
             boolean ultraTight = maxMemBytes <= 205L * 1024 * 1024;
             boolean extremeTight = maxMemBytes <= 145L * 1024 * 1024;
+            boolean hubBounded = hubCap < numUnits;
             boolean bankHeavy = bankBytes * 5L > maxMemBytes * 2L;
             boolean memPressured = bounded || (bankBytes * 5L > maxMemBytes);
 
             int maxMosaicWorkers =
-                    (extremeTight || bankHeavy)
+                    (extremeTight || bankHeavy || hubBounded)
                             ? 1
                             : (ultraTight
                                     ? Math.min(threads, 2)
                                     : (bounded ? Math.min(threads, 4) : threads));
             int workerThreads = Math.min(maxMosaicWorkers, numUnits);
             long workerReserve = (long) workerThreads * 6L * 1024 * 1024 + (4L << 20);
-            long csrBudget =
-                    Math.max(6L << 20, (long) (maxMemBytes * 0.72) - bankBytes - workerReserve);
 
-            int subsampleShift = bounded ? (ultraTight ? 2 : 1) : 0;
-            if (memPressured) {
+            Packed2BitSequence[] indexDonors;
+            long indexedBankBases = 0L;
+            if (hubBounded) {
+                indexDonors = new Packed2BitSequence[hubCap];
+                for (int d = 0; d < hubCap; d++) {
+                    Packed2BitSequence src = orderedDonors[d];
+                    indexDonors[d] = (src == null) ? null : src.sliceSeq(0, src.length);
+                    if (src != null) {
+                        indexedBankBases += src.length;
+                    }
+                    orderedDonors[d] = null;
+                }
+            } else {
+                indexDonors = orderedDonors;
+                indexedBankBases = colBankBases;
+            }
+            long indexedBankBytes = hubBounded ? bankBytes : ((indexedBankBases + 3L) >>> 2);
+            long hubExtraBytes = hubBounded ? ((indexedBankBases + 3L) >>> 2) : 0L;
+            long csrBudget =
+                    Math.max(
+                            4L << 20,
+                            (long) (maxMemBytes * 0.72)
+                                    - indexedBankBytes
+                                    - hubExtraBytes
+                                    - workerReserve);
+
+            int subsampleShift = bounded ? (ultraTight ? 2 : (hubBounded ? 0 : 1)) : 0;
+            if (memPressured || hubBounded) {
                 long estRawEntries =
-                        Math.max(1024L, totalBankBases / Packed2BitSequence.W_PRIMARY);
+                        Math.max(1024L, indexedBankBases / Packed2BitSequence.W_PRIMARY);
                 while (subsampleShift < 6) {
                     long ent = Math.max(1024L, estRawEntries >>> subsampleShift);
                     long estBucketBytes = Math.min(8L << 20, Math.max(64L << 10, ent * 2L));
@@ -500,30 +551,44 @@ public final class HyperGraSSFusionEngine {
                 }
             }
             int buildThreads =
-                    (extremeTight || bankHeavy)
+                    (extremeTight || bankHeavy || hubBounded)
                             ? 1
                             : (bounded ? Math.min(threads, 4) : threads);
             EimdlSyncmerIndex sharedDagIdx =
                     EimdlSyncmerIndex.buildWithSubsampling(
-                            orderedDonors,
+                            indexDonors,
                             subsampleShift,
                             true,
-                            !bounded && !memPressured && numUnits <= 16,
+                            !bounded && !memPressured && !hubBounded && numUnits <= 16,
                             buildThreads);
-            orderedDonors = null;
+            if (!hubBounded) {
+                orderedDonors = null;
+            }
+            indexDonors = null;
             boolean useIntraUnitChunking =
                     maxMosaicWorkers > 1
                             && (workerThreads <= 1
                                     || (numUnits <= 4
-                                            && totalBankBases >= 16_000_000L
+                                            && colBankBases >= 16_000_000L
                                             && !memPressured
                                             && !bounded));
             if (workerThreads <= 1 || useIntraUnitChunking) {
                 int chunkThreads = useIntraUnitChunking ? maxMosaicWorkers : 1;
                 for (int r = 0; r < numUnits; r++) {
-                    int dStart = sharedDagIdx.donorOffsets[r];
-                    int dLen = sharedDagIdx.donorOffsets[r + 1] - dStart;
-                    Packed2BitSequence targetSeq = sharedDagIdx.bank.sliceSeq(dStart, dLen);
+                    Packed2BitSequence targetSeq;
+                    if (r < sharedDagIdx.numDonors) {
+                        int dStart = sharedDagIdx.donorOffsets[r];
+                        int dLen = sharedDagIdx.donorOffsets[r + 1] - dStart;
+                        targetSeq = sharedDagIdx.bank.sliceSeq(dStart, dLen);
+                    } else {
+                        targetSeq = orderedDonors[r];
+                        orderedDonors[r] = null;
+                    }
+                    int ancLimit = Math.min(r, hubCap);
+                    int prefTwin =
+                            (mstParentRank[r] >= 0 && mstParentRank[r] < ancLimit)
+                                    ? mstParentRank[r]
+                                    : (ancLimit > 0 ? 0 : -1);
                     if (r == 0) {
                         rankMosaics[0] =
                                 EimdlMosaicCodec.encodeMosaic(
@@ -539,12 +604,13 @@ public final class HyperGraSSFusionEngine {
                                 EimdlMosaicCodec.encodeMosaic(
                                         targetSeq,
                                         sharedDagIdx,
-                                        r,
-                                        mstParentRank[r],
+                                        ancLimit,
+                                        prefTwin,
                                         rankDonorSimilarityOrder[r],
                                         opts.mosaicConfig,
                                         chunkThreads);
                     }
+                    rankDonorSimilarityOrder[r] = null;
                 }
             } else {
                 final EimdlSyncmerIndex dagIdx = sharedDagIdx;
@@ -597,6 +663,7 @@ public final class HyperGraSSFusionEngine {
                 }
             }
             sharedDagIdx = null; // Free CSR index + 2-bit bank before Novelty Superstream coding!
+            orderedDonors = null;
             mstParentRank = null;
             rankDonorSimilarityOrder = null;
         }
@@ -643,25 +710,16 @@ public final class HyperGraSSFusionEngine {
             throw new IllegalStateException("Novelty superstream exceeds 2.14 Gbp");
         }
         int totalNovelty = (int) totalNoveltyLong;
-        byte[] noveltySuper = new byte[totalNovelty];
-        int novDst = 0;
-        for (int r = 0; r < numUnits; r++) {
-            int nLen = unitNovLens[r];
-            if (nLen > 0) {
-                System.arraycopy(unitNovSlices[r], 0, noveltySuper, novDst, nLen);
-                novDst += nLen;
-            }
-            unitNovSlices[r] = null; // release per-unit novelty buffer incrementally!
-        }
+        byte[] noveltyComp =
+                FastNoveltyCoder.encodeFromSlices(
+                        unitNovSlices, unitNovLens, totalNovelty, threads, bounded);
         unitNovSlices = null;
         unitNovLens = null;
-
-        byte[] noveltyComp = FastNoveltyCoder.encode(noveltySuper, totalNovelty, threads, bounded);
-        noveltySuper = null;
 
         out.writeVarInt(totalNovelty);
         out.writeVarInt(noveltyComp.length);
         out.writeBytes(noveltyComp);
+        noveltyComp = null;
 
         double secs = (System.nanoTime() - startNano) / 1e9;
         return new CompressionReport(
@@ -730,14 +788,13 @@ public final class HyperGraSSFusionEngine {
             refBank = Packed2BitSequence.concatenate(panelSeqs, refOffsets);
         }
 
-        // Decode Unified Novelty DNA Superstream in parallel
+        // Decode Unified Novelty DNA Superstream lazily / in bounded chunks
         ByteIn novIn = new ByteIn(archive, hdr.noveltyOffset, hdr.noveltyPayloadLen);
-        byte[] noveltySuper =
-                FastNoveltyCoder.decode(novIn, hdr.totalNoveltyBases, threads, bounded);
+        FastNoveltyCoder.NoveltyReader novReader =
+                FastNoveltyCoder.openNoveltyReader(novIn, hdr.totalNoveltyBases, threads, bounded);
 
         // Slice novelty & target lengths per rank
         int[] rankTargetLen = new int[hdr.numUnits];
-        int[] rankNoveltyStart = new int[hdr.numUnits];
         int[] rankNoveltyLen = new int[hdr.numUnits];
         int nCur = 0;
         long totalTargetBasesLong = 0L;
@@ -747,7 +804,6 @@ public final class HyperGraSSFusionEngine {
                             archive, hdr.mosaicOffsets[r], hdr.mosaicOffsets[r] + hdr.mosaicLens[r]);
             int[] tlNl = EimdlMosaicCodec.peekLengths(mBytes);
             rankTargetLen[r] = tlNl[0];
-            rankNoveltyStart[r] = nCur;
             rankNoveltyLen[r] = tlNl[1];
             nCur += tlNl[1];
             totalTargetBasesLong += tlNl[0];
@@ -776,11 +832,7 @@ public final class HyperGraSSFusionEngine {
                                 archive,
                                 hdr.mosaicOffsets[r],
                                 hdr.mosaicOffsets[r] + hdr.mosaicLens[r]);
-                byte[] novSlice =
-                        Arrays.copyOfRange(
-                                noveltySuper,
-                                rankNoveltyStart[r],
-                                rankNoveltyStart[r] + rankNoveltyLen[r]);
+                byte[] novSlice = novReader.nextSlice(rankNoveltyLen[r]);
                 byte[] twoBit =
                         (r == 0)
                                 ? EimdlMosaicCodec.decodeMosaicToTwoBit(
@@ -801,11 +853,7 @@ public final class HyperGraSSFusionEngine {
                                 archive,
                                 hdr.mosaicOffsets[u],
                                 hdr.mosaicOffsets[u] + hdr.mosaicLens[u]);
-                byte[] novSlice =
-                        Arrays.copyOfRange(
-                                noveltySuper,
-                                rankNoveltyStart[u],
-                                rankNoveltyStart[u] + rankNoveltyLen[u]);
+                byte[] novSlice = novReader.nextSlice(rankNoveltyLen[u]);
                 byte[] twoBit =
                         EimdlMosaicCodec.decodeMosaicToTwoBit(
                                 mBytes, novSlice, refBank, refOffsets, refDonorCount);
@@ -813,7 +861,7 @@ public final class HyperGraSSFusionEngine {
             }
         }
 
-        noveltySuper = null;
+        novReader = null;
         refBank = null;
 
         // Reconstruct exact byte stream one unit at a time (~4.5 MB live buffer) & verify CRC-32
@@ -1160,15 +1208,125 @@ public final class HyperGraSSFusionEngine {
     private static final class InputUnit {
         Packed2BitSequence seq;
         FactorizedChunk chunk;
+        byte[] compressedAux;
         final int firstRecordIdx;
         final int recordCount;
 
         InputUnit(Packed2BitSequence seq, FactorizedChunk chunk, int firstRecordIdx, int recordCount) {
             this.seq = seq;
             this.chunk = chunk;
+            this.compressedAux = null;
             this.firstRecordIdx = firstRecordIdx;
             this.recordCount = recordCount;
         }
+
+        static InputUnit withCompressedAux(
+                Packed2BitSequence seq, byte[] compressedAux, int firstRecordIdx, int recordCount) {
+            InputUnit u = new InputUnit(seq, null, firstRecordIdx, recordCount);
+            u.compressedAux = compressedAux;
+            return u;
+        }
+    }
+
+    /**
+     * Streams any FASTA, multi-FASTA, RNA, soft-masked, or mega-byte (>2 GiB raw) input file
+     * slice-by-slice without ever calling {@code Files.readAllBytes(inputPath)}, compacting
+     * per-unit 6-channel auxiliary metadata immediately into serialized bytes to fit tightly inside
+     * bounded JVM heaps ({@code -Xmx256m} / {@code -Xmx512m}).
+     */
+    private static ParsedRawInput tryStreamGeneralFile(Path inputPath, FusionOptions opts)
+            throws IOException {
+        long fileSize = Files.size(inputPath);
+        int mode;
+        if (opts.referencePanel != null) {
+            mode = MODE_REF;
+        } else if (opts.mode >= 0) {
+            mode = opts.mode;
+        } else if (opts.singleGenome || fileSize < 6_500_000L) {
+            mode = MODE_SINGLE;
+        } else {
+            mode = MODE_COLLECTION;
+        }
+
+        if (fileSize == 0L) {
+            return new ParsedRawInput(0L, 0, mode, false, false, 0, List.of());
+        }
+
+        boolean boundedParse =
+                opts.boundedMemory || Runtime.getRuntime().maxMemory() <= 320L * 1024 * 1024;
+        int sliceTarget = TARGET_COLLECTION_UNIT_BASES;
+        FastaStreamFactorizer.FilePartition part =
+                FastaStreamFactorizer.partitionFile(inputPath, sliceTarget, true);
+
+        List<long[]> unitRanges = new ArrayList<>();
+        if (mode != MODE_COLLECTION && fileSize <= 16_777_216L && !boundedParse) {
+            unitRanges.add(new long[] {0L, fileSize});
+        } else {
+            List<FastaStreamFactorizer.BlockSlice> slices = part.slices;
+            int idx = 0;
+            while (idx < slices.size()) {
+                long start = slices.get(idx).startByte;
+                long end = slices.get(idx).endByte;
+                idx++;
+                while (idx < slices.size()
+                        && (end - start) + (slices.get(idx).endByte - slices.get(idx).startByte)
+                                <= (long) sliceTarget + 524_288L) {
+                    end = slices.get(idx).endByte;
+                    idx++;
+                }
+                unitRanges.add(new long[] {start, end});
+            }
+        }
+
+        int numUnits = unitRanges.size();
+        List<InputUnit> units = new ArrayList<>(numUnits);
+        int totalRecAcc = 0;
+        long totalDnaAcc = 0L;
+        byte[] ioScratch = new byte[0];
+        ByteOut metaBuf = new ByteOut(4096);
+
+        try (SeekableByteChannel ch = Files.newByteChannel(inputPath, StandardOpenOption.READ)) {
+            for (int u = 0; u < numUnits; u++) {
+                long start = unitRanges.get(u)[0];
+                long end = unitRanges.get(u)[1];
+                long lenLong = end - start;
+                if (lenLong > Integer.MAX_VALUE - 64L) {
+                    throw new IllegalStateException("Unit byte slice exceeds 2.14 GiB");
+                }
+                int len = (int) lenLong;
+                if (ioScratch.length < len) {
+                    ioScratch = new byte[len];
+                }
+                ch.position(start);
+                ByteBuffer bb = ByteBuffer.wrap(ioScratch, 0, len);
+                while (bb.hasRemaining()) {
+                    int nRead = ch.read(bb);
+                    if (nRead < 0) {
+                        throw new IOException("Unexpected EOF while streaming " + inputPath);
+                    }
+                }
+                FactorizedChunk chunk = FastaStreamFactorizer.factorize(ioScratch, 0, len);
+                int recCnt = chunk.getRecordSpans().length;
+                totalDnaAcc += chunk.dnaLen;
+                if (totalDnaAcc > Integer.MAX_VALUE - 64L) {
+                    throw new IllegalStateException(
+                            "Input DNA exceeds Java 2.14 Gbp limit; use native eimdl CLI for 64-bit >2.14 Gbp streams");
+                }
+                Packed2BitSequence seq =
+                        Packed2BitSequence.fromTwoBitBytes(chunk.dnaBases, chunk.dnaLen);
+                chunk.dnaBases = null;
+                metaBuf.reset();
+                FastaStreamFactorizer.writeAuxMetadata(metaBuf, chunk);
+                byte[] compAux = metaBuf.toByteArray();
+                units.add(InputUnit.withCompressedAux(seq, compAux, totalRecAcc, recCnt));
+                totalRecAcc += recCnt;
+            }
+        }
+
+        if (mode == MODE_COLLECTION && units.size() <= 1 && opts.mode < 0) {
+            mode = MODE_SINGLE;
+        }
+        return new ParsedRawInput(fileSize, part.crc32, mode, false, false, totalRecAcc, units);
     }
 
     /**
@@ -1497,10 +1655,8 @@ public final class HyperGraSSFusionEngine {
                             try {
                                 Path p = finalFiles.get(i);
                                 names[i] = p.getFileName().toString();
-                                byte[] raw = Files.readAllBytes(p);
-                                fileByteLens[i] = raw.length;
-                                fileHashes[i] = sha256(raw);
-                                seqs[i] = extractDnaFromReferenceBytes(raw);
+                                seqs[i] =
+                                        streamPanelFileAndHash(p, fileHashes, fileByteLens, i);
                             } catch (IOException e) {
                                 throw new RuntimeException(e);
                             }
@@ -1553,10 +1709,9 @@ public final class HyperGraSSFusionEngine {
                 .forEach(
                         i -> {
                             try {
-                                byte[] raw = Files.readAllBytes(files[i]);
-                                fileByteLens[i] = raw.length;
-                                fileHashes[i] = sha256(raw);
-                                seqs[i] = extractDnaFromReferenceBytes(raw);
+                                seqs[i] =
+                                        streamPanelFileAndHash(
+                                                files[i], fileHashes, fileByteLens, i);
                             } catch (IOException e) {
                                 throw new RuntimeException(e);
                             }
@@ -1570,33 +1725,53 @@ public final class HyperGraSSFusionEngine {
         return seqs;
     }
 
-    private static Packed2BitSequence extractDnaFromReferenceBytes(byte[] raw) {
-        Packed2BitSequence flat = Packed2BitSequence.tryFromFlatUppercaseAcgt(raw, raw.length);
-        if (flat != null) {
-            return flat;
+    private static Packed2BitSequence streamPanelFileAndHash(
+            Path p, byte[][] hashesOut, long[] byteLensOut, int idx) throws IOException {
+        MessageDigest md;
+        try {
+            md = MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
         }
-        byte[] twoBit = new byte[raw.length];
-        int len = 0;
+        Packed2BitSequence.DynamicPageBuilder pb = new Packed2BitSequence.DynamicPageBuilder();
+        byte[] buf = new byte[65536];
+        long totalBytes = 0L;
         boolean inHeader = false;
-        for (int i = 0; i < raw.length; i++) {
-            int b = raw[i] & 0xFF;
-            if (inHeader) {
-                if (b == '\n') inHeader = false;
-                continue;
-            }
-            if (b == '>' && (i == 0 || raw[i - 1] == '\n' || raw[i - 1] == '\r')) {
-                inHeader = true;
-                continue;
-            }
-            switch (b) {
-                case 'A', 'a' -> twoBit[len++] = 0;
-                case 'C', 'c' -> twoBit[len++] = 1;
-                case 'G', 'g' -> twoBit[len++] = 2;
-                case 'T', 't', 'U', 'u' -> twoBit[len++] = 3;
-                default -> {}
+        boolean atLineStart = true;
+
+        try (InputStream in = Files.newInputStream(p)) {
+            int nRead;
+            while ((nRead = in.read(buf)) > 0) {
+                md.update(buf, 0, nRead);
+                totalBytes += nRead;
+                for (int i = 0; i < nRead; i++) {
+                    int b = buf[i] & 0xFF;
+                    if (inHeader) {
+                        if (b == '\n') {
+                            inHeader = false;
+                            atLineStart = true;
+                        }
+                        continue;
+                    }
+                    if (b == '>' && atLineStart) {
+                        inHeader = true;
+                        atLineStart = false;
+                        continue;
+                    }
+                    atLineStart = (b == '\n' || b == '\r');
+                    switch (b) {
+                        case 'A', 'a' -> pb.appendBase(0);
+                        case 'C', 'c' -> pb.appendBase(1);
+                        case 'G', 'g' -> pb.appendBase(2);
+                        case 'T', 't', 'U', 'u' -> pb.appendBase(3);
+                        default -> {}
+                    }
+                }
             }
         }
-        return Packed2BitSequence.fromTwoBitBytes(twoBit, len);
+        byteLensOut[idx] = totalBytes;
+        hashesOut[idx] = md.digest();
+        return pb.build();
     }
 
     private static byte[] computeManifestSha256(

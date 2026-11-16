@@ -65,6 +65,50 @@ jobs:
           SKIP_BUILD: "1"
         run: ./test.sh
 
+      - name: Build Native C11/C++20/Rust eimdl engine and verify tests + Java<->Native interop
+        if: matrix.java == '21' && runner.os == 'Linux'
+        run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
+          gcc --version && g++ --version && cargo --version
+          (cd native/eimdl-rs && cargo build --release --offline && cargo test --release --offline)
+          ./native/eimdl-rs/target/release/eimdl --version
+          python3 - <<'PY'
+          import hashlib, os, subprocess, tempfile
+          from pathlib import Path
+          with tempfile.TemporaryDirectory() as td:
+              p = Path(td)
+              pdir = p / "panel"
+              pdir.mkdir()
+              donor = (b">donor0 chr test\n" + ((b"ACGT" * 200 + b"TGCA" * 150) * 6) + b"\n")
+              (pdir / "donor0.fa").write_bytes(donor)
+              tgt = (
+                  b">strain_a\r\n" + (b"ACGT" * 200 + b"TGCA" * 150) * 3
+                  + b"acgtuuNNNNNNRYSW" + (b"ACGT" * 200 + b"TGCA" * 150) * 3 + b"\r\n"
+                  + b">strain_b\n" + (b"TGCA" * 150 + b"ACGT" * 200) * 3 + b"\n"
+              )
+              raw = p / "multi.fa"
+              raw.write_bytes(tgt)
+              expected = hashlib.sha256(tgt).hexdigest()
+              eimdl = str(Path("native/eimdl-rs/target/release/eimdl").resolve())
+              for flags in (["--single"], ["--collection"], ["--collection", "--bounded"]):
+                  tag = "_".join(f.lstrip("-") for f in flags)
+                  aj, an, oj, on = p / f"j_{tag}.hgs2", p / f"n_{tag}.hgs2", p / f"oj_{tag}.fa", p / f"on_{tag}.fa"
+                  subprocess.run(["java", "-cp", "bin", "hypergrass.EimdlCli", "compress", "--target", str(raw), "--out", str(aj), *flags, "--threads", "2"], check=True)
+                  subprocess.run([eimdl, "decompress", "--archive", str(aj), "--out", str(on), "--threads", "2"], check=True)
+                  assert hashlib.sha256(on.read_bytes()).hexdigest() == expected, f"Java->Native mismatch ({flags})"
+                  subprocess.run([eimdl, "compress", "--target", str(raw), "--out", str(an), *flags, "--threads", "2"], check=True)
+                  subprocess.run(["java", "-cp", "bin", "hypergrass.EimdlCli", "decompress", "--archive", str(an), "--out", str(oj)], check=True)
+                  assert hashlib.sha256(oj.read_bytes()).hexdigest() == expected, f"Native->Java mismatch ({flags})"
+              rj, rn, drj, drn = p / "rj.hgs2", p / "rn.hgs2", p / "drj.fa", p / "drn.fa"
+              subprocess.run(["java", "-cp", "bin", "hypergrass.EimdlCli", "compress", "--target", str(raw), "--out", str(rj), "--panel", str(pdir), "--threads", "2"], check=True)
+              subprocess.run([eimdl, "decompress", "--archive", str(rj), "--panel", str(pdir), "--out", str(drn), "--threads", "2"], check=True)
+              assert hashlib.sha256(drn.read_bytes()).hexdigest() == expected, "Java->Native Mode R mismatch"
+              subprocess.run([eimdl, "compress", "--target", str(raw), "--out", str(rn), "--panel", str(pdir), "--threads", "2"], check=True)
+              subprocess.run(["java", "-cp", "bin", "hypergrass.EimdlCli", "decompress", "--archive", str(rn), "--panel", str(pdir), "--out", str(drj)], check=True)
+              assert hashlib.sha256(drj.read_bytes()).hexdigest() == expected, "Native->Java Mode R mismatch"
+              print("PASS: Bidirectional Java<->Native C11/C++20/Rust wire parity verified (Mode S, R, C).")
+          PY
+
   audit:
     name: Paper Audit & Metadata Integrity
     runs-on: ubuntu-latest

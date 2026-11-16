@@ -124,7 +124,8 @@ public final class FastNoveltyCoder {
             return empty.toByteArray();
         }
 
-        if (len >= TURBO_THRESHOLD) {
+        int turboCutoff = boundedMem ? TURBO_THRESHOLD : 64_000_000;
+        if (len >= turboCutoff) {
             return encodeTurbo(bases, len, threads, boundedMem);
         }
 
@@ -454,6 +455,254 @@ public final class FastNoveltyCoder {
             out.writeBytes(encoded[i]);
         }
         return out.toByteArray();
+    }
+
+    /**
+     * Bounded-memory encoder over chunked per-unit novelty slices, progressively releasing
+     * {@code slices[i] = null} so large chromosomes and collections avoid allocating a second
+     * 1-byte/base superstream under tight {@code -Xmx256m} heaps.
+     */
+    public static byte[] encodeFromSlices(
+            byte[][] slices, int[] sliceLens, int totalLen, int threads, boolean boundedMem) {
+        if (totalLen <= 0) {
+            ByteOut empty = new ByteOut(4);
+            empty.writeVarInt(0);
+            return empty.toByteArray();
+        }
+        int turboCutoff = boundedMem ? TURBO_THRESHOLD : 64_000_000;
+        if (totalLen < turboCutoff) {
+            byte[] flat = new byte[totalLen];
+            int dst = 0;
+            for (int i = 0; i < slices.length; i++) {
+                int sl = sliceLens[i];
+                if (sl > 0 && slices[i] != null) {
+                    System.arraycopy(slices[i], 0, flat, dst, sl);
+                    dst += sl;
+                }
+                slices[i] = null;
+            }
+            return encode(flat, totalLen, threads, boundedMem);
+        }
+
+        int totalSegs = (totalLen + TURBO_SEG_BASES - 1) / TURBO_SEG_BASES;
+        int[] segLens = new int[totalSegs];
+        for (int i = 0; i < totalSegs; i++) {
+            segLens[i] = Math.min(TURBO_SEG_BASES, totalLen - i * TURBO_SEG_BASES);
+        }
+
+        byte[][] encoded = new byte[totalSegs][];
+        int sliceIdx = 0;
+        int sliceOff = 0;
+        int batchWorkers = boundedMem ? 1 : Math.max(1, Math.min(threads, 4));
+
+        if (batchWorkers <= 1) {
+            byte[] scratch = new byte[Math.min(TURBO_SEG_BASES, totalLen)];
+            for (int s = 0; s < totalSegs; s++) {
+                int need = segLens[s];
+                int filled = 0;
+                while (filled < need && sliceIdx < slices.length) {
+                    int sl = sliceLens[sliceIdx];
+                    int avail = sl - sliceOff;
+                    if (avail <= 0) {
+                        slices[sliceIdx] = null;
+                        sliceIdx++;
+                        sliceOff = 0;
+                        continue;
+                    }
+                    int take = Math.min(avail, need - filled);
+                    System.arraycopy(slices[sliceIdx], sliceOff, scratch, filled, take);
+                    filled += take;
+                    sliceOff += take;
+                    if (sliceOff >= sl) {
+                        slices[sliceIdx] = null;
+                        sliceIdx++;
+                        sliceOff = 0;
+                    }
+                }
+                encoded[s] = encodeTurboSegment(scratch, 0, need);
+            }
+        } else {
+            byte[][] batchBufs = new byte[batchWorkers][];
+            int[] batchLens = new int[batchWorkers];
+            for (int w = 0; w < batchWorkers; w++) {
+                batchBufs[w] = new byte[Math.min(TURBO_SEG_BASES, totalLen)];
+            }
+            ForkJoinPool pool = new ForkJoinPool(batchWorkers);
+            try {
+                for (int baseSeg = 0; baseSeg < totalSegs; baseSeg += batchWorkers) {
+                    final int count = Math.min(batchWorkers, totalSegs - baseSeg);
+                    for (int w = 0; w < count; w++) {
+                        int need = segLens[baseSeg + w];
+                        batchLens[w] = need;
+                        int filled = 0;
+                        while (filled < need && sliceIdx < slices.length) {
+                            int sl = sliceLens[sliceIdx];
+                            int avail = sl - sliceOff;
+                            if (avail <= 0) {
+                                slices[sliceIdx] = null;
+                                sliceIdx++;
+                                sliceOff = 0;
+                                continue;
+                            }
+                            int take = Math.min(avail, need - filled);
+                            System.arraycopy(slices[sliceIdx], sliceOff, batchBufs[w], filled, take);
+                            filled += take;
+                            sliceOff += take;
+                            if (sliceOff >= sl) {
+                                slices[sliceIdx] = null;
+                                sliceIdx++;
+                                sliceOff = 0;
+                            }
+                        }
+                    }
+                    final int startSeg = baseSeg;
+                    pool.submit(
+                                    () ->
+                                            IntStream.range(0, count)
+                                                    .parallel()
+                                                    .forEach(
+                                                            w ->
+                                                                    encoded[startSeg + w] =
+                                                                            encodeTurboSegment(
+                                                                                    batchBufs[w],
+                                                                                    0,
+                                                                                    batchLens[w])))
+                            .join();
+                }
+            } finally {
+                pool.shutdown();
+            }
+        }
+
+        long totalComp = 0L;
+        for (byte[] e : encoded) {
+            totalComp += e.length;
+        }
+        int modelFlags = (boundedMem ? 1 : 0) | FLAG_TURBO_NOVELTY;
+        ByteOut out = new ByteOut((int) Math.min(Integer.MAX_VALUE - 64L, totalComp + totalSegs * 8L + 16L));
+        out.writeVarInt(totalSegs);
+        out.writeByte(modelFlags);
+        for (int i = 0; i < totalSegs; i++) {
+            out.writeVarInt(segLens[i]);
+        }
+        for (int i = 0; i < totalSegs; i++) {
+            out.writeVarInt(encoded[i].length);
+        }
+        for (int i = 0; i < totalSegs; i++) {
+            out.writeBytes(encoded[i]);
+            encoded[i] = null;
+        }
+        return out.toByteArray();
+    }
+
+    /** Streaming / lazy reader over novelty payloads keeping <= 4 MB live during Turbo bounded decode. */
+    public static final class NoveltyReader {
+        private final boolean lazyTurbo;
+        private final int[] segLens;
+        private final byte[][] payloads;
+        private int segIdx = -1;
+        private byte[] curSegBuf;
+        private int curSegLen = 0;
+        private int curSegOff = 0;
+
+        private final byte[] fullBuf;
+        private int fullOff = 0;
+
+        private NoveltyReader(int[] segLens, byte[][] payloads) {
+            this.lazyTurbo = true;
+            this.segLens = segLens;
+            this.payloads = payloads;
+            this.fullBuf = null;
+        }
+
+        private NoveltyReader(byte[] fullBuf) {
+            this.lazyTurbo = false;
+            this.segLens = null;
+            this.payloads = null;
+            this.fullBuf = fullBuf;
+        }
+
+        public byte[] nextSlice(int len) {
+            if (len <= 0) {
+                return new byte[0];
+            }
+            if (!lazyTurbo) {
+                byte[] out = Arrays.copyOfRange(fullBuf, fullOff, fullOff + len);
+                fullOff += len;
+                return out;
+            }
+            byte[] out = new byte[len];
+            int filled = 0;
+            while (filled < len) {
+                if (segIdx < 0 || curSegOff >= curSegLen) {
+                    segIdx++;
+                    if (segIdx >= payloads.length) {
+                        throw new IllegalStateException("Novelty stream exhausted early");
+                    }
+                    int sl = segLens[segIdx];
+                    if (curSegBuf == null || curSegBuf.length < sl) {
+                        curSegBuf = new byte[sl];
+                    }
+                    decodeTurboSegment(payloads[segIdx], curSegBuf, 0, sl);
+                    payloads[segIdx] = null; // release compressed payload incrementally!
+                    curSegLen = sl;
+                    curSegOff = 0;
+                }
+                int avail = curSegLen - curSegOff;
+                int take = Math.min(avail, len - filled);
+                System.arraycopy(curSegBuf, curSegOff, out, filled, take);
+                filled += take;
+                curSegOff += take;
+            }
+            return out;
+        }
+    }
+
+    public static NoveltyReader openNoveltyReader(
+            ByteIn in, int expectedLen, int threads, boolean boundedMem) {
+        if (expectedLen == 0) {
+            int totalSegs = in.readVarInt();
+            if (totalSegs != 0) {
+                throw new IllegalStateException("Expected 0 novelty segments for empty stream");
+            }
+            return new NoveltyReader(new byte[0]);
+        }
+        int mark = in.position();
+        int totalSegs = in.readVarInt();
+        if (totalSegs <= 0 || totalSegs > expectedLen / 1024 + 2) {
+            throw new IllegalStateException("Malformed novelty segment count: " + totalSegs);
+        }
+        int modelFlags = in.readByte() & 0xFF;
+        if ((modelFlags & ~7) != 0) {
+            throw new IllegalStateException("Unsupported novelty model flags: " + modelFlags);
+        }
+        boolean encodedTurbo = (modelFlags & FLAG_TURBO_NOVELTY) != 0;
+        if (encodedTurbo && (boundedMem || expectedLen >= 32_000_000)) {
+            int[] segLens = new int[totalSegs];
+            int sumLen = 0;
+            for (int i = 0; i < totalSegs; i++) {
+                segLens[i] = in.readVarInt();
+                if (segLens[i] < 0 || sumLen + segLens[i] > expectedLen) {
+                    throw new IllegalStateException("Invalid novelty segment length");
+                }
+                sumLen += segLens[i];
+            }
+            if (sumLen != expectedLen) {
+                throw new IllegalStateException(
+                        "Novelty segment length sum mismatch: " + sumLen + " vs " + expectedLen);
+            }
+            int[] compLens = new int[totalSegs];
+            for (int i = 0; i < totalSegs; i++) {
+                compLens[i] = in.readVarInt();
+            }
+            byte[][] payloads = new byte[totalSegs][];
+            for (int i = 0; i < totalSegs; i++) {
+                payloads[i] = in.readBytes(compLens[i]);
+            }
+            return new NoveltyReader(segLens, payloads);
+        }
+        in.setPosition(mark);
+        return new NoveltyReader(decode(in, expectedLen, threads, boundedMem));
     }
 
     private static void decodeTurbo(

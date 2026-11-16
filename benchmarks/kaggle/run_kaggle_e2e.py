@@ -72,6 +72,23 @@ def stage_dataset(stage_dir: Path) -> None:
     for jf in sorted((REPO_ROOT / "src" / "hypergrass").glob("*.java")):
         shutil.copy2(jf, sub / "src" / "hypergrass" / jf.name)
 
+    native_src = REPO_ROOT / "native"
+    if native_src.is_dir():
+        native_dst = sub / "native"
+        for rel_sub in ("c_kernels", "cpp_engine", "eimdl-rs/src", "eimdl-rs/tests"):
+            src_dir = native_src / rel_sub
+            if src_dir.is_dir():
+                dst_dir = native_dst / rel_sub
+                dst_dir.mkdir(parents=True, exist_ok=True)
+                for fp in sorted(src_dir.iterdir()):
+                    if fp.is_file():
+                        shutil.copy2(fp, dst_dir / fp.name)
+        for root_f in ("eimdl-rs/Cargo.toml", "eimdl-rs/build.rs"):
+            fp = native_src / root_f
+            if fp.is_file():
+                (native_dst / "eimdl-rs").mkdir(parents=True, exist_ok=True)
+                shutil.copy2(fp, native_dst / root_f)
+
     grass_dir = Path.home() / ".gemini/antigravity/brain/92f6b277-dea3-42a9-b123-90c65fe25a1c/scratch/GraSS/src"
     if grass_dir.is_dir():
         for fn in ("In.fa", "BuEb", "GCF_001884535.1.fna"):

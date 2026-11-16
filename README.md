@@ -374,6 +374,11 @@ hypergrass/
 │   ├── VerifyAnchorCodecs.java              # 9-suite anchor-bank codec verifier
 │   ├── VerifyArchiveAccounting.java         # 34-suite byte-accounting & 1,721-mutation fuzz rejection verifier
 │   └── [VerifyCostAwareEncoding, VerifyDonorArchives, VerifyDonorCosts, VerifyDonorIndex, AuxPlaneSelfTest, RangeCoderSelfTest].java
+├── native/                                  # Zero-crate native C11 + C++20 + Rust `eimdl` engine (.hgs2 wire-compatible)
+│   ├── c_kernels/                           # Runtime-CPUID AVX2/SWAR 2-bit DNA kernels, syncmer scan, CRC-32, SHA-256 & RFC 1951 deflate/inflate
+│   ├── cpp_engine/                          # 64-bit >2.14 Gbp CSR syncmer index, Kimura-V4 Mosaic codec & FastCRM/Turbo novelty coder
+│   ├── eimdl-rs/                            # Streaming Rust CLI/library (`Cargo.toml`, `build.rs`, `.hgs2` container, 6-channel FASTA factorizer, tests)
+│   └── README.md                            # Native build, C/C++/Rust FFI architecture & CLI guide
 ├── paper/                                   # 28-Page Research Monograph, Figures & Automated Numerical Audit
 │   ├── HGS2_EIMDL_Research_Paper.pdf        # Compiled 28-page single-column PDF monograph (0 overfull boxes)
 │   ├── HGS2_EIMDL_Research_Paper.tex        # Generated LaTeX source
@@ -433,9 +438,20 @@ java -cp bin hypergrass.EimdlCli decompress --archive target.hgs2 --panel panel_
 java -cp bin hypergrass.EimdlCli compress --collection --target pangenome.fasta --out pangenome.hgs2 --threads 12
 java -cp bin hypergrass.EimdlCli decompress --archive pangenome.hgs2 --out restored_pangenome.fasta
 
-# 4. Mode C under strict 128 MiB pure-JVM bounded heap (Laws V & VII)
+# 4. Mode C under strict 128 MiB pure-JVM bounded heap (Laws V & VII, streaming FASTA + chunked Turbo novelty)
 java -Xmx128m -cp bin hypergrass.EimdlCli compress --collection --bounded --target input.seq --out bounded128.hgs2
 java -Xmx128m -cp bin hypergrass.EimdlCli decompress --archive bounded128.hgs2 --out restored_input.seq
+```
+
+### 7.2.1 Native C11 + C++20 + Rust Engine (`native/eimdl-rs`)
+Zero-external-crate `.hgs2`-wire-compatible native implementation ([`native/README.md`](native/README.md)) supporting bidirectional Java $\leftrightarrow$ Native cross-decoding:
+
+```bash
+cd native/eimdl-rs
+cargo build --release --offline
+cargo test --release --offline
+./target/release/eimdl compress --collection --target pangenome.fa --out pangenome.hgs2 --threads 4
+./target/release/eimdl decompress --archive pangenome.hgs2 --out restored.fa --threads 4
 ```
 
 ### 7.3 Unified `HyperGraSS` CLI (Supports both `.hgs2` via `--fusion` and legacy `.hgs`)

@@ -134,10 +134,10 @@ def ensure_jdk_and_tools(src_bundle_root: Path) -> dict:
     WORK_ROOT.mkdir(parents=True, exist_ok=True)
     BIN_DIR.mkdir(parents=True, exist_ok=True)
 
-    log("Installing Linux benchmark dependencies (time, zstd, xz-utils, build tools)...")
+    log("Installing Linux benchmark dependencies (time, zstd, xz-utils, build tools, rustc/cargo)...")
     run_cmd(
         "apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "
-        "time zstd xz-utils build-essential cmake git curl zlib1g-dev pigz",
+        "time zstd xz-utils build-essential cmake git curl zlib1g-dev pigz cargo rustc",
         shell=True,
         check=False,
         timeout=600,
@@ -223,11 +223,38 @@ def ensure_jdk_and_tools(src_bundle_root: Path) -> dict:
         "verification_suites": suite_results,
         "verify_laws_tail": suite_results["VerifyCompressionLaws"]["tail"],
         "verify_fusion_tail": suite_results["VerifyFusionEngine"]["tail"],
+        "eimdl_native": None,
         "jarvis3": None,
         "agc": None,
         "zstd": shutil.which("zstd"),
         "xz": shutil.which("xz"),
     }
+
+    # Build Native C11/C++20/Rust engine (eimdl)
+    native_dir = java_dir.parent.parent / "native" / "eimdl-rs"
+    if native_dir.is_dir():
+        try:
+            cargo_bin = shutil.which("cargo")
+            if not cargo_bin:
+                log("Cargo missing via apt; installing minimal rustup toolchain...")
+                run_cmd(
+                    "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal",
+                    shell=True,
+                    timeout=300,
+                )
+                cargo_cand = Path.home() / ".cargo" / "bin" / "cargo"
+                if cargo_cand.exists():
+                    cargo_bin = str(cargo_cand)
+                    os.environ["PATH"] = f"{cargo_cand.parent}:{os.environ.get('PATH', '')}"
+            if cargo_bin:
+                run_cmd([cargo_bin, "build", "--release", "--offline"], cwd=native_dir, timeout=300)
+                run_cmd([cargo_bin, "test", "--release", "--offline"], cwd=native_dir, timeout=300)
+                nb = native_dir / "target" / "release" / "eimdl"
+                if nb.exists():
+                    tools["eimdl_native"] = str(nb)
+                    log(f"Built & verified Native C11/C++20/Rust engine at {nb}")
+        except Exception as exc:
+            log(f"Warning: Native C/C++/Rust engine build failed: {exc}")
 
     # Build pinned JARVIS3
     try:
@@ -451,6 +478,100 @@ def run_hgs2_compress_verify(
             "status": "error",
             "codec": f"HGS2_{mode}",
             "xmx": xmx,
+            "bounded": bounded,
+            "threads": threads,
+            "raw_bytes": raw_bytes,
+            "error": str(exc)[-600:],
+        }
+    finally:
+        arc.unlink(missing_ok=True)
+        restored.unlink(missing_ok=True)
+
+
+def run_hgs2_native_compress_verify(
+    tools: dict,
+    target: Path,
+    *,
+    mode: str = "collection",
+    threads: int = 4,
+    bounded: bool = False,
+    panel: Path | None = None,
+    timeout: int = 1200,
+) -> dict:
+    """Runs Native C11/C++20/Rust eimdl compress + decompress + SHA-256 verification."""
+    label = f"HGS2_Native_{mode}" + ("_bounded" if bounded else "")
+    if not tools.get("eimdl_native"):
+        return {"status": "unavailable", "codec": label}
+    raw_bytes = target.stat().st_size
+    in_sha = sha256_file(target)
+    arc = WORK_ROOT / f"nhgs_{os.getpid()}_{time.monotonic_ns()}.hgs2"
+    restored = WORK_ROOT / f"ndec_{os.getpid()}_{time.monotonic_ns()}.out"
+
+    cmd = [
+        tools["eimdl_native"],
+        "compress",
+        "--target",
+        str(target),
+        "--out",
+        str(arc),
+        "--threads",
+        str(threads),
+    ]
+    if mode == "collection":
+        cmd.append("--collection")
+    elif mode == "single":
+        cmd.append("--single")
+    if bounded:
+        cmd.append("--bounded")
+    if panel is not None:
+        cmd.extend(["--panel", str(panel)])
+
+    try:
+        enc_res = run_cmd(cmd, timeout=timeout, measure_rss=True)
+        telemetry = json.loads(enc_res["stdout"].strip().splitlines()[-1])
+        dec_cmd = [
+            tools["eimdl_native"],
+            "decompress",
+            "--archive",
+            str(arc),
+            "--out",
+            str(restored),
+            "--threads",
+            str(threads),
+        ]
+        if bounded:
+            dec_cmd.append("--bounded")
+        if panel is not None:
+            dec_cmd.extend(["--panel", str(panel)])
+        dec_res = run_cmd(dec_cmd, timeout=timeout, measure_rss=True)
+        dec_tel = json.loads(dec_res["stdout"].strip().splitlines()[-1])
+        out_sha = sha256_file(restored)
+        if out_sha != in_sha:
+            raise RuntimeError(f"Native SHA-256 mismatch on decode of {target.name}!")
+        arch_bytes = arc.stat().st_size
+        return {
+            "status": "ok",
+            "codec": label,
+            "bounded": bounded,
+            "threads": threads,
+            "raw_bytes": raw_bytes,
+            "target_bases": telemetry["target_bases"],
+            "archive_bytes": arch_bytes,
+            "bpb": (8.0 * arch_bytes) / raw_bytes,
+            "ratio": raw_bytes / arch_bytes,
+            "enc_wall_s": round(enc_res["elapsed"], 4),
+            "enc_inproc_s": telemetry["compress_seconds"],
+            "enc_peak_rss_mb": round(enc_res["peak_rss_kb"] / 1024.0, 2) if enc_res["peak_rss_kb"] else None,
+            "dec_wall_s": round(dec_res["elapsed"], 4),
+            "dec_inproc_s": dec_tel["decompress_seconds"],
+            "dec_peak_rss_mb": round(dec_res["peak_rss_kb"] / 1024.0, 2) if dec_res["peak_rss_kb"] else None,
+            "sha256_verified": True,
+            "telemetry": telemetry,
+        }
+    except Exception as exc:
+        return {
+            "status": "error",
+            "codec": label,
             "bounded": bounded,
             "threads": threads,
             "raw_bytes": raw_bytes,

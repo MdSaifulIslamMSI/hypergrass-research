@@ -77,6 +77,8 @@ def run_adversarial_and_bounded_suite(tools: dict, state: dict, cov_dir: Path | 
     wn_runs = [
         kc.run_hgs2_compress_verify(tools, wn_seq, mode="single", threads=cpus, xmx="-Xmx4g"),
         kc.run_hgs2_compress_verify(tools, wn_seq, mode="collection", threads=cpus, xmx="-Xmx4g"),
+        kc.run_hgs2_native_compress_verify(tools, wn_seq, mode="single", threads=cpus),
+        kc.run_hgs2_native_compress_verify(tools, wn_seq, mode="collection", threads=cpus),
         wc.run_hgs1_baseline(tools, wn_seq, single=True, threads=cpus, xmx="-Xmx4g"),
         wc.run_grass_baseline(tools, wn_seq, xmx="-Xmx4g", timeout=300),
         kc.run_jarvis3_baseline(tools, wn_seq, level=7, timeout=300),
@@ -114,9 +116,12 @@ def run_adversarial_and_bounded_suite(tools: dict, state: dict, cov_dir: Path | 
     adv["pathology_fasta"] = [
         kc.run_hgs2_compress_verify(tools, path_fa, mode="collection", threads=cpus, xmx="-Xmx4g"),
         kc.run_hgs2_compress_verify(tools, path_fa, mode="collection", threads=2, xmx="-Xmx128m", bounded=True),
+        kc.run_hgs2_native_compress_verify(tools, path_fa, mode="collection", threads=cpus),
+        kc.run_hgs2_native_compress_verify(tools, path_fa, mode="collection", threads=2, bounded=True),
         wc.run_hgs1_baseline(tools, path_fa, threads=cpus, xmx="-Xmx4g"),
         wc.run_grass_baseline(tools, path_fa, xmx="-Xmx4g", timeout=300),
         wc.run_mbgc_baseline(tools, path_fa, mode=3, threads=cpus),
+        wc.run_ffc_baseline(tools, path_fa, threads=cpus),
         wc.run_naf_baseline(tools, path_fa, level=22, long_win=31),
         wc.run_mfcompress_baseline(tools, path_fa, level=3, threads=cpus),
         wc.run_bsc_baseline(tools, path_fa),
@@ -162,6 +167,12 @@ def run_adversarial_and_bounded_suite(tools: dict, state: dict, cov_dir: Path | 
             )
             hres["dataset_mbp"] = mb_tgt
             adv["bounded_heap_matrix"].append(hres)
+            if xmx in ("-Xmx128m", "-Xmx512m"):
+                nres = kc.run_hgs2_native_compress_verify(
+                    tools, sub_seq, mode="collection", threads=min(cpus, 4), bounded=True, timeout=1800
+                )
+                nres["dataset_mbp"] = mb_tgt
+                adv["bounded_heap_matrix"].append(nres)
             sub_seq.unlink(missing_ok=True)
             save_state(state)
         pool_seq.unlink(missing_ok=True)
@@ -211,6 +222,7 @@ def run_bacterial_world_shootout(tools: dict, state: dict, src_root: Path, cpus:
         kc.log(f"=== {sp_name}: Mode S (Target 0, {rec0_seq.stat().st_size / 1e6:.2f} MB) — ALL 14+ Codecs ===")
         mode_s_seq = [
             kc.run_hgs2_compress_verify(tools, rec0_seq, mode="single", threads=cpus, xmx="-Xmx8g"),
+            kc.run_hgs2_native_compress_verify(tools, rec0_seq, mode="single", threads=cpus),
             wc.run_hgs1_baseline(tools, rec0_seq, single=True, threads=cpus, xmx="-Xmx8g"),
             wc.run_grass_baseline(tools, rec0_seq, xmx="-Xmx8g", timeout=600),
             kc.run_jarvis3_baseline(tools, rec0_seq, level=7, timeout=600),
@@ -226,10 +238,12 @@ def run_bacterial_world_shootout(tools: dict, state: dict, src_root: Path, cpus:
         ]
         mode_s_fa = [
             kc.run_hgs2_compress_verify(tools, rec0_fa, mode="single", threads=cpus, xmx="-Xmx8g"),
+            kc.run_hgs2_native_compress_verify(tools, rec0_fa, mode="single", threads=cpus),
             wc.run_grass_baseline(tools, rec0_fa, xmx="-Xmx8g", timeout=600),
             wc.run_mfcompress_baseline(tools, rec0_fa, level=3, threads=cpus),
             wc.run_naf_baseline(tools, rec0_fa, level=22, long_win=31),
             wc.run_mbgc_baseline(tools, rec0_fa, mode=3, threads=cpus),
+            wc.run_ffc_baseline(tools, rec0_fa, threads=cpus),
             wc.run_bsc_baseline(tools, rec0_fa, timeout=300),
             wc.run_named_general_baseline(tools, rec0_fa, "zstd", timeout=300),
             wc.run_named_general_baseline(tools, rec0_fa, "xz", timeout=300),
@@ -248,7 +262,9 @@ def run_bacterial_world_shootout(tools: dict, state: dict, src_root: Path, cpus:
         kc.log(f"=== {sp_name}: Mode R (Target 0 | {len(split_fas)}-Donor Panel vs GeCo3 -r & AGC marginal) ===")
         mode_r_runs = [
             kc.run_hgs2_compress_verify(tools, rec0_seq, mode="ref", threads=cpus, xmx="-Xmx8g", panel=pdir),
+            kc.run_hgs2_native_compress_verify(tools, rec0_seq, mode="ref", threads=cpus, panel=pdir),
             kc.run_hgs2_compress_verify(tools, rec0_seq, mode="ref", threads=cpus, xmx="-Xmx8g", panel=p1dir),
+            kc.run_hgs2_native_compress_verify(tools, rec0_seq, mode="ref", threads=cpus, panel=p1dir),
             wc.run_geco3_baseline(tools, rec0_seq, ref_seq=donor0_seq, timeout=600),
         ]
         if len(split_fas) >= 2:
@@ -266,11 +282,14 @@ def run_bacterial_world_shootout(tools: dict, state: dict, src_root: Path, cpus:
         mode_c_fa = [
             kc.run_hgs2_compress_verify(tools, sp_fa, mode="collection", threads=cpus, xmx="-Xmx16g"),
             kc.run_hgs2_compress_verify(tools, sp_fa, mode="collection", threads=min(cpus, 4), xmx="-Xmx256m", bounded=True),
+            kc.run_hgs2_native_compress_verify(tools, sp_fa, mode="collection", threads=cpus),
+            kc.run_hgs2_native_compress_verify(tools, sp_fa, mode="collection", threads=min(cpus, 4), bounded=True),
             wc.run_hgs1_baseline(tools, sp_fa, threads=cpus, xmx="-Xmx16g"),
             wc.run_grass_baseline(tools, sp_fa, xmx="-Xmx16g", timeout=900),
             wc.run_agc_from_multifasta(tools, sp_fa, adaptive=False, threads=cpus),
             wc.run_agc_from_multifasta(tools, sp_fa, adaptive=True, threads=cpus),
             wc.run_mbgc_baseline(tools, sp_fa, mode=3, threads=cpus),
+            wc.run_ffc_baseline(tools, sp_fa, threads=cpus),
             wc.run_naf_baseline(tools, sp_fa, level=22, long_win=31),
             wc.run_mfcompress_baseline(tools, sp_fa, level=3, threads=cpus),
             wc.run_bsc_baseline(tools, sp_fa),
@@ -283,6 +302,7 @@ def run_bacterial_world_shootout(tools: dict, state: dict, src_root: Path, cpus:
         ]
         mode_c_seq = [
             kc.run_hgs2_compress_verify(tools, sp_seq, mode="collection", threads=cpus, xmx="-Xmx16g"),
+            kc.run_hgs2_native_compress_verify(tools, sp_seq, mode="collection", threads=cpus),
             wc.run_grass_baseline(tools, sp_seq, xmx="-Xmx16g", timeout=900),
             kc.run_jarvis3_baseline(tools, sp_seq, level=7, timeout=900),
             wc.run_geco3_baseline(tools, sp_seq, level=5, timeout=900),
@@ -319,9 +339,12 @@ def run_viral_world_shootout(tools: dict, state: dict, cov_dir: Path | None, cpu
         v_fa = [
             kc.run_hgs2_compress_verify(tools, p, mode="collection", threads=cpus, xmx="-Xmx16g"),
             kc.run_hgs2_compress_verify(tools, p, mode="collection", threads=min(cpus, 4), xmx="-Xmx256m", bounded=True),
+            kc.run_hgs2_native_compress_verify(tools, p, mode="collection", threads=cpus),
+            kc.run_hgs2_native_compress_verify(tools, p, mode="collection", threads=min(cpus, 4), bounded=True),
             wc.run_hgs1_baseline(tools, p, threads=cpus, xmx="-Xmx16g"),
             wc.run_agc_from_multifasta(tools, p, adaptive=True, threads=cpus),
             wc.run_mbgc_baseline(tools, p, mode=3, threads=cpus),
+            wc.run_ffc_baseline(tools, p, threads=cpus),
             wc.run_naf_baseline(tools, p, level=22, long_win=31),
             wc.run_mfcompress_baseline(tools, p, level=2 if sz > 150_000_000 else 3, threads=cpus),
             wc.run_bsc_baseline(tools, p),
@@ -340,6 +363,7 @@ def run_viral_world_shootout(tools: dict, state: dict, cov_dir: Path | None, cpu
         v_seq = kc.WORK_ROOT / f"{p.stem}.seq"
         vmeta = kc.fasta_to_flat_seq(p, v_seq)
         v_seq_runs.append(kc.run_hgs2_compress_verify(tools, v_seq, mode="collection", threads=cpus, xmx="-Xmx16g"))
+        v_seq_runs.append(kc.run_hgs2_native_compress_verify(tools, v_seq, mode="collection", threads=cpus))
         if sz <= 165_000_000:
             v_seq_runs.append(wc.run_grass_baseline(tools, v_seq, xmx="-Xmx16g", timeout=900))
             v_seq_runs.append(kc.run_jarvis3_baseline(tools, v_seq, level=7, timeout=900))
@@ -368,7 +392,10 @@ def run_viral_world_shootout(tools: dict, state: dict, cov_dir: Path | None, cpu
             mruns = [
                 kc.run_hgs2_compress_verify(tools, viral_mega, mode="collection", threads=cpus, xmx="-Xmx22g", timeout=1800),
                 kc.run_hgs2_compress_verify(tools, viral_mega, mode="collection", threads=min(cpus, 4), xmx="-Xmx512m", bounded=True, timeout=1800),
+                kc.run_hgs2_native_compress_verify(tools, viral_mega, mode="collection", threads=cpus, timeout=1800),
+                kc.run_hgs2_native_compress_verify(tools, viral_mega, mode="collection", threads=min(cpus, 4), bounded=True, timeout=1800),
                 wc.run_mbgc_baseline(tools, viral_mega, mode=2, threads=cpus, timeout=1800),
+                wc.run_ffc_baseline(tools, viral_mega, threads=cpus, timeout=1800),
                 wc.run_naf_baseline(tools, viral_mega, level=22, long_win=31, timeout=1800),
                 kc.run_zstd_baseline(tools, viral_mega, level=19, timeout=900),
                 wc.run_bsc_baseline(tools, viral_mega, timeout=1800),
@@ -393,6 +420,9 @@ def run_human_world_shootout(tools: dict, state: dict, g_dir: Path | None, cpus:
         runs_fa = [
             kc.run_hgs2_compress_verify(tools, fa, mode="collection", threads=cpus, xmx="-Xmx16g"),
             kc.run_hgs2_compress_verify(tools, fa, mode="collection", threads=min(cpus, 4), xmx="-Xmx256m", bounded=True),
+            kc.run_hgs2_native_compress_verify(tools, fa, mode="collection", threads=cpus),
+            kc.run_hgs2_native_compress_verify(tools, fa, mode="collection", threads=min(cpus, 4), bounded=True),
+            wc.run_ffc_baseline(tools, fa, threads=cpus),
             wc.run_naf_baseline(tools, fa, level=22, long_win=31),
             wc.run_bsc_baseline(tools, fa),
             kc.run_zstd_baseline(tools, fa, level=19),
@@ -414,6 +444,8 @@ def run_human_world_shootout(tools: dict, state: dict, g_dir: Path | None, cpus:
         kc.fasta_to_flat_seq(fa, seq)
         runs_seq.append(kc.run_hgs2_compress_verify(tools, seq, mode="collection", threads=cpus, xmx="-Xmx16g"))
         runs_seq.append(kc.run_hgs2_compress_verify(tools, seq, mode="collection", threads=min(cpus, 4), xmx="-Xmx256m", bounded=True))
+        runs_seq.append(kc.run_hgs2_native_compress_verify(tools, seq, mode="collection", threads=cpus))
+        runs_seq.append(kc.run_hgs2_native_compress_verify(tools, seq, mode="collection", threads=min(cpus, 4), bounded=True))
         if fsz <= 75_000_000:
             runs_seq.append(wc.run_grass_baseline(tools, seq, xmx="-Xmx16g", timeout=900))
             runs_seq.append(kc.run_jarvis3_baseline(tools, seq, level=7, timeout=900))
@@ -446,7 +478,10 @@ def run_human_world_shootout(tools: dict, state: dict, g_dir: Path | None, cpus:
             pdir.mkdir(parents=True, exist_ok=True)
             shutil.copy2(g_fa, pdir / f"grch38_chr{cname}.fa")
             kc.log(f"=== Cross-Human Mode R: CHM13 chr{cname} | GRCh38 chr{cname} ===")
-            mr_runs = [kc.run_hgs2_compress_verify(tools, c_fa, mode="ref", threads=cpus, xmx="-Xmx16g", panel=pdir)]
+            mr_runs = [
+                kc.run_hgs2_compress_verify(tools, c_fa, mode="ref", threads=cpus, xmx="-Xmx16g", panel=pdir),
+                kc.run_hgs2_native_compress_verify(tools, c_fa, mode="ref", threads=cpus, panel=pdir),
+            ]
             shutil.rmtree(pdir, ignore_errors=True)
             if cname in ("21", "22"):
                 g_seq = kc.WORK_ROOT / f"mr_g{cname}.seq"
@@ -474,9 +509,11 @@ def run_human_world_shootout(tools: dict, state: dict, g_dir: Path | None, cpus:
             kc.log(f"=== Human Diploid Mode C: Chr{cname} ({merged.stat().st_size / (1<<20):.1f} MiB) ===")
             d_runs = [
                 kc.run_hgs2_compress_verify(tools, merged, mode="collection", threads=cpus, xmx="-Xmx22g", timeout=1800),
+                kc.run_hgs2_native_compress_verify(tools, merged, mode="collection", threads=cpus, timeout=1800),
                 kc.run_agc_collection(tools, g_fa, [c_fa], adaptive=False, threads=cpus),
                 kc.run_agc_collection(tools, g_fa, [c_fa], adaptive=True, threads=cpus),
                 wc.run_mbgc_baseline(tools, merged, mode=3, threads=cpus),
+                wc.run_ffc_baseline(tools, merged, threads=cpus),
                 wc.run_naf_baseline(tools, merged, level=22, long_win=31),
                 wc.run_bsc_baseline(tools, merged),
                 kc.run_zstd_baseline(tools, merged, level=19),

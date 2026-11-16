@@ -126,10 +126,51 @@ def ensure_world_tools(base_tools: dict) -> dict:
         for cand in [m_bld / "mbgc", *m_bld.rglob("mbgc")]:
             if cand.is_file() and cand.stat().st_mode & 0o111:
                 tools["mbgc"] = str(cand)
-                kc.log(f"Built MBGC at {cand}")
+                try:
+                    rev = kc.run_cmd(["git", "-C", str(m_dir), "rev-parse", "--short", "HEAD"], check=False)
+                    tools["mbgc_commit"] = rev["stdout"].strip()
+                except Exception:
+                    pass
+                kc.log(f"Built MBGC2 ({tools.get('mbgc_commit', 'head')}) at {cand}")
                 break
     except Exception as exc:
         kc.log(f"Warning: MBGC build failed: {exc}")
+
+    # 2b) FFC (kowallus/ffc, Bioinformatics 2026)
+    try:
+        ffc_dir = WORK_ROOT / "ffc_repo"
+        if not ffc_dir.exists():
+            kc.run_cmd(
+                ["git", "clone", "--depth", "1", "https://github.com/kowallus/ffc.git", str(ffc_dir)],
+                timeout=300,
+            )
+        zstd_lib = ffc_dir / "zstd" / "lib"
+        if zstd_lib.is_dir():
+            kc.run_cmd(
+                [
+                    "make",
+                    "-C",
+                    str(zstd_lib),
+                    "ZSTD_LEGACY_SUPPORT=0",
+                    "ZSTD_LIB_DEPRECATED=0",
+                    "ZSTD_LIB_DICTBUILDER=0",
+                    "libzstd.a",
+                ],
+                timeout=300,
+            )
+        ffc_bld = ffc_dir / "build"
+        kc.run_cmd(
+            ["cmake", "-S", str(ffc_dir), "-B", str(ffc_bld), "-DCMAKE_BUILD_TYPE=Release"],
+            timeout=300,
+        )
+        kc.run_cmd(["cmake", "--build", str(ffc_bld), f"-j{cpus}"], timeout=600)
+        for cand in [ffc_bld / "ffc", *ffc_bld.rglob("ffc")]:
+            if cand.is_file() and cand.stat().st_mode & 0o111:
+                tools["ffc"] = str(cand)
+                kc.log(f"Built FFC at {cand}")
+                break
+    except Exception as exc:
+        kc.log(f"Warning: FFC build failed: {exc}")
 
     # 3) NAF (KirillKryukov/naf: ennaf & unnaf)
     try:
@@ -232,12 +273,24 @@ def ensure_world_tools(base_tools: dict) -> dict:
     try:
         ref_seq, tgt_seq, ref_fa, multi_fa = _smoke_seq_and_fasta(smoke_dir)
         tools["smoke_checks"]["HGS2"] = kc.run_hgs2_compress_verify(tools, multi_fa, mode="collection", threads=2)["status"]
+        tools["smoke_checks"]["HGS2_Native"] = kc.run_hgs2_native_compress_verify(tools, multi_fa, mode="collection", threads=2)["status"]
         tools["smoke_checks"]["HGS1"] = run_hgs1_baseline(tools, multi_fa, threads=2)["status"]
         tools["smoke_checks"]["GraSS_seq"] = run_grass_baseline(tools, tgt_seq)["status"]
         tools["smoke_checks"]["GraSS_fa"] = run_grass_baseline(tools, multi_fa)["status"]
         tools["smoke_checks"]["AGC"] = kc.run_agc_collection(tools, ref_fa, [multi_fa], threads=2)["status"]
         tools["smoke_checks"]["JARVIS3"] = kc.run_jarvis3_baseline(tools, tgt_seq, level=7)["status"]
         tools["smoke_checks"]["MBGC"] = run_mbgc_baseline(tools, multi_fa, threads=2)["status"]
+
+        # Probe working FFC thread flag once on tiny smoke data
+        tools["_ffc_tflag"] = None
+        if tools.get("ffc"):
+            for tf in ["-t", "-T", ""]:
+                tools["_ffc_tflag"] = tf
+                if run_ffc_baseline(tools, multi_fa, threads=2)["status"] == "ok":
+                    break
+            else:
+                tools["_ffc_tflag"] = None
+        tools["smoke_checks"]["FFC"] = "ok" if tools.get("ffc") and tools["_ffc_tflag"] is not None else "unavailable"
         tools["smoke_checks"]["NAF"] = run_naf_baseline(tools, multi_fa, level=22, long_win=20)["status"]
         tools["smoke_checks"]["MFCompress"] = run_mfcompress_baseline(tools, multi_fa, threads=2)["status"]
 
@@ -615,6 +668,58 @@ def run_mbgc_baseline(
         return {"status": "error", "codec": label, "error": str(exc)[-500:]}
     finally:
         shutil.rmtree(mdir, ignore_errors=True)
+
+
+def run_ffc_baseline(
+    tools: dict,
+    fasta_path: Path,
+    *,
+    threads: int = 4,
+    timeout: int = 900,
+) -> dict:
+    """Runs FFC (Bioinformatics 2026) FASTA compress/decompress and verifies raw & sequence SHA-256."""
+    label = "FFC"
+    if not tools.get("ffc"):
+        return {"status": "unavailable", "codec": label}
+    raw_bytes = fasta_path.stat().st_size
+    in_raw_sha = kc.sha256_file(fasta_path)
+    in_seq_sha = kc._fasta_seq_sha256(fasta_path)
+    fdir = WORK_ROOT / f"ffc_{time.monotonic_ns()}"
+    fdir.mkdir(parents=True, exist_ok=True)
+    arc = fdir / "out.ffc"
+    dec = fdir / "restored.fa"
+    try:
+        tflag = tools.get("_ffc_tflag")
+        enc_cmd = [tools["ffc"], "-i", str(fasta_path), "-o", str(arc)]
+        if tflag:
+            enc_cmd.extend([tflag, str(threads)])
+        enc = kc.run_cmd(enc_cmd, cwd=fdir, timeout=timeout, measure_rss=True)
+        arch = arc.stat().st_size
+        dec_cmd = [tools["ffc"], "-d", "-f", "-i", str(arc), "-o", str(dec)]
+        if tflag:
+            dec_cmd.extend([tflag, str(threads)])
+        d_res = kc.run_cmd(dec_cmd, cwd=fdir, timeout=timeout, measure_rss=True)
+        raw_ok = kc.sha256_file(dec) == in_raw_sha
+        seq_ok = kc._fasta_seq_sha256(dec) == in_seq_sha
+        assert raw_ok or seq_ok, "FFC sequence SHA-256 mismatch"
+        return {
+            "status": "ok",
+            "codec": label,
+            "raw_bytes": raw_bytes,
+            "archive_bytes": arch,
+            "bpb": (8.0 * arch) / raw_bytes,
+            "ratio": raw_bytes / arch,
+            "enc_wall_s": round(enc["elapsed"], 4),
+            "enc_peak_rss_mb": round(enc["peak_rss_kb"] / 1024.0, 2) if enc["peak_rss_kb"] else None,
+            "dec_wall_s": round(d_res["elapsed"], 4),
+            "raw_sha256_verified": raw_ok,
+            "seq_sha256_verified": seq_ok,
+            "sha256_verified": seq_ok,
+        }
+    except Exception as exc:
+        return {"status": "error", "codec": label, "error": str(exc)[-500:]}
+    finally:
+        shutil.rmtree(fdir, ignore_errors=True)
 
 
 def run_naf_baseline(

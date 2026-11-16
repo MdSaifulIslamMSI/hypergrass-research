@@ -1,0 +1,17 @@
+[package]
+name = "eimdl_native"
+version = "2.0.0"
+edition = "2021"
+description = "Native C11/C++20/Rust 64-bit wire-compatible EIMDL / HGS2 genomic compression engine"
+license = "Apache-2.0"
+
+[lib]
+name = "eimdl_native"
+path = "src/lib.rs"
+
+[[bin]]
+name = "eimdl"
+path = "src/main.rs"
+
+[dependencies]
+# Zero external crate dependencies: builds hermetically offline anywhere with C11 + C++20 + rustc.

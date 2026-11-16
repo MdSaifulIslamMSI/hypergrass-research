@@ -183,6 +183,63 @@ public final class Packed2BitSequence {
         }
     }
 
+    /**
+     * Streaming non-humongous 2-bit page builder for unknown-length FASTA / compressed reference
+     * files, growing strictly by 256 KiB pages with zero whole-array reallocation.
+     */
+    public static final class DynamicPageBuilder {
+        private final java.util.ArrayList<long[]> pageList = new java.util.ArrayList<>(8);
+        private long[] curPage = new long[PAGE_WORDS + 1];
+        private int wordInPage = 0;
+        private long curWord = 0L;
+        private int curShift = 0;
+        private int basesWritten = 0;
+
+        public DynamicPageBuilder() {
+            pageList.add(curPage);
+        }
+
+        public void appendBase(int twoBitCode) {
+            curWord |= ((long) (twoBitCode & 3)) << curShift;
+            curShift += 2;
+            basesWritten++;
+            if (curShift == 64) {
+                emitWord(curWord);
+                curWord = 0L;
+                curShift = 0;
+            }
+        }
+
+        private void emitWord(long word) {
+            if (wordInPage == PAGE_WORDS) {
+                long[] next = new long[PAGE_WORDS + 1];
+                curPage[PAGE_WORDS] = word;
+                pageList.add(next);
+                curPage = next;
+                wordInPage = 0;
+            }
+            curPage[wordInPage++] = word;
+        }
+
+        public Packed2BitSequence build() {
+            if (curShift > 0) {
+                emitWord(curWord);
+                curWord = 0L;
+                curShift = 0;
+            }
+            int numPages = pageList.size();
+            long[][] pg = new long[numPages][];
+            for (int p = 0; p < numPages - 1; p++) {
+                pg[p] = pageList.get(p);
+            }
+            int tailWords = Math.max(0, wordInPage);
+            long[] lastSrc = pageList.get(numPages - 1);
+            pg[numPages - 1] = java.util.Arrays.copyOf(lastSrc, tailWords + 2);
+            linkPageSentinels(pg);
+            return new Packed2BitSequence(pg, basesWritten);
+        }
+    }
+
     /** Packs an array of already-factorized 2-bit values ({@code 0..3} per byte). */
     public static Packed2BitSequence fromTwoBitBytes(byte[] bases, int len) {
         int totalWords = (len + 31) >>> 5;
