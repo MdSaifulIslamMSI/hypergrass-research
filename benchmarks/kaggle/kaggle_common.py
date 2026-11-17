@@ -255,6 +255,7 @@ def ensure_jdk_and_tools(src_bundle_root: Path) -> dict:
         "verification_suites": suite_results,
         "verify_laws_tail": suite_results["VerifyCompressionLaws"]["tail"],
         "verify_fusion_tail": suite_results["VerifyFusionEngine"]["tail"],
+        "verify_paradigm_tail": suite_results["VerifyParadigm"]["tail"],
         "eimdl_native": None,
         "jarvis3": None,
         "agc": None,
@@ -262,10 +263,20 @@ def ensure_jdk_and_tools(src_bundle_root: Path) -> dict:
         "xz": shutil.which("xz"),
     }
 
-    # Build Native C23/C++23/Rust 2024 engine (eimdl)
-    native_dir = java_dir.parent.parent / "native" / "eimdl-rs"
-    if native_dir.is_dir():
+    # Build Native C23/C++23/Rust 2024 engine (eimdl) in writable scratch dir (/kaggle/input is read-only!)
+    src_native_root = java_dir.parent.parent / "native"
+    if src_native_root.is_dir():
         try:
+            build_native_root = WORK_ROOT / "native_build"
+            if build_native_root.exists():
+                shutil.rmtree(build_native_root, ignore_errors=True)
+            shutil.copytree(
+                src_native_root,
+                build_native_root,
+                ignore=shutil.ignore_patterns("target", ".git"),
+            )
+            native_dir = build_native_root / "eimdl-rs"
+
             cargo_bin = shutil.which("cargo")
             rustc_bin = shutil.which("rustc")
             rust_minor = 0
@@ -284,7 +295,7 @@ def ensure_jdk_and_tools(src_bundle_root: Path) -> dict:
                 if cargo_cand.exists():
                     cargo_bin = str(cargo_cand)
                     os.environ["PATH"] = f"{cargo_cand.parent}:{os.environ.get('PATH', '')}"
-            if cargo_bin:
+            if cargo_bin and native_dir.is_dir():
                 env_cc = {}
                 if shutil.which("gcc-14") and shutil.which("g++-14"):
                     env_cc = {"CC": "gcc-14", "CXX": "g++-14"}

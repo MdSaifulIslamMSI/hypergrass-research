@@ -781,6 +781,20 @@ def main() -> None:
     state["tools"] = {k: v for k, v in tools.items() if not k.startswith("_")}
     save_state(state)
 
+    req_smoke = (
+        "HGS2",
+        "HGS2_Native",
+        "HGS3_FASTA_Native",
+        "HGS3_FASTA_Java",
+        "HGS3_FASTQ_Native",
+        "HGS3_FASTQ_Java",
+        "CompressedDomain_Smoke",
+    )
+    bad_smoke = {k: tools.get("smoke_checks", {}).get(k) for k in req_smoke if tools.get("smoke_checks", {}).get(k) != "ok"}
+    assert tools.get("eimdl_native") and not bad_smoke, (
+        f"Preflight EIMDL/HGS3 check failed: eimdl_native={tools.get('eimdl_native')} bad_smoke={bad_smoke}"
+    )
+
     cpus = max(1, os.cpu_count() or 4)
     kc.log(f"Kaggle CPU Shootout Ready: {cpus} CPUs | smoke={tools.get('smoke_checks')}")
 
