@@ -284,6 +284,7 @@ def _run_ecoli_paradigm_v3_benchmarks(
             "hgs3_fasta_mode_r": fa_hgs3,
             "compressed_domain": cd_fasta,
         }
+        save_state(state)
 
         fq_meta = _generate_empirical_illumina_fastq(rec0_seq, ecoli_fq, num_reads=100_000, read_len=150)
         fq_runs = [
@@ -325,7 +326,7 @@ def _run_ecoli_paradigm_v3_benchmarks(
             kc.run_zstd_baseline(tools, ecoli_fq, level=19, timeout=600),
             kc.run_xz_baseline(tools, ecoli_fq, level=6, timeout=600),
         ]
-        for cname in ("brotli-11", "bzip2-9", "gzip-9"):
+        for cname in ("brotli", "bzip2", "gzip"):
             fq_runs.append(wc.run_named_general_baseline(tools, ecoli_fq, cname, timeout=600))
 
         cd_fastq = None
