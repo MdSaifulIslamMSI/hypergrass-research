@@ -1086,8 +1086,8 @@ pub(crate) fn decompress_with_container(
         }
     } else {
         let panel_refs: Vec<&[u8]> = panel_seqs.iter().map(|v| v.as_slice()).collect();
-        for u in 0..p.num_units {
-            unit_to_rank[u] = u;
+        for (u, slot) in unit_to_rank.iter_mut().enumerate().take(p.num_units) {
+            *slot = u;
             let (_tlen, nlen) = ffi::mosaic_peek_lengths(p.mosaic_slices[u])?;
             let nslice = &nov_super[nov_off..nov_off + (nlen as usize)];
             nov_off += nlen as usize;
@@ -1114,8 +1114,7 @@ pub(crate) fn decompress_with_container(
             written += ascii_buf.len() as u64;
         }
     } else {
-        for u in 0..p.num_units {
-            let r = unit_to_rank[u];
+        for (u, &r) in unit_to_rank.iter().enumerate().take(p.num_units) {
             let mut expected_dna = 0usize;
             let chunk: FactorizedChunk = fasta::read_aux_metadata(&mut ByteReader::new(p.unit_meta_slices[u]), &mut expected_dna)?;
             if decoded_ranks[r].len() != expected_dna {
