@@ -178,6 +178,224 @@ def run_adversarial_and_bounded_suite(tools: dict, state: dict, cov_dir: Path | 
         pool_seq.unlink(missing_ok=True)
 
 
+def _extract_valid_kmer(path: Path, *, k: int = 25, skip_bases: int = 200_000) -> str:
+    """Streams FASTA or flat .seq to return a concrete pure-ACGT k-mer past telomeric/leading gaps."""
+    run: list[str] = []
+    fallback: str | None = None
+    seen = 0
+    with path.open("r", encoding="ascii", errors="ignore") as fh:
+        for line in fh:
+            if not line or line.startswith(">"):
+                continue
+            for ch in line.strip().upper():
+                if ch in ("A", "C", "G", "T"):
+                    run.append(ch)
+                    seen += 1
+                    if len(run) > k:
+                        del run[:-k]
+                    if len(run) == k:
+                        if fallback is None:
+                            fallback = "".join(run)
+                        if seen >= skip_bases:
+                            return "".join(run)
+                else:
+                    run.clear()
+    return fallback or ("ACGT" * ((k // 4) + 1))[:k]
+
+
+def _generate_empirical_illumina_fastq(seq_path: Path, out_fq: Path, *, num_reads: int = 100_000, read_len: int = 150) -> dict:
+    """Synthesizes a deterministic Illumina-profile FASTQ from real E. coli DNA with linked errors, homopolymers, and cycle decay."""
+    genome = "".join(seq_path.read_text(encoding="ascii").split()).upper()
+    g_len = len(genome)
+    if g_len < read_len + 64:
+        raise ValueError(f"Sequence too short for FASTQ generation: {g_len}")
+    rng = random.Random(20260301)
+    alts = {"A": "CGT", "C": "AGT", "G": "ACT", "T": "ACG"}
+    q_hi = ("I", "J", "H", "I", "G", "I")
+    q_err = ("#", "$", "%", "&", "*", "!")
+    q_poly = ("2", "4", "6", "8", ":", "<")
+    total_snps = 0
+    with out_fq.open("w", encoding="ascii", newline="\n") as fh:
+        for rid in range(num_reads):
+            pos = rng.randrange(0, g_len - read_len)
+            sub = genome[pos : pos + read_len]
+            bases = list(sub)
+            quals: list[str] = []
+            homo = 1
+            for c in range(read_len):
+                b = bases[c]
+                if c > 0 and b == bases[c - 1]:
+                    homo += 1
+                else:
+                    homo = 1
+                err_prob = 0.0025 if c < 115 else 0.0095
+                if b in alts and rng.random() < err_prob:
+                    bases[c] = alts[b][rng.randrange(3)]
+                    quals.append(q_err[(rid + c) % len(q_err)])
+                    total_snps += 1
+                elif homo >= 4:
+                    quals.append(q_poly[(homo + c) % len(q_poly)])
+                elif c >= 120:
+                    decay_ord = max(35, 73 - (c - 120) // 2 - (rid & 3))
+                    quals.append(chr(decay_ord))
+                else:
+                    quals.append(q_hi[(pos + c) % len(q_hi)])
+            fh.write(f"@ECOLI_SIM:{rid}:{pos}/1 length={read_len}\n{''.join(bases)}\n+\n{''.join(quals)}\n")
+    return {"reads": num_reads, "read_len": read_len, "raw_bytes": out_fq.stat().st_size, "synthetic_errors": total_snps}
+
+
+def _run_ecoli_paradigm_v3_benchmarks(
+    tools: dict, state: dict, rec0_fa: Path, rec0_seq: Path, pdir: Path, pdir_fa: Path, cpus: int
+) -> None:
+    """Runs Next-Gen EIMDL v3.0 Paradigm Pillars 1-3 on real E. coli DNA & Illumina-profile multi-omic FASTQ."""
+    kc.log("=== Next-Gen EIMDL v3.0 Paradigm Benchmarks (E. coli K-12 Compressed-Domain + .hgs3 FASTQ) ===")
+    ecoli_kmer = _extract_valid_kmer(rec0_seq, k=21, skip_bases=120_000)
+    ecoli_hgs3 = kc.WORK_ROOT / f"ecoli_paradigm_{os.getpid()}.hgs3"
+    ecoli_fq = kc.WORK_ROOT / f"ecoli_sim_{os.getpid()}.fastq"
+    fq_hgs3 = kc.WORK_ROOT / f"ecoli_fq_paradigm_{os.getpid()}.hgs3"
+    try:
+        fa_hgs3 = kc.run_hgs3_omics_verify(
+            tools,
+            rec0_fa,
+            engine="native",
+            fmt="fasta",
+            panel=pdir_fa,
+            cds=True,
+            threads=cpus,
+            xmx="-Xmx8g",
+            cross_check_other=True,
+            keep_archive_path=ecoli_hgs3,
+        )
+        cd_fasta = None
+        if ecoli_hgs3.exists():
+            cd_fasta = kc.run_compressed_domain_bench(
+                tools,
+                ecoli_hgs3,
+                panel=pdir_fa,
+                query_seq=ecoli_kmer,
+                slice_start=50_000,
+                slice_end=50_200,
+                threads=cpus,
+                xmx="-Xmx8g",
+                compare_java=True,
+                measure_decomp_baseline=True,
+            )
+        state["paradigm_v3_benchmarks"]["compressed_domain_ecoli"] = {
+            "hgs3_fasta_mode_r": fa_hgs3,
+            "compressed_domain": cd_fasta,
+        }
+
+        fq_meta = _generate_empirical_illumina_fastq(rec0_seq, ecoli_fq, num_reads=100_000, read_len=150)
+        fq_runs = [
+            kc.run_hgs3_omics_verify(
+                tools,
+                ecoli_fq,
+                engine="native",
+                fmt="fastq",
+                panel=pdir_fa,
+                cds=True,
+                threads=cpus,
+                xmx="-Xmx8g",
+                cross_check_other=True,
+                keep_archive_path=fq_hgs3,
+            ),
+            kc.run_hgs3_omics_verify(
+                tools,
+                ecoli_fq,
+                engine="java",
+                fmt="fastq",
+                panel=pdir_fa,
+                cds=True,
+                threads=cpus,
+                xmx="-Xmx8g",
+                cross_check_other=False,
+            ),
+            kc.run_hgs3_omics_verify(
+                tools,
+                ecoli_fq,
+                engine="native",
+                fmt="fastq",
+                panel=None,
+                cds=False,
+                threads=cpus,
+                xmx="-Xmx8g",
+                cross_check_other=False,
+            ),
+            wc.run_bsc_baseline(tools, ecoli_fq, timeout=600),
+            kc.run_zstd_baseline(tools, ecoli_fq, level=19, timeout=600),
+            kc.run_xz_baseline(tools, ecoli_fq, level=6, timeout=600),
+        ]
+        for cname in ("brotli-11", "bzip2-9", "gzip-9"):
+            fq_runs.append(wc.run_named_general_baseline(tools, ecoli_fq, cname, timeout=600))
+
+        cd_fastq = None
+        if fq_hgs3.exists():
+            cd_fastq = kc.run_compressed_domain_bench(
+                tools,
+                fq_hgs3,
+                panel=pdir_fa,
+                query_seq=ecoli_kmer,
+                slice_start=150,
+                slice_end=350,
+                threads=cpus,
+                xmx="-Xmx8g",
+                compare_java=True,
+                measure_decomp_baseline=True,
+            )
+
+        state["paradigm_v3_benchmarks"]["multi_omic_fastq_ecoli"] = {
+            "dataset": fq_meta,
+            "runs": fq_runs,
+            "compressed_domain_fastq": cd_fastq,
+        }
+        save_state(state)
+    finally:
+        ecoli_hgs3.unlink(missing_ok=True)
+        ecoli_fq.unlink(missing_ok=True)
+        fq_hgs3.unlink(missing_ok=True)
+
+
+def _run_human_chr21_compressed_domain(tools: dict, state: dict, c_fa: Path, pdir: Path, cpus: int) -> None:
+    """Runs Pillar 1-3 compressed-domain VCFv4.2 + k-mer + slice analytics on Cross-Human CHM13 chr21 | GRCh38 chr21."""
+    kc.log("=== Next-Gen EIMDL v3.0 Human Compressed-Domain: CHM13 chr21 | GRCh38 chr21 ===")
+    chm21_hgs3 = kc.WORK_ROOT / f"chm13_chr21_paradigm_{os.getpid()}.hgs3"
+    chr21_kmer = _extract_valid_kmer(c_fa, k=25, skip_bases=6_000_000)
+    try:
+        hgs3_res = kc.run_hgs3_omics_verify(
+            tools,
+            c_fa,
+            engine="native",
+            fmt="fasta",
+            panel=pdir,
+            cds=True,
+            threads=cpus,
+            xmx="-Xmx16g",
+            cross_check_other=True,
+            keep_archive_path=chm21_hgs3,
+        )
+        cd_res = None
+        if chm21_hgs3.exists():
+            cd_res = kc.run_compressed_domain_bench(
+                tools,
+                chm21_hgs3,
+                panel=pdir,
+                query_seq=chr21_kmer,
+                slice_start=6_000_000,
+                slice_end=6_000_200,
+                threads=cpus,
+                xmx="-Xmx16g",
+                compare_java=True,
+                measure_decomp_baseline=True,
+            )
+        state["paradigm_v3_benchmarks"]["compressed_domain_human_chr21"] = {
+            "hgs3_mode_r": hgs3_res,
+            "compressed_domain": cd_res,
+        }
+        save_state(state)
+    finally:
+        chm21_hgs3.unlink(missing_ok=True)
+
+
 def run_bacterial_world_shootout(tools: dict, state: dict, src_root: Path, cpus: int) -> None:
     """Runs complete Mode S, Mode R, and Mode C shootouts on locked NCBI bacterial pangenomes."""
     manifests = {}
@@ -274,6 +492,8 @@ def run_bacterial_world_shootout(tools: dict, state: dict, src_root: Path, cpus:
             mode_r_runs.append(
                 wc.run_agc_marginal_mod_r(tools, split_fas[0], split_fas[1:], rec0_fa, adaptive=True, threads=cpus)
             )
+        if sp_name == "E_coli_24g":
+            _run_ecoli_paradigm_v3_benchmarks(tools, state, rec0_fa, rec0_seq, pdir, pdir_fa, cpus)
         shutil.rmtree(pdir, ignore_errors=True)
         shutil.rmtree(pdir_fa, ignore_errors=True)
         shutil.rmtree(p1dir, ignore_errors=True)
@@ -482,6 +702,8 @@ def run_human_world_shootout(tools: dict, state: dict, g_dir: Path | None, cpus:
                 kc.run_hgs2_compress_verify(tools, c_fa, mode="ref", threads=cpus, xmx="-Xmx16g", panel=pdir),
                 kc.run_hgs2_native_compress_verify(tools, c_fa, mode="ref", threads=cpus, panel=pdir),
             ]
+            if cname == "21":
+                _run_human_chr21_compressed_domain(tools, state, c_fa, pdir, cpus)
             shutil.rmtree(pdir, ignore_errors=True)
             if cname in ("21", "22"):
                 g_seq = kc.WORK_ROOT / f"mr_g{cname}.seq"
@@ -546,6 +768,11 @@ def main() -> None:
         "bacterial_shootout": [],
         "viral_shootout": [],
         "human_shootout": {"single_chromosomes": [], "cross_human_mode_r": [], "diploid_mode_c": []},
+        "paradigm_v3_benchmarks": {
+            "compressed_domain_ecoli": None,
+            "multi_omic_fastq_ecoli": None,
+            "compressed_domain_human_chr21": None,
+        },
     }
     save_state(state)
 

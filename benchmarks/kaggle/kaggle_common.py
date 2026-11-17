@@ -206,6 +206,7 @@ def ensure_jdk_and_tools(src_bundle_root: Path) -> dict:
         ("VerifyDonorCosts", [], 300),
         ("VerifyCompressionLaws", ["-Xmx2g"], 300),
         ("VerifyFusionEngine", ["-Xmx2g"], 300),
+        ("VerifyParadigm", ["-Xmx512m", "-ea"], 300),
     ]
     suite_results: dict = {}
     for cls_name, jvm_flags, suite_timeout in suites:
@@ -604,6 +605,335 @@ def run_hgs2_native_compress_verify(
     finally:
         arc.unlink(missing_ok=True)
         restored.unlink(missing_ok=True)
+
+
+def _parse_json_stdout(stdout: str) -> dict:
+    """Extracts a trailing single-line or multi-line JSON object from CLI stdout."""
+    text = stdout.strip()
+    if not text:
+        raise ValueError("Empty stdout when expecting JSON")
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+    for line in reversed(text.splitlines()):
+        s = line.strip()
+        if s.startswith("{") and s.endswith("}"):
+            try:
+                return json.loads(s)
+            except json.JSONDecodeError:
+                continue
+    start = text.rfind("\n{")
+    if start >= 0:
+        start += 1
+    else:
+        start = text.find("{")
+    end = text.rfind("}")
+    if start >= 0 and end > start:
+        return json.loads(text[start : end + 1])
+    raise ValueError(f"Could not locate JSON object in stdout: {text[-300:]}")
+
+
+def run_hgs3_omics_verify(
+    tools: dict,
+    target: Path,
+    *,
+    engine: str = "native",
+    fmt: str = "auto",
+    panel: Path | None = None,
+    cds: bool = True,
+    threads: int = 4,
+    xmx: str = "-Xmx12g",
+    timeout: int = 900,
+    cross_check_other: bool = False,
+    keep_archive_path: Path | None = None,
+) -> dict:
+    """Runs HGS3 multi-omic compress-omics + decompress-omics + SHA-256 verification."""
+    label = f"HGS3-{'Native' if engine == 'native' else 'Java'}"
+    if fmt != "auto":
+        label += f"-{fmt.upper()}"
+    if cds:
+        label += "+CDS"
+    if panel is None:
+        label += "-NoPanel"
+
+    if engine == "native" and not tools.get("eimdl_native"):
+        return {"status": "unavailable", "codec": label}
+
+    raw_bytes = target.stat().st_size
+    in_sha = sha256_file(target)
+    arc = keep_archive_path if keep_archive_path is not None else (WORK_ROOT / f"hgs3_{os.getpid()}_{time.monotonic_ns()}.hgs3")
+    restored = WORK_ROOT / f"dec3_{os.getpid()}_{time.monotonic_ns()}.out"
+    cross_dec = WORK_ROOT / f"xdec3_{os.getpid()}_{time.monotonic_ns()}.out"
+
+    def _base_cmd(use_engine: str) -> list[str]:
+        if use_engine == "native":
+            return [tools["eimdl_native"]]
+        return [tools["java"], xmx, "-cp", str(BIN_DIR), "hypergrass.EimdlCli"]
+
+    enc_cmd = [
+        *_base_cmd(engine),
+        "compress-omics",
+        "--target",
+        str(target),
+        "--out",
+        str(arc),
+        "--format",
+        fmt,
+        "--threads",
+        str(threads),
+    ]
+    if panel is not None:
+        enc_cmd.extend(["--panel", str(panel)])
+    if cds:
+        enc_cmd.append("--cds")
+
+    dec_cmd = [
+        *_base_cmd(engine),
+        "decompress-omics",
+        "--archive",
+        str(arc),
+        "--out",
+        str(restored),
+        "--threads",
+        str(threads),
+    ]
+    if panel is not None:
+        dec_cmd.extend(["--panel", str(panel)])
+
+    try:
+        enc_res = run_cmd(enc_cmd, timeout=timeout, measure_rss=True)
+        telemetry = _parse_json_stdout(enc_res["stdout"])
+        dec_res = run_cmd(dec_cmd, timeout=timeout, measure_rss=True)
+        out_sha = sha256_file(restored)
+        if out_sha != in_sha:
+            raise AssertionError(f"{label} SHA-256 mismatch: expected {in_sha}, got {out_sha}")
+
+        cross_ok = None
+        cross_wall_s = None
+        if cross_check_other and tools.get("eimdl_native"):
+            other_engine = "java" if engine == "native" else "native"
+            x_cmd = [
+                *_base_cmd(other_engine),
+                "decompress-omics",
+                "--archive",
+                str(arc),
+                "--out",
+                str(cross_dec),
+                "--threads",
+                str(threads),
+            ]
+            if panel is not None:
+                x_cmd.extend(["--panel", str(panel)])
+            x_res = run_cmd(x_cmd, timeout=timeout, measure_rss=True)
+            x_sha = sha256_file(cross_dec)
+            if x_sha != in_sha:
+                raise AssertionError(f"{label} cross-{other_engine} SHA-256 mismatch: expected {in_sha}, got {x_sha}")
+            cross_ok = True
+            cross_wall_s = round(x_res["elapsed"], 4)
+
+        arch = arc.stat().st_size
+        return {
+            "status": "ok",
+            "codec": label,
+            "engine": engine,
+            "format": fmt,
+            "cds_digest": cds,
+            "has_panel": panel is not None,
+            "raw_bytes": raw_bytes,
+            "archive_bytes": arch,
+            "bpb": (8.0 * arch) / raw_bytes,
+            "ratio": raw_bytes / arch,
+            "enc_wall_s": round(enc_res["elapsed"], 4),
+            "enc_peak_rss_mb": round(enc_res["peak_rss_kb"] / 1024.0, 2) if enc_res["peak_rss_kb"] else None,
+            "dec_wall_s": round(dec_res["elapsed"], 4),
+            "dec_peak_rss_mb": round(dec_res["peak_rss_kb"] / 1024.0, 2) if dec_res["peak_rss_kb"] else None,
+            "cross_decode_engine": ("java" if engine == "native" else "native") if cross_ok else None,
+            "cross_decode_wall_s": cross_wall_s,
+            "cross_sha256_verified": cross_ok,
+            "sha256_verified": True,
+            "telemetry": telemetry,
+        }
+    except Exception as exc:
+        return {"status": "error", "codec": label, "error": str(exc)[-500:]}
+    finally:
+        if keep_archive_path is None:
+            arc.unlink(missing_ok=True)
+        restored.unlink(missing_ok=True)
+        cross_dec.unlink(missing_ok=True)
+
+
+def run_compressed_domain_bench(
+    tools: dict,
+    archive: Path,
+    *,
+    panel: Path | None = None,
+    query_seq: str = "ACGTACGTACGTACGT",
+    slice_unit: int = 0,
+    slice_start: int = 1000,
+    slice_end: int = 1200,
+    threads: int = 4,
+    xmx: str = "-Xmx12g",
+    timeout: int = 600,
+    compare_java: bool = True,
+    measure_decomp_baseline: bool = True,
+) -> dict:
+    """Benchmarks Pillar 1 zero-FASTA compressed-domain analytics, VCFv4.2, k-mer, and slice queries."""
+    vcf_native = WORK_ROOT / f"cd_nat_{os.getpid()}_{time.monotonic_ns()}.vcf"
+    vcf_java = WORK_ROOT / f"cd_jav_{os.getpid()}_{time.monotonic_ns()}.vcf"
+    dec_tmp = WORK_ROOT / f"cd_dec_{os.getpid()}_{time.monotonic_ns()}.out"
+
+    def _run_suite(base: list[str], vcf_out: Path) -> dict:
+        p_args = ["--panel", str(panel)] if panel is not None else []
+        t_args = ["--threads", str(threads)]
+
+        ana_res = run_cmd([*base, "analyze", "--archive", str(archive), *p_args, "--json", *t_args], timeout=timeout, measure_rss=True)
+        ana_json = _parse_json_stdout(ana_res["stdout"])
+
+        vcf_json = None
+        vcf_wall_s = None
+        vcf_rss_mb = None
+        if panel is not None:
+            v_res = run_cmd(
+                [*base, "variants", "--archive", str(archive), "--panel", str(panel), "--out", str(vcf_out), "--json", *t_args],
+                timeout=timeout,
+                measure_rss=True,
+            )
+            vcf_json = _parse_json_stdout(v_res["stdout"])
+            head = vcf_out.read_text(encoding="utf-8", errors="replace")[:128]
+            if "##fileformat=VCFv4.2" not in head:
+                raise AssertionError(f"VCF missing VCFv4.2 header in {vcf_out}")
+            vcf_wall_s = round(v_res["elapsed"], 4)
+            vcf_rss_mb = round(v_res["peak_rss_kb"] / 1024.0, 2) if v_res["peak_rss_kb"] else None
+
+        km_res = run_cmd(
+            [*base, "kmer", "--archive", str(archive), *p_args, "--query", query_seq, "--both-strands", "--json", *t_args],
+            timeout=timeout,
+            measure_rss=True,
+        )
+        km_json = _parse_json_stdout(km_res["stdout"])
+
+        q_res = run_cmd(
+            [
+                *base,
+                "query",
+                "--archive",
+                str(archive),
+                *p_args,
+                "--unit",
+                str(slice_unit),
+                "--start",
+                str(slice_start),
+                "--end",
+                str(slice_end),
+                *t_args,
+            ],
+            timeout=timeout,
+            measure_rss=True,
+        )
+        slice_seq = q_res["stdout"].strip().splitlines()[-1].strip() if q_res["stdout"].strip() else ""
+        if not slice_seq:
+            raise AssertionError("Compressed query returned empty slice")
+
+        return {
+            "analyze": {
+                "wall_s": round(ana_res["elapsed"], 4),
+                "peak_rss_mb": round(ana_res["peak_rss_kb"] / 1024.0, 2) if ana_res["peak_rss_kb"] else None,
+                "report": ana_json,
+            },
+            "variants": (
+                {
+                    "wall_s": vcf_wall_s,
+                    "peak_rss_mb": vcf_rss_mb,
+                    "vcf_bytes": vcf_out.stat().st_size,
+                    "report": vcf_json,
+                }
+                if vcf_json is not None
+                else None
+            ),
+            "kmer": {
+                "wall_s": round(km_res["elapsed"], 4),
+                "peak_rss_mb": round(km_res["peak_rss_kb"] / 1024.0, 2) if km_res["peak_rss_kb"] else None,
+                "report": km_json,
+            },
+            "query": {
+                "wall_s": round(q_res["elapsed"], 4),
+                "peak_rss_mb": round(q_res["peak_rss_kb"] / 1024.0, 2) if q_res["peak_rss_kb"] else None,
+                "slice_len": len(slice_seq),
+                "slice_sha256": hashlib.sha256(slice_seq.encode("ascii")).hexdigest(),
+            },
+        }
+
+    try:
+        out: dict = {
+            "status": "ok",
+            "archive_bytes": archive.stat().st_size,
+            "query_seq": query_seq,
+            "native": None,
+            "java": None,
+            "decomp_baseline": None,
+            "java_native_parity": None,
+        }
+        if tools.get("eimdl_native"):
+            out["native"] = _run_suite([tools["eimdl_native"]], vcf_native)
+        if compare_java:
+            out["java"] = _run_suite([tools["java"], xmx, "-cp", str(BIN_DIR), "hypergrass.EimdlCli"], vcf_java)
+
+        if out["native"] and out["java"]:
+            na, ja = out["native"], out["java"]
+            checks = {
+                "total_bases_eq": na["analyze"]["report"].get("total_bases") == ja["analyze"]["report"].get("total_bases"),
+                "snps_eq": na["analyze"]["report"].get("snps") == ja["analyze"]["report"].get("snps"),
+                "kmer_hits_eq": na["kmer"]["report"].get("hit_count") == ja["kmer"]["report"].get("hit_count"),
+                "slice_eq": na["query"]["slice_sha256"] == ja["query"]["slice_sha256"],
+            }
+            if na["variants"] and ja["variants"]:
+                checks["vcf_variants_eq"] = (
+                    na["variants"]["report"].get("total_variants")
+                    == ja["variants"]["report"].get("total_variants")
+                )
+            out["java_native_parity"] = all(checks.values())
+            out["parity_checks"] = checks
+            if not out["java_native_parity"]:
+                raise AssertionError(f"Java vs Native compressed-domain mismatch: {checks}")
+
+        if measure_decomp_baseline and tools.get("eimdl_native"):
+            p_args = ["--panel", str(panel)] if panel is not None else []
+            d_res = run_cmd(
+                [
+                    tools["eimdl_native"],
+                    "decompress-omics",
+                    "--archive",
+                    str(archive),
+                    *p_args,
+                    "--out",
+                    str(dec_tmp),
+                    "--threads",
+                    str(threads),
+                ],
+                timeout=timeout,
+                measure_rss=True,
+            )
+            dec_s = d_res["elapsed"]
+            dec_rss_mb = round(d_res["peak_rss_kb"] / 1024.0, 2) if d_res["peak_rss_kb"] else None
+            base_ref = out["native"] or out["java"]
+            out["decomp_baseline"] = {
+                "dec_wall_s": round(dec_s, 4),
+                "dec_peak_rss_mb": dec_rss_mb,
+                "raw_decoded_bytes": dec_tmp.stat().st_size,
+                "analyze_speedup_vs_decomp": round(dec_s / max(base_ref["analyze"]["wall_s"], 1e-4), 2),
+                "kmer_speedup_vs_decomp": round(dec_s / max(base_ref["kmer"]["wall_s"], 1e-4), 2),
+                "variants_speedup_vs_decomp": (
+                    round(dec_s / max(base_ref["variants"]["wall_s"], 1e-4), 2) if base_ref["variants"] else None
+                ),
+            }
+        return out
+    except Exception as exc:
+        return {"status": "error", "error": str(exc)[-500:]}
+    finally:
+        vcf_native.unlink(missing_ok=True)
+        vcf_java.unlink(missing_ok=True)
+        dec_tmp.unlink(missing_ok=True)
 
 
 def run_zstd_baseline(tools: dict, target: Path, *, level: int = 19, timeout: int = 900) -> dict:

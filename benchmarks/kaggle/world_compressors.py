@@ -274,6 +274,33 @@ def ensure_world_tools(base_tools: dict) -> dict:
         ref_seq, tgt_seq, ref_fa, multi_fa = _smoke_seq_and_fasta(smoke_dir)
         tools["smoke_checks"]["HGS2"] = kc.run_hgs2_compress_verify(tools, multi_fa, mode="collection", threads=2)["status"]
         tools["smoke_checks"]["HGS2_Native"] = kc.run_hgs2_native_compress_verify(tools, multi_fa, mode="collection", threads=2)["status"]
+        tools["smoke_checks"]["HGS3_FASTA_Native"] = kc.run_hgs3_omics_verify(
+            tools, multi_fa, engine="native", fmt="fasta", cds=True, threads=2, cross_check_other=True
+        )["status"]
+        tools["smoke_checks"]["HGS3_FASTA_Java"] = kc.run_hgs3_omics_verify(
+            tools, multi_fa, engine="java", fmt="fasta", cds=True, threads=2, cross_check_other=True
+        )["status"]
+        fq_src = "".join(tgt_seq.read_text(encoding="ascii").split())
+        smoke_fq = smoke_dir / "smoke_reads.fastq"
+        with smoke_fq.open("w", encoding="ascii", newline="\n") as fh:
+            rlen = 150
+            for idx in range(min(160, len(fq_src) // rlen)):
+                rd = fq_src[idx * rlen : (idx + 1) * rlen]
+                q = ("I" * 120) + ("H" * 15) + ("F" * 10) + ("#" * 5)
+                fh.write(f"@SMOKE_READ:{idx} length={rlen}\n{rd}\n+\n{q}\n")
+        smoke_hgs3 = smoke_dir / "smoke_fq.hgs3"
+        tools["smoke_checks"]["HGS3_FASTQ_Native"] = kc.run_hgs3_omics_verify(
+            tools, smoke_fq, engine="native", fmt="fastq", panel=ref_fa, cds=True, threads=2,
+            cross_check_other=True, keep_archive_path=smoke_hgs3,
+        )["status"]
+        tools["smoke_checks"]["HGS3_FASTQ_Java"] = kc.run_hgs3_omics_verify(
+            tools, smoke_fq, engine="java", fmt="fastq", panel=ref_fa, cds=True, threads=2,
+            cross_check_other=True,
+        )["status"]
+        smoke_query = fq_src[120:140] if len(fq_src) >= 140 else "ACGTACGTACGTACGT"
+        tools["smoke_checks"]["CompressedDomain_Smoke"] = kc.run_compressed_domain_bench(
+            tools, smoke_hgs3, panel=ref_fa, query_seq=smoke_query, slice_start=50, slice_end=200, threads=2
+        )["status"]
         tools["smoke_checks"]["HGS1"] = run_hgs1_baseline(tools, multi_fa, threads=2)["status"]
         tools["smoke_checks"]["GraSS_seq"] = run_grass_baseline(tools, tgt_seq)["status"]
         tools["smoke_checks"]["GraSS_fa"] = run_grass_baseline(tools, multi_fa)["status"]
