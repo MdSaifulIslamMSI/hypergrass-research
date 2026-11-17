@@ -1,6 +1,20 @@
 #include "hgs_simd.h"
 #include <string.h>
 
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L && defined(__has_include)
+#if __has_include(<stdbit.h>)
+#include <stdbit.h>
+#define HGS_HAVE_C23_STDBIT 1
+#endif
+#endif
+
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
+#define HGS_CONSTEXPR static constexpr
+static_assert(sizeof(uint64_t) == 8);
+#else
+#define HGS_CONSTEXPR static const
+#endif
+
 #if defined(__x86_64__) || defined(_M_X64)
 #include <immintrin.h>
 #if defined(_MSC_VER)
@@ -11,7 +25,9 @@
 #endif
 
 static inline uint32_t hgs_ctz64(uint64_t x) {
-#if defined(__GNUC__) || defined(__clang__)
+#if defined(HGS_HAVE_C23_STDBIT)
+    return (uint32_t)stdc_trailing_zeros(x);
+#elif defined(__GNUC__) || defined(__clang__)
     return (uint32_t)__builtin_ctzll(x);
 #elif defined(_MSC_VER)
     unsigned long idx;
@@ -57,7 +73,7 @@ int hgs_cpu_has_avx2(void) {
 #endif
 }
 
-static const uint8_t ASCII_MAP_2BIT[256] = {
+HGS_CONSTEXPR uint8_t ASCII_MAP_2BIT[256] = {
     ['A'] = 0, ['a'] = 0,
     ['C'] = 1, ['c'] = 1,
     ['G'] = 2, ['g'] = 2,
@@ -353,7 +369,7 @@ uint32_t hgs_crc32_ieee(uint32_t prev_crc, const uint8_t* data, size_t len) {
 }
 
 /* FIPS 180-4 SHA-256 */
-static const uint32_t SHA256_K[64] = {
+HGS_CONSTEXPR uint32_t SHA256_K[64] = {
     0x428a2f98U, 0x71374491U, 0xb5c0fbcfU, 0xe9b5dba5U, 0x3956c25bU, 0x59f111f1U, 0x923f82a4U, 0xab1c5ed5U,
     0xd807aa98U, 0x12835b01U, 0x243185beU, 0x550c7dc3U, 0x72be5d74U, 0x80deb1feU, 0x9bdc06a7U, 0xc19bf174U,
     0xe49b69c1U, 0xefbe4786U, 0x0fc19dc6U, 0x240ca1ccU, 0x2de92c6fU, 0x4a7484aaU, 0x5cb0a9dcU, 0x76f988daU,

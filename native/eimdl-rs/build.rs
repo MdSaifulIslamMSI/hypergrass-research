@@ -19,7 +19,58 @@ fn run_checked(cmd: &mut Command, label: &str) {
     }
 }
 
-fn collect_zig_cxx_libs(zig_exe: &str, arch_target: &str, out_dir: &Path) -> Vec<(&'static str, PathBuf)> {
+fn pick_std_flag(
+    tool: &str,
+    prefix: &[&str],
+    is_cpp: bool,
+    out_dir: &Path,
+    candidates: &[&str],
+) -> &'static str {
+    let ext = if is_cpp { "cpp" } else { "c" };
+    let probe_src = out_dir.join(format!("_std_probe.{ext}"));
+    let probe_obj = out_dir.join(format!("_std_probe_{ext}.o"));
+    let body = if is_cpp {
+        "#include <bit>\nint _hgs_std_probe() { return std::countl_zero(1U); }\n"
+    } else {
+        "int _hgs_std_probe(void) { return 0; }\n"
+    };
+    let _ = std::fs::write(&probe_src, body);
+    let mut chosen: Option<&'static str> = None;
+    for &flag in candidates {
+        let mut cmd = Command::new(tool);
+        cmd.args(prefix);
+        if is_cpp {
+            cmd.args(["-x", "c++"]);
+        } else {
+            cmd.args(["-x", "c"]);
+        }
+        cmd.arg(flag).args(["-c"]).arg(&probe_src).arg("-o").arg(&probe_obj);
+        if let Ok(out) = cmd.output() {
+            if out.status.success() {
+                chosen = match flag {
+                    "-std=c23" => Some("-std=c23"),
+                    "-std=c2x" => Some("-std=c2x"),
+                    "-std=c++23" => Some("-std=c++23"),
+                    "-std=c++2b" => Some("-std=c++2b"),
+                    _ => None,
+                };
+                if chosen.is_some() {
+                    break;
+                }
+            }
+        }
+    }
+    let _ = std::fs::remove_file(&probe_src);
+    let _ = std::fs::remove_file(&probe_obj);
+    chosen.unwrap_or_else(|| {
+        panic!(
+            "Compiler '{tool}' supports none of the required modern standards: {}",
+            candidates.join(", ")
+        )
+    })
+}
+
+fn collect_zig_cxx_libs(zig_exe: &str, arch_target: &str, cxx_std: &str, out_dir: &Path) -> Vec<(&'static str, PathBuf)> {
     // Ask `zig c++ -v -shared` to resolve the exact C++ runtime archives for `arch_target`
     // rather than scanning the global zig cache (which may hold artifacts for other targets such as wasm32).
     let probe_cpp = out_dir.join("_zig_probe.cpp");
@@ -30,7 +81,7 @@ fn collect_zig_cxx_libs(zig_exe: &str, arch_target: &str, out_dir: &Path) -> Vec
     );
     let mut found: Vec<(&'static str, PathBuf)> = Vec::new();
     if let Ok(out) = Command::new(zig_exe)
-        .args(["c++", "-target", arch_target, "-std=c++20", "-fno-sanitize=undefined", "-v", "-shared", "-o"])
+        .args(["c++", "-target", arch_target, cxx_std, "-fno-sanitize=undefined", "-v", "-shared", "-o"])
         .arg(&probe_dll)
         .arg(&probe_cpp)
         .output()
@@ -103,10 +154,12 @@ fn main() {
         let cc = env::var("CC").unwrap_or_else(|_| if has_gcc { "gcc".into() } else { "clang".into() });
         let cxx = env::var("CXX").unwrap_or_else(|_| if has_gcc { "g++".into() } else { "clang++".into() });
         let ar = env::var("AR").unwrap_or_else(|_| "ar".into());
+        let c_std = pick_std_flag(&cc, &[], false, &out_dir, &["-std=c23", "-std=c2x"]);
+        let cxx_std = pick_std_flag(&cxx, &[], true, &out_dir, &["-std=c++23", "-std=c++2b"]);
 
         run_checked(
             Command::new(&cc)
-                .args(["-std=c11", opt_flag, "-Wall", "-Wextra", "-fPIC", "-I"])
+                .args([c_std, opt_flag, "-Wall", "-Wextra", "-fPIC", "-I"])
                 .arg(&c_inc)
                 .args(["-c"])
                 .arg(&simd_c)
@@ -116,7 +169,7 @@ fn main() {
         );
         run_checked(
             Command::new(&cc)
-                .args(["-std=c11", opt_flag, "-Wall", "-Wextra", "-fPIC", "-I"])
+                .args([c_std, opt_flag, "-Wall", "-Wextra", "-fPIC", "-I"])
                 .arg(&c_inc)
                 .args(["-c"])
                 .arg(&def_c)
@@ -126,7 +179,7 @@ fn main() {
         );
         run_checked(
             Command::new(&cxx)
-                .args(["-std=c++20", opt_flag, "-Wall", "-Wextra", "-fPIC", "-I"])
+                .args([cxx_std, opt_flag, "-Wall", "-Wextra", "-fPIC", "-I"])
                 .arg(&c_inc)
                 .arg("-I")
                 .arg(&cpp_inc)
@@ -161,13 +214,15 @@ fn main() {
         } else {
             "native"
         };
+        let c_std = pick_std_flag("zig", &["cc", "-target", zig_target], false, &out_dir, &["-std=c23", "-std=c2x"]);
+        let cxx_std = pick_std_flag("zig", &["c++", "-target", zig_target], true, &out_dir, &["-std=c++23", "-std=c++2b"]);
         if target_os == "windows" {
-            // Compile C11 kernels with `zig cc` and C++20 engine with `zig c++`, then link
+            // Compile C23 kernels with `zig cc` and C++23 engine with `zig c++`, then link
             // `hgs_native.dll` + GNU import lib `libhgs_native.dll.a` so zig's UCRT-backed
             // libc++ stays self-contained inside hgs_native.dll without clashing with Rust's msvcrt/libgcc_eh.
             run_checked(
                 Command::new("zig")
-                    .args(["cc", "-target", zig_target, "-std=c11", opt_flag, "-fno-sanitize=undefined", "-Wall", "-Wextra", "-I"])
+                    .args(["cc", "-target", zig_target, c_std, opt_flag, "-fno-sanitize=undefined", "-Wall", "-Wextra", "-I"])
                     .arg(&c_inc)
                     .args(["-c"])
                     .arg(&simd_c)
@@ -177,7 +232,7 @@ fn main() {
             );
             run_checked(
                 Command::new("zig")
-                    .args(["cc", "-target", zig_target, "-std=c11", opt_flag, "-fno-sanitize=undefined", "-Wall", "-Wextra", "-I"])
+                    .args(["cc", "-target", zig_target, c_std, opt_flag, "-fno-sanitize=undefined", "-Wall", "-Wextra", "-I"])
                     .arg(&c_inc)
                     .args(["-c"])
                     .arg(&def_c)
@@ -187,7 +242,7 @@ fn main() {
             );
             run_checked(
                 Command::new("zig")
-                    .args(["c++", "-target", zig_target, "-std=c++20", opt_flag, "-fno-sanitize=undefined", "-Wall", "-Wextra", "-I"])
+                    .args(["c++", "-target", zig_target, cxx_std, opt_flag, "-fno-sanitize=undefined", "-Wall", "-Wextra", "-I"])
                     .arg(&c_inc)
                     .arg("-I")
                     .arg(&cpp_inc)
@@ -203,7 +258,7 @@ fn main() {
             imp_arg.push(&imp_path);
             run_checked(
                 Command::new("zig")
-                    .args(["c++", "-target", zig_target, "-std=c++20", opt_flag, "-fno-sanitize=undefined", "-shared"])
+                    .args(["c++", "-target", zig_target, cxx_std, opt_flag, "-fno-sanitize=undefined", "-shared"])
                     .arg(&simd_obj)
                     .arg(&def_obj)
                     .arg(&cpp_obj)
@@ -227,7 +282,7 @@ fn main() {
         } else {
             run_checked(
                 Command::new("zig")
-                    .args(["cc", "-target", zig_target, "-std=c11", opt_flag, "-fno-sanitize=undefined", "-fPIC", "-Wall", "-Wextra", "-I"])
+                    .args(["cc", "-target", zig_target, c_std, opt_flag, "-fno-sanitize=undefined", "-fPIC", "-Wall", "-Wextra", "-I"])
                     .arg(&c_inc)
                     .args(["-c"])
                     .arg(&simd_c)
@@ -237,7 +292,7 @@ fn main() {
             );
             run_checked(
                 Command::new("zig")
-                    .args(["cc", "-target", zig_target, "-std=c11", opt_flag, "-fno-sanitize=undefined", "-fPIC", "-Wall", "-Wextra", "-I"])
+                    .args(["cc", "-target", zig_target, c_std, opt_flag, "-fno-sanitize=undefined", "-fPIC", "-Wall", "-Wextra", "-I"])
                     .arg(&c_inc)
                     .args(["-c"])
                     .arg(&def_c)
@@ -247,7 +302,7 @@ fn main() {
             );
             run_checked(
                 Command::new("zig")
-                    .args(["c++", "-target", zig_target, "-std=c++20", opt_flag, "-fno-sanitize=undefined", "-fPIC", "-Wall", "-Wextra", "-I"])
+                    .args(["c++", "-target", zig_target, cxx_std, opt_flag, "-fno-sanitize=undefined", "-fPIC", "-Wall", "-Wextra", "-I"])
                     .arg(&c_inc)
                     .arg("-I")
                     .arg(&cpp_inc)
@@ -263,7 +318,7 @@ fn main() {
                 "zig ar libhgs_native.a",
             );
 
-            let cxx_libs = collect_zig_cxx_libs("zig", zig_target, &out_dir);
+            let cxx_libs = collect_zig_cxx_libs("zig", zig_target, cxx_std, &out_dir);
             println!("cargo:rustc-link-search=native={}", out_dir.display());
             println!("cargo:rustc-link-lib=static:-bundle=hgs_native");
             for (rust_name, src_path) in cxx_libs {
@@ -280,6 +335,6 @@ fn main() {
             }
         }
     } else {
-        panic!("No C/C++20 compiler found (tried gcc/g++, clang/clang++, and zig)");
+        panic!("No C23/C++23 compiler found (tried gcc/g++, clang/clang++, and zig)");
     }
 }

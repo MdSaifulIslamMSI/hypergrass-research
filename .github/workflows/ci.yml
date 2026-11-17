@@ -22,7 +22,7 @@ jobs:
       fail-fast: false
       matrix:
         java:
-          - "21"
+          - "25"
           - "27"
     steps:
       - name: Checkout repository
@@ -54,8 +54,8 @@ jobs:
           jar --create --file "${{ runner.temp }}/dist/hypergrass-hgs2.jar" --main-class hypergrass.HyperGraSS -C bin .
           java -jar "${{ runner.temp }}/dist/hypergrass-hgs2.jar" --version
 
-      - name: Verify Maven POM build (JDK 21 baseline)
-        if: matrix.java == '21'
+      - name: Verify Maven POM build (JDK 25 LTS baseline)
+        if: matrix.java == '25'
         run: |
           mvn -B -ntp package
           java -jar target/hypergrass.jar --version
@@ -65,12 +65,19 @@ jobs:
           SKIP_BUILD: "1"
         run: ./test.sh
 
-      - name: Build Native C11/C++20/Rust eimdl engine and verify tests + Java<->Native interop
-        if: matrix.java == '21' && runner.os == 'Linux'
+      - name: Build Native C23/C++23/Rust 2024 eimdl engine and verify tests + Java<->Native interop
+        if: matrix.java == '25' && runner.os == 'Linux'
         run: |
           export PATH="$HOME/.cargo/bin:$PATH"
-          gcc --version && g++ --version && cargo --version
-          (cd native/eimdl-rs && cargo build --release --offline && cargo test --release --offline)
+          gcc --version && g++ --version && cargo --version && rustc --version
+          (
+            cd native/eimdl-rs
+            if cargo clippy --version >/dev/null 2>&1; then
+              cargo clippy --all-targets --offline -- -D warnings
+            fi
+            cargo build --release --offline
+            cargo test --release --offline
+          )
           ./native/eimdl-rs/target/release/eimdl --version
           python3 - <<'PY'
           import hashlib, os, subprocess, tempfile
@@ -120,7 +127,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
-          python-version: "3.12"
+          python-version: "3.13"
 
       - name: Run 1,693-check paper numerical audit
         run: python3 -B paper/audit_paper_numbers.py

@@ -5,7 +5,10 @@
 #include <stdint.h>
 
 #ifdef __cplusplus
+#define HGS_CPP_NODISCARD [[nodiscard]]
 extern "C" {
+#else
+#define HGS_CPP_NODISCARD
 #endif
 
 /** Owned heap buffer returned across FFI; free strictly via hgs_cpp_free_buffer(). */
@@ -17,7 +20,7 @@ typedef struct {
 void hgs_cpp_free_buffer(HgsOwnedBytes buf);
 
 /** Computes bottom-k canonical primary open-syncmer hash sketch over 2-bit bytes (0..3). */
-int hgs_cpp_compute_bottom_sketch(
+HGS_CPP_NODISCARD int hgs_cpp_compute_bottom_sketch(
     const uint8_t* two_bit_bases,
     size_t len,
     size_t sketch_size,
@@ -27,7 +30,7 @@ int hgs_cpp_compute_bottom_sketch(
 void hgs_cpp_free_u64(uint64_t* ptr);
 
 /** Estimates sorted bottom-sketch Jaccard similarity in [0, 1]. */
-double hgs_cpp_sketch_jaccard(const uint64_t* a, size_t a_len, const uint64_t* b, size_t b_len);
+HGS_CPP_NODISCARD double hgs_cpp_sketch_jaccard(const uint64_t* a, size_t a_len, const uint64_t* b, size_t b_len);
 
 /** Opaque 64-bit Syncmer CSR Index supporting >2.14 Gbp banks. */
 typedef struct HgsSyncmerIndex64 HgsSyncmerIndex64;
@@ -36,7 +39,7 @@ typedef struct HgsSyncmerIndex64 HgsSyncmerIndex64;
  * Builds a 64-bit CSR canonical open-syncmer index over num_donors donors concatenated into bank.
  * Each donor i has length donor_lens[i] and bases packed in donor_two_bit_ptrs[i] (2-bit 0..3).
  */
-HgsSyncmerIndex64* hgs_cpp_index_build(
+HGS_CPP_NODISCARD HgsSyncmerIndex64* hgs_cpp_index_build(
     const uint8_t* const* donor_two_bit_ptrs,
     const uint64_t* donor_lens,
     size_t num_donors,
@@ -70,7 +73,7 @@ void hgs_cpp_free_mosaic_result(HgsMosaicResult* res);
  * Encodes target[0..tgt_len) (2-bit 0..3) into standard .hgs2 Mosaic token stream + extracted novelty bases.
  * Optionally uses panel_idx (for donor ids < max_donor_exclusive) and donor_sim_order[0..sim_order_len).
  */
-HgsMosaicResult hgs_cpp_encode_mosaic(
+HGS_CPP_NODISCARD HgsMosaicResult hgs_cpp_encode_mosaic(
     const uint8_t* target_two_bit,
     uint64_t tgt_len,
     const HgsSyncmerIndex64* panel_idx,
@@ -90,7 +93,7 @@ HgsMosaicResult hgs_cpp_encode_mosaic(
  * Decodes standard .hgs2 Mosaic stream into 2-bit bases (0..3).
  * donor_2bit_ptrs[0..num_donors) points to previously decoded 2-bit donor arrays of lengths donor_lens[].
  */
-int hgs_cpp_decode_mosaic(
+HGS_CPP_NODISCARD int hgs_cpp_decode_mosaic(
     const uint8_t* mosaic_bytes,
     size_t mosaic_len,
     const uint8_t* novelty_bytes,
@@ -102,10 +105,10 @@ int hgs_cpp_decode_mosaic(
     uint64_t* out_len);
 
 /** Parses [target_len, novelty_len] from a .hgs2 mosaic payload header cleanly. */
-int hgs_cpp_mosaic_peek_lengths(const uint8_t* mosaic_bytes, size_t mosaic_len, uint64_t* out_tgt_len, uint64_t* out_nov_len);
+HGS_CPP_NODISCARD int hgs_cpp_mosaic_peek_lengths(const uint8_t* mosaic_bytes, size_t mosaic_len, uint64_t* out_tgt_len, uint64_t* out_nov_len);
 
 /** Stage-2 Unified Novelty Encoder (exact .hgs2 FastNoveltyCoder wire format: FastCRM + Turbo + Raw2Bit). */
-int hgs_cpp_novelty_encode(
+HGS_CPP_NODISCARD int hgs_cpp_novelty_encode(
     const uint8_t* two_bit_bases,
     uint64_t len,
     int threads,
@@ -113,7 +116,7 @@ int hgs_cpp_novelty_encode(
     HgsOwnedBytes* out_payload);
 
 /** Stage-2 Unified Novelty Decoder (exact .hgs2 FastNoveltyCoder wire format). */
-int hgs_cpp_novelty_decode(
+HGS_CPP_NODISCARD int hgs_cpp_novelty_decode(
     const uint8_t* payload,
     size_t payload_len,
     uint64_t expected_len,

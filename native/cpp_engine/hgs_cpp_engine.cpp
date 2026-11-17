@@ -3,12 +3,14 @@
 
 #include <algorithm>
 #include <atomic>
+#include <bit>
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
 #include <limits>
 #include <memory>
 #include <thread>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -241,13 +243,7 @@ struct BitRangeDec {
 };
 
 inline int clz32_pos(uint32_t v) {
-#if defined(__GNUC__) || defined(__clang__)
-    return __builtin_clz(v);
-#else
-    int n = 0;
-    while ((v & 0x80000000U) == 0U) { n++; v <<= 1; }
-    return n;
-#endif
+    return std::countl_zero(v);
 }
 
 struct MosaicModels {

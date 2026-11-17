@@ -9,13 +9,11 @@ $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $root
 & "$root/build.ps1"
 
-$jdk = if (Test-Path (Join-Path $env:USERPROFILE 'tools\jdk-27\bin\java.exe')) {
-    Join-Path $env:USERPROFILE 'tools\jdk-27'
-} elseif ($env:JAVA_HOME) {
+$jdk = @(
+    (Join-Path $env:USERPROFILE 'tools\jdk-27'),
+    (Join-Path $env:USERPROFILE 'tools\jdk-25'),
     $env:JAVA_HOME
-} else {
-    $null
-}
+) | Where-Object { $_ -and (Test-Path (Join-Path $_ 'bin\java.exe')) } | Select-Object -First 1
 $java = if ($jdk) { Join-Path $jdk 'bin\java.exe' } else { 'java' }
 
 Write-Host '== VerifyAllEdgeCases =='

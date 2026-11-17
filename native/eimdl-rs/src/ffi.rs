@@ -32,22 +32,22 @@ pub struct HgsSyncmerIndex64 {
     _private: [u8; 0],
 }
 
-extern "C" {
-    // C11 SIMD & Crypto Kernels (native/c_kernels/hgs_simd.c)
+unsafe extern "C" {
+    // C23 SIMD & Crypto Kernels (native/c_kernels/hgs_simd.c)
     fn hgs_cpu_has_avx2() -> i32;
     fn hgs_ascii_to_2bit_checked(src: *const u8, dst: *mut u8, len: usize, fourth_char: u8) -> i32;
     fn hgs_unpack_2bit_ascii(words: *const u64, offset: u64, len: usize, fourth_char: u8, out_ascii: *mut u8);
     fn hgs_crc32_ieee(prev_crc: u32, data: *const u8, len: usize) -> u32;
     fn hgs_sha256(data: *const u8, len: usize, out_digest: *mut u8);
 
-    // C11 Deflate / Inflate Kernels (native/c_kernels/hgs_deflate.c)
+    // C23 Deflate / Inflate Kernels (native/c_kernels/hgs_deflate.c)
     fn hgs_deflate_free(ptr: *mut u8);
     fn hgs_deflate_raw(src: *const u8, src_len: usize, out_buf: *mut *mut u8, out_len: *mut usize) -> i32;
     fn hgs_inflate_raw(src: *const u8, src_len: usize, hint: usize, out_buf: *mut *mut u8, out_len: *mut usize) -> i32;
     fn hgs_zlib_compress(src: *const u8, src_len: usize, out_buf: *mut *mut u8, out_len: *mut usize) -> i32;
     fn hgs_zlib_decompress(src: *const u8, src_len: usize, out_buf: *mut *mut u8, out_len: *mut usize) -> i32;
 
-    // C++20 Syncmer Graph, Mosaic & Novelty Engines (native/cpp_engine/hgs_cpp_engine.cpp)
+    // C++23 Syncmer Graph, Mosaic & Novelty Engines (native/cpp_engine/hgs_cpp_engine.cpp)
     fn hgs_cpp_free_buffer(buf: HgsOwnedBytes);
     fn hgs_cpp_compute_bottom_sketch(two_bit: *const u8, len: usize, sketch_size: usize, out_sk: *mut *mut u64, out_len: *mut usize) -> i32;
     fn hgs_cpp_free_u64(ptr: *mut u64);

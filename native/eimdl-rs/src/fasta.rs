@@ -162,7 +162,7 @@ fn range_aux_decode(src: &[u8], raw_len: usize, count_model: bool) -> Vec<u8> {
 
     let mut out = vec![0u8; raw_len];
     let mut prev = 0usize;
-    for i in 0..raw_len {
+    for slot in out.iter_mut().take(raw_len) {
         let base = prev << 8;
         let mut node = 1usize;
         for _ in 0..8 {
@@ -170,7 +170,7 @@ fn range_aux_decode(src: &[u8], raw_len: usize, count_model: bool) -> Vec<u8> {
             node = (node << 1) | b;
         }
         let sym = (node & 0xFF) as u8;
-        out[i] = sym;
+        *slot = sym;
         prev = sym as usize;
     }
     out
@@ -669,7 +669,7 @@ pub fn factorize(raw: &[u8]) -> FactorizedChunk {
         let e = s + sl as usize;
         for &orig in &raw[s..e] {
             let mut b = orig;
-            if b >= b'a' && b <= b'z' {
+            if b.is_ascii_lowercase() {
                 if !in_lower {
                     pending_up_gap = cur_case_run;
                     cur_case_run = 1;
@@ -956,7 +956,7 @@ pub fn reconstruct_to(c: &FactorizedChunk, dna_bases: &[u8], out: &mut dyn Write
     if c.num_headers == 0 && c.num_seq_lines == 0 {
         return Ok(0);
     }
-    let alpha = if c.rna_mode { [b'A', b'C', b'G', b'U'] } else { [b'A', b'C', b'G', b'T'] };
+    let alpha = if c.rna_mode { *b"ACGU" } else { *b"ACGT" };
     let acgtn_len = c.total_seq_chars - c.exc_gaps.len();
 
     let mut acgtn = vec![0u8; acgtn_len];

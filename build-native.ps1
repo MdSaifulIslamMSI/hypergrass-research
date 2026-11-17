@@ -1,5 +1,5 @@
 $ErrorActionPreference = 'Stop'
-# Opt-in static-musl native-image pilot. The default build remains --release 27.
+# Opt-in static-musl native-image pilot (GraalVM 25 LTS / --release 25).
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $root
 $image = 'ghcr.io/graalvm/native-image-community:25-muslib@sha256:bd08fee5f6effb210e829f434e5b5341d9b5b321ddc47363a241853723c810eb'

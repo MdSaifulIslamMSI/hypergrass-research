@@ -3,7 +3,8 @@
 **Lossless Genomic, Reference-Conditioned, and Pangenomic Sequence Compression under Evolutionary-Information Minimum Description Length (EIMDL) & Generalized Amdahl-Memory Scaling**
 
 [![Release](https://img.shields.io/github/v/release/MdSaifulIslamMSI/hypergrass-research?label=Release&color=blue)](https://github.com/MdSaifulIslamMSI/hypergrass-research/releases/tag/v2.0.0)
-[![Java](https://img.shields.io/badge/Java-21%2B%20%7C%20JDK%2025%2F27-blue.svg)](src/hypergrass/)
+[![Java](https://img.shields.io/badge/Java-25%20LTS%20%7C%20JDK%2027-blue.svg)](src/hypergrass/)
+[![Native](https://img.shields.io/badge/Native-C23%20%7C%20C%2B%2B23%20%7C%20Rust%202024-orange.svg)](native/README.md)
 [![Container](https://img.shields.io/badge/Formats-.hgs2%20v2.0%20%7C%20.hgs%20v1.0-success.svg)](docs/HGS-FORMAT.md)
 [![Paper](https://img.shields.io/badge/Monograph-28%20Pages%20PDF%20%2B%20LaTeX-critical.svg)](paper/HGS2_EIMDL_Research_Paper.pdf)
 [![Kaggle E2E](https://img.shields.io/badge/Kaggle%20E2E-15--Codec%20Shootout%20%2B%20T4%20GPU-20BEFF.svg)](benchmarks/kaggle/README.md)
@@ -11,7 +12,7 @@
 [![License](https://img.shields.io/badge/License-Apache_2.0-green.svg)](LICENSE)
 [![CI](https://github.com/MdSaifulIslamMSI/hypergrass-research/actions/workflows/ci.yml/badge.svg)](https://github.com/MdSaifulIslamMSI/hypergrass-research/actions/workflows/ci.yml)
 
-> **About:** Complete open-source research repository for **Evolutionary Information Minimum Description Length (`EIMDL`)** and its unified zero-dependency Java 21+ engine **`HGS2`** (uniting Gen 1 [`HyperGraSS v1`](docs/BENCHMARKS.md) and Gen 2 [`RC-MDL v2`](prototype/rcmdl/RESULTS.md) under Formal Laws I–VII). Achieves **`#1`** across **`15/15`** bacterial pangenome shootout tracks (*E. coli*, *S. enterica*, *K. pneumoniae* across Modes S, R, and C with 100% byte-for-byte FASTA SHA-256 identity), **`89.47x`** on all 24 **`T2T-CHM13v2.0 | GRCh38`** human chromosomes (`3.156 GB` $\to$ `35.28 MB`), **`#1`** archive size on human diploid `Chr21`/`Chr22`/`Chr1`/`Chr1..4`, **`43.2x–50.77x`** Tesla T4 CUDA sketch acceleration, and strict **`-Xmx128m`** pure-JVM execution—verified across `1,705/1,705` automated numerical and architectural assertions and Kaggle E2E cloud harnesses.
+> **About:** Complete open-source research repository for **Evolutionary Information Minimum Description Length (`EIMDL`)** and its unified zero-dependency Java 25+ (`JDK 25 LTS` / `JDK 27`) engine **`HGS2`** + wire-compatible **C23 / C++23 / Rust 2024** native engine ([`native/`](native/README.md)) (uniting Gen 1 [`HyperGraSS v1`](docs/BENCHMARKS.md) and Gen 2 [`RC-MDL v2`](prototype/rcmdl/RESULTS.md) under Formal Laws I–VII). Achieves **`#1`** across **`15/15`** bacterial pangenome shootout tracks (*E. coli*, *S. enterica*, *K. pneumoniae* across Modes S, R, and C with 100% byte-for-byte FASTA SHA-256 identity), **`89.47x`** on all 24 **`T2T-CHM13v2.0 | GRCh38`** human chromosomes (`3.156 GB` $\to$ `35.28 MB`), **`#1`** archive size on human diploid `Chr21`/`Chr22`/`Chr1`/`Chr1..4`, **`43.2x–50.77x`** Tesla T4 CUDA sketch acceleration, and strict **`-Xmx128m`** pure-JVM execution—verified across `1,705/1,705` automated numerical and architectural assertions and Kaggle E2E cloud harnesses.
 
 ---
 
@@ -374,10 +375,10 @@ hypergrass/
 │   ├── VerifyAnchorCodecs.java              # 9-suite anchor-bank codec verifier
 │   ├── VerifyArchiveAccounting.java         # 34-suite byte-accounting & 1,721-mutation fuzz rejection verifier
 │   └── [VerifyCostAwareEncoding, VerifyDonorArchives, VerifyDonorCosts, VerifyDonorIndex, AuxPlaneSelfTest, RangeCoderSelfTest].java
-├── native/                                  # Zero-crate native C11 + C++20 + Rust `eimdl` engine (.hgs2 wire-compatible)
+├── native/                                  # Zero-crate native C23 + C++23 + Rust 2024 `eimdl` engine (.hgs2 wire-compatible)
 │   ├── c_kernels/                           # Runtime-CPUID AVX2/SWAR 2-bit DNA kernels, syncmer scan, CRC-32, SHA-256 & RFC 1951 deflate/inflate
 │   ├── cpp_engine/                          # 64-bit >2.14 Gbp CSR syncmer index, Kimura-V4 Mosaic codec & FastCRM/Turbo novelty coder
-│   ├── eimdl-rs/                            # Streaming Rust CLI/library (`Cargo.toml`, `build.rs`, `.hgs2` container, 6-channel FASTA factorizer, tests)
+│   ├── eimdl-rs/                            # Rust 2024 streaming CLI/library (`Cargo.toml`, `build.rs`, `.hgs2` container, 6-channel FASTA factorizer, tests)
 │   └── README.md                            # Native build, C/C++/Rust FFI architecture & CLI guide
 ├── paper/                                   # 28-Page Research Monograph, Figures & Automated Numerical Audit
 │   ├── HGS2_EIMDL_Research_Paper.pdf        # Compiled 28-page single-column PDF monograph (0 overfull boxes)
@@ -416,11 +417,11 @@ hypergrass/
 ## 7. Quick Start: Build, CLI Usage, Verification & Reproduction
 
 ### 7.1 Prerequisites & Compilation
-Requires **Java 21+** (tested on JDK 21, GraalVM 25, and OpenJDK 27) with **zero external JAR dependencies**:
+Requires **Java 25 LTS+** (tested on OpenJDK Temurin 25 LTS, GraalVM 25, and OpenJDK 27) with **zero external JAR dependencies**:
 
 ```powershell
 New-Item -ItemType Directory -Force -Path bin | Out-Null
-javac --release 21 -d bin src/hypergrass/*.java
+javac --release 25 -d bin src/hypergrass/*.java
 ```
 
 ### 7.2 Compressing & Restoring with `EimdlCli` (`.hgs2` Container)
@@ -443,11 +444,12 @@ java -Xmx128m -cp bin hypergrass.EimdlCli compress --collection --bounded --targ
 java -Xmx128m -cp bin hypergrass.EimdlCli decompress --archive bounded128.hgs2 --out restored_input.seq
 ```
 
-### 7.2.1 Native C11 + C++20 + Rust Engine (`native/eimdl-rs`)
+### 7.2.1 Native C23 + C++23 + Rust 2024 Engine (`native/eimdl-rs`)
 Zero-external-crate `.hgs2`-wire-compatible native implementation ([`native/README.md`](native/README.md)) supporting bidirectional Java $\leftrightarrow$ Native cross-decoding:
 
 ```bash
 cd native/eimdl-rs
+cargo clippy --all-targets --offline -- -D warnings
 cargo build --release --offline
 cargo test --release --offline
 ./target/release/eimdl compress --collection --target pangenome.fa --out pangenome.hgs2 --threads 4
@@ -466,11 +468,11 @@ java -cp bin hypergrass.HyperGraSS decompress pangenome.hgs2 restored.fa
 
 ### 7.4 Verification Policy (Kaggle Cloud Execution + Local Syntax & Numerical Audit)
 
-> **Mandatory Kaggle-Only Testing Policy:** `test.ps1` and `test.sh` enforce cloud execution on Kaggle (or GitHub Actions CI) rather than local runs. Locally, compile-check with `javac --release 21 -Xlint:all` and audit all paper numbers deterministically:
+> **Mandatory Kaggle-Only Testing Policy:** `test.ps1` and `test.sh` enforce cloud execution on Kaggle (or GitHub Actions CI) rather than local runs. Locally, compile-check with `javac --release 25 -Xlint:all` and audit all paper numbers deterministically:
 
 ```powershell
 # 1. Local syntax compilation only (no local test/benchmark execution)
-javac --release 21 -Xlint:all -d build_check src/hypergrass/*.java; Remove-Item -Recurse -Force build_check
+javac --release 25 -Xlint:all -d build_check src/hypergrass/*.java; Remove-Item -Recurse -Force build_check
 
 # 2. Launch end-to-end verification, 15-codec shootout, T4 GPU, and human-scale kernels on Kaggle
 python benchmarks/kaggle/run_kaggle_e2e.py --target shootout

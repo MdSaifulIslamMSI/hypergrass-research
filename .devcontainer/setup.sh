@@ -53,7 +53,7 @@ python3 prototype/rcmdl/split_panel.py \
   --out prototype/rcmdl/work/saureus/genomes
 
 mkdir -p prototype/rcmdl/bin
-javac -d prototype/rcmdl/bin prototype/rcmdl/Rcmdl.java
+javac --release 25 -d prototype/rcmdl/bin prototype/rcmdl/Rcmdl.java
 
 cat <<'EOF'
 Ready.

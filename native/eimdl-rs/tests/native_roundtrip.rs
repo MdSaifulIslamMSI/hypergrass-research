@@ -105,18 +105,22 @@ fn hgs2_end_to_end_modes_s_r_c() {
     fs::write(&raw_fa, &fasta_txt).unwrap();
 
     // Mode S
-    let mut opts_s = CompressOptions::default();
-    opts_s.mode = MODE_SINGLE as i32;
-    opts_s.single_genome = true;
+    let opts_s = CompressOptions {
+        mode: MODE_SINGLE as i32,
+        single_genome: true,
+        ..Default::default()
+    };
     let rep_s = hgs2::compress_file(&raw_fa, &arc_s, &opts_s).unwrap();
     assert_eq!(rep_s.mode, MODE_SINGLE);
     hgs2::decompress_file(&arc_s, &dec_s, None, 2, false).unwrap();
     assert_eq!(fs::read(&dec_s).unwrap(), fasta_txt);
 
     // Mode C
-    let mut opts_c = CompressOptions::default();
-    opts_c.mode = MODE_COLLECTION as i32;
-    opts_c.bounded = true;
+    let opts_c = CompressOptions {
+        mode: MODE_COLLECTION as i32,
+        bounded: true,
+        ..Default::default()
+    };
     let rep_c = hgs2::compress_file(&raw_fa, &arc_c, &opts_c).unwrap();
     assert_eq!(rep_c.mode, MODE_COLLECTION);
     hgs2::decompress_file(&arc_c, &dec_c, None, 2, true).unwrap();
@@ -137,8 +141,10 @@ fn hgs2_end_to_end_modes_s_r_c() {
 
     let arc_r = tmp.join("mode_r.hgs2");
     let dec_r = tmp.join("dec_r.fa");
-    let mut opts_r = CompressOptions::default();
-    opts_r.reference_panel = Some(pdir.clone());
+    let opts_r = CompressOptions {
+        reference_panel: Some(pdir.clone()),
+        ..Default::default()
+    };
     let rep_r = hgs2::compress_file(&tgt_fa, &arc_r, &opts_r).unwrap();
     assert_eq!(rep_r.mode, MODE_REF);
     hgs2::decompress_file(&arc_r, &dec_r, Some(&pdir), 2, false).unwrap();

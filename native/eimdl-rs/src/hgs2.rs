@@ -452,8 +452,8 @@ fn build_prim_order(
     }
     let mut root = 0usize;
     let mut best_sum = -1.0f64;
-    for i in 0..n {
-        let s: f64 = (0..n).filter(|&j| j != i).map(|j| sim[i][j]).sum();
+    for (i, row) in sim.iter().enumerate().take(n) {
+        let s: f64 = row.iter().enumerate().filter(|&(j, _)| j != i).map(|(_, &v)| v).sum();
         if s > best_sum {
             best_sum = s;
             root = i;
@@ -694,7 +694,7 @@ pub fn compress_file(input: &Path, output: &Path, opts: &CompressOptions) -> Res
         for r in 0..num_units { hdr.write_var_u64(r.min(hub_cap) as u64); }
         drop(sketches);
     } else {
-        for u in 0..num_units { rank_to_unit[u] = u; }
+        for (u, slot) in rank_to_unit.iter_mut().enumerate().take(num_units) { *slot = u; }
     }
 
     if !raw_flat_acgt {
@@ -706,8 +706,8 @@ pub fn compress_file(input: &Path, output: &Path, opts: &CompressOptions) -> Res
         }
         drop(aux_blobs);
     } else {
-        for u in 0..num_units {
-            hdr.write_var_u64(flat_unit_lens[u]);
+        for &len in flat_unit_lens.iter().take(num_units) {
+            hdr.write_var_u64(len);
         }
     }
     out_file.write_all(&hdr.buf).map_err(|e| e.to_string())?;
@@ -803,8 +803,7 @@ pub fn compress_file(input: &Path, output: &Path, opts: &CompressOptions) -> Res
     } else {
         // MODE_COLLECTION (bounded hub bank or full bank)
         let mut hub_dna: Vec<Vec<u8>> = Vec::with_capacity(hub_cap);
-        for r in 0..hub_cap {
-            let u = rank_to_unit[r];
+        for &u in rank_to_unit.iter().take(hub_cap) {
             hub_dna.push(fetch_unit_dna(u)?);
         }
         let hub_refs: Vec<&[u8]> = hub_dna.iter().map(|v| v.as_slice()).collect();
@@ -893,10 +892,10 @@ pub fn decompress_file(archive: &Path, output: &Path, panel: Option<&Path>, thre
     let mut rank_to_unit = vec![0usize; num_units];
     let mut max_anc_rank = vec![0usize; num_units];
     if mode == MODE_COLLECTION && num_units > 1 {
-        for r in 0..num_units { rank_to_unit[r] = inp.read_var_u64()? as usize; }
-        for r in 0..num_units { max_anc_rank[r] = inp.read_var_u64()? as usize; }
+        for slot in rank_to_unit.iter_mut().take(num_units) { *slot = inp.read_var_u64()? as usize; }
+        for slot in max_anc_rank.iter_mut().take(num_units) { *slot = inp.read_var_u64()? as usize; }
     } else {
-        for u in 0..num_units { rank_to_unit[u] = u; }
+        for (u, slot) in rank_to_unit.iter_mut().enumerate().take(num_units) { *slot = u; }
     }
 
     let mut unit_meta_slices: Vec<&[u8]> = Vec::new();
@@ -958,10 +957,9 @@ pub fn decompress_file(archive: &Path, output: &Path, panel: Option<&Path>, thre
     let mut written = 0u64;
 
     if raw_flat_acgt {
-        let map = if raw_rna_u { [b'A', b'C', b'G', b'U'] } else { [b'A', b'C', b'G', b'T'] };
+        let map = if raw_rna_u { *b"ACGU" } else { *b"ACGT" };
         let mut ascii_buf = Vec::new();
-        for u in 0..num_units {
-            let r = unit_to_rank[u];
+        for &r in unit_to_rank.iter().take(num_units) {
             let dna = &decoded_ranks[r];
             ascii_buf.resize(dna.len(), 0);
             for (i, &b) in dna.iter().enumerate() { ascii_buf[i] = map[(b & 3) as usize]; }

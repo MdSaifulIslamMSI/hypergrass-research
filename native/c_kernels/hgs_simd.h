@@ -1,11 +1,19 @@
 #ifndef HGS_SIMD_H
 #define HGS_SIMD_H
 
+#ifdef __cplusplus
+#include <cstddef>
+#include <cstdint>
+#define HGS_NODISCARD [[nodiscard]]
+extern "C" {
+#else
 #include <stddef.h>
 #include <stdint.h>
-
-#ifdef __cplusplus
-extern "C" {
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
+#define HGS_NODISCARD [[nodiscard]]
+#else
+#define HGS_NODISCARD
+#endif
 #endif
 
 /**
@@ -17,7 +25,7 @@ extern "C" {
 typedef void (*HgsSyncmerCb)(uint64_t pos, uint64_t canon_kmer, uint8_t strand, void* ctx);
 
 /** Returns 1 if host CPU supports AVX2 (runtime CPUID check), 0 otherwise. */
-int hgs_cpu_has_avx2(void);
+HGS_NODISCARD int hgs_cpu_has_avx2(void);
 
 /**
  * Vectorized (AVX2 when supported, SWAR fallback) ASCII DNA/RNA -> 2-bit byte array (0..3).
@@ -25,7 +33,7 @@ int hgs_cpu_has_avx2(void);
  * or uppercase ACGU (fourth_char='U'), else 0 (still writes lowercase/U mapped to 0..3
  * and 0 for non-ACGTU bytes).
  */
-int hgs_ascii_to_2bit_checked(const uint8_t* src, uint8_t* dst, size_t len, uint8_t fourth_char);
+HGS_NODISCARD int hgs_ascii_to_2bit_checked(const uint8_t* src, uint8_t* dst, size_t len, uint8_t fourth_char);
 
 /**
  * Packs 2-bit bytes (0..3 per byte) into LSB-first 64-bit words (32 bases per word),
@@ -103,7 +111,7 @@ void hgs_scan_open_syncmers(
     void* ctx);
 
 /** Slice-by-8 IEEE 802.3 CRC-32 (pass prev_crc = 0 on initial call). */
-uint32_t hgs_crc32_ieee(uint32_t prev_crc, const uint8_t* data, size_t len);
+HGS_NODISCARD uint32_t hgs_crc32_ieee(uint32_t prev_crc, const uint8_t* data, size_t len);
 
 /** Self-contained FIPS 180-4 SHA-256 digest (32 bytes written to out_digest). */
 void hgs_sha256(const uint8_t* data, size_t len, uint8_t out_digest[32]);

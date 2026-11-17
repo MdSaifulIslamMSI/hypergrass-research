@@ -8,7 +8,7 @@ use eimdl_native::hgs2::{self, CompressOptions, MODE_COLLECTION, MODE_SINGLE};
 
 fn print_usage() {
     eprintln!(
-        "EIMDL / HyperGraSS v2.0.0 Native Engine (C11 AVX2/SWAR + C++20 64-bit DAG/CRM + Rust Streaming)\n\
+        "EIMDL / HyperGraSS v2.0.0 Native Engine (C23 AVX2/SWAR + C++23 64-bit DAG/CRM + Rust 2024 Streaming)\n\
          Usage:\n\
            eimdl --version\n\
            eimdl compress --target <file> --out <archive> [--panel <dir|file>] [--exclude <name>] [--panel-list <file>] [--panel-limit <N>] [--collection] [--single] [--bounded] [--threads <N>]\n\

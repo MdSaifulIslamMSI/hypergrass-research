@@ -34,20 +34,20 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up JDK 21
+      - name: Set up JDK 25 LTS
         uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: "21"
+          java-version: "25"
 
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
-          python-version: "3.12"
+          python-version: "3.13"
 
-      - name: Build Java 21 classes & run all 7 verification suites
+      - name: Build Java 25 LTS classes & run all 7 verification suites
         env:
-          JAVA_RELEASE: "21"
+          JAVA_RELEASE: "25"
         run: |
           chmod +x build.sh test.sh
           ./test.sh

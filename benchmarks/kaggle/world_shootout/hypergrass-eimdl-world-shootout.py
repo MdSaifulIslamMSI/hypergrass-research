@@ -1,8 +1,8 @@
 """Kaggle CPU-Only End-to-End World-Leading Compressor Shootout for HGS2 / EIMDL.
 
 Executes with zero GPU/TPU quota (Kaggle free CPU VM: 4 vCPUs, 32 GiB RAM):
-  0. Compiles all 34 Java sources (--release 21 -Xlint:all) + runs ALL 7 Verify* suites
-     + compiles & 24 KiB smoke-verifies 15 open-source world-leading compressors (including Original GraSS -e2).
+  0. Compiles all Java sources (--release 25 -Xlint:all) + runs ALL 7 Verify* suites
+     + builds Native C23/C++23/Rust 2024 `eimdl` + compiles & smoke-verifies world compressors (incl. FFC, MBGC2, GraSS -e2).
   1. Brutal Adversarial Torture & Law IV/VII Bounded-Heap Stress (100M@-Xmx128m .. 1Gbp@-Xmx512m).
   2. Real NCBI SHA-256-Locked Bacterial Pangenome Shootout (E. coli 24g, S. enterica 25g, K. pneumoniae 23g)
      across Mode S, Mode R (vs GeCo3 -r & AGC marginal), and Mode C (vs AGC, MBGC, NAF, MFCompress, JARVIS3, GeCo3, libbsc, zpaq, xz, zstd, brotli, bzip2, gzip).

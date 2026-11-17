@@ -1,7 +1,7 @@
 """Shared Kaggle cloud harness for large-scale HGS2/EIMDL validation.
 
-Builds OpenJDK (>=21), compiles HyperGraSS + EIMDL, self-verifies Compression Laws
-I-VII and the Fusion Engine, builds pinned JARVIS3 and AGC baselines, prepares
+Builds OpenJDK (>=25 LTS), compiles HyperGraSS + EIMDL, self-verifies Compression Laws
+I-VII and the Fusion Engine, builds pinned JARVIS3, AGC, FFC, MBGC2, and Native C23/C++23/Rust 2024 eimdl, prepares
 multi-hundred-MB and gigabyte-scale Human (GRCh38 + T2T-CHM13v2.0) and SARS-CoV-2
 datasets, and measures wall time, peak RSS, compression ratio, and SHA-256 parity.
 """
@@ -130,17 +130,23 @@ def _parse_java_major(version_output: str) -> int:
 
 
 def ensure_jdk_and_tools(src_bundle_root: Path) -> dict:
-    """Installs apt utilities + OpenJDK (>=21), compiles HGS2, and builds JARVIS3/AGC."""
+    """Installs apt utilities + OpenJDK (>=25 LTS), Rust (>=1.85 / 2024 ed.), compiles HGS2, and builds baselines."""
     WORK_ROOT.mkdir(parents=True, exist_ok=True)
     BIN_DIR.mkdir(parents=True, exist_ok=True)
 
-    log("Installing Linux benchmark dependencies (time, zstd, xz-utils, build tools, rustc/cargo)...")
+    log("Installing Linux benchmark dependencies (time, zstd, xz-utils, build tools, gcc-14 fallback, rustc/cargo)...")
     run_cmd(
         "apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "
         "time zstd xz-utils build-essential cmake git curl zlib1g-dev pigz cargo rustc",
         shell=True,
         check=False,
         timeout=600,
+    )
+    run_cmd(
+        "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq gcc-14 g++-14 || true",
+        shell=True,
+        check=False,
+        timeout=300,
     )
 
     java_bin = shutil.which("java")
@@ -150,14 +156,14 @@ def ensure_jdk_and_tools(src_bundle_root: Path) -> dict:
         out = run_cmd([javac_bin, "-version"], check=False)
         major = _parse_java_major(out["stdout"] + "\n" + out["stderr"])
 
-    if major < 21:
-        log(f"System javac major={major} < 21; downloading Eclipse Temurin JDK 21 LTS...")
-        jdk_tgz = WORK_ROOT / "temurin21.tar.gz"
-        jdk_dir = WORK_ROOT / "jdk21"
+    if major < 25:
+        log(f"System javac major={major} < 25; downloading Eclipse Temurin JDK 25 LTS...")
+        jdk_tgz = WORK_ROOT / "temurin25.tar.gz"
+        jdk_dir = WORK_ROOT / "jdk25"
         existing_java = list(jdk_dir.glob("*/bin/java"))
         if not existing_java:
             url = (
-                "https://api.adoptium.net/v3/binary/latest/21/ga/linux/x64/"
+                "https://api.adoptium.net/v3/binary/latest/25/ga/linux/x64/"
                 "jdk/hotspot/normal/eclipse?project=jdk"
             )
             urllib.request.urlretrieve(url, jdk_tgz)
@@ -186,8 +192,8 @@ def ensure_jdk_and_tools(src_bundle_root: Path) -> dict:
         java_dir = cli_java.parent
 
     java_files = sorted(str(p) for p in java_dir.glob("*.java"))
-    log(f"Compiling {len(java_files)} HyperGraSS/EIMDL Java sources (--release 21 -Xlint:all)...")
-    run_cmd([javac_bin, "--release", "21", "-Xlint:all", "-d", str(BIN_DIR), *java_files], timeout=300)
+    log(f"Compiling {len(java_files)} HyperGraSS/EIMDL Java sources (--release 25 -Xlint:all)...")
+    run_cmd([javac_bin, "--release", "25", "-Xlint:all", "-d", str(BIN_DIR), *java_files], timeout=300)
 
     grass_fixture = next(src_bundle_root.rglob("GCF_001884535.1.fna"), None)
     edge_jvm = [f"-Dgrass.src={grass_fixture.parent}"] if grass_fixture else []
@@ -230,13 +236,19 @@ def ensure_jdk_and_tools(src_bundle_root: Path) -> dict:
         "xz": shutil.which("xz"),
     }
 
-    # Build Native C11/C++20/Rust engine (eimdl)
+    # Build Native C23/C++23/Rust 2024 engine (eimdl)
     native_dir = java_dir.parent.parent / "native" / "eimdl-rs"
     if native_dir.is_dir():
         try:
             cargo_bin = shutil.which("cargo")
-            if not cargo_bin:
-                log("Cargo missing via apt; installing minimal rustup toolchain...")
+            rustc_bin = shutil.which("rustc")
+            rust_minor = 0
+            if rustc_bin:
+                rv = run_cmd([rustc_bin, "--version"], check=False)
+                rm = re.search(r"rustc\s+1\.(\d+)", rv["stdout"] + rv["stderr"])
+                rust_minor = int(rm.group(1)) if rm else 0
+            if (not cargo_bin) or rust_minor < 85:
+                log(f"System rustc 1.{rust_minor} < 1.85 (needed for Rust 2024 edition); installing minimal rustup...")
                 run_cmd(
                     "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal",
                     shell=True,
@@ -247,12 +259,24 @@ def ensure_jdk_and_tools(src_bundle_root: Path) -> dict:
                     cargo_bin = str(cargo_cand)
                     os.environ["PATH"] = f"{cargo_cand.parent}:{os.environ.get('PATH', '')}"
             if cargo_bin:
-                run_cmd([cargo_bin, "build", "--release", "--offline"], cwd=native_dir, timeout=300)
-                run_cmd([cargo_bin, "test", "--release", "--offline"], cwd=native_dir, timeout=300)
+                env_cc = {}
+                if shutil.which("gcc-14") and shutil.which("g++-14"):
+                    env_cc = {"CC": "gcc-14", "CXX": "g++-14"}
+                old_cc = {k: os.environ.get(k) for k in env_cc}
+                os.environ.update(env_cc)
+                try:
+                    run_cmd([cargo_bin, "build", "--release", "--offline"], cwd=native_dir, timeout=300)
+                    run_cmd([cargo_bin, "test", "--release", "--offline"], cwd=native_dir, timeout=300)
+                finally:
+                    for k, v in old_cc.items():
+                        if v is None:
+                            os.environ.pop(k, None)
+                        else:
+                            os.environ[k] = v
                 nb = native_dir / "target" / "release" / "eimdl"
                 if nb.exists():
                     tools["eimdl_native"] = str(nb)
-                    log(f"Built & verified Native C11/C++20/Rust engine at {nb}")
+                    log(f"Built & verified Native C23/C++23/Rust 2024 engine at {nb}")
         except Exception as exc:
             log(f"Warning: Native C/C++/Rust engine build failed: {exc}")
 

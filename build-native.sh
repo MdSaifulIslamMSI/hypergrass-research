@@ -2,7 +2,7 @@
 # Build the static-musl native-image pilot.
 #
 # This is an opt-in experiment, not the default build. The default Java build
-# remains `build.sh`/`build.ps1` with --release 27. GraalVM 25 is the newest
+# remains `build.sh`/`build.ps1` with --release 25 (LTS) and CI verification on 25 & 27. GraalVM 25 is the newest
 # native-image release available, so the pilot compiles the same sources with
 # --release 25; the resulting archive bytes are verified against the JVM.
 set -eu

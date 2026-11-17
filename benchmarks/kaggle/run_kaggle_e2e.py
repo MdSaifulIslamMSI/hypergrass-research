@@ -2,7 +2,7 @@
 """Permanent Kaggle-Only End-to-End Orchestrator for HyperGraSS / EIMDL.
 
 Replaces all local unit/integration/benchmark runs:
-  1. Syntax-compiles Java locally only for preflight typo detection (--release 21 -Xlint:all)
+  1. Syntax-compiles Java locally only for preflight typo detection (--release 25 -Xlint:all)
      NEVER executing any Java tests or compression benchmarks on the local machine.
   2. Stages and pushes `mdsaifulislammsi/hypergrass-eimdl-src` to Kaggle Datasets.
   3. Waits for Kaggle dataset extraction (`ready`).
@@ -83,7 +83,7 @@ def stage_dataset(stage_dir: Path) -> None:
                 for fp in sorted(src_dir.iterdir()):
                     if fp.is_file():
                         shutil.copy2(fp, dst_dir / fp.name)
-        for root_f in ("eimdl-rs/Cargo.toml", "eimdl-rs/build.rs"):
+        for root_f in ("eimdl-rs/Cargo.toml", "eimdl-rs/Cargo.lock", "eimdl-rs/build.rs"):
             fp = native_src / root_f
             if fp.is_file():
                 (native_dst / "eimdl-rs").mkdir(parents=True, exist_ok=True)
