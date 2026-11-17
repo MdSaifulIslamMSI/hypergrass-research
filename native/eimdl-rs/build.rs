@@ -127,22 +127,26 @@ fn main() {
     let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
     let target_env = env::var("CARGO_CFG_TARGET_ENV").unwrap_or_default();
 
-    let simd_c = native_dir.join("c_kernels").join("hgs_simd.c");
-    let def_c = native_dir.join("c_kernels").join("hgs_deflate.c");
+    let c_sources = ["hgs_simd.c", "hgs_deflate.c", "hgs_ans.c"];
+    let c_headers = ["hgs_simd.h", "hgs_deflate.h", "hgs_ans.h"];
     let cpp_src = native_dir.join("cpp_engine").join("hgs_cpp_engine.cpp");
     let c_inc = native_dir.join("c_kernels");
     let cpp_inc = native_dir.join("cpp_engine");
 
-    println!("cargo:rerun-if-changed={}", simd_c.display());
-    println!("cargo:rerun-if-changed={}", c_inc.join("hgs_simd.h").display());
-    println!("cargo:rerun-if-changed={}", def_c.display());
-    println!("cargo:rerun-if-changed={}", c_inc.join("hgs_deflate.h").display());
+    for src in c_sources {
+        println!("cargo:rerun-if-changed={}", c_inc.join(src).display());
+    }
+    for hdr in c_headers {
+        println!("cargo:rerun-if-changed={}", c_inc.join(hdr).display());
+    }
     println!("cargo:rerun-if-changed={}", cpp_src.display());
     println!("cargo:rerun-if-changed={}", cpp_inc.join("hgs_cpp_engine.hpp").display());
 
     let opt_flag = if env::var("PROFILE").as_deref() == Ok("debug") { "-O2" } else { "-O3" };
-    let simd_obj = out_dir.join("hgs_simd.o");
-    let def_obj = out_dir.join("hgs_deflate.o");
+    let c_objs: Vec<PathBuf> = c_sources
+        .iter()
+        .map(|s| out_dir.join(s.replace(".c", ".o")))
+        .collect();
     let cpp_obj = out_dir.join("hgs_cpp_engine.o");
     let lib_path = out_dir.join("libhgs_native.a");
 
@@ -157,26 +161,18 @@ fn main() {
         let c_std = pick_std_flag(&cc, &[], false, &out_dir, &["-std=c23", "-std=c2x"]);
         let cxx_std = pick_std_flag(&cxx, &[], true, &out_dir, &["-std=c++23", "-std=c++2b"]);
 
-        run_checked(
-            Command::new(&cc)
-                .args([c_std, opt_flag, "-Wall", "-Wextra", "-fPIC", "-I"])
-                .arg(&c_inc)
-                .args(["-c"])
-                .arg(&simd_c)
-                .arg("-o")
-                .arg(&simd_obj),
-            "compile hgs_simd.c",
-        );
-        run_checked(
-            Command::new(&cc)
-                .args([c_std, opt_flag, "-Wall", "-Wextra", "-fPIC", "-I"])
-                .arg(&c_inc)
-                .args(["-c"])
-                .arg(&def_c)
-                .arg("-o")
-                .arg(&def_obj),
-            "compile hgs_deflate.c",
-        );
+        for (src, obj) in c_sources.iter().zip(c_objs.iter()) {
+            run_checked(
+                Command::new(&cc)
+                    .args([c_std, opt_flag, "-Wall", "-Wextra", "-fPIC", "-I"])
+                    .arg(&c_inc)
+                    .args(["-c"])
+                    .arg(c_inc.join(src))
+                    .arg("-o")
+                    .arg(obj),
+                &format!("compile {src}"),
+            );
+        }
         run_checked(
             Command::new(&cxx)
                 .args([cxx_std, opt_flag, "-Wall", "-Wextra", "-fPIC", "-I"])
@@ -190,10 +186,13 @@ fn main() {
             "compile hgs_cpp_engine.cpp",
         );
         let _ = std::fs::remove_file(&lib_path);
-        run_checked(
-            Command::new(&ar).args(["rcs"]).arg(&lib_path).arg(&simd_obj).arg(&def_obj).arg(&cpp_obj),
-            "archive libhgs_native.a",
-        );
+        let mut ar_cmd = Command::new(&ar);
+        ar_cmd.args(["rcs"]).arg(&lib_path);
+        for obj in &c_objs {
+            ar_cmd.arg(obj);
+        }
+        ar_cmd.arg(&cpp_obj);
+        run_checked(&mut ar_cmd, "archive libhgs_native.a");
 
         println!("cargo:rustc-link-search=native={}", out_dir.display());
         println!("cargo:rustc-link-lib=static=hgs_native");
@@ -217,29 +216,18 @@ fn main() {
         let c_std = pick_std_flag("zig", &["cc", "-target", zig_target], false, &out_dir, &["-std=c23", "-std=c2x"]);
         let cxx_std = pick_std_flag("zig", &["c++", "-target", zig_target], true, &out_dir, &["-std=c++23", "-std=c++2b"]);
         if target_os == "windows" {
-            // Compile C23 kernels with `zig cc` and C++23 engine with `zig c++`, then link
-            // `hgs_native.dll` + GNU import lib `libhgs_native.dll.a` so zig's UCRT-backed
-            // libc++ stays self-contained inside hgs_native.dll without clashing with Rust's msvcrt/libgcc_eh.
-            run_checked(
-                Command::new("zig")
-                    .args(["cc", "-target", zig_target, c_std, opt_flag, "-fno-sanitize=undefined", "-Wall", "-Wextra", "-I"])
-                    .arg(&c_inc)
-                    .args(["-c"])
-                    .arg(&simd_c)
-                    .arg("-o")
-                    .arg(&simd_obj),
-                "zig cc hgs_simd.c",
-            );
-            run_checked(
-                Command::new("zig")
-                    .args(["cc", "-target", zig_target, c_std, opt_flag, "-fno-sanitize=undefined", "-Wall", "-Wextra", "-I"])
-                    .arg(&c_inc)
-                    .args(["-c"])
-                    .arg(&def_c)
-                    .arg("-o")
-                    .arg(&def_obj),
-                "zig cc hgs_deflate.c",
-            );
+            for (src, obj) in c_sources.iter().zip(c_objs.iter()) {
+                run_checked(
+                    Command::new("zig")
+                        .args(["cc", "-target", zig_target, c_std, opt_flag, "-fno-sanitize=undefined", "-Wall", "-Wextra", "-I"])
+                        .arg(&c_inc)
+                        .args(["-c"])
+                        .arg(c_inc.join(src))
+                        .arg("-o")
+                        .arg(obj),
+                    &format!("zig cc {src}"),
+                );
+            }
             run_checked(
                 Command::new("zig")
                     .args(["c++", "-target", zig_target, cxx_std, opt_flag, "-fno-sanitize=undefined", "-Wall", "-Wextra", "-I"])
@@ -256,19 +244,13 @@ fn main() {
             let imp_path = out_dir.join("libhgs_native.dll.a");
             let mut imp_arg = std::ffi::OsString::from("-Wl,--out-implib,");
             imp_arg.push(&imp_path);
-            run_checked(
-                Command::new("zig")
-                    .args(["c++", "-target", zig_target, cxx_std, opt_flag, "-fno-sanitize=undefined", "-shared"])
-                    .arg(&simd_obj)
-                    .arg(&def_obj)
-                    .arg(&cpp_obj)
-                    .arg("-Wl,--export-all-symbols")
-                    .arg(&imp_arg)
-                    .arg("-o")
-                    .arg(&dll_path),
-                "zig c++ link hgs_native.dll",
-            );
-            // Copy hgs_native.dll next to target/<profile>/ and deps/ for direct CLI execution.
+            let mut link_cmd = Command::new("zig");
+            link_cmd.args(["c++", "-target", zig_target, cxx_std, opt_flag, "-fno-sanitize=undefined", "-shared"]);
+            for obj in &c_objs {
+                link_cmd.arg(obj);
+            }
+            link_cmd.arg(&cpp_obj).arg("-Wl,--export-all-symbols").arg(&imp_arg).arg("-o").arg(&dll_path);
+            run_checked(&mut link_cmd, "zig c++ link hgs_native.dll");
             if let Some(build_dir) = out_dir.ancestors().find(|p| p.file_name().and_then(|s| s.to_str()) == Some("build")) {
                 if let Some(profile_dir) = build_dir.parent() {
                     let _ = std::fs::copy(&dll_path, profile_dir.join("hgs_native.dll"));
@@ -280,26 +262,18 @@ fn main() {
             println!("cargo:rustc-link-search=native={}", out_dir.display());
             println!("cargo:rustc-link-lib=dylib=hgs_native");
         } else {
-            run_checked(
-                Command::new("zig")
-                    .args(["cc", "-target", zig_target, c_std, opt_flag, "-fno-sanitize=undefined", "-fPIC", "-Wall", "-Wextra", "-I"])
-                    .arg(&c_inc)
-                    .args(["-c"])
-                    .arg(&simd_c)
-                    .arg("-o")
-                    .arg(&simd_obj),
-                "zig cc hgs_simd.c",
-            );
-            run_checked(
-                Command::new("zig")
-                    .args(["cc", "-target", zig_target, c_std, opt_flag, "-fno-sanitize=undefined", "-fPIC", "-Wall", "-Wextra", "-I"])
-                    .arg(&c_inc)
-                    .args(["-c"])
-                    .arg(&def_c)
-                    .arg("-o")
-                    .arg(&def_obj),
-                "zig cc hgs_deflate.c",
-            );
+            for (src, obj) in c_sources.iter().zip(c_objs.iter()) {
+                run_checked(
+                    Command::new("zig")
+                        .args(["cc", "-target", zig_target, c_std, opt_flag, "-fno-sanitize=undefined", "-fPIC", "-Wall", "-Wextra", "-I"])
+                        .arg(&c_inc)
+                        .args(["-c"])
+                        .arg(c_inc.join(src))
+                        .arg("-o")
+                        .arg(obj),
+                    &format!("zig cc {src}"),
+                );
+            }
             run_checked(
                 Command::new("zig")
                     .args(["c++", "-target", zig_target, cxx_std, opt_flag, "-fno-sanitize=undefined", "-fPIC", "-Wall", "-Wextra", "-I"])
@@ -313,10 +287,13 @@ fn main() {
                 "zig c++ hgs_cpp_engine.cpp",
             );
             let _ = std::fs::remove_file(&lib_path);
-            run_checked(
-                Command::new("zig").args(["ar", "rcs"]).arg(&lib_path).arg(&simd_obj).arg(&def_obj).arg(&cpp_obj),
-                "zig ar libhgs_native.a",
-            );
+            let mut ar_cmd = Command::new("zig");
+            ar_cmd.args(["ar", "rcs"]).arg(&lib_path);
+            for obj in &c_objs {
+                ar_cmd.arg(obj);
+            }
+            ar_cmd.arg(&cpp_obj);
+            run_checked(&mut ar_cmd, "zig ar libhgs_native.a");
 
             let cxx_libs = collect_zig_cxx_libs("zig", zig_target, cxx_std, &out_dir);
             println!("cargo:rustc-link-search=native={}", out_dir.display());

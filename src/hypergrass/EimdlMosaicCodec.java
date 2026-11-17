@@ -4,6 +4,7 @@ import hypergrass.VarIntCodec.ByteIn;
 import hypergrass.VarIntCodec.ByteOut;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.ForkJoinPool;
 import java.util.stream.IntStream;
 
@@ -92,6 +93,109 @@ public final class EimdlMosaicCodec {
     /** Output of encoding one sequence's mosaic structure + extracted novelty bases. */
     public record EncodedMosaic(
             byte[] mosaicBytes, byte[] noveltyBases, int noveltyLen, MosaicStats stats) {}
+
+    /** Evolutionary telemetry decoded directly from Mosaic tokens. */
+    public record MosaicInspectStats(
+            long targetLen,
+            long noveltyLen,
+            long panelMatchBases,
+            long selfMatchBases,
+            long tandemMatchBases,
+            long literalBases,
+            long panelTokens,
+            long selfTokens,
+            long tandemTokens,
+            long literalRuns,
+            long snps,
+            long transitions,
+            long transversions,
+            long wobbleMod3Hits,
+            long splices,
+            long insertedBases,
+            long deletedBases,
+            long recombinationSwitches) {}
+
+    /** Exact variant call extracted directly from compressed Mosaic tokens. */
+    public record VariantRecord(
+            int kind,
+            int strand,
+            int isTransition,
+            int prevMod3,
+            int donorId,
+            long refPos,
+            long tgtPos,
+            int refLen,
+            int altLen,
+            byte[] refBases,
+            byte[] altBases) {}
+
+    /** Disjoint target span descriptor for O(tokens) compressed-domain k-mer queries. */
+    public record SpanEvent(
+            int kind,
+            int strand,
+            boolean hasEdits,
+            int donorId,
+            long refPos,
+            long tgtPos,
+            long tgtLen) {}
+
+    public record MosaicInspectResult(
+            MosaicInspectStats stats, List<VariantRecord> variants, List<SpanEvent> spans) {}
+
+    private static final class MosaicObserver {
+        final boolean collectVariants;
+        final boolean collectSpans;
+        final List<VariantRecord> variants;
+        final List<SpanEvent> spans;
+        long targetLen;
+        long noveltyLen;
+        long panelMatchBases;
+        long selfMatchBases;
+        long tandemMatchBases;
+        long literalBases;
+        long panelTokens;
+        long selfTokens;
+        long tandemTokens;
+        long literalRuns;
+        long snps;
+        long transitions;
+        long transversions;
+        long wobbleMod3Hits;
+        long splices;
+        long insertedBases;
+        long deletedBases;
+        long recombinationSwitches;
+        int lastPanelDonor = -1;
+
+        MosaicObserver(boolean collectVariants, boolean collectSpans) {
+            this.collectVariants = collectVariants;
+            this.collectSpans = collectSpans;
+            this.variants = collectVariants ? new ArrayList<>() : List.of();
+            this.spans = collectSpans ? new ArrayList<>() : List.of();
+        }
+
+        MosaicInspectStats toStats() {
+            return new MosaicInspectStats(
+                    targetLen,
+                    noveltyLen,
+                    panelMatchBases,
+                    selfMatchBases,
+                    tandemMatchBases,
+                    literalBases,
+                    panelTokens,
+                    selfTokens,
+                    tandemTokens,
+                    literalRuns,
+                    snps,
+                    transitions,
+                    transversions,
+                    wobbleMod3Hits,
+                    splices,
+                    insertedBases,
+                    deletedBases,
+                    recombinationSwitches);
+        }
+    }
 
     private record Subblock(int len, int[] snpOffsets, int snpCount, int dTgtAfter, int dRefAfter) {}
 
@@ -751,12 +855,50 @@ public final class EimdlMosaicCodec {
      * against optional {@code panelBank} ({@code donorOffsets}). Runs at memory-copy speed (hundreds
      * of MB/s, zero hash tables needed!).
      */
+    public static MosaicInspectResult inspectMosaic(
+            byte[] mosaicBytes,
+            byte[] noveltyBases,
+            Packed2BitSequence panelBank,
+            int[] donorOffsets,
+            int maxDonorExclusive,
+            boolean collectVariants,
+            boolean collectSpans) {
+        MosaicObserver obs = new MosaicObserver(collectVariants, collectSpans);
+        decodeMosaicImpl(
+                mosaicBytes,
+                noveltyBases,
+                panelBank,
+                donorOffsets,
+                maxDonorExclusive,
+                true,
+                obs);
+        return new MosaicInspectResult(obs.toStats(), obs.variants, obs.spans);
+    }
+
     public static byte[] decodeMosaicToTwoBit(
             byte[] mosaicBytes,
             byte[] noveltyBases,
             Packed2BitSequence panelBank,
             int[] donorOffsets,
             int maxDonorExclusive) {
+        return decodeMosaicImpl(
+                mosaicBytes,
+                noveltyBases,
+                panelBank,
+                donorOffsets,
+                maxDonorExclusive,
+                false,
+                null);
+    }
+
+    private static byte[] decodeMosaicImpl(
+            byte[] mosaicBytes,
+            byte[] noveltyBases,
+            Packed2BitSequence panelBank,
+            int[] donorOffsets,
+            int maxDonorExclusive,
+            boolean inspectOnly,
+            MosaicObserver obs) {
         ByteIn in = new ByteIn(mosaicBytes);
         int flags = in.readByte() & 0xFF;
         boolean hasPanel = (flags & 1) != 0;
@@ -767,14 +909,19 @@ public final class EimdlMosaicCodec {
         if (targetLen < 0 || noveltyLen < 0 || noveltyLen > noveltyBases.length) {
             throw new IllegalStateException("Malformed mosaic lengths");
         }
+        if (obs != null) {
+            obs.targetLen = targetLen;
+            obs.noveltyLen = noveltyLen;
+        }
         if (targetLen == 0) {
-            return new byte[0];
+            return inspectOnly ? null : new byte[0];
         }
         if (hasPanel && (panelBank == null || maxDonorExclusive <= 0)) {
             throw new IllegalStateException("Archive requires reference panel for mosaic decode");
         }
 
-        byte[] out = new byte[targetLen];
+        boolean needOut = !inspectOnly || cfg.allowSelfMatch || cfg.allowTandem || !cfg.allowKimuraV4;
+        byte[] out = needOut ? new byte[targetLen] : null;
         BitRangeDec dec = new BitRangeDec(in);
         MosaicModels models = new MosaicModels();
 
@@ -801,7 +948,25 @@ public final class EimdlMosaicCodec {
                 if (pos + litLen > targetLen || novCursor + litLen > noveltyLen) {
                     throw new IllegalStateException("Literal run exceeds target or novelty bounds");
                 }
-                System.arraycopy(noveltyBases, novCursor, out, pos, litLen);
+                if (out != null) {
+                    System.arraycopy(noveltyBases, novCursor, out, pos, litLen);
+                }
+                if (obs != null) {
+                    obs.literalRuns++;
+                    obs.literalBases += litLen;
+                    if (obs.collectSpans) {
+                        obs.spans.add(new SpanEvent(0, 0, true, -1, novCursor, pos, litLen));
+                    }
+                    if (obs.collectVariants) {
+                        byte[] alt =
+                                (litLen <= 65536)
+                                        ? Arrays.copyOfRange(noveltyBases, novCursor, novCursor + litLen)
+                                        : null;
+                        obs.variants.add(
+                                new VariantRecord(
+                                        4, 0, 0, 0, -1, novCursor, pos, 0, litLen, null, alt));
+                    }
+                }
                 novCursor += litLen;
                 pos += litLen;
                 prevWasLiteral = true;
@@ -838,6 +1003,13 @@ public final class EimdlMosaicCodec {
                                 lastTgtEnd[ds],
                                 isMtf0);
 
+                if (obs != null) {
+                    obs.panelTokens++;
+                    if (obs.lastPanelDonor >= 0 && obs.lastPanelDonor != donorId) {
+                        obs.recombinationSwitches++;
+                    }
+                    obs.lastPanelDonor = donorId;
+                }
                 int[] adv =
                         decodeSubblocksFromPanel(
                                 dec,
@@ -853,7 +1025,9 @@ public final class EimdlMosaicCodec {
                                 targetLen,
                                 noveltyBases,
                                 novCursor,
-                                noveltyLen);
+                                noveltyLen,
+                                donorId,
+                                obs);
                 lastRefEnd[ds] = adv[0];
                 lastTgtEnd[ds] = adv[1];
                 pos = adv[1];
@@ -871,9 +1045,18 @@ public final class EimdlMosaicCodec {
                     if (period > pos || pos + len > targetLen) {
                         throw new IllegalStateException("Malformed tandem copy geometry");
                     }
-                    int src = pos - period;
-                    for (int k = 0; k < len; k++) {
-                        out[pos + k] = out[src + k];
+                    if (out != null) {
+                        int src = pos - period;
+                        for (int k = 0; k < len; k++) {
+                            out[pos + k] = out[src + k];
+                        }
+                    }
+                    if (obs != null) {
+                        obs.tandemTokens++;
+                        obs.tandemMatchBases += len;
+                        if (obs.collectSpans) {
+                            obs.spans.add(new SpanEvent(3, 0, false, -1, period, pos, len));
+                        }
                     }
                     pos += len;
                 } else {
@@ -883,6 +1066,9 @@ public final class EimdlMosaicCodec {
                     int selfRefLen = pos;
                     if (startRefPos < 0 || startRefPos >= selfRefLen) {
                         throw new IllegalStateException("Malformed self copy start position");
+                    }
+                    if (obs != null) {
+                        obs.selfTokens++;
                     }
                     int[] adv =
                             decodeSubblocksFromSelf(
@@ -897,7 +1083,8 @@ public final class EimdlMosaicCodec {
                                     targetLen,
                                     noveltyBases,
                                     novCursor,
-                                    noveltyLen);
+                                    noveltyLen,
+                                    obs);
                     pos = adv[1];
                     novCursor = adv[2];
                 }
@@ -908,7 +1095,7 @@ public final class EimdlMosaicCodec {
             throw new IllegalStateException(
                     "Unconsumed novelty bases after mosaic decode: " + novCursor + " vs " + noveltyLen);
         }
-        return out;
+        return inspectOnly ? null : out;
     }
 
     // =========================================================================
@@ -2370,7 +2557,53 @@ public final class EimdlMosaicCodec {
             int targetLen,
             byte[] noveltyBases,
             int novCursor,
-            int noveltyLen) {
+            int noveltyLen,
+            int donorId,
+            MosaicObserver obs) {
+        return decodeSubblocks(
+                dec, models, cfg, refBank, refOffset, refLen, false, strand,
+                startRefPos, out, startTgtPos, targetLen, noveltyBases, novCursor, noveltyLen,
+                donorId, obs);
+    }
+
+    private static int[] decodeSubblocksFromSelf(
+            BitRangeDec dec,
+            MosaicModels models,
+            MosaicConfig cfg,
+            byte[] out,
+            int selfRefLen,
+            int strand,
+            int startRefPos,
+            int startTgtPos,
+            int targetLen,
+            byte[] noveltyBases,
+            int novCursor,
+            int noveltyLen,
+            MosaicObserver obs) {
+        return decodeSubblocks(
+                dec, models, cfg, null, 0, selfRefLen, true, strand,
+                startRefPos, out, startTgtPos, targetLen, noveltyBases, novCursor, noveltyLen,
+                -1, obs);
+    }
+
+    private static int[] decodeSubblocks(
+            BitRangeDec dec,
+            MosaicModels models,
+            MosaicConfig cfg,
+            Packed2BitSequence refBank,
+            int refOffset,
+            int refLen,
+            boolean isSelf,
+            int strand,
+            int startRefPos,
+            byte[] out,
+            int startTgtPos,
+            int targetLen,
+            byte[] noveltyBases,
+            int novCursor,
+            int noveltyLen,
+            int donorId,
+            MosaicObserver obs) {
         int curRef = startRefPos;
         int curTgt = startTgtPos;
         int emaGap = 128;
@@ -2380,13 +2613,37 @@ public final class EimdlMosaicCodec {
             int minL = (b == 0) ? MIN_MATCH_LEN : MIN_SPLICE_ANCHOR;
             int subLen = models.readCount(dec, models.matchLenSlots, b == 0 ? 0 : 1, 1) + minL;
             if (curRef < 0 || curRef + subLen > refLen || curTgt + subLen > targetLen) {
-                throw new IllegalStateException("Panel subblock exceeds donor or target bounds");
+                throw new IllegalStateException("Subblock exceeds donor or target bounds");
             }
 
-            // Copy baseline reference bases first (fast unrolled copy)
-            copyRefToOut(refBank, refOffset, refLen, strand, curRef, out, curTgt, subLen);
+            if (out != null) {
+                if (!isSelf) {
+                    copyRefToOut(refBank, refOffset, refLen, strand, curRef, out, curTgt, subLen);
+                } else if (strand == 0) {
+                    for (int k = 0; k < subLen; k++) {
+                        out[curTgt + k] = out[curRef + k];
+                    }
+                } else {
+                    int fwdTop = refLen - 1 - curRef;
+                    for (int k = 0; k < subLen; k++) {
+                        out[curTgt + k] = (byte) ((out[fwdTop - k] ^ 3) & 3);
+                    }
+                }
+            }
+
+            int spanIdx = -1;
+            if (obs != null) {
+                if (isSelf) obs.selfMatchBases += subLen;
+                else obs.panelMatchBases += subLen;
+                if (obs.collectSpans) {
+                    spanIdx = obs.spans.size();
+                    obs.spans.add(
+                            new SpanEvent(isSelf ? 2 : 1, strand, false, donorId, curRef, curTgt, subLen));
+                }
+            }
 
             int hasSnpsFlag = 0;
+            long subSnps = 0L;
             if (cfg.allowApprox) {
                 int lenBin = subLen < 64 ? 0 : (subLen < 512 ? 1 : (subLen < 4096 ? 2 : 3));
                 int hasSnps = dec.decodeBit(models.hasSnps, ((b > 0 ? 1 : 0) << 2) | lenBin);
@@ -2423,17 +2680,30 @@ public final class EimdlMosaicCodec {
 
                         int mRef = curRef + snpOff;
                         int mTgt = curTgt + snpOff;
-                        int refB = out[mTgt] & 3;
+                        int refB =
+                                (out != null)
+                                        ? (out[mTgt] & 3)
+                                        : refBank.baseAtStrand(refOffset, refLen, strand, mRef);
                         int tgtB;
                         if (cfg.allowKimuraV4) {
-                            int prevRefB =
-                                    (mRef > 0)
-                                            ? refBank.baseAtStrand(refOffset, refLen, strand, mRef - 1)
-                                            : 0;
-                            int nextRefB =
-                                    (mRef + 1 < refLen)
-                                            ? refBank.baseAtStrand(refOffset, refLen, strand, mRef + 1)
-                                            : 0;
+                            int prevRefB = 0;
+                            int nextRefB = 0;
+                            if (!isSelf) {
+                                prevRefB =
+                                        (mRef > 0)
+                                                ? refBank.baseAtStrand(refOffset, refLen, strand, mRef - 1)
+                                                : 0;
+                                nextRefB =
+                                        (mRef + 1 < refLen)
+                                                ? refBank.baseAtStrand(refOffset, refLen, strand, mRef + 1)
+                                                : 0;
+                            } else {
+                                prevRefB = (mRef > 0) ? selfBaseAt(out, refLen, strand, mRef - 1) : 0;
+                                nextRefB =
+                                        (mRef + 1 < refLen)
+                                                ? selfBaseAt(out, refLen, strand, mRef + 1)
+                                                : 0;
+                            }
                             int subCtx =
                                     (refB << 6)
                                             | (prevRefB << 4)
@@ -2448,10 +2718,34 @@ public final class EimdlMosaicCodec {
                             }
                             tgtB = refB ^ delta;
                         } else {
-                            int prevTgtB = (mTgt > 0) ? (out[mTgt - 1] & 3) : 0;
+                            int prevTgtB = (mTgt > 0 && out != null) ? (out[mTgt - 1] & 3) : 0;
                             tgtB = models.readFixedTree(dec, models.ablateBase4[prevTgtB], 2);
                         }
-                        out[mTgt] = (byte) tgtB;
+                        if (out != null) out[mTgt] = (byte) tgtB;
+                        if (obs != null) {
+                            int delta = (refB ^ tgtB) & 3;
+                            int isTi = (delta == 2) ? 1 : 0;
+                            subSnps++;
+                            obs.snps++;
+                            if (isTi == 1) obs.transitions++;
+                            else obs.transversions++;
+                            if (prevMod3Zero != 0) obs.wobbleMod3Hits++;
+                            if (obs.collectVariants && !isSelf) {
+                                obs.variants.add(
+                                        new VariantRecord(
+                                                0,
+                                                strand,
+                                                isTi,
+                                                prevMod3Zero,
+                                                donorId,
+                                                mRef,
+                                                mTgt,
+                                                1,
+                                                1,
+                                                new byte[] {(byte) refB},
+                                                new byte[] {(byte) tgtB}));
+                            }
+                        }
                         localOff = snpOff + 1;
                         s++;
                         if (localOff >= subLen - 1) {
@@ -2459,6 +2753,19 @@ public final class EimdlMosaicCodec {
                         }
                     }
                 }
+            }
+            if (spanIdx >= 0 && subSnps > 0L) {
+                SpanEvent prev = obs.spans.get(spanIdx);
+                obs.spans.set(
+                        spanIdx,
+                        new SpanEvent(
+                                prev.kind,
+                                prev.strand,
+                                true,
+                                prev.donorId,
+                                prev.refPos,
+                                prev.tgtPos,
+                                prev.tgtLen));
             }
 
             curRef += subLen;
@@ -2484,163 +2791,43 @@ public final class EimdlMosaicCodec {
                 dTgt = models.readCount(dec, models.spliceInsSlots, 0, 6) + 1;
                 dRef = models.readCount(dec, models.spliceDelSlots, 0, 7) + 1;
             }
-            if (curTgt + dTgt > targetLen || novCursor + dTgt > noveltyLen) {
-                throw new IllegalStateException("Splice insertion exceeds bounds");
+            if (curTgt + dTgt > targetLen || novCursor + dTgt > noveltyLen || curRef + dRef > refLen) {
+                throw new IllegalStateException("Splice insertion/deletion exceeds bounds");
             }
+            int spliceRefPos = curRef;
+            int spliceTgtPos = curTgt;
+            int novStart = novCursor;
             if (dTgt > 0) {
-                System.arraycopy(noveltyBases, novCursor, out, curTgt, dTgt);
+                if (out != null) System.arraycopy(noveltyBases, novCursor, out, curTgt, dTgt);
                 novCursor += dTgt;
                 curTgt += dTgt;
             }
             curRef += dRef;
-            b++;
-        }
-        return new int[] {curRef, curTgt, novCursor};
-    }
-
-    private static int[] decodeSubblocksFromSelf(
-            BitRangeDec dec,
-            MosaicModels models,
-            MosaicConfig cfg,
-            byte[] out,
-            int selfRefLen,
-            int strand,
-            int startRefPos,
-            int startTgtPos,
-            int targetLen,
-            byte[] noveltyBases,
-            int novCursor,
-            int noveltyLen) {
-        int curRef = startRefPos;
-        int curTgt = startTgtPos;
-        int emaGap = 128;
-        int b = 0;
-
-        while (true) {
-            int minL = (b == 0) ? MIN_MATCH_LEN : MIN_SPLICE_ANCHOR;
-            int subLen = models.readCount(dec, models.matchLenSlots, b == 0 ? 0 : 1, 1) + minL;
-            if (curRef < 0 || curRef + subLen > selfRefLen || curTgt + subLen > targetLen) {
-                throw new IllegalStateException("Self subblock exceeds prefix or target bounds");
-            }
-
-            if (strand == 0) {
-                for (int k = 0; k < subLen; k++) {
-                    out[curTgt + k] = out[curRef + k];
+            if (obs != null) {
+                obs.splices++;
+                obs.insertedBases += dTgt;
+                obs.deletedBases += dRef;
+                if (obs.collectSpans && dTgt > 0) {
+                    obs.spans.add(new SpanEvent(0, 0, true, -1, novStart, spliceTgtPos, dTgt));
                 }
-            } else {
-                int fwdTop = selfRefLen - 1 - curRef;
-                for (int k = 0; k < subLen; k++) {
-                    out[curTgt + k] = (byte) ((out[fwdTop - k] ^ 3) & 3);
-                }
-            }
-
-            int hasSnpsFlag = 0;
-            if (cfg.allowApprox) {
-                int lenBin = subLen < 64 ? 0 : (subLen < 512 ? 1 : (subLen < 4096 ? 2 : 3));
-                int hasSnps = dec.decodeBit(models.hasSnps, ((b > 0 ? 1 : 0) << 2) | lenBin);
-                hasSnpsFlag = hasSnps;
-                if (hasSnps == 1) {
-                    int localOff = 0;
-                    int prevMod3Zero = 1;
-                    int s = 0;
-                    while (true) {
-                        int maxGap = (subLen - 1) - localOff;
-                        if (s > 0) {
-                            if (maxGap < 0) break;
-                            int remBin = maxGap < 16 ? 0 : (maxGap < 128 ? 1 : 2);
-                            int reg = gapRegime(emaGap);
-                            if (dec.decodeBit(models.moreSnps, (reg << 2) | remBin) == 0) {
-                                break;
-                            }
-                        }
-                        int reg = gapRegime(emaGap);
-                        int gap =
-                                decodeSnpGap(
-                                        dec,
-                                        models,
-                                        cfg.allowWobbleMod3,
-                                        maxGap,
-                                        reg,
-                                        prevMod3Zero);
-                        int snpOff = localOff + gap;
-                        if (snpOff < 0 || snpOff >= subLen) {
-                            throw new IllegalStateException("Decoded self SNP offset out of bounds");
-                        }
-                        prevMod3Zero = ((gap + 1) % 3 == 0) ? 1 : 0;
-                        emaGap = (emaGap * 3 + Math.min(2048, gap)) >>> 2;
-
-                        int mRef = curRef + snpOff;
-                        int mTgt = curTgt + snpOff;
-                        int refB = out[mTgt] & 3;
-                        int tgtB;
-                        if (cfg.allowKimuraV4) {
-                            int prevRefB =
-                                    (mRef > 0)
-                                            ? selfBaseAt(out, selfRefLen, strand, mRef - 1)
-                                            : 0;
-                            int nextRefB =
-                                    (mRef + 1 < selfRefLen)
-                                            ? selfBaseAt(out, selfRefLen, strand, mRef + 1)
-                                            : 0;
-                            int subCtx =
-                                    (refB << 6)
-                                            | (prevRefB << 4)
-                                            | (nextRefB << 2)
-                                            | ((reg <= 1 ? 1 : 0) << 1)
-                                            | (cfg.allowWobbleMod3 ? prevMod3Zero : 0);
-                            int delta;
-                            if (dec.decodeBit(models.kimuraTi, subCtx) == 1) {
-                                delta = 2;
-                            } else {
-                                delta = dec.decodeBit(models.kimuraTv, subCtx) == 1 ? 3 : 1;
-                            }
-                            tgtB = refB ^ delta;
-                        } else {
-                            int prevTgtB = (mTgt > 0) ? (out[mTgt - 1] & 3) : 0;
-                            tgtB = models.readFixedTree(dec, models.ablateBase4[prevTgtB], 2);
-                        }
-                        out[mTgt] = (byte) tgtB;
-                        localOff = snpOff + 1;
-                        s++;
-                        if (localOff >= subLen - 1) {
-                            break;
+                if (obs.collectVariants && !isSelf) {
+                    int kind = (dTgt > 0 && dRef == 0) ? 1 : ((dRef > 0 && dTgt == 0) ? 2 : 3);
+                    byte[] rb = null;
+                    if (dRef > 0 && dRef <= 65536) {
+                        rb = new byte[dRef];
+                        for (int k = 0; k < dRef; k++) {
+                            rb[k] = (byte) refBank.baseAtStrand(refOffset, refLen, strand, spliceRefPos + k);
                         }
                     }
+                    byte[] ab =
+                            (dTgt > 0 && dTgt <= 65536)
+                                    ? Arrays.copyOfRange(noveltyBases, novStart, novStart + dTgt)
+                                    : null;
+                    obs.variants.add(
+                            new VariantRecord(
+                                    kind, strand, 0, 0, donorId, spliceRefPos, spliceTgtPos, dRef, dTgt, rb, ab));
                 }
             }
-
-            curRef += subLen;
-            curTgt += subLen;
-
-            boolean canSplice =
-                    cfg.allowIndelSplice
-                            && (curTgt + MIN_SPLICE_ANCHOR <= targetLen)
-                            && (curRef + MIN_SPLICE_ANCHOR <= selfRefLen);
-            int spCtx = ((b > 0 ? 1 : 0) << 2) | (hasSnpsFlag << 1) | (subLen >= 256 ? 1 : 0);
-            if (!canSplice || dec.decodeBit(models.hasSplice, spCtx) == 0) {
-                break;
-            }
-            int dTgt;
-            int dRef;
-            if (dec.decodeBit(models.spliceIsPureDel, 0) == 1) {
-                dTgt = 0;
-                dRef = models.readCount(dec, models.spliceDelSlots, 0, 7) + 1;
-            } else if (dec.decodeBit(models.spliceIsPureIns, 0) == 1) {
-                dRef = 0;
-                dTgt = models.readCount(dec, models.spliceInsSlots, 0, 6) + 1;
-            } else {
-                dTgt = models.readCount(dec, models.spliceInsSlots, 0, 6) + 1;
-                dRef = models.readCount(dec, models.spliceDelSlots, 0, 7) + 1;
-            }
-            if (curTgt + dTgt > targetLen || novCursor + dTgt > noveltyLen) {
-                throw new IllegalStateException("Self splice insertion exceeds bounds");
-            }
-            if (dTgt > 0) {
-                System.arraycopy(noveltyBases, novCursor, out, curTgt, dTgt);
-                novCursor += dTgt;
-                curTgt += dTgt;
-            }
-            curRef += dRef;
             b++;
         }
         return new int[] {curRef, curTgt, novCursor};

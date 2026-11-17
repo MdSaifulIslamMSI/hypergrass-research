@@ -146,7 +146,7 @@ fn stream_extract_panel_file(path: &Path) -> Result<(u64, [u8; 32], Vec<u8>), St
     Ok((total, digest, two_bit))
 }
 
-struct StreamingSha256 {
+pub(crate) struct StreamingSha256 {
     state: [u32; 8],
     bitlen: u64,
     buf: [u8; 64],
@@ -154,7 +154,7 @@ struct StreamingSha256 {
 }
 
 impl StreamingSha256 {
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             state: [
                 0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
@@ -207,7 +207,7 @@ impl StreamingSha256 {
         self.state[7] = self.state[7].wrapping_add(h);
     }
 
-    fn update(&mut self, data: &[u8]) {
+    pub(crate) fn update(&mut self, data: &[u8]) {
         self.bitlen += (data.len() as u64) * 8;
         let mut i = 0usize;
         if self.buf_len > 0 {
@@ -232,7 +232,7 @@ impl StreamingSha256 {
         }
     }
 
-    fn finish(mut self) -> [u8; 32] {
+    pub(crate) fn finish(mut self) -> [u8; 32] {
         self.buf[self.buf_len] = 0x80;
         self.buf_len += 1;
         if self.buf_len > 56 {
@@ -266,7 +266,7 @@ fn compute_manifest_sha256(names: &[String], byte_lens: &[u64], hashes: &[[u8; 3
     sha.finish()
 }
 
-fn compress_panel_names(names: &[String]) -> Result<Vec<u8>, String> {
+pub(crate) fn compress_panel_names(names: &[String]) -> Result<Vec<u8>, String> {
     let mut raw = ByteWriter::with_capacity(names.len() * 8 + 16);
     let mut prev: &[u8] = &[];
     for s in names {
@@ -282,7 +282,7 @@ fn compress_panel_names(names: &[String]) -> Result<Vec<u8>, String> {
     ffi::zlib_compress(&raw.buf).map_err(|e| e.to_string())
 }
 
-fn decompress_panel_names(comp: &[u8], count: usize) -> Result<Vec<String>, String> {
+pub(crate) fn decompress_panel_names(comp: &[u8], count: usize) -> Result<Vec<String>, String> {
     let raw = ffi::zlib_decompress(comp).map_err(|e| e.to_string())?;
     let mut inp = ByteReader::new(&raw);
     let mut names = Vec::with_capacity(count);
@@ -306,14 +306,14 @@ fn decompress_panel_names(comp: &[u8], count: usize) -> Result<Vec<String>, Stri
     Ok(names)
 }
 
-struct LoadedPanel {
-    names: Vec<String>,
-    seqs: Vec<Vec<u8>>,
-    manifest_sha256: [u8; 32],
-    total_bases: u64,
+pub(crate) struct LoadedPanel {
+    pub names: Vec<String>,
+    pub seqs: Vec<Vec<u8>>,
+    pub manifest_sha256: [u8; 32],
+    pub total_bases: u64,
 }
 
-fn load_panel_for_compress(opts: &CompressOptions) -> Result<LoadedPanel, String> {
+pub(crate) fn load_panel_for_compress(opts: &CompressOptions) -> Result<LoadedPanel, String> {
     let panel_path = opts.reference_panel.as_ref().ok_or("Missing reference panel")?;
     let mut files = Vec::new();
     if panel_path.is_file() {
@@ -365,7 +365,11 @@ fn load_panel_for_compress(opts: &CompressOptions) -> Result<LoadedPanel, String
     Ok(LoadedPanel { names, seqs, manifest_sha256, total_bases })
 }
 
-fn verify_and_load_panel_for_decode(panel_path: Option<&Path>, expected_names: &[String], expected_sha: &[u8; 32]) -> Result<Vec<Vec<u8>>, String> {
+pub(crate) fn verify_and_load_panel_for_decode(
+    panel_path: Option<&Path>,
+    expected_names: &[String],
+    expected_sha: &[u8; 32],
+) -> Result<Vec<Vec<u8>>, String> {
     let pp = panel_path.ok_or("Mode R archive requires --panel / --ref path to decode")?;
     let mut files = Vec::with_capacity(expected_names.len());
     if pp.is_file() {
@@ -434,7 +438,7 @@ fn check_flat_upper_file(path: &Path) -> Result<Option<(u64, u32, bool)>, String
     Ok(Some((size, crc, has_u && !has_t)))
 }
 
-fn build_prim_order(
+pub(crate) fn build_prim_order(
     sketches: &[Vec<u64>],
     out_rank_to_unit: &mut [usize],
     out_mst_parent: &mut [i32],
@@ -501,7 +505,22 @@ fn build_prim_order(
     }
 }
 
+pub const MAGIC3: &[u8; 4] = b"HGS3";
+pub const FLAG3_FASTQ: u8 = 0x10;
+pub const FLAG3_HAS_CDS: u8 = 0x20;
+
 pub fn compress_file(input: &Path, output: &Path, opts: &CompressOptions) -> Result<CompressionReport, String> {
+    compress_with_container(input, output, opts, MAGIC, false, None)
+}
+
+pub(crate) fn compress_with_container(
+    input: &Path,
+    output: &Path,
+    opts: &CompressOptions,
+    magic: &[u8; 4],
+    use_ans: bool,
+    trailing_cds: Option<&[u8]>,
+) -> Result<CompressionReport, String> {
     let t0 = Instant::now();
     let file_size = fs::metadata(input).map_err(|e| e.to_string())?.len();
     let threads = opts.threads.max(1);
@@ -518,7 +537,7 @@ pub fn compress_file(input: &Path, output: &Path, opts: &CompressOptions) -> Res
 
     if file_size == 0 {
         let mut out = ByteWriter::with_capacity(64);
-        out.write_bytes(MAGIC);
+        out.write_bytes(magic);
         out.write_u8(mode & 3);
         out.write_u64_le(0);
         out.write_u32_le(0);
@@ -660,12 +679,13 @@ pub fn compress_file(input: &Path, output: &Path, opts: &CompressOptions) -> Res
         }
     }
 
-    // Write HGS2 container header directly
+    // Write HGS2 / HGS3 FASTA container header directly
     let mut hdr = ByteWriter::with_capacity(64 + num_units * 16);
     let mut hflags = mode & 3;
     if raw_flat_acgt { hflags |= FLAG_RAW_FLAT_ACGT; }
     if raw_rna_u { hflags |= FLAG_RAW_RNA_U; }
-    hdr.write_bytes(MAGIC);
+    if trailing_cds.is_some() && magic == MAGIC3 { hflags |= FLAG3_HAS_CDS; }
+    hdr.write_bytes(magic);
     hdr.write_u8(hflags);
     hdr.write_u64_le(file_size);
     hdr.write_u32_le(final_crc);
@@ -837,7 +857,11 @@ pub fn compress_file(input: &Path, output: &Path, opts: &CompressOptions) -> Res
 
     // Stage 2: Unified Novelty Superstream
     let total_nov = novelty_super.len() as u64;
-    let nov_comp = ffi::novelty_encode(&novelty_super, threads, opts.bounded)?;
+    let nov_comp = if use_ans {
+        ffi::ans_novelty_encode(&novelty_super, threads)?
+    } else {
+        ffi::novelty_encode(&novelty_super, threads, opts.bounded)?
+    };
     drop(novelty_super);
 
     let mut nw = ByteWriter::with_capacity(16);
@@ -845,61 +869,124 @@ pub fn compress_file(input: &Path, output: &Path, opts: &CompressOptions) -> Res
     nw.write_var_u64(nov_comp.len() as u64);
     out_file.write_all(&nw.buf).map_err(|e| e.to_string())?;
     out_file.write_all(&nov_comp).map_err(|e| e.to_string())?;
+    total_written_bytes += (nw.buf.len() + nov_comp.len()) as u64;
+    if let Some(cds) = trailing_cds
+        && magic == MAGIC3
+    {
+        let mut cw = ByteWriter::with_capacity(16);
+        cw.write_var_u64(cds.len() as u64);
+        out_file.write_all(&cw.buf).map_err(|e| e.to_string())?;
+        out_file.write_all(cds).map_err(|e| e.to_string())?;
+        total_written_bytes += (cw.buf.len() + cds.len()) as u64;
+    }
     out_file.flush().map_err(|e| e.to_string())?;
 
-    total_written_bytes += (nw.buf.len() + nov_comp.len()) as u64;
     report.archive_bytes = total_written_bytes;
     report.seconds = t0.elapsed().as_secs_f64();
     Ok(report)
 }
 
-pub fn decompress_file(archive: &Path, output: &Path, panel: Option<&Path>, threads: i32, bounded: bool) -> Result<f64, String> {
-    let t0 = Instant::now();
-    let bytes = fs::read(archive).map_err(|e| e.to_string())?;
-    let mut inp = ByteReader::new(&bytes);
-    let magic = inp.read_bytes(4)?;
-    if magic != MAGIC {
-        return Err("Not an HGS2 archive".into());
+pub(crate) struct ParsedHgs2<'a> {
+    pub is_hgs3: bool,
+    pub mode: u8,
+    pub raw_flat_acgt: bool,
+    pub raw_rna_u: bool,
+    pub raw_len: u64,
+    pub expected_crc: u32,
+    pub total_records: u64,
+    pub num_units: usize,
+    pub panel_names: Vec<String>,
+    pub panel_sha: [u8; 32],
+    pub rank_to_unit: Vec<usize>,
+    pub max_anc_rank: Vec<usize>,
+    pub unit_meta_slices: Vec<&'a [u8]>,
+    pub mosaic_slices: Vec<&'a [u8]>,
+    pub total_novelty_bases: u64,
+    pub novelty_comp: &'a [u8],
+    pub cds_comp: &'a [u8],
+}
+
+pub(crate) fn parse_hgs2<'a>(bytes: &'a [u8], decode_panel_names: bool) -> Result<ParsedHgs2<'a>, String> {
+    parse_container(bytes, MAGIC, decode_panel_names)
+}
+
+pub(crate) fn parse_container<'a>(
+    bytes: &'a [u8],
+    expected_magic: &[u8; 4],
+    decode_panel_names: bool,
+) -> Result<ParsedHgs2<'a>, String> {
+    let mut inp = ByteReader::new(bytes);
+    let magic_got = inp.read_bytes(4)?;
+    if magic_got != expected_magic {
+        return Err(format!("Expected {:?} archive header", std::str::from_utf8(expected_magic).unwrap_or("HGS")));
     }
+    let is_hgs3 = magic_got == MAGIC3;
     let flags = inp.read_u8()?;
     let mode = flags & 3;
+    let is_fastq = is_hgs3 && ((flags & FLAG3_FASTQ) != 0);
+    if is_fastq {
+        return Err("Use HGS3 FASTQ reader for FASTQ archives".into());
+    }
     let raw_flat_acgt = (flags & FLAG_RAW_FLAT_ACGT) != 0;
     let raw_rna_u = (flags & FLAG_RAW_RNA_U) != 0;
+    let has_cds = is_hgs3 && ((flags & FLAG3_HAS_CDS) != 0);
     let raw_len = inp.read_u64_le()?;
     let expected_crc = inp.read_u32_le()?;
-    let _total_recs = inp.read_var_u64()?;
+    let total_records = inp.read_var_u64()?;
     let num_units = inp.read_var_u64()? as usize;
 
-    let mut panel_seqs = Vec::new();
+    let mut panel_names = Vec::new();
+    let mut panel_sha = [0u8; 32];
     if mode == MODE_REF {
         let pcnt = inp.read_var_u64()? as usize;
         let cn_len = inp.read_var_u64()? as usize;
         let cn = inp.read_bytes(cn_len)?;
-        let pnames = decompress_panel_names(cn, pcnt)?;
-        let mut psha = [0u8; 32];
-        psha.copy_from_slice(inp.read_bytes(32)?);
-        if pcnt > 0 {
-            panel_seqs = verify_and_load_panel_for_decode(panel, &pnames, &psha)?;
+        if decode_panel_names {
+            panel_names = decompress_panel_names(cn, pcnt)?;
         }
+        panel_sha.copy_from_slice(inp.read_bytes(32)?);
     }
 
     if raw_len == 0 || num_units == 0 {
-        if expected_crc != 0 { return Err("CRC mismatch on empty archive".into()); }
-        File::create(output).map_err(|e| e.to_string())?;
-        return Ok(t0.elapsed().as_secs_f64());
+        return Ok(ParsedHgs2 {
+            is_hgs3,
+            mode,
+            raw_flat_acgt,
+            raw_rna_u,
+            raw_len,
+            expected_crc,
+            total_records,
+            num_units,
+            panel_names,
+            panel_sha,
+            rank_to_unit: Vec::new(),
+            max_anc_rank: Vec::new(),
+            unit_meta_slices: Vec::new(),
+            mosaic_slices: Vec::new(),
+            total_novelty_bases: 0,
+            novelty_comp: &[],
+            cds_comp: &[],
+        });
     }
 
     let mut rank_to_unit = vec![0usize; num_units];
     let mut max_anc_rank = vec![0usize; num_units];
     if mode == MODE_COLLECTION && num_units > 1 {
-        for slot in rank_to_unit.iter_mut().take(num_units) { *slot = inp.read_var_u64()? as usize; }
-        for slot in max_anc_rank.iter_mut().take(num_units) { *slot = inp.read_var_u64()? as usize; }
+        for slot in rank_to_unit.iter_mut().take(num_units) {
+            *slot = inp.read_var_u64()? as usize;
+        }
+        for slot in max_anc_rank.iter_mut().take(num_units) {
+            *slot = inp.read_var_u64()? as usize;
+        }
     } else {
-        for (u, slot) in rank_to_unit.iter_mut().enumerate().take(num_units) { *slot = u; }
+        for (u, slot) in rank_to_unit.iter_mut().enumerate().take(num_units) {
+            *slot = u;
+        }
     }
 
-    let mut unit_meta_slices: Vec<&[u8]> = Vec::new();
+    let mut unit_meta_slices: Vec<&'a [u8]> = Vec::new();
     if !raw_flat_acgt {
+        unit_meta_slices.reserve(num_units);
         for _ in 0..num_units {
             let _frec = inp.read_var_u64()?;
             let _rcnt = inp.read_var_u64()?;
@@ -918,34 +1005,93 @@ pub fn decompress_file(archive: &Path, output: &Path, panel: Option<&Path>, thre
         mosaic_slices.push(inp.read_bytes(mlen)?);
     }
 
-    let total_nov = inp.read_var_u64()?;
+    let total_novelty_bases = inp.read_var_u64()?;
     let nov_comp_len = inp.read_var_u64()? as usize;
-    let nov_comp = inp.read_bytes(nov_comp_len)?;
-    let nov_super = ffi::novelty_decode(nov_comp, total_nov, threads, bounded)?;
+    let novelty_comp = inp.read_bytes(nov_comp_len)?;
+    let cds_comp = if has_cds && inp.has_remaining() {
+        let clen = inp.read_var_u64()? as usize;
+        inp.read_bytes(clen)?
+    } else {
+        &[]
+    };
 
-    let mut unit_to_rank = vec![0usize; num_units];
-    let mut decoded_ranks: Vec<Vec<u8>> = Vec::with_capacity(num_units);
+    Ok(ParsedHgs2 {
+        is_hgs3,
+        mode,
+        raw_flat_acgt,
+        raw_rna_u,
+        raw_len,
+        expected_crc,
+        total_records,
+        num_units,
+        panel_names,
+        panel_sha,
+        rank_to_unit,
+        max_anc_rank,
+        unit_meta_slices,
+        mosaic_slices,
+        total_novelty_bases,
+        novelty_comp,
+        cds_comp,
+    })
+}
+
+pub fn decompress_file(archive: &Path, output: &Path, panel: Option<&Path>, threads: i32, bounded: bool) -> Result<f64, String> {
+    decompress_with_container(archive, output, panel, threads, bounded, MAGIC)
+}
+
+pub(crate) fn decompress_with_container(
+    archive: &Path,
+    output: &Path,
+    panel: Option<&Path>,
+    threads: i32,
+    bounded: bool,
+    expected_magic: &[u8; 4],
+) -> Result<f64, String> {
+    let t0 = Instant::now();
+    let bytes = fs::read(archive).map_err(|e| e.to_string())?;
+    let p = parse_container(&bytes, expected_magic, true)?;
+
+    let mut panel_seqs = Vec::new();
+    if p.mode == MODE_REF && !p.panel_names.is_empty() {
+        panel_seqs = verify_and_load_panel_for_decode(panel, &p.panel_names, &p.panel_sha)?;
+    }
+
+    if p.raw_len == 0 || p.num_units == 0 {
+        if p.expected_crc != 0 { return Err("CRC mismatch on empty archive".into()); }
+        File::create(output).map_err(|e| e.to_string())?;
+        return Ok(t0.elapsed().as_secs_f64());
+    }
+
+    let nov_super = if p.is_hgs3 {
+        ffi::ans_novelty_decode(p.novelty_comp, p.total_novelty_bases, threads)?
+    } else {
+        ffi::novelty_decode(p.novelty_comp, p.total_novelty_bases, threads, bounded)?
+    };
+
+    let mut unit_to_rank = vec![0usize; p.num_units];
+    let mut decoded_ranks: Vec<Vec<u8>> = Vec::with_capacity(p.num_units);
     let mut nov_off = 0usize;
 
-    if mode == MODE_COLLECTION && num_units > 1 {
-        for r in 0..num_units {
-            unit_to_rank[rank_to_unit[r]] = r;
-            let (_tlen, nlen) = ffi::mosaic_peek_lengths(mosaic_slices[r])?;
+    if p.mode == MODE_COLLECTION && p.num_units > 1 {
+        for r in 0..p.num_units {
+            unit_to_rank[p.rank_to_unit[r]] = r;
+            let (_tlen, nlen) = ffi::mosaic_peek_lengths(p.mosaic_slices[r])?;
             let nslice = &nov_super[nov_off..nov_off + (nlen as usize)];
             nov_off += nlen as usize;
-            let anc = max_anc_rank[r];
+            let anc = p.max_anc_rank[r];
             let donor_refs: Vec<&[u8]> = decoded_ranks[..anc].iter().map(|v| v.as_slice()).collect();
-            let dna = ffi::decode_mosaic(mosaic_slices[r], nslice, &donor_refs)?;
+            let dna = ffi::decode_mosaic(p.mosaic_slices[r], nslice, &donor_refs)?;
             decoded_ranks.push(dna);
         }
     } else {
         let panel_refs: Vec<&[u8]> = panel_seqs.iter().map(|v| v.as_slice()).collect();
-        for u in 0..num_units {
+        for u in 0..p.num_units {
             unit_to_rank[u] = u;
-            let (_tlen, nlen) = ffi::mosaic_peek_lengths(mosaic_slices[u])?;
+            let (_tlen, nlen) = ffi::mosaic_peek_lengths(p.mosaic_slices[u])?;
             let nslice = &nov_super[nov_off..nov_off + (nlen as usize)];
             nov_off += nlen as usize;
-            let dna = ffi::decode_mosaic(mosaic_slices[u], nslice, &panel_refs)?;
+            let dna = ffi::decode_mosaic(p.mosaic_slices[u], nslice, &panel_refs)?;
             decoded_ranks.push(dna);
         }
     }
@@ -956,10 +1102,10 @@ pub fn decompress_file(archive: &Path, output: &Path, panel: Option<&Path>, thre
     let mut crc = 0u32;
     let mut written = 0u64;
 
-    if raw_flat_acgt {
-        let map = if raw_rna_u { *b"ACGU" } else { *b"ACGT" };
+    if p.raw_flat_acgt {
+        let map = if p.raw_rna_u { *b"ACGU" } else { *b"ACGT" };
         let mut ascii_buf = Vec::new();
-        for &r in unit_to_rank.iter().take(num_units) {
+        for &r in unit_to_rank.iter().take(p.num_units) {
             let dna = &decoded_ranks[r];
             ascii_buf.resize(dna.len(), 0);
             for (i, &b) in dna.iter().enumerate() { ascii_buf[i] = map[(b & 3) as usize]; }
@@ -968,10 +1114,10 @@ pub fn decompress_file(archive: &Path, output: &Path, panel: Option<&Path>, thre
             written += ascii_buf.len() as u64;
         }
     } else {
-        for u in 0..num_units {
+        for u in 0..p.num_units {
             let r = unit_to_rank[u];
             let mut expected_dna = 0usize;
-            let chunk: FactorizedChunk = fasta::read_aux_metadata(&mut ByteReader::new(unit_meta_slices[u]), &mut expected_dna)?;
+            let chunk: FactorizedChunk = fasta::read_aux_metadata(&mut ByteReader::new(p.unit_meta_slices[u]), &mut expected_dna)?;
             if decoded_ranks[r].len() != expected_dna {
                 return Err(format!("Unit {u} DNA length mismatch: {} vs {expected_dna}", decoded_ranks[r].len()));
             }
@@ -980,58 +1126,26 @@ pub fn decompress_file(archive: &Path, output: &Path, panel: Option<&Path>, thre
     }
     out_f.flush().map_err(|e| e.to_string())?;
 
-    if written != raw_len {
-        return Err(format!("Decompressed size mismatch: {written} vs {raw_len}"));
+    if written != p.raw_len {
+        return Err(format!("Decompressed size mismatch: {written} vs {}", p.raw_len));
     }
-    if crc != expected_crc {
-        return Err(format!("CRC-32 mismatch: 0x{crc:08X} vs 0x{expected_crc:08X}"));
+    if crc != p.expected_crc {
+        return Err(format!("CRC-32 mismatch: 0x{crc:08X} vs 0x{:08X}", p.expected_crc));
     }
     Ok(t0.elapsed().as_secs_f64())
 }
 
 pub fn inspect_file(archive: &Path) -> Result<ArchiveInfo, String> {
     let bytes = fs::read(archive).map_err(|e| e.to_string())?;
-    let mut inp = ByteReader::new(&bytes);
-    if inp.read_bytes(4)? != MAGIC { return Err("Not an HGS2 archive".into()); }
-    let flags = inp.read_u8()?;
-    let mode = flags & 3;
-    let raw_flat_acgt = (flags & FLAG_RAW_FLAT_ACGT) != 0;
-    let raw_rna_u = (flags & FLAG_RAW_RNA_U) != 0;
-    let raw_bytes = inp.read_u64_le()?;
-    let crc32 = inp.read_u32_le()?;
-    let total_records = inp.read_var_u64()?;
-    let num_units = inp.read_var_u64()? as usize;
-    if mode == MODE_REF {
-        let _pcnt = inp.read_var_u64()?;
-        let cn_len = inp.read_var_u64()? as usize;
-        let _ = inp.read_bytes(cn_len)?;
-        let _ = inp.read_bytes(32)?;
-    }
-    if num_units > 0 {
-        if mode == MODE_COLLECTION && num_units > 1 {
-            for _ in 0..num_units { let _ = inp.read_var_u64()?; }
-            for _ in 0..num_units { let _ = inp.read_var_u64()?; }
-        }
-        if !raw_flat_acgt {
-            for _ in 0..num_units {
-                let _ = inp.read_var_u64()?;
-                let _ = inp.read_var_u64()?;
-                let ml = inp.read_var_u64()? as usize;
-                let _ = inp.read_bytes(ml)?;
-            }
-        } else {
-            for _ in 0..num_units { let _ = inp.read_var_u64()?; }
-        }
-        for _ in 0..num_units {
-            let ml = inp.read_var_u64()? as usize;
-            let _ = inp.read_bytes(ml)?;
-        }
-        let total_novelty_bases = inp.read_var_u64()?;
-        return Ok(ArchiveInfo {
-            mode, raw_flat_acgt, raw_rna_u, raw_bytes, crc32, total_records, num_units, total_novelty_bases,
-        });
-    }
+    let p = parse_hgs2(&bytes, false)?;
     Ok(ArchiveInfo {
-        mode, raw_flat_acgt, raw_rna_u, raw_bytes, crc32, total_records, num_units, total_novelty_bases: 0,
+        mode: p.mode,
+        raw_flat_acgt: p.raw_flat_acgt,
+        raw_rna_u: p.raw_rna_u,
+        raw_bytes: p.raw_len,
+        crc32: p.expected_crc,
+        total_records: p.total_records,
+        num_units: p.num_units,
+        total_novelty_bases: p.total_novelty_bases,
     })
 }

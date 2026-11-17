@@ -44,4 +44,8 @@ Write-Host '== VerifyFusionEngine =='
 & $java -Xmx512m -cp bin hypergrass.VerifyFusionEngine
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+Write-Host '== VerifyParadigm =='
+& $java -Xmx512m -ea -cp bin hypergrass.VerifyParadigm
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
 Write-Host 'All verification suites passed.'

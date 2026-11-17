@@ -32,4 +32,7 @@ java -Xmx512m -cp bin hypergrass.VerifyCompressionLaws
 echo "== VerifyFusionEngine =="
 java -Xmx512m -cp bin hypergrass.VerifyFusionEngine
 
+echo "== VerifyParadigm =="
+java -Xmx512m -ea -cp bin hypergrass.VerifyParadigm
+
 echo "All verification suites passed."

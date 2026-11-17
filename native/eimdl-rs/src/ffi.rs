@@ -28,6 +28,71 @@ pub struct HgsMosaicResult {
 }
 
 #[repr(C)]
+#[derive(Clone, Copy, Default, Debug)]
+pub struct HgsMosaicStats {
+    pub target_len: u64,
+    pub novelty_len: u64,
+    pub panel_match_bases: u64,
+    pub self_match_bases: u64,
+    pub tandem_match_bases: u64,
+    pub literal_bases: u64,
+    pub panel_tokens: u64,
+    pub self_tokens: u64,
+    pub tandem_tokens: u64,
+    pub literal_runs: u64,
+    pub snps: u64,
+    pub transitions: u64,
+    pub transversions: u64,
+    pub wobble_mod3_hits: u64,
+    pub splices: u64,
+    pub inserted_bases: u64,
+    pub deleted_bases: u64,
+    pub recombination_switches: u64,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct HgsVariantRecord {
+    pub kind: u8,
+    pub strand: u8,
+    pub is_transition: u8,
+    pub prev_mod3: u8,
+    pub donor_id: u32,
+    pub ref_pos: u64,
+    pub tgt_pos: u64,
+    pub ref_len: u32,
+    pub alt_len: u32,
+    pub ref_seq_off: u64,
+    pub alt_seq_off: u64,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct HgsSpanEvent {
+    pub kind: u8,
+    pub strand: u8,
+    pub has_edits: u8,
+    pub reserved: u8,
+    pub donor_id: u32,
+    pub ref_pos: u64,
+    pub tgt_pos: u64,
+    pub tgt_len: u64,
+    pub ref_len: u64,
+}
+
+#[repr(C)]
+pub struct HgsMosaicInspectResult {
+    pub stats: HgsMosaicStats,
+    pub variants: *mut HgsVariantRecord,
+    pub num_variants: usize,
+    pub spans: *mut HgsSpanEvent,
+    pub num_spans: usize,
+    pub var_seq_pool: *mut u8,
+    pub var_seq_pool_len: usize,
+    pub status: i32,
+}
+
+#[repr(C)]
 pub struct HgsSyncmerIndex64 {
     _private: [u8; 0],
 }
@@ -96,6 +161,47 @@ unsafe extern "C" {
     fn hgs_cpp_mosaic_peek_lengths(mosaic: *const u8, mosaic_len: usize, out_tgt: *mut u64, out_nov: *mut u64) -> i32;
     fn hgs_cpp_novelty_encode(bases: *const u8, len: u64, threads: i32, bounded: i32, out: *mut HgsOwnedBytes) -> i32;
     fn hgs_cpp_novelty_decode(payload: *const u8, payload_len: usize, expected_len: u64, threads: i32, bounded: i32, out: *mut HgsOwnedBytes) -> i32;
+
+    // C23 4-Stripe SIMD rANS & Conditioned Phred Quality Kernels (native/c_kernels/hgs_ans.c)
+    fn hgs_ans_free(ptr: *mut u8);
+    fn hgs_ans4_encode_dna(two_bit: *const u8, len: usize, out_buf: *mut *mut u8, out_len: *mut usize) -> i32;
+    fn hgs_ans4_decode_dna(payload: *const u8, payload_len: usize, expected_len: usize, out_buf: *mut *mut u8, out_len: *mut usize) -> i32;
+    fn hgs_ans_compute_homo_bins(two_bit: *const u8, len: usize, out_bins: *mut u8);
+    fn hgs_ans4_encode_qual(
+        quals_raw: *const u8,
+        mismatch_mask: *const u8,
+        homo_bins: *const u8,
+        len: usize,
+        read_len_hint: u32,
+        out_buf: *mut *mut u8,
+        out_len: *mut usize,
+    ) -> i32;
+    fn hgs_ans4_decode_qual(
+        payload: *const u8,
+        payload_len: usize,
+        mismatch_mask: *const u8,
+        homo_bins: *const u8,
+        expected_len: usize,
+        read_len_hint: u32,
+        out_buf: *mut *mut u8,
+        out_len: *mut usize,
+    ) -> i32;
+
+    // C++23 Compressed-Domain Mosaic Inspector & Parallel rANS Novelty Wrapper
+    fn hgs_cpp_free_inspect_result(res: *mut HgsMosaicInspectResult);
+    fn hgs_cpp_mosaic_inspect(
+        mosaic_bytes: *const u8,
+        mosaic_len: usize,
+        novelty_bytes: *const u8,
+        novelty_len: usize,
+        donor_2bit_ptrs: *const *const u8,
+        donor_lens: *const u64,
+        max_donor_exclusive: usize,
+        collect_variants: i32,
+        collect_spans: i32,
+    ) -> HgsMosaicInspectResult;
+    fn hgs_cpp_ans_novelty_encode(two_bit_bases: *const u8, len: u64, threads: i32, out_payload: *mut HgsOwnedBytes) -> i32;
+    fn hgs_cpp_ans_novelty_decode(payload: *const u8, payload_len: usize, expected_len: u64, threads: i32, out_two_bit: *mut HgsOwnedBytes) -> i32;
 }
 
 pub fn has_avx2() -> bool {
@@ -393,11 +499,189 @@ pub fn novelty_decode(payload: &[u8], expected_len: u64, threads: i32, bounded: 
     if rc != 0 {
         return Err("hgs_cpp_novelty_decode failed");
     }
+    Ok(take_owned_cpp_bytes(owned))
+}
+
+fn take_owned_cpp_bytes(owned: HgsOwnedBytes) -> Vec<u8> {
     let vec = if owned.len == 0 || owned.data.is_null() {
         Vec::new()
     } else {
         unsafe { slice::from_raw_parts(owned.data, owned.len) }.to_vec()
     };
     unsafe { hgs_cpp_free_buffer(owned) };
-    Ok(vec)
+    vec
+}
+
+fn take_ans_bytes(ptr: *mut u8, len: usize) -> Vec<u8> {
+    let vec = if len == 0 || ptr.is_null() {
+        Vec::new()
+    } else {
+        unsafe { slice::from_raw_parts(ptr, len) }.to_vec()
+    };
+    unsafe { hgs_ans_free(ptr) };
+    vec
+}
+
+pub struct MosaicInspectReport {
+    pub stats: HgsMosaicStats,
+    pub variants: Vec<HgsVariantRecord>,
+    pub spans: Vec<HgsSpanEvent>,
+    pub var_seq_pool: Vec<u8>,
+}
+
+pub fn mosaic_inspect(
+    mosaic: &[u8],
+    novelty: &[u8],
+    donors: &[&[u8]],
+    max_donor_exclusive: usize,
+    collect_variants: bool,
+    collect_spans: bool,
+) -> Result<MosaicInspectReport, &'static str> {
+    let limit = max_donor_exclusive.min(donors.len());
+    let ptrs: Vec<*const u8> = donors[..limit].iter().map(|s| s.as_ptr()).collect();
+    let lens: Vec<u64> = donors[..limit].iter().map(|s| s.len() as u64).collect();
+    let mut raw = unsafe {
+        hgs_cpp_mosaic_inspect(
+            mosaic.as_ptr(),
+            mosaic.len(),
+            novelty.as_ptr(),
+            novelty.len(),
+            ptrs.as_ptr(),
+            lens.as_ptr(),
+            limit,
+            if collect_variants { 1 } else { 0 },
+            if collect_spans { 1 } else { 0 },
+        )
+    };
+    if raw.status != 0 {
+        unsafe { hgs_cpp_free_inspect_result(&mut raw) };
+        return Err("hgs_cpp_mosaic_inspect failed");
+    }
+    let variants = if raw.num_variants == 0 || raw.variants.is_null() {
+        Vec::new()
+    } else {
+        unsafe { slice::from_raw_parts(raw.variants, raw.num_variants) }.to_vec()
+    };
+    let spans = if raw.num_spans == 0 || raw.spans.is_null() {
+        Vec::new()
+    } else {
+        unsafe { slice::from_raw_parts(raw.spans, raw.num_spans) }.to_vec()
+    };
+    let var_seq_pool = if raw.var_seq_pool_len == 0 || raw.var_seq_pool.is_null() {
+        Vec::new()
+    } else {
+        unsafe { slice::from_raw_parts(raw.var_seq_pool, raw.var_seq_pool_len) }.to_vec()
+    };
+    let stats = raw.stats;
+    unsafe { hgs_cpp_free_inspect_result(&mut raw) };
+    Ok(MosaicInspectReport {
+        stats,
+        variants,
+        spans,
+        var_seq_pool,
+    })
+}
+
+pub fn ans_novelty_encode(bases: &[u8], threads: i32) -> Result<Vec<u8>, &'static str> {
+    let mut owned = HgsOwnedBytes { data: ptr::null_mut(), len: 0 };
+    let rc = unsafe { hgs_cpp_ans_novelty_encode(bases.as_ptr(), bases.len() as u64, threads, &mut owned) };
+    if rc != 0 {
+        return Err("hgs_cpp_ans_novelty_encode failed");
+    }
+    Ok(take_owned_cpp_bytes(owned))
+}
+
+pub fn ans_novelty_decode(payload: &[u8], expected_len: u64, threads: i32) -> Result<Vec<u8>, &'static str> {
+    let mut owned = HgsOwnedBytes { data: ptr::null_mut(), len: 0 };
+    let rc = unsafe { hgs_cpp_ans_novelty_decode(payload.as_ptr(), payload.len(), expected_len, threads, &mut owned) };
+    if rc != 0 {
+        return Err("hgs_cpp_ans_novelty_decode failed");
+    }
+    Ok(take_owned_cpp_bytes(owned))
+}
+
+pub fn ans4_encode_dna(two_bit: &[u8]) -> Result<Vec<u8>, &'static str> {
+    let mut ptr = ptr::null_mut();
+    let mut len = 0usize;
+    let rc = unsafe { hgs_ans4_encode_dna(two_bit.as_ptr(), two_bit.len(), &mut ptr, &mut len) };
+    if rc != 0 {
+        return Err("hgs_ans4_encode_dna failed");
+    }
+    Ok(take_ans_bytes(ptr, len))
+}
+
+pub fn ans4_decode_dna(payload: &[u8], expected_len: usize) -> Result<Vec<u8>, &'static str> {
+    let mut ptr = ptr::null_mut();
+    let mut len = 0usize;
+    let rc = unsafe { hgs_ans4_decode_dna(payload.as_ptr(), payload.len(), expected_len, &mut ptr, &mut len) };
+    if rc != 0 {
+        return Err("hgs_ans4_decode_dna failed");
+    }
+    Ok(take_ans_bytes(ptr, len))
+}
+
+pub fn compute_homo_bins(two_bit: &[u8]) -> Vec<u8> {
+    let mut bins = vec![0u8; two_bit.len()];
+    if !two_bit.is_empty() {
+        unsafe { hgs_ans_compute_homo_bins(two_bit.as_ptr(), two_bit.len(), bins.as_mut_ptr()) };
+    }
+    bins
+}
+
+pub fn ans4_encode_qual(
+    quals_raw: &[u8],
+    mismatch_mask: &[u8],
+    homo_bins: &[u8],
+    read_len_hint: u32,
+) -> Result<Vec<u8>, &'static str> {
+    if quals_raw.len() != mismatch_mask.len() || quals_raw.len() != homo_bins.len() {
+        return Err("quality conditioning array length mismatch");
+    }
+    let mut ptr = ptr::null_mut();
+    let mut len = 0usize;
+    let rc = unsafe {
+        hgs_ans4_encode_qual(
+            quals_raw.as_ptr(),
+            mismatch_mask.as_ptr(),
+            homo_bins.as_ptr(),
+            quals_raw.len(),
+            read_len_hint,
+            &mut ptr,
+            &mut len,
+        )
+    };
+    if rc != 0 {
+        return Err("hgs_ans4_encode_qual failed");
+    }
+    Ok(take_ans_bytes(ptr, len))
+}
+
+pub fn ans4_decode_qual(
+    payload: &[u8],
+    mismatch_mask: &[u8],
+    homo_bins: &[u8],
+    expected_len: usize,
+    read_len_hint: u32,
+) -> Result<Vec<u8>, &'static str> {
+    if mismatch_mask.len() != expected_len || homo_bins.len() != expected_len {
+        return Err("quality decode mask length mismatch");
+    }
+    let mut ptr = ptr::null_mut();
+    let mut len = 0usize;
+    let rc = unsafe {
+        hgs_ans4_decode_qual(
+            payload.as_ptr(),
+            payload.len(),
+            mismatch_mask.as_ptr(),
+            homo_bins.as_ptr(),
+            expected_len,
+            read_len_hint,
+            &mut ptr,
+            &mut len,
+        )
+    };
+    if rc != 0 {
+        return Err("hgs_ans4_decode_qual failed");
+    }
+    Ok(take_ans_bytes(ptr, len))
 }

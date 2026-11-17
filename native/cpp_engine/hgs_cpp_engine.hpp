@@ -124,6 +124,102 @@ HGS_CPP_NODISCARD int hgs_cpp_novelty_decode(
     int bounded_mem,
     HgsOwnedBytes* out_two_bit);
 
+/** Compressed-domain evolutionary statistics decoded directly from Mosaic tokens. */
+typedef struct {
+    uint64_t target_len;
+    uint64_t novelty_len;
+    uint64_t panel_match_bases;
+    uint64_t self_match_bases;
+    uint64_t tandem_match_bases;
+    uint64_t literal_bases;
+    uint64_t panel_tokens;
+    uint64_t self_tokens;
+    uint64_t tandem_tokens;
+    uint64_t literal_runs;
+    uint64_t snps;
+    uint64_t transitions;
+    uint64_t transversions;
+    uint64_t wobble_mod3_hits;
+    uint64_t splices;
+    uint64_t inserted_bases;
+    uint64_t deleted_bases;
+    uint64_t recombination_switches;
+} HgsMosaicStats;
+
+/**
+ * Exact variant call extracted directly from compressed Mosaic tokens without FASTA emission.
+ * kind: 0 = SNV, 1 = INS, 2 = DEL, 3 = COMPLEX_INDEL, 4 = LITERAL_SPAN
+ */
+typedef struct {
+    uint8_t kind;
+    uint8_t strand;
+    uint8_t is_transition;
+    uint8_t prev_mod3;
+    uint32_t donor_id;
+    uint64_t ref_pos;
+    uint64_t tgt_pos;
+    uint32_t ref_len;
+    uint32_t alt_len;
+    uint64_t ref_seq_off;
+    uint64_t alt_seq_off;
+} HgsVariantRecord;
+
+/** Token span descriptor for O(tokens) compressed-domain k-mer and ancestry queries. */
+typedef struct {
+    uint8_t kind;     /* 0 = LIT, 1 = PANEL, 2 = SELF, 3 = TANDEM */
+    uint8_t strand;   /* 0 = +, 1 = - */
+    uint8_t has_edits;
+    uint8_t reserved;
+    uint32_t donor_id;
+    uint64_t ref_pos;
+    uint64_t tgt_pos;
+    uint64_t tgt_len;
+    uint64_t ref_len;
+} HgsSpanEvent;
+
+typedef struct {
+    HgsMosaicStats stats;
+    HgsVariantRecord* variants;
+    size_t num_variants;
+    HgsSpanEvent* spans;
+    size_t num_spans;
+    uint8_t* var_seq_pool; /* 2-bit bases (0..3) referenced by HgsVariantRecord offsets */
+    size_t var_seq_pool_len;
+    int status;
+} HgsMosaicInspectResult;
+
+void hgs_cpp_free_inspect_result(HgsMosaicInspectResult* res);
+
+/**
+ * Inspects a compressed .hgs2/.hgs3 Mosaic stream in compressed domain, computing exact
+ * evolutionary telemetry and optionally extracting exact SNV/INDEL variants & token spans.
+ */
+HGS_CPP_NODISCARD HgsMosaicInspectResult hgs_cpp_mosaic_inspect(
+    const uint8_t* mosaic_bytes,
+    size_t mosaic_len,
+    const uint8_t* novelty_bytes,
+    size_t novelty_len,
+    const uint8_t* const* donor_2bit_ptrs,
+    const uint64_t* donor_lens,
+    size_t max_donor_exclusive,
+    int collect_variants,
+    int collect_spans);
+
+/** Parallel SIMD 4-stripe rANS Novelty Encoder for .hgs3 containers (with Law IV bypass). */
+HGS_CPP_NODISCARD int hgs_cpp_ans_novelty_encode(
+    const uint8_t* two_bit_bases,
+    uint64_t len,
+    int threads,
+    HgsOwnedBytes* out_payload);
+
+/** Parallel SIMD 4-stripe rANS Novelty Decoder for .hgs3 containers. */
+HGS_CPP_NODISCARD int hgs_cpp_ans_novelty_decode(
+    const uint8_t* payload,
+    size_t payload_len,
+    uint64_t expected_len,
+    int threads,
+    HgsOwnedBytes* out_two_bit);
+
 #ifdef __cplusplus
 }
 #endif

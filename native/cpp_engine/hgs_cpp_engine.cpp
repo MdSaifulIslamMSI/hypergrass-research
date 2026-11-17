@@ -1,5 +1,6 @@
 #include "hgs_cpp_engine.hpp"
 #include "../c_kernels/hgs_simd.h"
+#include "../c_kernels/hgs_ans.h"
 
 #include <algorithm>
 #include <atomic>
@@ -1276,13 +1277,42 @@ void copy_donor_span_to_out(
     }
 }
 
+struct MosaicObserver {
+    HgsMosaicStats stats{};
+    std::vector<HgsVariantRecord> variants;
+    std::vector<HgsSpanEvent> spans;
+    std::vector<uint8_t> var_seq_pool;
+    bool collect_variants = false;
+    bool collect_spans = false;
+    uint32_t last_panel_donor = UINT32_MAX;
+
+    uint64_t append_pool(const uint8_t* ptr, size_t len) {
+        if (len == 0 || !ptr) return std::numeric_limits<uint64_t>::max();
+        uint64_t off = static_cast<uint64_t>(var_seq_pool.size());
+        var_seq_pool.insert(var_seq_pool.end(), ptr, ptr + len);
+        return off;
+    }
+
+    uint64_t append_donor_pool(
+        const Packed2Bit& bank, uint64_t ref_offset, uint64_t ref_len, uint8_t strand, uint64_t start_ref, size_t len) {
+        if (len == 0) return std::numeric_limits<uint64_t>::max();
+        uint64_t off = static_cast<uint64_t>(var_seq_pool.size());
+        var_seq_pool.reserve(var_seq_pool.size() + len);
+        for (size_t k = 0; k < len; k++) {
+            var_seq_pool.push_back(bank.base_at_strand(ref_offset, ref_len, strand, start_ref + k));
+        }
+        return off;
+    }
+};
+
 bool decode_subblocks_donor(
     BitRangeDec& dec, MosaicModels& m, const MosaicConfigC& cfg,
     const Packed2Bit* bank_opt, uint64_t ref_offset, uint64_t ref_len,
     bool is_self, uint8_t strand, uint64_t start_ref_pos,
     uint8_t* out, uint64_t start_tgt_pos, uint64_t target_len,
     const uint8_t* novelty, uint64_t& nov_cur, uint64_t novelty_len,
-    uint64_t& out_end_ref, uint64_t& out_end_tgt) {
+    uint64_t& out_end_ref, uint64_t& out_end_tgt,
+    uint32_t donor_id = 0, MosaicObserver* obs = nullptr) {
     uint64_t cur_ref = start_ref_pos;
     uint64_t cur_tgt = start_tgt_pos;
     int ema_gap = 128;
@@ -1299,16 +1329,32 @@ bool decode_subblocks_donor(
         uint64_t sub_len = m.read_count(dec, m.match_len_slots[b == 0 ? 0 : 1], 1) + min_l;
         if (cur_ref + sub_len > ref_len || cur_tgt + sub_len > target_len) return false;
 
-        if (!is_self) {
-            copy_donor_span_to_out(*bank_opt, ref_offset, ref_len, strand, cur_ref, out, cur_tgt, sub_len);
-        } else if (strand == 0) {
-            for (uint64_t k = 0; k < sub_len; k++) out[cur_tgt + k] = out[cur_ref + k];
-        } else {
-            uint64_t fwd_top = ref_len - 1ULL - cur_ref;
-            for (uint64_t k = 0; k < sub_len; k++) out[cur_tgt + k] = static_cast<uint8_t>((out[fwd_top - k] ^ 3U) & 3U);
+        if (out != nullptr) {
+            if (!is_self) {
+                copy_donor_span_to_out(*bank_opt, ref_offset, ref_len, strand, cur_ref, out, cur_tgt, sub_len);
+            } else if (strand == 0) {
+                for (uint64_t k = 0; k < sub_len; k++) out[cur_tgt + k] = out[cur_ref + k];
+            } else {
+                uint64_t fwd_top = ref_len - 1ULL - cur_ref;
+                for (uint64_t k = 0; k < sub_len; k++) out[cur_tgt + k] = static_cast<uint8_t>((out[fwd_top - k] ^ 3U) & 3U);
+            }
+        }
+
+        size_t span_idx = 0;
+        if (obs != nullptr) {
+            if (is_self) obs->stats.self_match_bases += sub_len;
+            else obs->stats.panel_match_bases += sub_len;
+            if (obs->collect_spans) {
+                span_idx = obs->spans.size();
+                obs->spans.push_back(HgsSpanEvent{
+                    static_cast<uint8_t>(is_self ? 2 : 1), strand, 0, 0,
+                    donor_id, cur_ref, cur_tgt, sub_len, sub_len
+                });
+            }
         }
 
         int has_snps_flag = 0;
+        uint64_t sub_snps = 0;
         if (cfg.allow_approx) {
             int len_bin = sub_len < 64 ? 0 : (sub_len < 512 ? 1 : (sub_len < 4096 ? 2 : 3));
             int has_snps = dec.decode_bit(m.has_snps.data(), ((b > 0 ? 1 : 0) << 2) | len_bin);
@@ -1334,7 +1380,7 @@ bool decode_subblocks_donor(
 
                     uint64_t mr = cur_ref + snp_off;
                     uint64_t mt = cur_tgt + snp_off;
-                    uint8_t rb = out[mt] & 3U;
+                    uint8_t rb = (out != nullptr) ? (out[mt] & 3U) : read_ref_base(mr);
                     uint8_t tb;
                     if (cfg.allow_kimura) {
                         uint8_t pr = (mr > 0) ? read_ref_base(mr - 1) : 0;
@@ -1345,15 +1391,36 @@ bool decode_subblocks_donor(
                             : (dec.decode_bit(m.kimura_tv.data(), ctx) == 1 ? 3 : 1);
                         tb = static_cast<uint8_t>(rb ^ delta);
                     } else {
-                        uint8_t pt = (mt > 0) ? (out[mt - 1] & 3U) : 0;
+                        uint8_t pt = (mt > 0 && out != nullptr) ? (out[mt - 1] & 3U) : 0;
                         tb = static_cast<uint8_t>(m.read_fixed_tree(dec, m.ablate_base4[pt], 2));
                     }
-                    out[mt] = tb;
+                    if (out != nullptr) out[mt] = tb;
+                    if (obs != nullptr) {
+                        uint8_t delta = static_cast<uint8_t>((rb ^ tb) & 3U);
+                        bool is_ti = (delta == 2U);
+                        sub_snps++;
+                        obs->stats.snps++;
+                        if (is_ti) obs->stats.transitions++;
+                        else obs->stats.transversions++;
+                        if (prev_mod3 != 0) obs->stats.wobble_mod3_hits++;
+                        if (obs->collect_variants && !is_self) {
+                            uint64_t r_off = obs->append_pool(&rb, 1);
+                            uint64_t a_off = obs->append_pool(&tb, 1);
+                            obs->variants.push_back(HgsVariantRecord{
+                                0, strand, static_cast<uint8_t>(is_ti ? 1 : 0),
+                                static_cast<uint8_t>(prev_mod3 ? 1 : 0),
+                                donor_id, mr, mt, 1, 1, r_off, a_off
+                            });
+                        }
+                    }
                     local_off = snp_off + 1;
                     s++;
                     if (local_off + 1 >= sub_len) break;
                 }
             }
+        }
+        if (obs != nullptr && obs->collect_spans && sub_snps > 0) {
+            obs->spans[span_idx].has_edits = 1;
         }
 
         cur_ref += sub_len;
@@ -1372,12 +1439,43 @@ bool decode_subblocks_donor(
             dr = m.read_count(dec, m.splice_del_slots[0], 7) + 1ULL;
         }
         if (cur_tgt + dt > target_len || nov_cur + dt > novelty_len) return false;
+        uint64_t splice_ref_pos = cur_ref;
+        uint64_t splice_tgt_pos = cur_tgt;
+        uint64_t nov_start = nov_cur;
+        if (splice_ref_pos + dr > ref_len) return false;
         if (dt > 0) {
-            std::memcpy(out + cur_tgt, novelty + nov_cur, static_cast<size_t>(dt));
+            if (out != nullptr) std::memcpy(out + cur_tgt, novelty + nov_cur, static_cast<size_t>(dt));
             nov_cur += dt;
             cur_tgt += dt;
         }
         cur_ref += dr;
+        if (obs != nullptr) {
+            obs->stats.splices++;
+            obs->stats.inserted_bases += dt;
+            obs->stats.deleted_bases += dr;
+            if (obs->collect_spans && dt > 0) {
+                obs->spans.push_back(HgsSpanEvent{
+                    0, 0, 1, 0, std::numeric_limits<uint32_t>::max(),
+                    nov_start, splice_tgt_pos, dt, dt
+                });
+            }
+            if (obs->collect_variants && !is_self) {
+                uint8_t kind = (dt > 0 && dr == 0) ? 1 : ((dr > 0 && dt == 0) ? 2 : 3);
+                uint64_t r_off = (dr > 0 && dr <= 65536ULL)
+                    ? obs->append_donor_pool(*bank_opt, ref_offset, ref_len, strand, splice_ref_pos, static_cast<size_t>(dr))
+                    : std::numeric_limits<uint64_t>::max();
+                uint64_t a_off = (dt > 0 && dt <= 65536ULL)
+                    ? obs->append_pool(novelty + nov_start, static_cast<size_t>(dt))
+                    : std::numeric_limits<uint64_t>::max();
+                obs->variants.push_back(HgsVariantRecord{
+                    kind, strand, 0, 0, donor_id,
+                    splice_ref_pos, splice_tgt_pos,
+                    static_cast<uint32_t>(std::min<uint64_t>(dr, std::numeric_limits<uint32_t>::max())),
+                    static_cast<uint32_t>(std::min<uint64_t>(dt, std::numeric_limits<uint32_t>::max())),
+                    r_off, a_off
+                });
+            }
+        }
         b++;
     }
 
@@ -2566,6 +2664,180 @@ bool decode_crm_segment(const uint8_t* payload, size_t payload_len, uint8_t* dst
     return true;
 }
 
+int mosaic_decode_impl(
+    const uint8_t* mosaic_bytes,
+    size_t mosaic_len,
+    const uint8_t* novelty_bytes,
+    size_t novelty_len,
+    const uint8_t* const* donor_2bit_ptrs,
+    const uint64_t* donor_lens,
+    size_t max_donor_exclusive,
+    uint8_t** out_two_bit,
+    uint64_t* out_len,
+    MosaicObserver* obs) {
+    if (out_two_bit) *out_two_bit = nullptr;
+    if (out_len) *out_len = 0;
+
+    ByteSpanIn in{mosaic_bytes, mosaic_len, 0};
+    bool ok = true;
+    uint8_t flags = in.read_byte(ok);
+    if (!ok) return -1;
+    MosaicConfigC cfg = MosaicConfigC::from_header_byte(flags);
+    uint64_t target_len = in.read_var_u64(ok);
+    uint64_t nov_hdr_len = in.read_var_u64(ok);
+    if (!ok || nov_hdr_len > novelty_len) return -1;
+    if (out_len) *out_len = target_len;
+    if (obs) {
+        obs->stats.target_len = target_len;
+        obs->stats.novelty_len = nov_hdr_len;
+    }
+    if (target_len == 0) return 0;
+    if (cfg.has_panel && max_donor_exclusive == 0) return -1;
+
+    uint8_t* owned_out = nullptr;
+    std::vector<uint8_t> transient_out;
+    uint8_t* out = nullptr;
+    if (out_two_bit != nullptr) {
+        owned_out = static_cast<uint8_t*>(std::malloc(static_cast<size_t>(target_len)));
+        if (!owned_out) return -1;
+        out = owned_out;
+    } else if (cfg.allow_self || cfg.allow_tandem || !cfg.allow_kimura) {
+        transient_out.resize(static_cast<size_t>(target_len));
+        out = transient_out.data();
+    }
+    auto cleanup_fail = [&]() -> int {
+        std::free(owned_out);
+        return -1;
+    };
+
+    std::vector<Packed2Bit> donor_banks(cfg.has_panel ? max_donor_exclusive : 0);
+    std::vector<uint8_t> donor_ready(cfg.has_panel ? max_donor_exclusive : 0, 0);
+
+    BitRangeDec dec(in);
+    MosaicModels models;
+    std::vector<int> mtf;
+    init_mtf(mtf, cfg.has_panel ? max_donor_exclusive : 0);
+    std::vector<int64_t> last_ref(cfg.has_panel ? max_donor_exclusive * 2 : 0, -1);
+    std::vector<int64_t> last_tgt(cfg.has_panel ? max_donor_exclusive * 2 : 0, -1);
+
+    bool prev_lit = false, prev_pan = true;
+    uint64_t pos = 0, nov_cur = 0;
+
+    while (pos < target_len) {
+        bool is_lit = (!prev_lit) && (dec.decode_bit(models.is_literal.data(), prev_pan ? 1 : 2) == 1);
+        if (is_lit) {
+            uint64_t lit_len = models.read_count(dec, models.lit_len_slots[0], 0) + 1ULL;
+            if (pos + lit_len > target_len || nov_cur + lit_len > nov_hdr_len) return cleanup_fail();
+            uint64_t nov_start = nov_cur;
+            if (out != nullptr) std::memcpy(out + pos, novelty_bytes + nov_cur, static_cast<size_t>(lit_len));
+            if (obs != nullptr) {
+                obs->stats.literal_runs++;
+                obs->stats.literal_bases += lit_len;
+                if (obs->collect_spans) {
+                    obs->spans.push_back(HgsSpanEvent{
+                        0, 0, 1, 0, std::numeric_limits<uint32_t>::max(),
+                        nov_start, pos, lit_len, lit_len
+                    });
+                }
+                if (obs->collect_variants) {
+                    uint64_t a_off = (lit_len <= 65536ULL)
+                        ? obs->append_pool(novelty_bytes + nov_start, static_cast<size_t>(lit_len))
+                        : std::numeric_limits<uint64_t>::max();
+                    obs->variants.push_back(HgsVariantRecord{
+                        4, 0, 0, 0, std::numeric_limits<uint32_t>::max(),
+                        nov_start, pos, 0,
+                        static_cast<uint32_t>(std::min<uint64_t>(lit_len, std::numeric_limits<uint32_t>::max())),
+                        std::numeric_limits<uint64_t>::max(), a_off
+                    });
+                }
+            }
+            nov_cur += lit_len;
+            pos += lit_len;
+            prev_lit = true;
+            continue;
+        }
+        bool after_lit = prev_lit;
+        prev_lit = false;
+        bool is_pan = cfg.has_panel && ((cfg.allow_self || cfg.allow_tandem)
+            ? (dec.decode_bit(models.is_panel_match.data(), prev_pan ? 1 : 0) == 1) : true);
+        prev_pan = is_pan;
+
+        if (is_pan) {
+            int prev_m0 = mtf[0];
+            int ds = decode_mtf_ds(dec, models, mtf, max_donor_exclusive, after_lit ? 1 : 0);
+            int is_m0 = (ds == prev_m0) ? 1 : 0;
+            size_t did = static_cast<size_t>(ds >> 1);
+            uint8_t st = static_cast<uint8_t>(ds & 1);
+            if (did >= max_donor_exclusive) return cleanup_fail();
+            if (!donor_lens || (donor_lens[did] > 0 && (!donor_2bit_ptrs || !donor_2bit_ptrs[did]))) {
+                return cleanup_fail();
+            }
+            if (!donor_ready[did]) {
+                donor_banks[did] = Packed2Bit::from_bytes(donor_2bit_ptrs[did], donor_lens[did]);
+                donor_ready[did] = 1;
+            }
+            uint64_t srp = decode_panel_ref_pos(dec, models, pos, donor_lens[did], last_ref[ds], last_tgt[ds], is_m0, ok);
+            if (!ok) return cleanup_fail();
+            if (obs != nullptr) {
+                obs->stats.panel_tokens++;
+                if (obs->last_panel_donor != std::numeric_limits<uint32_t>::max() &&
+                    obs->last_panel_donor != static_cast<uint32_t>(did)) {
+                    obs->stats.recombination_switches++;
+                }
+                obs->last_panel_donor = static_cast<uint32_t>(did);
+            }
+            uint64_t er = 0, et = 0;
+            if (!decode_subblocks_donor(dec, models, cfg, &donor_banks[did], 0, donor_lens[did], false, st, srp,
+                                        out, pos, target_len, novelty_bytes, nov_cur, nov_hdr_len,
+                                        er, et, static_cast<uint32_t>(did), obs)) {
+                return cleanup_fail();
+            }
+            last_ref[ds] = static_cast<int64_t>(er);
+            last_tgt[ds] = static_cast<int64_t>(et);
+            pos = et;
+        } else {
+            bool is_tan = (cfg.allow_self && cfg.allow_tandem)
+                ? (dec.decode_bit(models.is_tandem.data(), 0) == 1) : cfg.allow_tandem;
+            if (is_tan) {
+                uint64_t period = static_cast<uint64_t>(models.read_fixed_tree(dec, models.tandem_period_tree, 6)) + 1ULL;
+                uint64_t tlen = models.read_count(dec, models.match_len_slots[0], 1) + MIN_TANDEM_LEN;
+                if (period > pos || pos + tlen > target_len) return cleanup_fail();
+                if (out != nullptr) {
+                    uint64_t src = pos - period;
+                    for (uint64_t k = 0; k < tlen; k++) out[pos + k] = out[src + k];
+                }
+                if (obs != nullptr) {
+                    obs->stats.tandem_tokens++;
+                    obs->stats.tandem_match_bases += tlen;
+                    if (obs->collect_spans) {
+                        obs->spans.push_back(HgsSpanEvent{
+                            3, 0, 0, 0, std::numeric_limits<uint32_t>::max(),
+                            period, pos, tlen, tlen
+                        });
+                    }
+                }
+                pos += tlen;
+            } else {
+                uint8_t st = static_cast<uint8_t>(dec.decode_bit(models.self_strand.data(), 0));
+                uint64_t dc = models.read_count(dec, models.self_dist_slots[st], 2);
+                uint64_t srp = (st == 0) ? (pos - 1ULL - dc) : dc;
+                if (srp >= pos) return cleanup_fail();
+                if (obs != nullptr) obs->stats.self_tokens++;
+                uint64_t er = 0, et = 0;
+                if (!decode_subblocks_donor(dec, models, cfg, nullptr, 0, pos, true, st, srp,
+                                            out, pos, target_len, novelty_bytes, nov_cur, nov_hdr_len,
+                                            er, et, std::numeric_limits<uint32_t>::max(), obs)) {
+                    return cleanup_fail();
+                }
+                pos = et;
+            }
+        }
+    }
+    if (nov_cur != nov_hdr_len) return cleanup_fail();
+    if (out_two_bit != nullptr) *out_two_bit = owned_out;
+    return 0;
+}
+
 } // namespace
 
 // ============================================================================
@@ -3145,103 +3417,10 @@ int hgs_cpp_decode_mosaic(
     size_t max_donor_exclusive,
     uint8_t** out_two_bit,
     uint64_t* out_len) {
-    *out_two_bit = nullptr;
-    *out_len = 0;
-
-    ByteSpanIn in{mosaic_bytes, mosaic_len, 0};
-    bool ok = true;
-    uint8_t flags = in.read_byte(ok);
-    if (!ok) return -1;
-    MosaicConfigC cfg = MosaicConfigC::from_header_byte(flags);
-    uint64_t target_len = in.read_var_u64(ok);
-    uint64_t nov_hdr_len = in.read_var_u64(ok);
-    if (!ok || nov_hdr_len > novelty_len) return -1;
-    *out_len = target_len;
-    if (target_len == 0) return 0;
-    if (cfg.has_panel && max_donor_exclusive == 0) return -1;
-
-    uint8_t* out = static_cast<uint8_t*>(std::malloc(static_cast<size_t>(target_len)));
-    if (!out) return -1;
-
-    // Lazy packed wrapper only for referenced donors
-    std::vector<Packed2Bit> donor_banks(cfg.has_panel ? max_donor_exclusive : 0);
-    std::vector<uint8_t> donor_ready(cfg.has_panel ? max_donor_exclusive : 0, 0);
-
-    BitRangeDec dec(in);
-    MosaicModels models;
-    std::vector<int> mtf;
-    init_mtf(mtf, cfg.has_panel ? max_donor_exclusive : 0);
-    std::vector<int64_t> last_ref(cfg.has_panel ? max_donor_exclusive * 2 : 0, -1);
-    std::vector<int64_t> last_tgt(cfg.has_panel ? max_donor_exclusive * 2 : 0, -1);
-
-    bool prev_lit = false, prev_pan = true;
-    uint64_t pos = 0, nov_cur = 0;
-
-    while (pos < target_len) {
-        bool is_lit = (!prev_lit) && (dec.decode_bit(models.is_literal.data(), prev_pan ? 1 : 2) == 1);
-        if (is_lit) {
-            uint64_t lit_len = models.read_count(dec, models.lit_len_slots[0], 0) + 1ULL;
-            if (pos + lit_len > target_len || nov_cur + lit_len > nov_hdr_len) { std::free(out); return -1; }
-            std::memcpy(out + pos, novelty_bytes + nov_cur, static_cast<size_t>(lit_len));
-            nov_cur += lit_len;
-            pos += lit_len;
-            prev_lit = true;
-            continue;
-        }
-        bool after_lit = prev_lit;
-        prev_lit = false;
-        bool is_pan = cfg.has_panel && ((cfg.allow_self || cfg.allow_tandem)
-            ? (dec.decode_bit(models.is_panel_match.data(), prev_pan ? 1 : 0) == 1) : true);
-        prev_pan = is_pan;
-
-        if (is_pan) {
-            int prev_m0 = mtf[0];
-            int ds = decode_mtf_ds(dec, models, mtf, max_donor_exclusive, after_lit ? 1 : 0);
-            int is_m0 = (ds == prev_m0) ? 1 : 0;
-            size_t did = static_cast<size_t>(ds >> 1);
-            uint8_t st = static_cast<uint8_t>(ds & 1);
-            if (did >= max_donor_exclusive) { std::free(out); return -1; }
-            if (!donor_ready[did]) {
-                donor_banks[did] = Packed2Bit::from_bytes(donor_2bit_ptrs[did], donor_lens[did]);
-                donor_ready[did] = 1;
-            }
-            uint64_t srp = decode_panel_ref_pos(dec, models, pos, donor_lens[did], last_ref[ds], last_tgt[ds], is_m0, ok);
-            if (!ok) { std::free(out); return -1; }
-            uint64_t er = 0, et = 0;
-            if (!decode_subblocks_donor(dec, models, cfg, &donor_banks[did], 0, donor_lens[did], false, st, srp,
-                                        out, pos, target_len, novelty_bytes, nov_cur, nov_hdr_len, er, et)) {
-                std::free(out); return -1;
-            }
-            last_ref[ds] = static_cast<int64_t>(er);
-            last_tgt[ds] = static_cast<int64_t>(et);
-            pos = et;
-        } else {
-            bool is_tan = (cfg.allow_self && cfg.allow_tandem)
-                ? (dec.decode_bit(models.is_tandem.data(), 0) == 1) : cfg.allow_tandem;
-            if (is_tan) {
-                uint64_t period = static_cast<uint64_t>(models.read_fixed_tree(dec, models.tandem_period_tree, 6)) + 1ULL;
-                uint64_t tlen = models.read_count(dec, models.match_len_slots[0], 1) + MIN_TANDEM_LEN;
-                if (period > pos || pos + tlen > target_len) { std::free(out); return -1; }
-                uint64_t src = pos - period;
-                for (uint64_t k = 0; k < tlen; k++) out[pos + k] = out[src + k];
-                pos += tlen;
-            } else {
-                uint8_t st = static_cast<uint8_t>(dec.decode_bit(models.self_strand.data(), 0));
-                uint64_t dc = models.read_count(dec, models.self_dist_slots[st], 2);
-                uint64_t srp = (st == 0) ? (pos - 1ULL - dc) : dc;
-                if (srp >= pos) { std::free(out); return -1; }
-                uint64_t er = 0, et = 0;
-                if (!decode_subblocks_donor(dec, models, cfg, nullptr, 0, pos, true, st, srp,
-                                            out, pos, target_len, novelty_bytes, nov_cur, nov_hdr_len, er, et)) {
-                    std::free(out); return -1;
-                }
-                pos = et;
-            }
-        }
-    }
-    if (nov_cur != nov_hdr_len) { std::free(out); return -1; }
-    *out_two_bit = out;
-    return 0;
+    return mosaic_decode_impl(
+        mosaic_bytes, mosaic_len, novelty_bytes, novelty_len,
+        donor_2bit_ptrs, donor_lens, max_donor_exclusive,
+        out_two_bit, out_len, nullptr);
 }
 
 int hgs_cpp_mosaic_peek_lengths(const uint8_t* mosaic_bytes, size_t mosaic_len, uint64_t* out_tgt_len, uint64_t* out_nov_len) {
@@ -3480,6 +3659,233 @@ int hgs_cpp_novelty_decode(const uint8_t* payload, size_t payload_len, uint64_t 
         for (auto& t : pool) t.join();
     }
     if (fail) { std::free(dst); return -1; }
+    out_two_bit->data = dst;
+    out_two_bit->len = static_cast<size_t>(expected_len);
+    return 0;
+}
+
+void hgs_cpp_free_inspect_result(HgsMosaicInspectResult* res) {
+    if (!res) return;
+    std::free(res->variants);
+    std::free(res->spans);
+    std::free(res->var_seq_pool);
+    std::memset(res, 0, sizeof(*res));
+}
+
+HgsMosaicInspectResult hgs_cpp_mosaic_inspect(
+    const uint8_t* mosaic_bytes,
+    size_t mosaic_len,
+    const uint8_t* novelty_bytes,
+    size_t novelty_len,
+    const uint8_t* const* donor_2bit_ptrs,
+    const uint64_t* donor_lens,
+    size_t max_donor_exclusive,
+    int collect_variants,
+    int collect_spans) {
+    HgsMosaicInspectResult res{};
+    MosaicObserver obs;
+    obs.collect_variants = (collect_variants != 0);
+    obs.collect_spans = (collect_spans != 0);
+
+    int rc = mosaic_decode_impl(
+        mosaic_bytes, mosaic_len, novelty_bytes, novelty_len,
+        donor_2bit_ptrs, donor_lens, max_donor_exclusive,
+        nullptr, nullptr, &obs);
+    if (rc != 0) {
+        res.status = rc;
+        return res;
+    }
+
+    res.stats = obs.stats;
+    if (!obs.variants.empty()) {
+        size_t bytes = obs.variants.size() * sizeof(HgsVariantRecord);
+        res.variants = static_cast<HgsVariantRecord*>(std::malloc(bytes));
+        if (!res.variants) { hgs_cpp_free_inspect_result(&res); res.status = -1; return res; }
+        std::memcpy(res.variants, obs.variants.data(), bytes);
+        res.num_variants = obs.variants.size();
+    }
+    if (!obs.spans.empty()) {
+        size_t bytes = obs.spans.size() * sizeof(HgsSpanEvent);
+        res.spans = static_cast<HgsSpanEvent*>(std::malloc(bytes));
+        if (!res.spans) { hgs_cpp_free_inspect_result(&res); res.status = -1; return res; }
+        std::memcpy(res.spans, obs.spans.data(), bytes);
+        res.num_spans = obs.spans.size();
+    }
+    if (!obs.var_seq_pool.empty()) {
+        res.var_seq_pool = static_cast<uint8_t*>(std::malloc(obs.var_seq_pool.size()));
+        if (!res.var_seq_pool) { hgs_cpp_free_inspect_result(&res); res.status = -1; return res; }
+        std::memcpy(res.var_seq_pool, obs.var_seq_pool.data(), obs.var_seq_pool.size());
+        res.var_seq_pool_len = obs.var_seq_pool.size();
+    }
+    res.status = 0;
+    return res;
+}
+
+static constexpr uint8_t FLAG_ANS4_NOVELTY = 0x10;
+static constexpr uint64_t ANS4_SEG_BASES = 1'000'000ULL;
+
+int hgs_cpp_ans_novelty_encode(
+    const uint8_t* two_bit_bases,
+    uint64_t len,
+    int threads,
+    HgsOwnedBytes* out_payload) {
+    *out_payload = HgsOwnedBytes{nullptr, 0};
+    if (len == 0) return 0;
+    if (!two_bit_bases) return -1;
+
+    size_t total_segs = static_cast<size_t>((len + ANS4_SEG_BASES - 1ULL) / ANS4_SEG_BASES);
+    std::vector<uint64_t> seg_starts(total_segs, 0);
+    std::vector<size_t> seg_lens(total_segs, 0);
+    std::vector<uint8_t*> seg_ptrs(total_segs, nullptr);
+    std::vector<size_t> comp_lens(total_segs, 0);
+    uint64_t cur = 0;
+    for (size_t i = 0; i < total_segs; i++) {
+        seg_starts[i] = cur;
+        size_t chunk = static_cast<size_t>(std::min<uint64_t>(ANS4_SEG_BASES, len - cur));
+        seg_lens[i] = chunk;
+        cur += chunk;
+    }
+
+    int th = (threads > 0) ? threads : 1;
+    int workers = std::min<int>(th, static_cast<int>(total_segs));
+    std::atomic<bool> fail{false};
+    if (workers <= 1) {
+        for (size_t i = 0; i < total_segs; i++) {
+            if (hgs_ans4_encode_dna(two_bit_bases + seg_starts[i], seg_lens[i], &seg_ptrs[i], &comp_lens[i]) != 0) {
+                fail = true;
+                break;
+            }
+        }
+    } else {
+        std::vector<std::thread> pool;
+        std::atomic<size_t> next_i{0};
+        for (int w = 0; w < workers; w++) {
+            pool.emplace_back([&]() {
+                while (true) {
+                    size_t i = next_i.fetch_add(1);
+                    if (i >= total_segs) break;
+                    if (hgs_ans4_encode_dna(two_bit_bases + seg_starts[i], seg_lens[i], &seg_ptrs[i], &comp_lens[i]) != 0) {
+                        fail = true;
+                    }
+                }
+            });
+        }
+        for (auto& t : pool) t.join();
+    }
+
+    if (fail) {
+        for (uint8_t* p : seg_ptrs) hgs_ans_free(p);
+        return -1;
+    }
+
+    ByteVecOut out;
+    out.reserve(64 + total_segs * 8);
+    out.write_byte(FLAG_ANS4_NOVELTY);
+    out.write_var_u64(static_cast<uint64_t>(total_segs));
+    size_t data_bytes = 0;
+    for (size_t i = 0; i < total_segs; i++) {
+        out.write_var_u64(static_cast<uint64_t>(seg_lens[i]));
+        out.write_var_u64(static_cast<uint64_t>(comp_lens[i]));
+        data_bytes += comp_lens[i];
+    }
+    out.reserve(out.buf.size() + data_bytes);
+    for (size_t i = 0; i < total_segs; i++) {
+        out.write_bytes(seg_ptrs[i], comp_lens[i]);
+        hgs_ans_free(seg_ptrs[i]);
+    }
+
+    uint8_t* ret = static_cast<uint8_t*>(std::malloc(out.buf.size()));
+    if (!ret) return -1;
+    std::memcpy(ret, out.buf.data(), out.buf.size());
+    out_payload->data = ret;
+    out_payload->len = out.buf.size();
+    return 0;
+}
+
+int hgs_cpp_ans_novelty_decode(
+    const uint8_t* payload,
+    size_t payload_len,
+    uint64_t expected_len,
+    int threads,
+    HgsOwnedBytes* out_two_bit) {
+    *out_two_bit = HgsOwnedBytes{nullptr, 0};
+    if (expected_len == 0) return (payload_len == 0) ? 0 : -1;
+    if (!payload || payload_len == 0) return -1;
+
+    ByteSpanIn in{payload, payload_len, 0};
+    bool ok = true;
+    uint8_t flags = in.read_byte(ok);
+    if (!ok || flags != FLAG_ANS4_NOVELTY) return -1;
+    uint64_t total_segs_u64 = in.read_var_u64(ok);
+    if (!ok || total_segs_u64 == 0 || total_segs_u64 > expected_len + 1ULL) return -1;
+    size_t total_segs = static_cast<size_t>(total_segs_u64);
+
+    std::vector<uint64_t> seg_starts(total_segs, 0);
+    std::vector<size_t> seg_lens(total_segs, 0);
+    std::vector<size_t> comp_lens(total_segs, 0);
+    uint64_t sum_bases = 0;
+    size_t sum_comp = 0;
+    for (size_t i = 0; i < total_segs; i++) {
+        uint64_t sl = in.read_var_u64(ok);
+        uint64_t cl = in.read_var_u64(ok);
+        if (!ok || sl == 0 || sl > expected_len - sum_bases || cl > payload_len - in.pos - sum_comp) return -1;
+        seg_starts[i] = sum_bases;
+        seg_lens[i] = static_cast<size_t>(sl);
+        comp_lens[i] = static_cast<size_t>(cl);
+        sum_bases += sl;
+        sum_comp += static_cast<size_t>(cl);
+    }
+    if (sum_bases != expected_len || in.pos + sum_comp != payload_len) return -1;
+
+    std::vector<const uint8_t*> ptrs(total_segs, nullptr);
+    size_t cur_off = in.pos;
+    for (size_t i = 0; i < total_segs; i++) {
+        ptrs[i] = payload + cur_off;
+        cur_off += comp_lens[i];
+    }
+
+    uint8_t* dst = static_cast<uint8_t*>(std::malloc(static_cast<size_t>(expected_len)));
+    if (!dst) return -1;
+
+    int th = (threads > 0) ? threads : 1;
+    int workers = std::min<int>(th, static_cast<int>(total_segs));
+    std::atomic<bool> fail{false};
+    auto decode_one = [&](size_t i) {
+        uint8_t* tmp = nullptr;
+        size_t tmp_len = 0;
+        if (hgs_ans4_decode_dna(ptrs[i], comp_lens[i], seg_lens[i], &tmp, &tmp_len) != 0 || tmp_len != seg_lens[i]) {
+            hgs_ans_free(tmp);
+            fail = true;
+            return;
+        }
+        if (tmp_len > 0) std::memcpy(dst + seg_starts[i], tmp, tmp_len);
+        hgs_ans_free(tmp);
+    };
+
+    if (workers <= 1) {
+        for (size_t i = 0; i < total_segs; i++) {
+            decode_one(i);
+            if (fail) break;
+        }
+    } else {
+        std::vector<std::thread> pool;
+        std::atomic<size_t> next_i{0};
+        for (int w = 0; w < workers; w++) {
+            pool.emplace_back([&]() {
+                while (true) {
+                    size_t i = next_i.fetch_add(1);
+                    if (i >= total_segs) break;
+                    decode_one(i);
+                }
+            });
+        }
+        for (auto& t : pool) t.join();
+    }
+
+    if (fail) {
+        std::free(dst);
+        return -1;
+    }
     out_two_bit->data = dst;
     out_two_bit->len = static_cast<size_t>(expected_len);
     return 0;

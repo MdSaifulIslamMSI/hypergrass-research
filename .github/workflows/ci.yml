@@ -60,12 +60,12 @@ jobs:
           mvn -B -ntp package
           java -jar target/hypergrass.jar --version
 
-      - name: Run all 7 lossless verification suites
+      - name: Run all 8 lossless verification suites
         env:
           SKIP_BUILD: "1"
         run: ./test.sh
 
-      - name: Build Native C23/C++23/Rust 2024 eimdl engine and verify tests + Java<->Native interop
+      - name: Build Native C23/C++23/Rust 2024 eimdl engine and verify tests + Java<->Native HGS2/HGS3 interop
         if: matrix.java == '25' && runner.os == 'Linux'
         run: |
           export PATH="$HOME/.cargo/bin:$PATH"
@@ -80,13 +80,14 @@ jobs:
           )
           ./native/eimdl-rs/target/release/eimdl --version
           python3 - <<'PY'
-          import hashlib, os, subprocess, tempfile
+          import hashlib, json, os, subprocess, tempfile
           from pathlib import Path
           with tempfile.TemporaryDirectory() as td:
               p = Path(td)
               pdir = p / "panel"
               pdir.mkdir()
-              donor = (b">donor0 chr test\n" + ((b"ACGT" * 200 + b"TGCA" * 150) * 6) + b"\n")
+              donor_seq = (b"ACGT" * 200 + b"TGCA" * 150) * 6
+              donor = b">donor0 chr test\n" + donor_seq + b"\n"
               (pdir / "donor0.fa").write_bytes(donor)
               tgt = (
                   b">strain_a\r\n" + (b"ACGT" * 200 + b"TGCA" * 150) * 3
@@ -113,7 +114,41 @@ jobs:
               subprocess.run([eimdl, "compress", "--target", str(raw), "--out", str(rn), "--panel", str(pdir), "--threads", "2"], check=True)
               subprocess.run(["java", "-cp", "bin", "hypergrass.EimdlCli", "decompress", "--archive", str(rn), "--panel", str(pdir), "--out", str(drj)], check=True)
               assert hashlib.sha256(drj.read_bytes()).hexdigest() == expected, "Native->Java Mode R mismatch"
-              print("PASS: Bidirectional Java<->Native C11/C++20/Rust wire parity verified (Mode S, R, C).")
+
+              # HGS3 FASTQ & FASTA bidirectional parity + Compressed-Domain Genomics
+              fq_lines = []
+              for i in range(40):
+                  seq = bytearray(donor_seq[i * 40 : i * 40 + 150])
+                  qual = bytearray(b"I" * 150)
+                  if i % 4 == 0:
+                      seq[25] = ord('G') if seq[25] != ord('G') else ord('T')
+                      qual[25] = ord('#')
+                  eol = b"\n" if i % 2 == 0 else b"\r\n"
+                  fq_lines.append(f"@SRR1.{i} r={i}".encode() + eol + bytes(seq) + eol + (b"+" if i != 2 else f"+SRR1.{i}".encode()) + eol + bytes(qual) + eol)
+              fq_raw = b"".join(fq_lines)
+              fq_path = p / "reads.fastq"
+              fq_path.write_bytes(fq_raw)
+              fq_exp = hashlib.sha256(fq_raw).hexdigest()
+              f3j, f3n, df3j, df3n = p / "j.hgs3", p / "n.hgs3", p / "df3j.fq", p / "df3n.fq"
+              subprocess.run(["java", "-cp", "bin", "hypergrass.EimdlCli", "compress-omics", "--target", str(fq_path), "--out", str(f3j), "--panel", str(pdir), "--cds", "--threads", "2"], check=True)
+              subprocess.run([eimdl, "decompress-omics", "--archive", str(f3j), "--panel", str(pdir), "--out", str(df3n), "--threads", "2"], check=True)
+              assert hashlib.sha256(df3n.read_bytes()).hexdigest() == fq_exp, "Java->Native HGS3 FASTQ mismatch"
+              subprocess.run([eimdl, "compress-omics", "--target", str(fq_path), "--out", str(f3n), "--panel", str(pdir), "--cds", "--threads", "2"], check=True)
+              subprocess.run(["java", "-cp", "bin", "hypergrass.EimdlCli", "decompress-omics", "--archive", str(f3n), "--panel", str(pdir), "--out", str(df3j)], check=True)
+              assert hashlib.sha256(df3j.read_bytes()).hexdigest() == fq_exp, "Native->Java HGS3 FASTQ mismatch"
+
+              fa3n, dfa3j = p / "fa.hgs3", p / "dfa3j.fa"
+              subprocess.run([eimdl, "compress-omics", "--target", str(raw), "--out", str(fa3n), "--panel", str(pdir), "--cds", "--threads", "2"], check=True)
+              subprocess.run(["java", "-cp", "bin", "hypergrass.EimdlCli", "decompress-omics", "--archive", str(fa3n), "--panel", str(pdir), "--out", str(dfa3j)], check=True)
+              assert hashlib.sha256(dfa3j.read_bytes()).hexdigest() == expected, "Native->Java HGS3 FASTA mismatch"
+
+              ana_n = json.loads(subprocess.check_output([eimdl, "analyze", "--archive", str(f3j), "--panel", str(pdir), "--json"], text=True))
+              ana_j = json.loads(subprocess.check_output(["java", "-cp", "bin", "hypergrass.EimdlCli", "analyze", "--archive", str(f3j), "--panel", str(pdir), "--json"], text=True))
+              assert ana_n["total_bases"] == ana_j["total_bases"] == 6000
+              km_n = json.loads(subprocess.check_output([eimdl, "kmer", "--archive", str(rn), "--panel", str(pdir), "--query", donor_seq[10:25].decode(), "--both-strands", "--json"], text=True))
+              km_j = json.loads(subprocess.check_output(["java", "-cp", "bin", "hypergrass.EimdlCli", "kmer", "--archive", str(rn), "--panel", str(pdir), "--query", donor_seq[10:25].decode(), "--both-strands", "--json"], text=True))
+              assert km_n["hit_count"] == km_j["hit_count"] >= 1
+              print("PASS: Bidirectional Java<->Native C23/C++23/Rust 2024 HGS2+HGS3 parity verified.")
           PY
 
   audit:

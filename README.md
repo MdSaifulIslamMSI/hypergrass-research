@@ -456,6 +456,19 @@ cargo test --release --offline
 ./target/release/eimdl decompress --archive pangenome.hgs2 --out restored.fa --threads 4
 ```
 
+### 7.2.2 Next-Gen `.hgs3` Multi-Omic & Compressed-Domain Computing (`EimdlCli` & Native `eimdl`)
+
+```powershell
+# Compress & byte-exact restore FASTQ (pangenome-conditioned Phred + 4x-rANS + optional CDS digest)
+java -cp bin hypergrass.EimdlCli compress-omics --target reads.fastq --panel panel_dir/ --cds --out reads.hgs3
+java -cp bin hypergrass.EimdlCli decompress-omics --archive reads.hgs3 --panel panel_dir/ --out restored.fastq
+
+# Compressed-domain evolutionary report, VCF v4.2 variant calls & exact k-mer search (zero FASTA reconstruction)
+java -cp bin hypergrass.EimdlCli analyze --archive target.hgs2 --panel panel_dir/
+java -cp bin hypergrass.EimdlCli variants --archive target.hgs2 --panel panel_dir/ --out calls.vcf
+java -cp bin hypergrass.EimdlCli kmer --archive target.hgs2 --panel panel_dir/ --query ACGTACGTACGT --both-strands
+```
+
 ### 7.3 Unified `HyperGraSS` CLI (Supports both `.hgs2` via `--fusion` and legacy `.hgs`)
 
 ```powershell

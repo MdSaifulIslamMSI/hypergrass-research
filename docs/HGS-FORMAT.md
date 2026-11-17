@@ -286,3 +286,26 @@ numSeqLines    uvarint
 - [`src/hypergrass/HyperGraSS.java`](../src/hypergrass/HyperGraSS.java) — `.hgs` v1 container, footer, CLI, `--lean` streaming, and automatic `.hgs2` magic dispatch.
 - [`src/hypergrass/FastaStreamFactorizer.java`](../src/hypergrass/FastaStreamFactorizer.java) — 6-channel lossless FASTA/RNA/DNA stream factorization.
 - [`src/hypergrass/VarIntCodec.java`](../src/hypergrass/VarIntCodec.java) — LEB128 varints, 2-bit packing, and `aux` modes `0..7`.
+
+---
+
+## 13. `.hgs3` v3.0 Multi-Omic Container, 4-Stripe SIMD rANS, & Compressed-Domain Genomics
+
+The `.hgs3` container (magic `"HGS3"`) generalizes `.hgs2` across **multi-omic biological streams** while maintaining 100% deterministic bidirectional interoperability between Native (`C23` + `C++23` + `Rust 2024`) and Java 25 LTS (`Hgs3OmicCodec`, `HgsAnsCoder`, `CompressedDomainEngine`):
+
+1. **Header (`HGS3`):**
+   - Bytes `0..4`: `"HGS3"`
+   - Byte `4`: `flags` — bits `0..1` = mode (`0` Single, `1` Ref-Panel, `2` Collection MST), bit `2` (`0x04`) = `FLAG_RAW_FLAT_ACGT`, bit `3` (`0x08`) = `FLAG_RAW_RNA_U`, bit `4` (`0x10`) = `FLAG3_FASTQ`, bit `5` (`0x20`) = `FLAG3_HAS_CDS`
+   - `rawBytes` (`uint64 LE`), `crc32` (`uint32 LE`), `totalRecords` (`uvarint`), `numUnits` (`uvarint`), plus Mode R SHA-256 panel manifest pin block (identical to Section 3).
+2. **Parallel 4-Stripe Byte-rANS Novelty Coder (`FLAG_ANS4_NOVELTY = 0x10`, `hgs_ans.c` / `HgsAnsCoder.java`):**
+   - Overflow-free 32-bit Byte-rANS (`PROB_BITS = 12`, `ANS_L = 2^23`, `XMAX_MUL = 524288`), partitioned into 4 independent stripes mixing adaptive Order-0/2/4/6 contexts across `1,000,000`-base deterministic segments, falling back strictly to `ANS_MODE_RAW_2BIT` (`0x00`) under Law IV noise ceilings.
+3. **Lossless Pangenome-Conditioned FASTQ (`FLAG3_FASTQ = 0x10`):**
+   - **Metadata Stream:** Common read-ID prefix stripping + incremental LCP deltas, uniform/mixed `CRLF`/`LF` & `+` comment flags, fixed/variable read lengths, and sparse/XOR ambiguity & soft-mask restoration (`deflate`/`zlib`).
+   - **DNA Stream:** Reference/panel Mosaic (`EimdlMosaicCodec`) + 4-stripe rANS novelty (`FLAG_ANS4_NOVELTY`).
+   - **Coupled Phred Quality Stream (`ANS_MODE_RANS4_QUAL = 3`):** Hierarchical `(same, coarse[9], fine[8], nibble[16])` residual coding conditioned directly on Mosaic variant/literal `mismatch_mask`, DNA `homo_bins`, `prev_qbin`, and read cycle phase — regenerated deterministically from the DNA Mosaic tokens at zero mask signaling overhead.
+4. **Optional 6-Frame CDS Proteome Summary (`FLAG3_HAS_CDS = 0x20`):**
+   - Appends `(orfCount, longestOrfAa, totalOrfAa, gcPermille, proteomeSha256[32])` for genomic/transcriptomic validation without disturbing byte-exact reconstruction.
+5. **Compressed-Domain Algebra (`HGS2` & `HGS3`):**
+   - `analyze` computes Kimura `Ti/Tv` / $\kappa$ proxy, codon-wobble mod-3 periodicity, indel spectrum, donor recombination switches, and donor base shares directly from compressed tokens.
+   - `variants` emits strand-normalized, 1-base anchored **VCF v4.2** calls directly without target FASTA reconstruction.
+   - `kmer` executes exact forward + reverse-complement k-mer queries across conserved panel spans (zero target buffer materialization), SNP-patched local spans, and span boundary stitches.

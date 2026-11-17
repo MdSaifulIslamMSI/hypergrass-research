@@ -44,7 +44,7 @@ static int inf_bits(InfState* s, int need, uint32_t* val) {
 }
 
 #define MAXBITS 15
-#define MAXLCODES 286
+#define MAXLCODES 288
 #define MAXDCODES 30
 #define MAXCODES (MAXLCODES + MAXDCODES)
 
@@ -195,7 +195,7 @@ int hgs_inflate_raw(const uint8_t* src, size_t src_len, size_t expected_len_hint
             int nlen = (int)hlit_r + 257;
             int ndist = (int)hdist_r + 1;
             int ncode = (int)hclen_r + 4;
-            if (nlen > MAXLCODES || ndist > MAXDCODES) goto fail;
+            if (nlen > 286 || ndist > MAXDCODES) goto fail;
 
             int16_t cl_lens[19];
             for (int i = 0; i < 19; i++) cl_lens[i] = 0;

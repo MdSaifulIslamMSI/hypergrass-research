@@ -56,13 +56,16 @@ public final class HyperGraSSFusionEngine {
     public static final byte MAGIC_1 = 'G';
     public static final byte MAGIC_2 = 'S';
     public static final byte MAGIC_3 = '2';
+    public static final byte MAGIC3_3 = '3';
 
     public static final int MODE_SINGLE = 0;
     public static final int MODE_REF = 1;
     public static final int MODE_COLLECTION = 2;
 
-    private static final int FLAG_RAW_FLAT_ACGT = 1 << 2;
-    private static final int FLAG_RAW_RNA_U = 1 << 3;
+    static final int FLAG_RAW_FLAT_ACGT = 1 << 2;
+    static final int FLAG_RAW_RNA_U = 1 << 3;
+    static final int FLAG3_FASTQ = 1 << 4;
+    static final int FLAG3_HAS_CDS = 1 << 5;
 
     /** Default target DNA size (4 MiB bases = 4 aligned 256 KiB pages) for headerless streams. */
     private static final int TARGET_COLLECTION_UNIT_BASES = Packed2BitSequence.PAGE_BASES * 4;
@@ -143,6 +146,17 @@ public final class HyperGraSSFusionEngine {
 
     public static CompressionReport compressFile(Path input, Path output, FusionOptions opts)
             throws IOException {
+        return compressFileWithContainer(input, output, opts, false, null);
+    }
+
+    static CompressionReport compressFileToHgs3Fasta(
+            Path input, Path output, FusionOptions opts, byte[] trailingCds) throws IOException {
+        return compressFileWithContainer(input, output, opts, true, trailingCds);
+    }
+
+    private static CompressionReport compressFileWithContainer(
+            Path input, Path output, FusionOptions opts, boolean hgs3Mode, byte[] trailingCds)
+            throws IOException {
         long t0 = System.nanoTime();
         ParsedRawInput parsed = parseSource(input, null, opts);
         int initOutCap =
@@ -150,7 +164,7 @@ public final class HyperGraSSFusionEngine {
                         ? 65536
                         : (int) Math.min(16_777_216L, Math.max(256L, parsed.rawLength / 16L));
         ByteOut archiveOut = new ByteOut(initOutCap);
-        CompressionReport rep = compressParsed(parsed, archiveOut, opts, t0);
+        CompressionReport rep = compressParsed(parsed, archiveOut, opts, t0, hgs3Mode, trailingCds);
         try (OutputStream fos = Files.newOutputStream(output)) {
             fos.write(archiveOut.internalBuffer(), 0, archiveOut.size());
         }
@@ -178,7 +192,7 @@ public final class HyperGraSSFusionEngine {
         long t0 = System.nanoTime();
         ParsedRawInput parsed = parseSource(null, raw, opts);
         ByteOut out = new ByteOut(Math.max(128, raw.length / 16));
-        compressParsed(parsed, out, opts, t0);
+        compressParsed(parsed, out, opts, t0, false, null);
         return out.toByteArray();
     }
 
@@ -267,7 +281,12 @@ public final class HyperGraSSFusionEngine {
     }
 
     private static CompressionReport compressParsed(
-            ParsedRawInput parsed, ByteOut out, FusionOptions opts, long startNano)
+            ParsedRawInput parsed,
+            ByteOut out,
+            FusionOptions opts,
+            long startNano,
+            boolean hgs3Mode,
+            byte[] trailingCds)
             throws IOException {
         int threads = Math.max(1, opts.threads);
         boolean autoLowMem = Runtime.getRuntime().maxMemory() <= 320L * 1024 * 1024;
@@ -285,12 +304,13 @@ public final class HyperGraSSFusionEngine {
         int headerFlags = (mode & 3);
         if (rawFlatAcgt) headerFlags |= FLAG_RAW_FLAT_ACGT;
         if (rawRnaU) headerFlags |= FLAG_RAW_RNA_U;
+        if (hgs3Mode && trailingCds != null && !units.isEmpty()) headerFlags |= FLAG3_HAS_CDS;
 
-        // Write HGS2 header
+        // Write HGS2 / HGS3 FASTA header
         out.writeByte(MAGIC_0);
         out.writeByte(MAGIC_1);
         out.writeByte(MAGIC_2);
-        out.writeByte(MAGIC_3);
+        out.writeByte(hgs3Mode ? MAGIC3_3 : MAGIC_3);
         out.writeByte(headerFlags);
         out.writeLongLE(rawLength);
         out.writeIntLE(crcVal);
@@ -710,9 +730,24 @@ public final class HyperGraSSFusionEngine {
             throw new IllegalStateException("Novelty superstream exceeds 2.14 Gbp");
         }
         int totalNovelty = (int) totalNoveltyLong;
-        byte[] noveltyComp =
-                FastNoveltyCoder.encodeFromSlices(
-                        unitNovSlices, unitNovLens, totalNovelty, threads, bounded);
+        byte[] noveltyComp;
+        if (hgs3Mode) {
+            byte[] combined = new byte[totalNovelty];
+            int cOff = 0;
+            for (int r = 0; r < numUnits; r++) {
+                int len = unitNovLens[r];
+                if (len > 0) {
+                    System.arraycopy(unitNovSlices[r], 0, combined, cOff, len);
+                    cOff += len;
+                }
+                unitNovSlices[r] = null;
+            }
+            noveltyComp = HgsAnsCoder.ansNoveltyEncode(combined, threads);
+        } else {
+            noveltyComp =
+                    FastNoveltyCoder.encodeFromSlices(
+                            unitNovSlices, unitNovLens, totalNovelty, threads, bounded);
+        }
         unitNovSlices = null;
         unitNovLens = null;
 
@@ -720,6 +755,10 @@ public final class HyperGraSSFusionEngine {
         out.writeVarInt(noveltyComp.length);
         out.writeBytes(noveltyComp);
         noveltyComp = null;
+        if (hgs3Mode && trailingCds != null) {
+            out.writeVarInt(trailingCds.length);
+            out.writeBytes(trailingCds);
+        }
 
         double secs = (System.nanoTime() - startNano) / 1e9;
         return new CompressionReport(
@@ -762,7 +801,7 @@ public final class HyperGraSSFusionEngine {
 
     public static void decompressToStream(
             byte[] archive, Path referencePanel, OutputStream outStream) throws IOException {
-        ParsedHgs2 hdr = parseHeaderAndDirectory(archive);
+        ParsedHgs2 hdr = parseHeaderAndDirectory(archive, true);
         if (hdr.rawByteLen == 0L || hdr.numUnits == 0) {
             if (hdr.mode == MODE_REF && hdr.panelCount > 0) {
                 verifyAndLoadPanelForDecode(referencePanel, hdr.panelNames, hdr.panelManifestSha256);
@@ -789,9 +828,20 @@ public final class HyperGraSSFusionEngine {
         }
 
         // Decode Unified Novelty DNA Superstream lazily / in bounded chunks
-        ByteIn novIn = new ByteIn(archive, hdr.noveltyOffset, hdr.noveltyPayloadLen);
-        FastNoveltyCoder.NoveltyReader novReader =
-                FastNoveltyCoder.openNoveltyReader(novIn, hdr.totalNoveltyBases, threads, bounded);
+        byte[] hgs3NovBuf = null;
+        FastNoveltyCoder.NoveltyReader novReader = null;
+        if (hdr.isHgs3) {
+            byte[] novComp =
+                    Arrays.copyOfRange(
+                            archive,
+                            hdr.noveltyOffset,
+                            hdr.noveltyOffset + hdr.noveltyPayloadLen);
+            hgs3NovBuf = HgsAnsCoder.ansNoveltyDecode(novComp, hdr.totalNoveltyBases, threads);
+        } else {
+            ByteIn novIn = new ByteIn(archive, hdr.noveltyOffset, hdr.noveltyPayloadLen);
+            novReader =
+                    FastNoveltyCoder.openNoveltyReader(novIn, hdr.totalNoveltyBases, threads, bounded);
+        }
 
         // Slice novelty & target lengths per rank
         int[] rankTargetLen = new int[hdr.numUnits];
@@ -824,6 +874,7 @@ public final class HyperGraSSFusionEngine {
         Packed2BitSequence decodedBank = Packed2BitSequence.allocatePaged(totalDnaBases);
         int[] unitToRank = new int[hdr.numUnits];
 
+        int hgs3NovOff = 0;
         if (hdr.mode == MODE_COLLECTION && hdr.numUnits > 1) {
             for (int r = 0; r < hdr.numUnits; r++) {
                 unitToRank[hdr.rankToUnit[r]] = r;
@@ -832,7 +883,13 @@ public final class HyperGraSSFusionEngine {
                                 archive,
                                 hdr.mosaicOffsets[r],
                                 hdr.mosaicOffsets[r] + hdr.mosaicLens[r]);
-                byte[] novSlice = novReader.nextSlice(rankNoveltyLen[r]);
+                byte[] novSlice;
+                if (hgs3NovBuf != null) {
+                    novSlice = Arrays.copyOfRange(hgs3NovBuf, hgs3NovOff, hgs3NovOff + rankNoveltyLen[r]);
+                    hgs3NovOff += rankNoveltyLen[r];
+                } else {
+                    novSlice = novReader.nextSlice(rankNoveltyLen[r]);
+                }
                 byte[] twoBit =
                         (r == 0)
                                 ? EimdlMosaicCodec.decodeMosaicToTwoBit(
@@ -853,7 +910,13 @@ public final class HyperGraSSFusionEngine {
                                 archive,
                                 hdr.mosaicOffsets[u],
                                 hdr.mosaicOffsets[u] + hdr.mosaicLens[u]);
-                byte[] novSlice = novReader.nextSlice(rankNoveltyLen[u]);
+                byte[] novSlice;
+                if (hgs3NovBuf != null) {
+                    novSlice = Arrays.copyOfRange(hgs3NovBuf, hgs3NovOff, hgs3NovOff + rankNoveltyLen[u]);
+                    hgs3NovOff += rankNoveltyLen[u];
+                } else {
+                    novSlice = novReader.nextSlice(rankNoveltyLen[u]);
+                }
                 byte[] twoBit =
                         EimdlMosaicCodec.decodeMosaicToTwoBit(
                                 mBytes, novSlice, refBank, refOffsets, refDonorCount);
@@ -1594,10 +1657,10 @@ public final class HyperGraSSFusionEngine {
         return Packed2BitSequence.tryFromFlatUppercaseAcgt(converted, len);
     }
 
-    private record LoadedPanel(
+    record LoadedPanel(
             String[] names, Packed2BitSequence[] seqs, byte[] manifestSha256, long totalBases) {}
 
-    private static LoadedPanel loadReferencePanelForCompress(
+    static LoadedPanel loadReferencePanelForCompress(
             Path panelPath,
             Set<String> excludeNames,
             List<String> explicitNames,
@@ -1670,7 +1733,7 @@ public final class HyperGraSSFusionEngine {
         return new LoadedPanel(names, seqs, manifestSha, totalBases);
     }
 
-    private static Packed2BitSequence[] verifyAndLoadPanelForDecode(
+    static Packed2BitSequence[] verifyAndLoadPanelForDecode(
             Path panelPath, String[] expectedNames, byte[] expectedManifestSha256)
             throws IOException {
         if (panelPath == null) {
@@ -1812,7 +1875,7 @@ public final class HyperGraSSFusionEngine {
         updateIntBE(md, (int) v);
     }
 
-    private static byte[] compressPanelNames(String[] names) {
+    static byte[] compressPanelNames(String[] names) {
         ByteOut raw = new ByteOut(names.length * 8 + 16);
         byte[] prev = new byte[0];
         for (String s : names) {
@@ -1830,7 +1893,7 @@ public final class HyperGraSSFusionEngine {
         return deflateBytes(raw.toByteArray());
     }
 
-    private static String[] decompressPanelNames(byte[] comp, int count) {
+    static String[] decompressPanelNames(byte[] comp, int count) {
         byte[] raw = inflateBytes(comp, 0, comp.length);
         ByteIn in = new ByteIn(raw);
         String[] names = new String[count];
@@ -1854,7 +1917,7 @@ public final class HyperGraSSFusionEngine {
         return names;
     }
 
-    private static byte[] deflateBytes(byte[] raw) {
+    static byte[] deflateBytes(byte[] raw) {
         Deflater def = new Deflater(Deflater.BEST_COMPRESSION);
         try {
             def.setInput(raw);
@@ -1871,7 +1934,7 @@ public final class HyperGraSSFusionEngine {
         }
     }
 
-    private static byte[] inflateBytes(byte[] src, int off, int len) {
+    static byte[] inflateBytes(byte[] src, int off, int len) {
         Inflater inf = new Inflater();
         try {
             inf.setInput(src, off, len);
@@ -1899,7 +1962,8 @@ public final class HyperGraSSFusionEngine {
     // HGS2 Container Structural Parser & Validator
     // =========================================================================
 
-    private static final class ParsedHgs2 {
+    static final class ParsedHgs2 {
+        boolean isHgs3;
         int mode;
         boolean rawFlatAcgt;
         boolean rawRnaU;
@@ -1927,6 +1991,8 @@ public final class HyperGraSSFusionEngine {
         int totalNoveltyBases;
         int noveltyOffset;
         int noveltyPayloadLen;
+        int cdsOffset;
+        int cdsLen;
 
         long headerBytes;
         long panelPinningBytes;
@@ -1939,25 +2005,44 @@ public final class HyperGraSSFusionEngine {
         }
     }
 
-    private static ParsedHgs2 parseHeaderAndDirectory(byte[] archive) {
-        if (!isHgs2Magic(archive) || archive.length < 18) {
-            throw new IllegalArgumentException("Not a valid HGS2 archive");
+    static ParsedHgs2 parseHeaderAndDirectory(byte[] archive) {
+        return parseHeaderAndDirectory(archive, false);
+    }
+
+    static ParsedHgs2 parseHeaderAndDirectory(byte[] archive, boolean allowHgs3) {
+        if (archive == null || archive.length < 18) {
+            throw new IllegalArgumentException("Not a valid HGS archive");
+        }
+        boolean isHgs3 =
+                allowHgs3
+                        && archive[0] == MAGIC_0
+                        && archive[1] == MAGIC_1
+                        && archive[2] == MAGIC_2
+                        && archive[3] == MAGIC3_3;
+        if (!isHgs3 && !isHgs2Magic(archive)) {
+            throw new IllegalArgumentException("Not a valid HGS2/HGS3 archive");
         }
         ByteIn in = new ByteIn(archive);
-        in.readBytes(4); // HGS2
+        in.readBytes(4); // HGS2 / HGS3
         int flags = in.readByte() & 0xFF;
-        if ((flags & ~0x0F) != 0) {
-            throw new IllegalArgumentException("Unsupported HGS2 flags: 0x" + Integer.toHexString(flags));
+        if (isHgs3 && (flags & FLAG3_FASTQ) != 0) {
+            throw new IllegalArgumentException("FASTQ HGS3 archive handled by Hgs3OmicCodec");
+        }
+        int allowedMask = isHgs3 ? (0x0F | FLAG3_HAS_CDS) : 0x0F;
+        if ((flags & ~allowedMask) != 0) {
+            throw new IllegalArgumentException("Unsupported HGS flags: 0x" + Integer.toHexString(flags));
         }
         int mode = flags & 3;
         if (mode > MODE_COLLECTION) {
-            throw new IllegalArgumentException("Invalid HGS2 mode: " + mode);
+            throw new IllegalArgumentException("Invalid HGS mode: " + mode);
         }
 
         ParsedHgs2 p = new ParsedHgs2();
+        p.isHgs3 = isHgs3;
         p.mode = mode;
         p.rawFlatAcgt = (flags & FLAG_RAW_FLAT_ACGT) != 0;
         p.rawRnaU = (flags & FLAG_RAW_RNA_U) != 0;
+        boolean hasCds = isHgs3 && (flags & FLAG3_HAS_CDS) != 0;
         p.rawByteLen = in.readLongLE();
         if (p.rawByteLen < 0) {
             throw new IllegalArgumentException("Negative raw byte length in HGS2 header");
@@ -2051,11 +2136,16 @@ public final class HyperGraSSFusionEngine {
         p.noveltyPayloadLen = in.readVarInt();
         p.noveltyOffset = in.position();
         in.readBytes(p.noveltyPayloadLen);
+        p.noveltyFramingAndPayloadBytes = in.position() - novStart;
+        if (hasCds && in.hasRemaining()) {
+            p.cdsLen = in.readVarInt();
+            p.cdsOffset = in.position();
+            in.readBytes(p.cdsLen);
+        }
         if (in.hasRemaining()) {
             throw new IllegalArgumentException(
-                    "Unexpected trailing bytes at end of HGS2 archive: " + in.remaining());
+                    "Unexpected trailing bytes at end of HGS archive: " + in.remaining());
         }
-        p.noveltyFramingAndPayloadBytes = in.position() - novStart;
         return p;
     }
 }
