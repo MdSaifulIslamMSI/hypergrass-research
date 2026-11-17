@@ -91,7 +91,7 @@ def ensure_world_tools(base_tools: dict) -> dict:
     try:
         g_tgz = WORK_ROOT / "geco3.tar.gz"
         if not g_tgz.exists():
-            urllib.request.urlretrieve(GECO3_URL, g_tgz)
+            kc.download_file(GECO3_URL, g_tgz)
         got = kc.sha256_file(g_tgz)
         if got != GECO3_SHA256:
             raise RuntimeError(f"GeCo3 SHA-256 mismatch: {got}")

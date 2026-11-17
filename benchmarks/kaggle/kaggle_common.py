@@ -101,6 +101,31 @@ def sha256_file(path: Path) -> str:
     return h.hexdigest()
 
 
+def download_file(url: str, dest: Path, *, timeout: int = 300, retries: int = 4) -> None:
+    """Downloads URL with explicit User-Agent + retries (with curl fallback) so CDNs never 403 bare Python-urllib."""
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) HyperGraSS-EIMDL-Benchmark/1.0"}
+    last_exc: Exception | None = None
+    for attempt in range(retries):
+        tmp = dest.with_suffix(dest.suffix + ".part")
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=timeout) as resp, tmp.open("wb") as out:
+                shutil.copyfileobj(resp, out, length=1 << 20)
+            tmp.replace(dest)
+            return
+        except Exception as exc:
+            last_exc = exc
+            tmp.unlink(missing_ok=True)
+            time.sleep(2.0 * (attempt + 1))
+    curl = shutil.which("curl")
+    if curl:
+        run_cmd([curl, "-fsSL", "-A", headers["User-Agent"], "--retry", "3", "-o", str(dest), url], timeout=timeout)
+        return
+    assert last_exc is not None
+    raise last_exc
+
+
 def collect_system_info() -> dict:
     info: dict = {
         "cpu_count": os.cpu_count(),
@@ -166,7 +191,7 @@ def ensure_jdk_and_tools(src_bundle_root: Path) -> dict:
                 "https://api.adoptium.net/v3/binary/latest/25/ga/linux/x64/"
                 "jdk/hotspot/normal/eclipse?project=jdk"
             )
-            urllib.request.urlretrieve(url, jdk_tgz)
+            download_file(url, jdk_tgz)
             jdk_dir.mkdir(parents=True, exist_ok=True)
             with tarfile.open(jdk_tgz, "r:gz") as tf:
                 tf.extractall(jdk_dir)
@@ -284,7 +309,7 @@ def ensure_jdk_and_tools(src_bundle_root: Path) -> dict:
     # Build pinned JARVIS3
     try:
         j_tgz = WORK_ROOT / "jarvis3.tar.gz"
-        urllib.request.urlretrieve(JARVIS3_URL, j_tgz)
+        download_file(JARVIS3_URL, j_tgz)
         got = sha256_file(j_tgz)
         if got != JARVIS3_SHA256:
             raise RuntimeError(f"JARVIS3 SHA-256 mismatch: {got}")
