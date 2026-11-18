@@ -1,8 +1,8 @@
 # Evolutionary Information Minimum Description Length (EIMDL): Four-Generation Architecture, Seven Formal Laws, Multi-Omic `.hgs3` Containers, Native `C23/C++23/Rust 2024` Engine & Compressed-Domain Genomics
 
-**Author:** Md Saiful Islam  
+**Author:** Md Saiful Islam (Academy of Technology) · **ORCID:** [0009-0006-0570-9934](https://orcid.org/0009-0006-0570-9934) · **Email:** [mdsaifulislam38msi@gmail.com](mailto:mdsaifulislam38msi@gmail.com)  
 **Engine & Container Specification:** Next-Gen EIMDL v3 (`HGS3` v3.0/v3.1 `.hgs3` + Native `C23/C++23/Rust 2024` `eimdl`), Unified `HGS2` (`.hgs2` v2.0) & HyperGraSS v1 (`.hgs` v1.0)  
-**Repository:** [https://github.com/MdSaifulIslamMSI/hypergrass-research](https://github.com/MdSaifulIslamMSI/hypergrass-research)  
+**Repository:** [https://github.com/MdSaifulIslamMSI/hypergrass-research](https://github.com/MdSaifulIslamMSI/hypergrass-research) · **Zenodo DOI:** [10.5281/zenodo.24344825](https://doi.org/10.5281/zenodo.24344825) (`v3.1.1`: [10.5281/zenodo.24344826](https://doi.org/10.5281/zenodo.24344826))  
 **Compiled LaTeX Monograph (33-Page PDF):** [HGS2_EIMDL_Research_Paper.pdf](file:///C:/Users/mdsai/.gemini/antigravity/scratch/hypergrass/paper/HGS2_EIMDL_Research_Paper.pdf) · **LaTeX Source:** [HGS2_EIMDL_Research_Paper.tex](file:///C:/Users/mdsai/.gemini/antigravity/scratch/hypergrass/paper/HGS2_EIMDL_Research_Paper.tex)
 
 ---
