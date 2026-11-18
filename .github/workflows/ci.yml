@@ -151,6 +151,15 @@ jobs:
               print("PASS: Bidirectional Java<->Native C23/C++23/Rust 2024 HGS2+HGS3 parity verified.")
           PY
 
+      - name: Verify Bioconda offline packaging recipe (build.sh + run_test.sh)
+        if: matrix.java == '25' && runner.os == 'Linux'
+        run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
+          BIOCONDA_PREFIX="${{ runner.temp }}/bioconda_prefix"
+          rm -rf "${BIOCONDA_PREFIX}"
+          PREFIX="${BIOCONDA_PREFIX}" SRC_DIR="${PWD}" CC="$(command -v gcc)" CXX="$(command -v g++)" AR="$(command -v ar)" bash packaging/bioconda/eimdl/build.sh
+          PATH="${BIOCONDA_PREFIX}/bin:${PATH}" bash packaging/bioconda/eimdl/run_test.sh
+
   audit:
     name: Paper Audit & Metadata Integrity
     runs-on: ubuntu-latest
@@ -174,7 +183,7 @@ jobs:
           cff = pathlib.Path("CITATION.cff").read_text(encoding="utf-8")
           for req in ("cff-version: 1.2.0", "title:", "version:", "authors:", "license:", "repository-code:"):
               assert req in cff, f"Missing {req} in CITATION.cff"
-          for script in ("build.sh", "test.sh"):
+          for script in ("build.sh", "test.sh", "packaging/bioconda/eimdl/build.sh", "packaging/bioconda/eimdl/run_test.sh"):
               raw = pathlib.Path(script).read_bytes()
               assert b"\r\n" not in raw, f"CRLF detected in {script}"
           print("CITATION.cff and LF script checks passed.")

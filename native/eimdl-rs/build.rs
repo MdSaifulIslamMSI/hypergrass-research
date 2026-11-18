@@ -150,14 +150,24 @@ fn main() {
     let cpp_obj = out_dir.join("hgs_cpp_engine.o");
     let lib_path = out_dir.join("libhgs_native.a");
 
+    let env_cc = env::var("CC")
+        .ok()
+        .filter(|s| !s.trim().is_empty() && tool_exists(s, "--version"));
+    let env_cxx = env::var("CXX")
+        .ok()
+        .filter(|s| !s.trim().is_empty() && tool_exists(s, "--version"));
+    let has_env_cc = env_cc.is_some() && env_cxx.is_some();
     let has_gcc = tool_exists("gcc", "--version") && tool_exists("g++", "--version");
     let has_clang = tool_exists("clang", "--version") && tool_exists("clang++", "--version");
     let has_zig = tool_exists("zig", "version");
 
-    if has_gcc || (target_os != "windows" && has_clang) {
-        let cc = env::var("CC").unwrap_or_else(|_| if has_gcc { "gcc".into() } else { "clang".into() });
-        let cxx = env::var("CXX").unwrap_or_else(|_| if has_gcc { "g++".into() } else { "clang++".into() });
-        let ar = env::var("AR").unwrap_or_else(|_| "ar".into());
+    if has_env_cc || has_gcc || (target_os != "windows" && has_clang) {
+        let cc = env_cc.unwrap_or_else(|| if has_gcc { "gcc".into() } else { "clang".into() });
+        let cxx = env_cxx.unwrap_or_else(|| if has_gcc { "g++".into() } else { "clang++".into() });
+        let ar = env::var("AR")
+            .ok()
+            .filter(|s| !s.trim().is_empty())
+            .unwrap_or_else(|| "ar".into());
         let c_std = pick_std_flag(&cc, &[], false, &out_dir, &["-std=c23", "-std=c2x"]);
         let cxx_std = pick_std_flag(&cxx, &[], true, &out_dir, &["-std=c++23", "-std=c++2b"]);
 

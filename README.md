@@ -276,7 +276,7 @@ All 33 Java files compiled cleanly (`javac --release 21 -Xlint:all`) and passed 
 
 ![Figure 9 — Next-Gen EIMDL v3.0 Native Parity, .hgs3 Multi-Omic FASTQ Shootout & Compressed-Domain Analytics](paper/figures/fig9_nextgen_eimdl_v3_paradigm.png)
 
-Completed in [`world_shootout_v3_results.json`](benchmarks/kaggle/results/world_shootout_v3_results.json) (`29,168.35 s` / `8.1 hr`, 4 AMD EPYC 7B12 vCPUs, OpenJDK 25.0.5 LTS + native `C23/C++23/Rust 2024` `eimdl`, **`8/8`** cloud verification suites passing incl. `VerifyParadigm` in `1.083 s`, **`5/5` Java $\leftrightarrow$ Native compressed-domain parity = True**, `MFCompress` GCC link `unavailable`):
+Completed in [`world_shootout_v3_results.json`](benchmarks/kaggle/results/world_shootout_v3_results.json) (`29,168.35 s` / `8.1 hr`, 4 `Intel Xeon @ 2.20GHz` vCPUs, OpenJDK 25.0.5 LTS + native `C23/C++23/Rust 2024` `eimdl`, **`8/8`** cloud verification suites passing incl. `VerifyParadigm` in `1.083 s`, **`5/5` Java $\leftrightarrow$ Native compressed-domain parity = True**, `MFCompress` GCC link `unavailable`):
 
 | Track / Dataset | Raw (`B`) | Result & Telemetry | Key Comparison / Biological Output |
 |---|---:|---|---|
@@ -426,6 +426,7 @@ hypergrass/
 │   ├── INDEPENDENT.md                       # Independent Salmonella & Klebsiella replication report
 │   ├── HGS-FORMAT.md                        # Binary container specification for .hgs3 (v3), .hgs2 (v2.0) & .hgs (v1.0)
 │   └── [FOUNDATIONS, SPECIALIZED, BROAD, ABLATION, ENTROPY-FLOOR, SCALING].md
+├── packaging/bioconda/eimdl/                # Offline Bioconda recipe (meta.yaml, build.sh, run_test.sh) for Native eimdl + Java 25
 ├── HANDOFF.md                               # Compact research handoff & canonical SHA-256 dataset manifest
 └── README.md                                # This file
 ```
