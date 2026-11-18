@@ -1,9 +1,9 @@
 [package]
 name = "eimdl_native"
-version = "2.0.0"
+version = "3.0.0"
 edition = "2024"
 rust-version = "1.85"
-description = "Native C23/C++23/Rust 2024 64-bit wire-compatible EIMDL / HGS2 genomic compression engine"
+description = "Native C23/C++23/Rust 2024 64-bit wire-compatible EIMDL v3 (.hgs2/.hgs3 & compressed-domain) genomic engine"
 license = "Apache-2.0"
 
 [lib]

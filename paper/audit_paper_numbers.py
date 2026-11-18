@@ -417,7 +417,7 @@ def main():
     ]:
         require_in_readme_and_handoff(val, lbl)
 
-    # 12. Verify compiled PDF and all 13 figure pairs (9 data plots + 4 architectural blueprints) exist + are embedded in README.md
+    # 12. Verify compiled PDF and all 14 figure pairs (9 data plots + 5 architectural blueprints) exist + are embedded in README.md
     if not os.path.exists(pdf_path) or os.path.getsize(pdf_path) < 100_000:
         failures.append(f"[PDF MISSING OR TOO SMALL]: {pdf_path}")
     checks += 1
@@ -435,6 +435,7 @@ def main():
         "arch2_mosaic_evolutionary_codec",
         "arch3_fast_novelty_coder",
         "arch4_container_and_lineage",
+        "arch5_eimdl_v3_paradigm",
     ]:
         checks += 1
         if f"paper/figures/{fn}.png" not in readme_text:

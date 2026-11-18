@@ -6,11 +6,11 @@
 
   <groupId>org.hypergrass</groupId>
   <artifactId>hypergrass</artifactId>
-  <version>2.0.0</version>
+  <version>3.0.0</version>
   <packaging>jar</packaging>
 
   <name>HyperGraSS</name>
-  <description>Evolutionary Information Minimum Description Length (EIMDL / HGS2) lossless genomic and pangenomic sequence compression engine</description>
+  <description>Evolutionary Information Minimum Description Length (EIMDL / HGS3 / HGS2) lossless multi-omic genomic and compressed-domain engine</description>
 
   <licenses>
     <license>

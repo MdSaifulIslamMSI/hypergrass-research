@@ -1,8 +1,8 @@
 cff-version: 1.2.0
-message: "If you use HyperGraSS / HGS2 / EIMDL or the accompanying 25-page research monograph in your work, please cite the software and monograph using this metadata."
-title: "Evolutionary Information Minimum Description Length (EIMDL): Unified Seven-Law Lossless Genomic Compressor (HGS2 / HyperGraSS)"
-version: "2.0.0"
-date-released: 2026-11-14
+message: "If you use HyperGraSS / HGS2 / HGS3 / EIMDL or the accompanying research monograph in your work, please cite the software and monograph using this metadata."
+title: "Evolutionary Information Minimum Description Length (EIMDL): Four-Generation Architecture, Multi-Omic .hgs3 Containers & Compressed-Domain Genomics"
+version: "3.0.0"
+date-released: 2026-11-18
 license: "Apache-2.0"
 type: software
 authors:
@@ -11,16 +11,13 @@ authors:
 repository-code: "https://github.com/MdSaifulIslamMSI/hypergrass-research"
 url: "https://github.com/MdSaifulIslamMSI/hypergrass-research/blob/master/paper/HGS2_EIMDL_Research_Paper.pdf"
 abstract: >-
-  Open-source zero-dependency Java 25 LTS / Java 27 research engine (HGS2 / EIMDL, .hgs2 v2.0)
-  with a wire-compatible native C23 / C++23 / Rust 2024 engine,
-  uniting Generation 1 (HyperGraSS v1) and Generation 2 (RC-MDL v2) under Seven
-  Formal Mathematical and Biological Laws (Laws I-VII) for lossless single-genome
-  (Mode S), reference-conditioned (Mode R), and pangenome collection (Mode C)
-  compression with exact 6-channel FASTA reconstruction. Includes the 28-page
-  research monograph, 12 publication figures and blueprints, automated numerical audit,
-  and reproducible Kaggle E2E cloud verification suite (winning 15/15
-  bacterial tracks and compressing all 24 T2T-CHM13v2.0 | GRCh38 human
-  chromosomes by 89.47x from 3.156 GB to 35.28 MB).
+  Open-source zero-dependency Java 25 LTS / Java 27 research engine (HGS3 / HGS2 / EIMDL)
+  with a wire-compatible native C23 / C++23 / Rust 2024 engine (eimdl), uniting Generation 1
+  (HyperGraSS v1), Generation 2 (RC-MDL v2), Generation 3 (HGS2 .hgs2 v2.0, Laws I-VII),
+  and Next-Gen EIMDL v3 (.hgs3 multi-omic FASTA/FASTQ+CDS & zero-FASTA compressed-domain
+  genomics: analyze, direct VCF v4.2 calling, lazy k-mer search, and slice querying).
+  Includes the complete LaTeX/PDF monograph, 14 publication figures and architectural
+  blueprints, 1,859-check automated numerical audit, and Kaggle E2E cloud shootout verification.
 keywords:
   - genomics
   - pangenome

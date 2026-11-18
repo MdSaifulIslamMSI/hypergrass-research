@@ -45,14 +45,27 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Build Java 25 LTS classes & run all 7 verification suites
+      - name: Build Java 25 LTS classes & run all 8 verification suites
         env:
           JAVA_RELEASE: "25"
         run: |
           chmod +x build.sh test.sh
           ./test.sh
 
-      - name: Run 1,693-check paper numerical audit
+      - name: Build & test Native C23/C++23/Rust 2024 eimdl engine
+        run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
+          (
+            cd native/eimdl-rs
+            if cargo clippy --version >/dev/null 2>&1; then
+              cargo clippy --all-targets --offline -- -D warnings
+            fi
+            cargo build --release --offline
+            cargo test --release --offline
+          )
+          ./native/eimdl-rs/target/release/eimdl --version
+
+      - name: Run 1,859-check paper numerical audit
         run: python3 -B paper/audit_paper_numbers.py
 
       - name: Assemble checksummed release bundle
@@ -67,10 +80,12 @@ jobs:
           rm -rf "${OUT}"
           mkdir -p "${OUT}"
           jar --create \
-            --file "${OUT}/hypergrass-hgs2-${TAG}.jar" \
+            --file "${OUT}/hypergrass-hgs3-${TAG}.jar" \
             --main-class hypergrass.HyperGraSS \
             -C bin .
-          java -jar "${OUT}/hypergrass-hgs2-${TAG}.jar" --version
+          java -jar "${OUT}/hypergrass-hgs3-${TAG}.jar" --version
+          cp native/eimdl-rs/target/release/eimdl "${OUT}/hypergrass-eimdl-${TAG}-linux-x86_64"
+          chmod +x "${OUT}/hypergrass-eimdl-${TAG}-linux-x86_64"
           ARCHIVE_REF="HEAD"
           if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
             ARCHIVE_REF="${TAG}"
@@ -81,12 +96,17 @@ jobs:
             "${ARCHIVE_REF}"
           cp paper/HGS2_EIMDL_Research_Paper.pdf "${OUT}/HGS2_EIMDL_Research_Paper.pdf"
           cp paper/figures/fig8_kaggle_world_shootout_and_human.png "${OUT}/fig8_kaggle_world_shootout_and_human.png"
+          cp paper/figures/fig9_nextgen_eimdl_v3_paradigm.png "${OUT}/fig9_nextgen_eimdl_v3_paradigm.png"
+          cp paper/figures/arch5_eimdl_v3_paradigm.png "${OUT}/arch5_eimdl_v3_paradigm.png"
           (
             cd "${OUT}"
             sha256sum \
-              "hypergrass-hgs2-${TAG}.jar" \
+              "hypergrass-hgs3-${TAG}.jar" \
+              "hypergrass-eimdl-${TAG}-linux-x86_64" \
               "HGS2_EIMDL_Research_Paper.pdf" \
               "fig8_kaggle_world_shootout_and_human.png" \
+              "fig9_nextgen_eimdl_v3_paradigm.png" \
+              "arch5_eimdl_v3_paradigm.png" \
               "hypergrass-research-${TAG}.tar.gz" > SHA256SUMS.txt
             cat SHA256SUMS.txt
           )
@@ -110,7 +130,7 @@ jobs:
           if ! gh release view "${TAG}" >/dev/null 2>&1; then
             if [ "${EVENT_NAME}" = "push" ] && [ "${REF_NAME#refs/tags/}" != "${REF_NAME}" ]; then
               gh release create "${TAG}" "${OUT}"/* \
-                --title "HGS2 / EIMDL ${TAG}" \
+                --title "Next-Gen EIMDL / HGS3 ${TAG} — Native Engine, Multi-Omic .hgs3 & Compressed-Domain Genomics" \
                 --generate-notes
             else
               echo "Release ${TAG} does not exist yet and event is ${EVENT_NAME}; artifact bundle uploaded to workflow run."

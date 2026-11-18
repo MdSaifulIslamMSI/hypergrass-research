@@ -2,17 +2,17 @@
 
 **Lossless Genomic, Reference-Conditioned, and Pangenomic Sequence Compression under Evolutionary-Information Minimum Description Length (EIMDL) & Generalized Amdahl-Memory Scaling**
 
-[![Release](https://img.shields.io/github/v/release/MdSaifulIslamMSI/hypergrass-research?label=Release&color=blue)](https://github.com/MdSaifulIslamMSI/hypergrass-research/releases/tag/v2.0.0)
+[![Release](https://img.shields.io/github/v/release/MdSaifulIslamMSI/hypergrass-research?label=Release&color=blue)](https://github.com/MdSaifulIslamMSI/hypergrass-research/releases/tag/v3.0.0)
 [![Java](https://img.shields.io/badge/Java-25%20LTS%20%7C%20JDK%2027-blue.svg)](src/hypergrass/)
 [![Native](https://img.shields.io/badge/Native-C23%20%7C%20C%2B%2B23%20%7C%20Rust%202024-orange.svg)](native/README.md)
 [![Container](https://img.shields.io/badge/Formats-.hgs3%20v3%20%7C%20.hgs2%20v2.0%20%7C%20.hgs%20v1.0-success.svg)](docs/HGS-FORMAT.md)
-[![Paper](https://img.shields.io/badge/Monograph-30%20Pages%20PDF%20%2B%20LaTeX-critical.svg)](paper/HGS2_EIMDL_Research_Paper.pdf)
+[![Paper](https://img.shields.io/badge/Monograph-33%20Pages%20PDF%20%2B%20LaTeX-critical.svg)](paper/HGS2_EIMDL_Research_Paper.pdf)
 [![Kaggle E2E](https://img.shields.io/badge/Kaggle%20E2E-15--Codec%20Shootout%20%2B%20T4%20GPU-20BEFF.svg)](benchmarks/kaggle/README.md)
-[![Audit](https://img.shields.io/badge/Automated%20Audit-1%2C856%20%2F%201%2C856%20PASS-brightgreen.svg)](paper/audit_paper_numbers.py)
+[![Audit](https://img.shields.io/badge/Automated%20Audit-1%2C859%20%2F%201%2C859%20PASS-brightgreen.svg)](paper/audit_paper_numbers.py)
 [![License](https://img.shields.io/badge/License-Apache_2.0-green.svg)](LICENSE)
 [![CI](https://github.com/MdSaifulIslamMSI/hypergrass-research/actions/workflows/ci.yml/badge.svg)](https://github.com/MdSaifulIslamMSI/hypergrass-research/actions/workflows/ci.yml)
 
-> **About:** Complete open-source research repository for **Evolutionary Information Minimum Description Length (`EIMDL`)** and its unified zero-dependency Java 25+ (`JDK 25 LTS` / `JDK 27`) engine **`HGS2`/`HGS3`** + wire-compatible **C23 / C++23 / Rust 2024** native engine ([`native/`](native/README.md)) (uniting Gen 1 [`HyperGraSS v1`](docs/BENCHMARKS.md) and Gen 2 [`RC-MDL v2`](prototype/rcmdl/RESULTS.md) under Formal Laws I–VII). Achieves **`#1`** across **`15/15`** bacterial pangenome shootout tracks (*E. coli*, *S. enterica*, *K. pneumoniae* across Modes S, R, and C with 100% byte-for-byte FASTA SHA-256 identity), **`89.47x`** on all 24 **`T2T-CHM13v2.0 | GRCh38`** human chromosomes (`3.156 GB` $\to$ `35.28 MB`), **`#1`** archive size on human diploid `Chr21`/`Chr22`/`Chr1`/`Chr1..4`, **`43.2x–50.77x`** Tesla T4 CUDA sketch acceleration, strict **`-Xmx128m`** pure-JVM execution, and Next-Gen **`.hgs3`** multi-omic FASTQ + compressed-domain zero-FASTA analytics (`172,088` human `chr21` VCFv4.2 calls in `1.60 s`)—verified across `1,856/1,856` automated numerical and architectural assertions and Kaggle E2E cloud harnesses.
+> **About:** Complete open-source research repository for **Evolutionary Information Minimum Description Length (`EIMDL`)** and its unified zero-dependency Java 25+ (`JDK 25 LTS` / `JDK 27`) engine **`HGS2`/`HGS3`** + wire-compatible **C23 / C++23 / Rust 2024** native engine ([`native/`](native/README.md)) (uniting Gen 1 [`HyperGraSS v1`](docs/BENCHMARKS.md) and Gen 2 [`RC-MDL v2`](prototype/rcmdl/RESULTS.md) under Formal Laws I–VII). Achieves **`#1`** across **`15/15`** bacterial pangenome shootout tracks (*E. coli*, *S. enterica*, *K. pneumoniae* across Modes S, R, and C with 100% byte-for-byte FASTA SHA-256 identity), **`89.47x`** on all 24 **`T2T-CHM13v2.0 | GRCh38`** human chromosomes (`3.156 GB` $\to$ `35.28 MB`), **`#1`** archive size on human diploid `Chr21`/`Chr22`/`Chr1`/`Chr1..4`, **`43.2x–50.77x`** Tesla T4 CUDA sketch acceleration, strict **`-Xmx128m`** pure-JVM execution, and Next-Gen **`.hgs3`** multi-omic FASTQ + compressed-domain zero-FASTA analytics (`172,088` human `chr21` VCFv4.2 calls in `1.60 s`)—verified across `1,859/1,859` automated numerical and architectural assertions and Kaggle E2E cloud harnesses.
 
 ---
 
@@ -20,15 +20,15 @@
 
 | Resource | Description | Path |
 |---|---|---|
-| **30-Page Research Monograph (PDF)** | Complete typeset single-column LaTeX research paper covering Generations 1, 2, and 3, Laws I–VII, OpenAI `2026` ETH architectural transfer (+ §1.1.3 OVC scope boundary), Kaggle E2E 15-codec shootout, Next-Gen EIMDL v3.0 (`.hgs3`, Native engine, compressed-domain genomics), 24 tables, 9 data plots, and 4 system/wire architectural blueprints (`0` overfull boxes) | [`paper/HGS2_EIMDL_Research_Paper.pdf`](paper/HGS2_EIMDL_Research_Paper.pdf) |
-| **Research Monograph (Markdown)** | Full GitHub-flavored Markdown edition of the 30-page monograph with embedded figures, architectural blueprints, and complete tables | [`docs/PAPER-DRAFT.md`](docs/PAPER-DRAFT.md) |
-| **LaTeX Source & Reproducible Build** | Deterministic generators (`build_latex_paper.py`, `build_markdown_paper.py`, `generate_figures.py`, `generate_architecture_diagrams.py`) & `1,856`-assertion audit (`audit_paper_numbers.py`) | [`paper/README.md`](paper/README.md) |
+| **33-Page Research Monograph (PDF)** | Complete typeset single-column LaTeX research paper covering Generations 1–4 (`HyperGraSS v1`, `RC-MDL v2`, `HGS2`, Next-Gen EIMDL v3 `.hgs3` + Native `eimdl` + compressed-domain genomics), Laws I–VII, OpenAI `2026` ETH architectural transfer (+ §1.1.3 OVC scope boundary), Kaggle E2E 15-codec shootout, 24 tables, 9 data plots, and 5 system/wire architectural blueprints (`0` overfull boxes) | [`paper/HGS2_EIMDL_Research_Paper.pdf`](paper/HGS2_EIMDL_Research_Paper.pdf) |
+| **Research Monograph (Markdown)** | Full GitHub-flavored Markdown edition of the 33-page monograph with embedded figures, architectural blueprints, and complete tables | [`docs/PAPER-DRAFT.md`](docs/PAPER-DRAFT.md) |
+| **LaTeX Source & Reproducible Build** | Deterministic generators (`build_latex_paper.py`, `build_markdown_paper.py`, `generate_figures.py`, `generate_architecture_diagrams.py`) & `1,859`-assertion audit (`audit_paper_numbers.py`) | [`paper/README.md`](paper/README.md) |
 | **Mathematical & Biological Laws (I–VII)** | Formal specification of $V_4$ Kimura-CpG algebra, 6-state causal ORF-HMM, Two-Gear coalescent copying, 5-regime MDL, Amdahl-Memory scaling, Law VI two-adic/Pitman-Yor coding, Law VII disjoint `-Xmx128m` heap lifecycle, and `openai2026eth` §1.1.3 OVC boundary | [`docs/COMPRESSION-LAW.md`](docs/COMPRESSION-LAW.md) |
 | **Unified `HGS2` / `EIMDL` Benchmarks** | Complete Mode S, Mode R (LOO + Cluster-LOO), Mode C, Amdahl scaling, `-Xmx128m` bounded-heap, and synthetic/adversarial tables | [`docs/FUSION-BENCHMARKS.md`](docs/FUSION-BENCHMARKS.md) |
 | **Locked Independent Replication** | Independent *Salmonella enterica* (25 genomes) and *Klebsiella pneumoniae* (23 genomes) Mode C, Mode S, Mode R, and tuned `JARVIS3 -l 31` evaluation | [`docs/INDEPENDENT.md`](docs/INDEPENDENT.md) |
-| **Archive Container Specification** | Byte-exact binary format specification for `.hgs2` v2.0 (`0x48475332`) and legacy `.hgs` v1.0 (`0x48475301`) | [`docs/HGS-FORMAT.md`](docs/HGS-FORMAT.md) |
+| **Archive Container Specification** | Byte-exact binary format specification for `.hgs3` v3.0/v3.1 (`0x48475333`), `.hgs2` v2.0 (`0x48475332`), and legacy `.hgs` v1.0 (`0x48475301`) | [`docs/HGS-FORMAT.md`](docs/HGS-FORMAT.md) |
 | **Foundational Invariants & Gen 1/2 Docs** | Scientific contract ([`FOUNDATIONS.md`](docs/FOUNDATIONS.md)), specialized panels ([`SPECIALIZED.md`](docs/SPECIALIZED.md)), broad panels ([`BROAD.md`](docs/BROAD.md)), ablations ([`ABLATION.md`](docs/ABLATION.md)), entropy floor ([`ENTROPY-FLOOR.md`](docs/ENTROPY-FLOOR.md)), scaling ([`SCALING.md`](docs/SCALING.md)), RC-MDL v2 ([`RESULTS.md`](prototype/rcmdl/RESULTS.md)), handoff ([`HANDOFF.md`](HANDOFF.md)) | [`docs/`](docs/) |
-| **Latest Release (`v2.0.0`)** | Zero-dependency Java 21+ executable JAR (`hypergrass-hgs2-v2.0.0.jar`), 25-page PDF monograph, Fig. 8 (300 DPI), clean source tarball & `SHA256SUMS.txt` | [`releases/tag/v2.0.0`](https://github.com/MdSaifulIslamMSI/hypergrass-research/releases/tag/v2.0.0) |
+| **Latest Release (`v3.0.0`)** | Zero-dependency Java 25 executable JAR (`hypergrass-hgs3-v3.0.0.jar`), native C23/C++23/Rust `hypergrass-eimdl-v3.0.0-linux-x86_64` binary, PDF monograph, `fig8`/`fig9`/`arch5`, clean source tarball & `SHA256SUMS.txt` | [`releases/tag/v3.0.0`](https://github.com/MdSaifulIslamMSI/hypergrass-research/releases/tag/v3.0.0) |
 | **Citation & License** | GitHub Citation File Format 1.2.0 metadata ([`CITATION.cff`](CITATION.cff)) powering the sidebar citation widget & Apache License 2.0 ([`LICENSE`](LICENSE)) | [`CITATION.cff`](CITATION.cff) |
 
 ![Figure 1 — Cross-Regime Executive Synthesis of the Unified HGS2 / EIMDL Engine](paper/figures/fig1_regime_overview.png)
@@ -272,6 +272,8 @@ All 33 Java files compiled cleanly (`javac --release 21 -Xlint:all`) and passed 
 
 ### 4.7 Next-Gen EIMDL v3.0: Native C23/C++23/Rust Engine, `.hgs3` Multi-Omic FASTQ & Compressed-Domain Genomics
 
+![Architecture Blueprint 5 — Next-Gen EIMDL v3 Polyglot Native Engine, .hgs3 Multi-Omic Container & Compressed-Domain Compute](paper/figures/arch5_eimdl_v3_paradigm.png)
+
 ![Figure 9 — Next-Gen EIMDL v3.0 Native Parity, .hgs3 Multi-Omic FASTQ Shootout & Compressed-Domain Analytics](paper/figures/fig9_nextgen_eimdl_v3_paradigm.png)
 
 Completed in [`world_shootout_v3_results.json`](benchmarks/kaggle/results/world_shootout_v3_results.json) (`29,168.35 s` / `8.1 hr`, 4 AMD EPYC 7B12 vCPUs, OpenJDK 25.0.5 LTS + native `C23/C++23/Rust 2024` `eimdl`, **`8/8`** cloud verification suites passing incl. `VerifyParadigm` in `1.083 s`, **`5/5` Java $\leftrightarrow$ Native compressed-domain parity = True**, `MFCompress` GCC link `unavailable`):
@@ -396,11 +398,11 @@ hypergrass/
 │   ├── cpp_engine/                          # 64-bit >2.14 Gbp CSR syncmer index, Kimura-V4 Mosaic codec & FastCRM/Turbo novelty coder
 │   ├── eimdl-rs/                            # Rust 2024 streaming CLI/library (`Cargo.toml`, `build.rs`, `.hgs2` container, 6-channel FASTA factorizer, tests)
 │   └── README.md                            # Native build, C/C++/Rust FFI architecture & CLI guide
-├── paper/                                   # 30-Page Research Monograph, Figures & Automated Numerical Audit
-│   ├── HGS2_EIMDL_Research_Paper.pdf        # Compiled 30-page single-column PDF monograph (0 overfull boxes)
+├── paper/                                   # 33-Page Research Monograph, Figures & Automated Numerical Audit
+│   ├── HGS2_EIMDL_Research_Paper.pdf        # Compiled 33-page single-column PDF monograph (0 overfull boxes)
 │   ├── HGS2_EIMDL_Research_Paper.tex        # Generated LaTeX source
 │   ├── references.bib                       # BibTeX bibliography (incl. openai2026eth & roy2025grass)
-│   ├── figures/                             # 13 publication-grade 300 DPI figures (fig1..fig9 + arch1..arch4)
+│   ├── figures/                             # 14 publication-grade 300 DPI figures (fig1..fig9 + arch1..arch5)
 │   ├── generate_figures.py                  # Deterministic figure generator from committed JSON results
 │   ├── generate_architecture_diagrams.py    # Publication architectural & wire-format blueprint generator
 │   ├── table_builders.py                    # LaTeX table generator from committed JSON results
@@ -422,7 +424,7 @@ hypergrass/
 │   ├── COMPRESSION-LAW.md                   # Mathematical & biological laws (Laws I–VII + openai2026eth §1.1.3 OVC boundary)
 │   ├── FUSION-BENCHMARKS.md                 # Complete HGS2 / EIMDL benchmark tables
 │   ├── INDEPENDENT.md                       # Independent Salmonella & Klebsiella replication report
-│   ├── HGS-FORMAT.md                        # Binary container specification for .hgs2 (v2.0) and .hgs (v1.0)
+│   ├── HGS-FORMAT.md                        # Binary container specification for .hgs3 (v3), .hgs2 (v2.0) & .hgs (v1.0)
 │   └── [FOUNDATIONS, SPECIALIZED, BROAD, ABLATION, ENTROPY-FLOOR, SCALING].md
 ├── HANDOFF.md                               # Compact research handoff & canonical SHA-256 dataset manifest
 └── README.md                                # This file

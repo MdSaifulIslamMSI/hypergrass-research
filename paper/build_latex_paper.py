@@ -2,8 +2,9 @@
 """
 Assemble the complete single-column, overflow-free LaTeX monograph
 paper/HGS2_EIMDL_Research_Paper.tex covering 100% of the end-to-end research
-across Generation 1 (HyperGraSS v1), Generation 2 (RC-MDL v2), and
-Generation 3 (HGS2 / EIMDL), using programmatic tables from table_builders.py.
+across Generation 1 (HyperGraSS v1), Generation 2 (RC-MDL v2),
+Generation 3 (HGS2 / EIMDL), and Next-Gen EIMDL v3 (.hgs3, Native C23/C++23/Rust,
+and Compressed-Domain Genomics), using programmatic tables from table_builders.py.
 """
 
 import os
@@ -46,13 +47,14 @@ PART1_TEX = r"""\documentclass[10pt]{article}
 \renewcommand{\arraystretch}{1.10}
 
 \title{\textbf{Evolutionary Information Minimum Description Length (EIMDL):\\
-A Complete End-to-End Theory, Three-Generation Architectural Progression,\\
-and Bounded-Memory Engine for Single-Genome, Reference-Conditioned,\\
-and Pangenome Compression}}
+Four-Generation Architecture, Seven Formal Laws,\\
+Multi-Omic \texttt{.hgs3} Containers, Native \texttt{C23/C++23/Rust~2024}\\
+Engine, and Compressed-Domain Genomics}}
 
 \author{
   \textbf{Md Saiful Islam}\\
-  HyperGraSS / RC-MDL / EIMDL Research Project (\texttt{HGS} v1.0 \& \texttt{HGS2} v2.0)\\
+  HyperGraSS / RC-MDL / EIMDL Research Project\\
+  (\texttt{.hgs} v1.0, \texttt{.hgs2} v2.0 \& Next-Gen \texttt{.hgs3} v3.0/v3.1)\\
   Repository: \url{https://github.com/MdSaifulIslamMSI/hypergrass-research}
 }
 \date{November 2026}
@@ -64,9 +66,9 @@ and Pangenome Compression}}
 \noindent
 Lossless genomic compression has historically fractured into incompatible algorithmic paradigms: alignment-dependent pangenome archivers such as \texttt{AGC~3.2.5} require shared anchor segmentation and degrade on structurally rearranged or unaligned strains; general-purpose Lempel--Ziv and Burrows--Wheeler codecs (\texttt{xz}, \texttt{zstd}, \texttt{bzip2}, and original \texttt{GraSS}) fragment whenever single-nucleotide polymorphisms (SNPs) interrupt exact $k$-mers; and pure finite-context Markov/repeat models (\texttt{GeCo3}, \texttt{JARVIS3}) capture local sequence statistics at high memory cost without modeling multi-donor coalescent synteny or affine insertion--deletion (indel) mechanics.
 
-This monograph presents the complete, end-to-end scientific and engineering record of the \textbf{HyperGraSS} research program across all three architectural generations:
+This monograph presents the complete, end-to-end scientific and engineering record of the \textbf{HyperGraSS / EIMDL} research program across all four architectural generations:
 \textbf{Generation~1 (\texttt{HyperGraSS v1}, \texttt{.hgs} v1.0)}, which introduced open-syncmer anchor banks, Anchor-Conditioned Homology Match Coding (\texttt{AC-HMC}), Block-Conditioned LZ-Grammar (\texttt{BC-LZG}), a Quantized Context-Repeat Mixer (\texttt{QCRM}), 8-channel $100:1$ entropy-floor accounting, GraalVM~25 static-musl $256$~MiB native execution, $2.077$~GiB 64-bit streaming verification, and sub-second block-indexed slice querying;
-\textbf{Generation~2 (\texttt{RC-MDL v2} Prototype)}, which established unaligned reference-conditioned Minimum Description Length (MDL) coding, Prim minimum-spanning-tree pangenome ordering, and 13-configuration \texttt{AGC~3.2.5} oracle benchmarking; and
+\textbf{Generation~2 (\texttt{RC-MDL v2} Prototype)}, which established unaligned reference-conditioned Minimum Description Length (MDL) coding, Prim minimum-spanning-tree pangenome ordering, and 13-configuration \texttt{AGC~3.2.5} oracle benchmarking;
 \textbf{Generation~3 (\texttt{HGS2} / \texttt{EIMDL}, \texttt{.hgs2} v2.0)}, which unifies all regimes under seven mathematically proved, experimentally falsifiable laws:
 (I)~Klein Four-Group $V_4 = (\Sigma_4,\oplus)$ Strand-Invariant Kimura--CpG Differential Substitution Coding;
 (II)~Bijective Codon-Wobble Gap Decomposition $\psi(\text{gap})=(\lfloor\text{gap}/3\rfloor, (\text{gap}+1)\bmod 3)$ and a 6-State Causal Open-Reading-Frame Hidden Markov Model (\texttt{6F-ORF-HMM});
@@ -74,10 +76,13 @@ This monograph presents the complete, end-to-end scientific and engineering reco
 (IV)~Universal Five-Regime Existing and Non-Existing Sequence Completeness ($\le 2.0012$~bpb white-noise safety ceiling);
 (V)~Generalized Amdahl-Memory Streaming Scaling via a $0.25$~B/base 2-bit DNA bank and two-pass zero-materialization canonical open-syncmer Compressed Sparse Row (CSR) index ($k=16, s=10, w=6, t=3$);
 (VI)~Two-Adic Tapered Binary Adaptation ($\tau=20$, lowering the fixed-point floor from $31/4096$ to $11/4096$), Hierarchical Pitman--Yor Suffix Backoff, and Reciprocal-Multiplication Normalization; and
-(VII)~Strictly Disjoint Stage-1/Stage-2 Memory Lifecycle and Thread-Throttled Sub-Linear Execution operating inside a strict \texttt{-Xmx128m} ($128$~MiB, $1.06$~B/base) pure-JVM heap cap with $2.05\times$ encode ($45.16\times$ vs.\ \texttt{HyperGraSS~v1}) and $5.46\times$ ($6.56\times$ at 8T) decode speedup.
+(VII)~Strictly Disjoint Stage-1/Stage-2 Memory Lifecycle and Thread-Throttled Sub-Linear Execution operating inside a strict \texttt{-Xmx128m} ($128$~MiB, $1.06$~B/base) pure-JVM heap cap with $2.05\times$ encode ($45.16\times$ vs.\ \texttt{HyperGraSS~v1}) and $5.46\times$ ($6.56\times$ at 8T) decode speedup; and
+\textbf{Next-Gen \texttt{EIMDL v3} (\texttt{.hgs3} v3.0/v3.1 + Native \texttt{C23/C++23/Rust~2024} Engine \texttt{eimdl})}, which eliminates JVM GC overhead and the $2.14$~Gbp 32-bit array horizon via 64-bit C++23 CSR indexing + AVX2/SWAR 2-bit C23 kernels, introduces parallel 4-stripe Byte-rANS (\texttt{4$\times$-rANS}) + multi-omic FASTQ/CDS containers (\texttt{HGS3}) with pangenome-stratified \texttt{SA-IS} BWT--MTF--\texttt{RUNA/RUNB} Phred coding, and establishes zero-FASTA compressed-domain analytics (\texttt{analyze}, direct \texttt{VCF v4.2} calling, lazy \texttt{kmer} search, and slice \texttt{query}) directly over compressed evolutionary tokens.
 Laws~VI and~VII adapt architectural techniques from OpenAI's October~2026 ETH refutation preprint~\cite{openai2026eth} while explicitly preserving its Orthogonal Vectors Conjecture (OVC) boundary on polynomial-time string matching.
 
 Across 73 complete bacterial genomes in Leave-One-Out (\textbf{Mode~R}) benchmarks, \texttt{HGS2} achieves \textbf{1,174,113~B} ($0.07820$~bpb, $102.30\times$) on 24 \textit{Escherichia coli} genomes ($7.14\times$ smaller than \texttt{AGC~3.2.5} best single configuration, winning \textbf{24/24} targets), \textbf{47,339~B} ($0.00358$~bpb, $2,233.78\times$) on 24 \textit{Mycobacterium tuberculosis} genomes ($6.17\times$ smaller than \texttt{AGC} best single configuration, \textbf{24/24} wins; $2.04\times$ smaller than a 13-configuration per-target \texttt{AGC} oracle, \textbf{19/24} wins), and \textbf{174,217~B} ($0.01962$~bpb, $407.79\times$) on 25 \textit{Staphylococcus aureus} genomes ($17.10\times$ smaller than \texttt{AGC} best single configuration, \textbf{25/25} wins; $9.28\times$ smaller than the 13-configuration \texttt{AGC} oracle, \textbf{24/25} wins). In self-contained pangenome archiving (\textbf{Mode~C}), \texttt{HGS2} compresses the 24-genome \textit{E.~coli} collection to \textbf{3,371,489~B} (1T, $0.2246$~bpb, $35.62\times$) and \textbf{3,388,639~B} (default parallel, $0.2257$~bpb, $35.44\times$, $19.65$~s at 12T encode / $8.66$~s at 8T decode), outperforming \texttt{HyperGraSS v1} ($3,810,409$~B), \texttt{JARVIS3 -l 7} ($3,896,361$~B), \texttt{RC-MDL v2} ($3,972,975$~B), \texttt{xz -9} ($5,663,640$~B), \texttt{GeCo3} ($8,409,358$~B), \texttt{AGC~3.2.5} ($8,540,341$~B), and original \texttt{GraSS} ($24,777,592$~B), while beating unbounded \texttt{v1} and \texttt{JARVIS3} even inside a pure-JVM \texttt{-Xmx128m} cap (\textbf{3,452,703~B}). In the locked Docker (\texttt{hypergrass-corpus:jdk27}) independent replication, \texttt{HGS2} also wins both \textit{Salmonella enterica} ($2,390,106$~B vs.\ $2,709,545$~B \texttt{JARVIS3}) and \textit{Klebsiella pneumoniae} ($2,523,991$~B vs.\ $2,948,926$~B \texttt{JARVIS3}). Every archive is verified byte-for-byte via SHA-256 and backed by 171,941 automated falsification assertions.
+
+In Next-Gen \texttt{EIMDL v3.0} Kaggle cloud evaluations (\texttt{29,168.35~s}, \texttt{8/8} verification suites passing, \texttt{5/5} Java--Native compressed-domain parity = \texttt{True}), the wire-compatible native engine cuts peak encoder RSS on human \texttt{GRCh38\_chr21} by \textbf{$-60.9\%$} ($246.71$~MB vs.\ $630.28$~MB Java; \textbf{7,857,257~B} vs.\ $7,876,544$~B Java and $8,537,556$~B \texttt{NAF-l22}) and compresses \texttt{GRCh38\_chr1} to \textbf{47,511,069~B} in $9.23$~s decode. In multi-omic \texttt{.hgs3} mode, \textit{E.~coli} FASTA+CDS compresses to \textbf{58,987~B} (\texttt{0.0958~bpb}, $83.50\times$, \texttt{27,176} ORFs) and \texttt{CHM13\_chr21 | GRCh38\_chr21} ($45,654,375$~B) to \textbf{1,024,592~B} (\texttt{0.1795~bpb}, $44.56\times$, \texttt{252,280} ORFs). Without reconstructing FASTA, \texttt{eimdl analyze} recovers \texttt{31,334} \textit{E.~coli} SNPs ($61.96\%$ mod-3 synonymous wobble, $\text{Ti/Tv}=2.5794$) and \texttt{285,603} human \texttt{chr21} SNPs in \texttt{1.47~s} at \texttt{66.91~MB} RSS ($-34.5\%$ vs.\ $102.09$~MB decompression), while \texttt{eimdl variants} streams \texttt{172,088} human \texttt{VCF v4.2} calls in \texttt{1.60~s} at \texttt{72.73~MB} RSS. On $34.17$~MB \textit{E.~coli} Illumina FASTQ ($100{,}000\times 150$~bp), pangenome+CDS coupling (\texttt{6,056,142~B} Java / \texttt{6,226,185~B} Native) cuts archive size by \textbf{$-17.4\%$} vs.\ \texttt{NoPanel} ($7,536,092$~B) and speeds compressed-domain analytics $1.51\times\text{--}1.75\times$ over full decompression, while \texttt{EIMDL v3.1} addresses v3.0 Phred quality ($78.55\%$), lazy zero-target \texttt{kmer}, and \texttt{-Xmx256m} human streaming bottlenecks across GitHub Actions CI (\texttt{8/8} Java + \texttt{7/7} Native) and active Kaggle v7 cloud validation.
 \end{abstract}
 
 \section{Introduction, Architectural Progression, and Scientific Contract}
@@ -89,9 +94,9 @@ Under Algorithmic Information Theory and Rissanen's Minimum Description Length (
   \item \textbf{Pure Finite-Context and Weighted-Repeat Models:} Dedicated genomic sequence coders such as \texttt{XM}~\cite{cao2007simple}, \texttt{FCM}~\cite{pinho2011fcm}, \texttt{GeCo3}~\cite{silva2020geco3}, and \texttt{JARVIS3}~\cite{sousa2024jarvis3} blend multiple Markov orders with hash-indexed repeat models. Although effective on single headerless DNA streams (\textbf{Mode~S}), they do not model multi-donor coalescent haplotype switching, affine syntenic micro-indels, or 6-channel FASTA container metadata, and high-order tables (\texttt{JARVIS3 -l 31}) require $\approx 1.16$~GiB of resident memory per stream.
 \end{enumerate}
 
-\subsection{Complete Three-Generation Progression of the Research Program}
+\subsection{Complete Four-Generation Progression of the Research Program}
 
-To provide a complete end-to-end record from the beginning of the project to its unified conclusion, we document all four systems evaluated in this repository (\texttt{docs/FOUNDATIONS.md}):
+To provide a complete end-to-end record from the beginning of the project through Next-Gen EIMDL~v3, we document all systems evaluated in this repository (\texttt{docs/FOUNDATIONS.md}):
 \begin{enumerate}
   \item \textbf{Original \texttt{GraSS} Baseline (\texttt{AnshuOishik/GraSS}, commit \texttt{6d93700}, flag \texttt{-e2}):} The external reference-free Java baseline that combines a two-stage Lempel--Ziv match finder with \texttt{libbsc} block sorting in a tar container ($24,777,592$~B on the 24-genome \textit{E.~coli} pangenome; $22,264,066$~B on $100$~Mbp human \texttt{hg38 chr1}).
   \item \textbf{Generation~1 --- \texttt{HyperGraSS v1} (\texttt{.hgs} v1.0, magic \texttt{HGS\textbackslash x01}, \texttt{hypergrass.Main}):} Our first-generation in-repo architecture (\texttt{docs/BENCHMARKS.md}, \texttt{docs/SPECIALIZED.md}, \texttt{docs/BROAD.md}, \texttt{docs/ABLATION.md}, \texttt{docs/SCALING.md}, \texttt{docs/MEMORY-SWEEP.md}, \texttt{docs/ENTROPY-FLOOR.md}, \texttt{docs/END-TO-END.md}). Generation~1 introduced:
@@ -106,6 +111,7 @@ To provide a complete end-to-end record from the beginning of the project to its
   While Generation~1 reduced the 24-genome \textit{E.~coli} pangenome from $9,215,764$~B (default $4$~MiB bank / $2$~MiB blocks) to $4,885,851$~B (\texttt{--pangenome} $16$~MiB bank / $8$~MiB blocks) and further to \textbf{3,810,409~B} ($0.254$~bpb) with LZ77+range gap coding, its byte-by-byte context-mixed anchor pages required $887.45$~s and $1,452$~MB JVM RSS on the full pangenome, and our 8-channel entropy-floor decomposition (\texttt{docs/ENTROPY-FLOOR.md}) proved that self-contained Mode~C archives cannot cross $100:1$ ($1.20$~MB) because the irreducible first-genome anchor alone requires $2,257,234$~B ($1.88\times$ the entire $100:1$ budget).
   \item \textbf{Generation~2 --- \texttt{RC-MDL v2} Prototype (\texttt{prototype/rcmdl}):} Our standalone Reference-Conditioned Minimum Description Length prototype (\texttt{prototype/rcmdl/RESULTS.md}), designed specifically to solve the reference-conditioned regime (\textbf{Mode~R}) where the donor panel is already known to the receiver, as well as tree-ordered collection coding (\textbf{Mode~C}). Generation~2 introduced unaligned syncmer-seeded approximate donor matching, Prim minimum-spanning-tree (MST) collection ordering ($3,972,975$~B on \textit{E.~coli} Mode~C), and Leave-One-Out Mode~R coding ($1,636,367$~B on \textit{E.~coli}, $92,506$~B on \textit{M.~tuberculosis}, and $243,807$~B on \textit{S.~aureus}), alongside an exhaustive 13-configuration parameter sweep of \texttt{AGC~3.2.5}.
   \item \textbf{Generation~3 --- Unified \texttt{HGS2} / \texttt{EIMDL} Engine (\texttt{.hgs2} v2.0, magic \texttt{HGS2}, \texttt{hypergrass.EimdlCli}):} The unified architecture (\texttt{HyperGraSSFusionEngine.java}, \texttt{FastNoveltyCoder.java}, \texttt{EimdlMosaicCodec.java}, \texttt{EimdlSyncmerIndex.java}, \texttt{FastaStreamFactorizer.java}, \texttt{DonorPanelIndex.java}) that fuses Generation~2's unaligned coalescent haplotype copying with Generation~1's context-repeat mixing under seven formal laws (\texttt{docs/COMPRESSION-LAW.md}, \texttt{docs/FUSION-BENCHMARKS.md}, \texttt{docs/INDEPENDENT.md}). \texttt{HGS2} crosses the $100:1$ threshold in Mode~R across all three primary species ($102.30\times$ on \textit{E.~coli}, $2,233.78\times$ on \textit{M.~tuberculosis}, $407.79\times$ on \textit{S.~aureus}), reduces 24-genome \textit{E.~coli} Mode~C to \textbf{3,371,489~B} (1T) / \textbf{3,388,639~B} (12T in $19.65$~s encode / $10.40$~s decode [$8.66$~s at 8T]), and executes the full $120.11$~Mbp pangenome inside strict \textbf{\texttt{-Xmx192m}}, \textbf{\texttt{-Xmx160m}}, and \textbf{\texttt{-Xmx128m}} pure-JVM heap limits (\textbf{3,452,703~B}; and \textbf{3,422,314~B} at \texttt{-Xmx256m}/\texttt{-Xmx224m}).
+  \item \textbf{Generation~4 --- Next-Gen \texttt{EIMDL v3} (\texttt{.hgs3} v3.0/v3.1, magic \texttt{HGS3}, Native \texttt{C23/C++23/Rust~2024} \texttt{eimdl} \& Compressed-Domain Engine):} Extends the wire specification across two interoperable runtimes (Java~25~LTS \texttt{Hgs3OmicCodec} / \texttt{HgsAnsCoder} / \texttt{CompressedDomainEngine} and native \texttt{C23/C++23/Rust~2024} \texttt{eimdl} with 64-bit $>2.14$~Gbp CSR indexing), adds parallel 4-stripe Byte-rANS (\texttt{4$\times$-rANS}) + multi-omic FASTQ + 6-frame ORF digests (\texttt{+CDS}) + pangenome-stratified \texttt{SA-IS} BWT Phred coding, and executes \texttt{analyze}, \texttt{variants} (\texttt{VCF v4.2}), \texttt{kmer}, and \texttt{query} directly inside the compressed archive (Section~\ref{sec:eimdl_v3}).
 \end{enumerate}
 
 \begin{figure}[t!]
@@ -153,7 +159,7 @@ Gen~3 Two-Gear Matcher & Single-gear permissive approximate matching across pang
 }
 \end{table}
 
-\section{Six-Channel Bijective Factorization and Binary Container Specifications (\texttt{.hgs} v1.0 and \texttt{.hgs2} v2.0)}
+\section{Six-Channel Bijective Factorization and Binary Container Specifications (\texttt{.hgs} v1.0, \texttt{.hgs2} v2.0, and Multi-Omic \texttt{.hgs3} v3.0/v3.1)}
 
 A practical genomic compressor cannot assume pre-sanitized, headerless uppercase $\texttt{ACGT}$ strings; real biological repositories contain multi-FASTA headers, variable line wrapping ($\text{LF}$ or $\text{CRLF}$), lowercase soft-masking, IUPAC ambiguity codes ($\texttt{N, R, Y, S, W, K, M, B, D, H, V}$), and RNA uracil ($\texttt{U/u}$).
 
@@ -180,19 +186,20 @@ For any valid FASTA, multi-FASTA, or flat sequence file $X \in \Sigma_{\text{raw
 During forward factorization, every byte of $X$ is either a header byte appended to $\mathcal{H}$ at base index $p_k$, a line break $(\text{LF}/\text{CRLF})$ recorded in $\mathcal{W}$ (or $\tau$ at EOF), or a sequence character at index $i \in \{0,\dots,n-1\}$. If the character's uppercase projection belongs to $\{\texttt{A,C,G,T/U}\}$, its case state is recorded in $\mathcal{C}$ and its 2-bit value $\phi(\cdot) \in \Sigma_4$ is written to $S[i]$; otherwise, its exact byte value and index $i$ are appended to $\mathcal{E}$ while $S[i] \leftarrow 0$. Reconstruction $\Phi^{-1}$ replays $S[0..n-1]$, overriding $S[e_r]$ with the exact byte from $\mathcal{E}$, applying lowercase toggles from $\mathcal{C}$ (and $\texttt{T}\to\texttt{U}$ if the RNA flag is set), interleaving headers from $\mathcal{H}$ at $p_k$, and inserting line breaks from $\mathcal{W}$ and $\tau$. Since each partition is mutually exclusive and collectively exhaustive, $\Phi^{-1}(\Phi(X)) = X$ identically.
 \end{proof}
 
-\subsection{Complete Binary Layout of \texttt{.hgs} v1.0 and \texttt{.hgs2} v2.0 (\texttt{docs/HGS-FORMAT.md})}
+\subsection{Complete Binary Layout of \texttt{.hgs} v1.0, \texttt{.hgs2} v2.0, and \texttt{.hgs3} v3.0/v3.1 (\texttt{docs/HGS-FORMAT.md})}
 
-Table~\ref{tab:format_specs} documents the exact byte-level container specifications for both Generation~1 (\texttt{.hgs} v1.0) and Generation~3 (\texttt{.hgs2} v2.0).
+Table~\ref{tab:format_specs} documents the exact byte-level container specifications for Generation~1 (\texttt{.hgs} v1.0), Generation~3 (\texttt{.hgs2} v2.0), and Next-Gen~EIMDL~v3 (\texttt{.hgs3} v3.0/v3.1).
 \begin{itemize}
   \item \textbf{Generation~1 (\texttt{.hgs} v1.0):} Supports two container layouts distinguished by byte~5:
   (a)~the \emph{Compact Single-Block Container} ($13$-byte header when byte~$5 \ge 32$: magic \texttt{HGS\textbackslash x01}, version \texttt{1}, \texttt{auxFormat} $\in \{32:\text{basic Deflate},\; 33:\text{structured LZ77+range}\}$, $4$-byte \texttt{auxLen}, $3$-byte 24-bit \texttt{dnaLen}) used for inputs $\le 128$~MiB without an anchor bank; and
   (b)~the \emph{Multi-Block Indexed Container} ($6$-byte header: magic \texttt{HGS\textbackslash x01}, version \texttt{1}, \texttt{modeFlags} where bit~$0 = \texttt{HAS\_ANCHOR}$, bit~$1 = \texttt{LEAN\_MODE}$, bit~$2 = \texttt{SHARED\_GAP}$) followed by the paged anchor bank ($65,536$-bp context-mixed pages), compressed blocks (each storing \texttt{auxMetadata} and a DNA payload under mode~$0$ [empty], mode~$1$ [\texttt{QCRM}], mode~$2$ [seed-match \texttt{BC-LZG}], or mode~$3$ [anchor-conditioned \texttt{AC-HMC} with donor list, match lengths, masked mismatch runs, and variant gaps]), and a random-access \emph{Footer Directory} terminated by a $28$-byte trailer ending in magic \texttt{0x48474631} (\texttt{"HGF1"}). Each footer entry stores \texttt{rawBytes}, \texttt{recordCount}, \texttt{dnaBases}, \texttt{blockOffset}, \texttt{blockLength}, \texttt{firstRecord}, and \texttt{firstRecordBaseOffset}, enabling $O(1)$ block seek for \texttt{query --slice} without decompressing non-overlapping blocks.
   \item \textbf{Generation~3 (\texttt{.hgs2} v2.0):} Uses a unified $27$-byte preamble (magic \texttt{0x48475332} = \texttt{"HGS2"}, version \texttt{2}, regime mode $\in \{0:\text{Mode~S},\; 1:\text{Mode~R},\; 2:\text{Mode~C}\}$, flags bitfield, $8$-byte raw input length, $4$-byte canonical base count $n$, $4$-byte donor count) followed in Mode~R by a mandatory \textbf{32-byte SHA-256 donor-panel pin} verified before decompression, the 6-channel metadata $\mathcal{M}$, order-1 range-coded structural/indel-splice/$V_4$-wobble streams, and Stage-2 parallel $4$~Mbp warm-primed \texttt{FastCRM} novelty sub-blocks (with bit~31 of the sub-block length word signaling raw 2-bit safety bypass under Law~IV).
+  \item \textbf{Generation~4 / Next-Gen EIMDL~v3 (\texttt{.hgs3} v3.0/v3.1, magic \texttt{"HGS3"} = \texttt{0x48475333}):} Generalizes \texttt{.hgs2} across multi-omic FASTA/FASTQ inputs with byte-exact parity between Java~25 and Native \texttt{eimdl}. Flag bits~4 (\texttt{FLAG3\_FASTQ=0x10}) and~5 (\texttt{FLAG3\_HAS\_CDS=0x20}) enable LCP read-ID prefix compression, coupled DNA Mosaic + 4-stripe Byte-rANS (\texttt{PROB\_BITS=12}, \texttt{ANS\_L=2\textsuperscript{23}}, \texttt{XMAX\_MUL=524288}), optional 6-frame ORF digests (\texttt{+CDS}: \texttt{orfCount}, \texttt{longestOrfAa}, \texttt{totalOrfAa}, \texttt{gcPermille}, \texttt{proteomeSha256[32]}), and pangenome-stratified Phred quality modes \texttt{3} (\texttt{ANS\_MODE\_RANS4\_QUAL}) and v3.1 \texttt{4} (\texttt{ANS\_MODE\_RANS4\_QUAL\_BWT}, $2{,}000{,}000$-B \texttt{SA-IS} BWT $\to$ \texttt{MTF} $\to$ \texttt{RUNA/RUNB} $\to$ 3-context 4-stripe rANS gated strictly by Law~IV).
 \end{itemize}
 
 \begin{table}[h!]
 \centering
-\caption{Exact binary container specifications of Generation~1 (\texttt{.hgs} v1.0) and Generation~3 (\texttt{.hgs2} v2.0) (\texttt{docs/HGS-FORMAT.md}).}
+\caption{Exact binary container specifications of Generation~1 (\texttt{.hgs} v1.0), Generation~3 (\texttt{.hgs2} v2.0), and Next-Gen EIMDL~v3 (\texttt{.hgs3} v3.0/v3.1) (\texttt{docs/HGS-FORMAT.md}).}
 \label{tab:format_specs}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{llll}
@@ -213,6 +220,11 @@ Table~\ref{tab:format_specs} documents the exact byte-level container specificat
  & Mode~R Pin ($32$~B) & \texttt{donorPanelSha256} & Mandatory 32-byte SHA-256 digest of canonical donor panel (Mode~R only) \\
  & Stage-1 Streams & Order-1 Range Streams & Token types $T_k$, MTF donors, strand, syntenic $\Delta$, affine splices, wobble $(q,\phi)$, $V_4$ SNPs \\
  & Stage-2 Sub-Blocks & $4$~Mbp \texttt{FastCRM} Blocks & $32$-KiB warm-primed sub-blocks; bit~31 of length word ($\texttt{0x80000000}$) = raw 2-bit bypass \\
+\midrule
+\textbf{\texttt{.hgs3} v3.0/v3.1 Multi-Omic} & \texttt{0x00..0x04} ($5$~B) & \texttt{magic}, \texttt{flags} & \texttt{"HGS3"} (\texttt{0x48475333}); bits~0..1 mode, \texttt{0x10}=\texttt{FASTQ}, \texttt{0x20}=\texttt{HAS\_CDS}, \texttt{0x04}=\texttt{FLAT} \\
+(Native \texttt{eimdl} + Java~25) & Header + Pin & \texttt{raw64}, \texttt{crc32}, \texttt{recs}, \texttt{panelSha} & $8$-B rawLen, $4$-B CRC-32, uvarint records/units + Mode~R SHA-256 donor pin \\
+ & FASTQ + DNA + \texttt{+CDS} & LCP IDs + \texttt{4$\times$-rANS} + ORF Digest & LCP read IDs + Mosaic + $4$-stripe Byte-rANS novelty (\texttt{FLAG\_ANS4\_NOVELTY}) + 6-frame proteome SHA-256 \\
+ & Stratified Phred Stream & \texttt{mode=3} or \texttt{mode=4} (v3.1) & Mode~3 binned residuals or v3.1 \texttt{SA-IS} BWT ($2$~MB blk) $\to$ \texttt{MTF} $\to$ \texttt{RUNA/B} $\to$ \texttt{4$\times$-rANS}, $\min$-gated \\
 \bottomrule
 \end{tabular}%
 }
@@ -1003,9 +1015,56 @@ All-24 \texttt{CHM13v2.0|GRCh38} Mode~R & 3,156,242,851 & \textbf{35,277,041} (\
 }
 \end{table}
 
-\subsection{Next-Gen EIMDL v3.0: Native C23/C++23/Rust~2024 Engine, Multi-Omic \texttt{.hgs3}, and Compressed-Domain Genomics (\texttt{world\_shootout\_v3\_results.json})}
+\section{Next-Gen EIMDL v3: Native \texttt{C23/C++23/Rust~2024} Engine, Multi-Omic \texttt{.hgs3}, and Compressed-Domain Genomics}
+\label{sec:eimdl_v3}
 
-To advance \texttt{EIMDL} beyond the managed JVM and into zero-decompression genomic computing, Next-Gen \textbf{EIMDL v3.0} was benchmarked end-to-end on Kaggle (\texttt{benchmarks/kaggle/results/world\_shootout\_v3\_results.json}, \texttt{29,168.35~s} / \texttt{8.1~hr} on 4~AMD EPYC~7B12 vCPUs, OpenJDK~25.0.5~LTS, and the native \texttt{C23/C++23/Rust~2024} \texttt{eimdl} engine). All \texttt{8/8} cloud verification suites passed (\texttt{VerifyAllEdgeCases} \texttt{41.18~s}, \texttt{VerifyDonorIndex} \texttt{1.22~s}, \texttt{VerifyAnchorCodecs} \texttt{5.18~s}, \texttt{VerifyArchiveAccounting} \texttt{1.81~s}, \texttt{VerifyDonorCosts} \texttt{3.38~s}, \texttt{VerifyCompressionLaws} \texttt{17.00~s}, \texttt{VerifyFusionEngine} \texttt{4.38~s}, and \texttt{VerifyParadigm} \texttt{1.08~s}), along with every bidirectional \texttt{HGS2}/\texttt{HGS3} and compressed-domain parity smoke check (\texttt{MFCompress} remained \texttt{unavailable} due to GCC linking failure).
+Generation~3 (\texttt{HGS2} v2.0) solved evolutionary pangenome compression across Modes~S, R, and~C inside a bounded JVM heap, yet left three architectural barriers: (i)~JVM garbage-collection pressure and $2.14$~Gbp signed 32-bit array limits on large mammalian chromosomes, (ii)~no coupled representation for Illumina FASTQ Phred quality scores or 6-frame proteome summaries, and (iii)~compression-only containers requiring full FASTA/FASTQ reconstruction before biological downstream analysis. \textbf{Next-Gen EIMDL~v3} (\texttt{world\_shootout\_v3\_results.json} + \texttt{v3.1} upgrades) resolves all three through a polyglot native runtime, the \texttt{.hgs3} multi-omic wire format, and zero-FASTA compressed-domain computing (Figure~\ref{fig:arch_v3_paradigm}).
+
+\begin{figure}[t!]
+  \centering
+  \includegraphics[width=0.98\textwidth]{figures/arch5_eimdl_v3_paradigm.pdf}
+  \caption{\textbf{Architecture Blueprint 5: Next-Gen EIMDL~v3 polyglot runtime, \texttt{.hgs3} multi-omic container, and zero-FASTA compressed-domain analytics.} Shows bidirectional wire interoperability between Java~25~LTS and the zero-crate \texttt{C23/C++23/Rust~2024} native binary (\texttt{eimdl}), coupled \texttt{.hgs3} FASTQ/FASTA substreams with stratified Phred modes~3--4, and direct compressed-domain \texttt{analyze}, \texttt{variants}, \texttt{kmer}, and \texttt{query} operators.}
+  \label{fig:arch_v3_paradigm}
+\end{figure}
+
+\subsection{Polyglot Native \texttt{C23/C++23/Rust~2024} Runtime (\texttt{eimdl}) and Breaking the 2.14~Gbp Barrier}
+
+Rather than rewriting the mathematical laws for an incompatible binary container, Next-Gen EIMDL~v3 splits execution cleanly across three native layers linked into a single static Rust~2024 CLI/library (\texttt{native/eimdl-rs}) while maintaining 100\% byte-for-byte wire compatibility with Java~25~LTS:
+\begin{enumerate}
+  \item \textbf{\texttt{C23} Runtime-CPUID SIMD \& Entropy Kernels (\texttt{native/c\_kernels}):} AVX2/SWAR 2-bit DNA pack/unpack, canonical open-syncmer window scanners, hardware CRC-32 / SHA-256, RFC~1951 Deflate/Inflate, and overflow-free 32-bit 4-stripe Byte-rANS (\texttt{hgs\_ans.c}).
+  \item \textbf{\texttt{C++23} 64-Bit CSR Index, Two-Gear Mosaic \& FastCRM (\texttt{native/cpp\_engine}):} Replaces Java signed 32-bit \texttt{int[]} CSR arrays with 64-bit offsets exceeding the $2^{31}-1 \approx 2.14$~Gbp single-panel horizon and eliminates JVM heap fragmentation on $>50$~MB human chromosomes.
+  \item \textbf{\texttt{Rust~2024} Streaming CLI/FFI (\texttt{eimdl}):} Zero-crate streaming orchestrator enforcing identical Law~I--VII bitstreams so archives compressed natively cross-decode bit-identically in Java~25~LTS (and vice versa).
+\end{enumerate}
+
+\subsection{Multi-Omic \texttt{.hgs3} Objective, Parallel \texttt{4$\times$-rANS}, and Stratified \texttt{SA-IS} BWT Phred Coding}
+
+\begin{definition}[Coupled Multi-Omic \texttt{.hgs3} Description Length]
+Given a FASTQ or FASTA+CDS dataset $X = (\mathcal{I}, \mathbf{S}, \mathbf{Q})$ with read identifiers/metadata $\mathcal{I}$, nucleotide bases $\mathbf{S} \in \Sigma_4^n$, quality scores $\mathbf{Q} \in \{33,\dots,126\}^n$, optional reference panel $\mathcal{R}$, and 6-frame ORF proteome digest $\mathcal{P}(\mathbf{S})$, the \texttt{.hgs3} objective decomposes description length as:
+\begin{equation}
+  L_{\text{HGS3}}(X \mid \mathcal{R}) = L_{\text{ID/LCP}}(\mathcal{I}) + L_{\text{Mosaic}}(\mathbf{S} \mid \mathcal{R}) + L_{\text{ANS4}}(\text{novelty}) + L_{\text{Qual}}(\mathbf{Q} \mid \mathbf{M}_{\text{mismatch}}(\mathcal{T}), \mathcal{B}_{\text{homo}}(\mathbf{S})) + L_{\text{CDS}}(\mathcal{P}),
+\end{equation}
+where $\mathbf{M}_{\text{mismatch}} \in \{0,1\}^n$ partitions bases into reference-matched vs.\ mismatched/novel sites and $\mathcal{B}_{\text{homo}}$ captures local homopolymer run lengths---both regenerated deterministically during decoding from DNA Mosaic tokens $\mathcal{T}$ at \textbf{zero mask overhead}.
+\end{definition}
+
+For Phred quality coding under EIMDL~v3.0 (\texttt{ANS\_MODE\_RANS4\_QUAL=3}), each residual is modeled hierarchically across $(\text{same}, \text{coarse}[9], \text{fine}[8], \text{nibble}[16])$ conditioned on $\mathbf{M}_{\text{mismatch}}$, $\mathcal{B}_{\text{homo}}$, previous quality bin, and read cycle phase. Because cloud telemetry established that v3.0 Phred still represented $78.55\%$ ($4,890,843$~B) of the $34.17$~MB FASTQ archive, \textbf{EIMDL~v3.1} introduces \texttt{ANS\_MODE\_RANS4\_QUAL\_BWT=4}: partitioning each $2{,}000{,}000$-byte Phred block by $\mathbf{M}_{\text{mismatch}} \in \{0,1\}$, computing linear-time $O(n)$ \texttt{SA-IS} Burrows--Wheeler transforms, active-alphabet Move-To-Front (\texttt{MTF}), bijective \texttt{RUNA}/\texttt{RUNB} zero-run collapsing, and 3-context 4-stripe rANS with binary-search CDF normalization, strictly Law-IV gated via:
+\begin{equation}
+  L_{\text{Qual}} = \min\!\Bigl(|Q|_{\text{raw}},\; L_{\text{mode 3}},\; L_{\text{mode 4}}\Bigr) + 1\text{~B}.
+\end{equation}
+
+\subsection{Zero-FASTA Compressed-Domain Query Algebra ($\mathcal{Q}(\mathcal{A} \mid \mathcal{R})$) and Lazy Span Execution}
+
+Instead of executing $\Phi^{-1}(\mathcal{A})$ prior to downstream genomics, EIMDL~v3 defines a compressed-domain algebra $\mathcal{Q}(\mathcal{A} \mid \mathcal{R})$ directly over the decoded Mosaic token sequence $\mathcal{T} = (t_1,\dots,t_M)$ without allocating the full target string $\mathbf{S}$:
+\begin{proposition}[Semantic Equivalence and Zero-Target-Allocation Panel Queries]
+Let $\mathcal{T} = (t_1,\dots,t_M)$ denote the disjoint coordinate partition emitted by \texttt{EimdlMosaicCodec}. Then:
+\begin{enumerate}
+  \item \textbf{\texttt{analyze} \& \texttt{variants} (VCF v4.2):} Because every substitution $(j, \delta \in V_4\setminus\{0\})$, wobble gap $\psi(\text{gap})$, and affine splice $(\Delta_{\text{ref}}, \Delta_{\text{tgt}})$ is stored explicitly inside panel tokens ($t_m.\text{kind}=0$), $\mathcal{Q}_{\text{analyze}}(\mathcal{A})$ and $\mathcal{Q}_{\text{vcf}}(\mathcal{A})$ recover identical Kimura $\text{Ti/Tv}$, mod-3 codon wobble periodicity, recombination switches, and normalized 1-base anchored SNV/INS/DEL/complex VCF records ($\mathcal{Q}_{\text{vcf}}(\mathcal{A}) \equiv \mathcal{Q}_{\text{vcf}}(\Phi^{-1}(\mathcal{A}))$) with memory $O(|\mathcal{R}| + \text{token buffer})$ rather than $O(|\mathcal{R}| + |\mathbf{S}| + \text{index}(\mathbf{S}))$.
+  \item \textbf{Lazy Self-Span \texttt{kmer} (\texttt{EIMDL~v3.1}):} During motif lookup of length $k_{\text{q}}$ on both strands, unedited self/donor spans ($t_m.\text{kind}=0$ or unedited $t_m.\text{kind}=1$) are scanned strictly in reference panel space (\texttt{exact\_zero\_target\_spans}). In \texttt{v3.1} (\texttt{compute.rs}, \texttt{CompressedDomainEngine.java}), self-DNA materialization is deferred lazily only to spans with $t_m.\text{kind} \ge 2$ and local edits, eliminating whole-unit bailouts whenever panel and self-repeat tokens coexist.
+\end{enumerate}
+\end{proposition}
+
+\subsection{Verified Cloud Shootout Results (\texttt{world\_shootout\_v3\_results.json}) and EIMDL v3.1 Delta}
+
+Next-Gen \textbf{EIMDL v3.0} was benchmarked end-to-end on Kaggle (\path{benchmarks/kaggle/results/world_shootout_v3_results.json}, \texttt{29,168.35~s} / \texttt{8.1~hr} on 4~AMD EPYC~7B12 vCPUs, OpenJDK~25.0.5~LTS, and native \texttt{C23/C++23/Rust~2024} \texttt{eimdl}). All \texttt{8/8} cloud verification suites passed (\texttt{VerifyAllEdgeCases} \texttt{41.18~s}, \texttt{VerifyDonorIndex} \texttt{1.22~s}, \texttt{VerifyAnchorCodecs} \texttt{5.18~s}, \texttt{VerifyArchiveAccounting} \texttt{1.81~s}, \texttt{VerifyDonorCosts} \texttt{3.38~s}, \texttt{VerifyCompressionLaws} \texttt{17.00~s}, \texttt{VerifyFusionEngine} \texttt{4.38~s}, and \texttt{VerifyParadigm} \texttt{1.083~s}), along with every bidirectional \texttt{HGS2}/\texttt{HGS3} and compressed-domain parity smoke check (\texttt{MFCompress} remained \texttt{unavailable} due to GCC linking failure).
 
 \begin{figure}[t!]
   \centering
@@ -1071,7 +1130,7 @@ To advance \texttt{EIMDL} beyond the managed JVM and into zero-decompression gen
 
 \section{Honest Scientific Boundaries, Negative Results, and Threats to Validity}
 
-In keeping with our strict anti-fabrication commitment, we explicitly report every boundary condition, negative ablation result, and trade-off observed across all three generations of our experiments:
+In keeping with our strict anti-fabrication commitment, we explicitly report every boundary condition, negative ablation result, and trade-off observed across all four generations of our experiments:
 
 \begin{enumerate}
   \item \textbf{Micro-Indel Splicing vs.\ Law~VI Token/Novelty Efficiency Trade-Off (Table~\ref{tab:ablations_real}):}
@@ -1084,8 +1143,8 @@ In keeping with our strict anti-fabrication commitment, we explicitly report eve
   Across the 9 within-species Mash diversity strata in Generation~1 (Table~\ref{tab:gen1_broad}), \texttt{HyperGraSS v1 --pangenome} won $8/9$ strata but trailed \texttt{JARVIS3 -l 7} by $-0.16\%$ ($5,276$~B: $3,381,136$~B vs.\ $3,375,860$~B) on the 20-genome medium-diversity \textit{E.~coli} stratum. Generation~3 (\texttt{HGS2}) resolves this by replacing fixed-bank block matching with unaligned spanning-tree coalescent copying and \texttt{FastCRM}.
   \item \textbf{Mode~S Single-Genome CPU Throughput vs.\ Default \texttt{JARVIS3 -l 7} (Locked Docker Snapshot):}
   In reference-free single-genome compression (Table~\ref{tab:ind12_subset}, executed inside Docker \texttt{hypergrass-corpus:jdk27}), \texttt{EIMDL Mode~S} (\texttt{--threads 1}) achieves smaller archives than both \texttt{JARVIS3 -l 7} ($-8.79\%$) and \texttt{JARVIS3 -l 31} ($-2.32\%$) while using $2.46\times$ and $10.7\times$ less RAM, respectively, and runs $1.26\times$ faster than \texttt{JARVIS3 -l 31} in aggregate. However, against lightweight default \texttt{JARVIS3 -l 7}, \texttt{EIMDL Mode~S} is $3.65\times$ slower to compress ($332.5$~s vs.\ $91.0$~s) and $3.16\times$ slower to restore ($277.9$~s vs.\ $87.9$~s) due to symmetric per-base context mixing in that locked container snapshot (host Mode~S under Laws~VIa--VIc achieves $6.75$~s encode / $6.57$~s decode on \textit{E.~coli} \texttt{00.fa}; re-running the Docker comparison for Table~\ref{tab:ind12_subset} remains future work).
-  \item \textbf{32-Bit Signed Integer CSR Addressing Horizon ($\approx 2.14$~Gbp) in Generation~3:}
-  While Generation~1's 64-bit \texttt{SequenceSource} verified streaming block compression up to $2.077$~GiB ($2,229,710,670$~B, Table~\ref{tab:gen1_systems}), Generation~3's \texttt{DonorPanelIndex} stores concatenated donor base coordinates in signed 32-bit Java arrays (\texttt{int[] csrPositions}), bounding a single in-memory donor reference bank to $2^{31}-1 \approx 2.14\times 10^9$~bp ($\approx 430$ bacterial genomes or $\approx 68\%$ of a haploid human genome) unless partitioned into shards.
+  \item \textbf{32-Bit Signed Integer CSR Addressing Horizon ($\approx 2.14$~Gbp) in Java Generation~3:}
+  While Generation~1's 64-bit \texttt{SequenceSource} verified streaming block compression up to $2.077$~GiB ($2,229,710,670$~B, Table~\ref{tab:gen1_systems}) and Next-Gen EIMDL~v3's \texttt{C++23} native CSR index (\texttt{native/cpp\_engine}) adopts 64-bit indexing above $2.14$~Gbp, the pure-JVM \texttt{DonorPanelIndex} still stores concatenated donor base coordinates in signed 32-bit Java arrays (\texttt{int[] csrPositions}), bounding a single unsharded JVM donor bank to $2^{31}-1 \approx 2.14\times 10^9$~bp.
   \item \textbf{Kaggle Shootout Codec Integrity, Ultra-Clonal Viral Cohorts, Bounded-Heap Human OOMs, and TPU Batch Fallback:}
   (a)~External codecs exhibited non-trivial integrity/build failures in Kaggle's shootout: \texttt{MFCompress} failed GCC linking (\texttt{ld returned 1 exit status}); \texttt{MBGC} and \texttt{NAF} stripped exact FASTA line-wrapping/headers (\texttt{raw\_sha256=False, seq\_sha256=True}) on bacterial collections and diploid chromosomes, with \texttt{NAF -l 22} failing sequence SHA-256 on \texttt{pathology\_fasta} and \texttt{MBGC -m3} timing out ($900$~s) on \texttt{Diploid\_Chr22}; and \texttt{Original GraSS -e2} crashed (\texttt{ArrayIndexOutOfBoundsException: Index 2 out of bounds for length 2}) on every bacterial multi-FASTA while corrupting \texttt{pathology\_fasta} ($14,368,768$~B vs.\ $15,574,362$~B).
   (b)~On high-redundancy coronavirus FASTA cohorts (\texttt{group\_3} $97.9$~MB, \texttt{group\_22} $308.9$~MB, \texttt{covid\_mega} $1.45$~GB), \texttt{NAF -l 22} ($1,862,725$~B, $4.07$~GB RSS) and \texttt{MBGC -m2} ($1,966,421$~B, $2.28$~s) edge \texttt{HGS2} FASTA ($2,152,306$~B), and on single non-homologous \texttt{GRCh38\_chr21}/\texttt{chr22} \texttt{.seq}, \texttt{GeCo3 -l 5} ($7.84$~MB/$7.40$~MB) and \texttt{JARVIS3 -l 31} ($7.33$~MB/$6.97$~MB, $211\text{--}228$~s) are smaller at $10\times\text{--}150\times$ slower decode.

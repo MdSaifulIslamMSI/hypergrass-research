@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
-Generate 4 massive publication-grade architectural blueprints (300 DPI PNG + vector PDF)
-for the HGS2 / EIMDL genomic compression research monograph and repository documentation:
+Generate 5 massive publication-grade architectural blueprints (300 DPI PNG + vector PDF)
+for the HGS2 / HGS3 / EIMDL genomic compression research monograph and repository documentation:
 
   1. arch1_eimdl_system_pipeline     : Unified HGS2 / EIMDL 3-Regime Runtime & Disjoint Stage-1/2 Lifecycle
   2. arch2_mosaic_evolutionary_codec : Laws I-III & V: Two-Pass CSR Syncmer Index, Two-Gear Matcher, Indel Splice, V4 + Wobble
   3. arch3_fast_novelty_coder        : Laws IIb, IV & VI: 6F-ORF-HMM, 19/22-Expert FastCRM, Division-Free Mixing, Raw 2-Bit Bypass
   4. arch4_container_and_lineage     : Byte-Level .hgs2 v2.0 / .hgs v1.0 Binary Wire Specification & 3-Generation Evolution
+  5. arch5_eimdl_v3_paradigm         : Next-Gen EIMDL v3 (.hgs3, Native C23/C++23/Rust, Zero-FASTA Compressed-Domain Compute)
 
 Every symbol, constant, threshold, and metric matches the committed Java 21 source code and JSON reports verbatim.
 """
@@ -919,12 +920,123 @@ def make_arch4():
     save_arch(fig, "arch4_container_and_lineage")
 
 
+def make_arch5():
+    fig, ax = new_canvas((15.8, 10.4))
+    draw_title(
+        ax,
+        "NEXT-GEN EIMDL v3 (.hgs3): Polyglot C23/C++23/Rust Engine, Multi-Omic FASTQ+CDS & Zero-FASTA Compute",
+        "100% Bidirectional Wire Parity (Java 25 LTS <-> Native eimdl) | 4x-rANS + SA-IS BWT Phred | Direct VCF v4.2 & Zero-Alloc k-mer",
+    )
+
+    # Zone 1: Polyglot Native & Managed Runtimes
+    draw_zone(ax, 1.0, 8.6, 31.2, 84.4, "1. Polyglot Wire Runtimes", C_NAVY, C_NAVY_BG, badge="Java 25 <-> Native")
+    draw_card(ax, 2.2, 65.8, 28.8, 23.0, "Java 25 LTS Engine (src/hypergrass)", [
+        "• Hgs3OmicCodec + HgsAnsCoder (modes 3 & 4)",
+        "• CompressedDomainEngine + EimdlCli",
+        "• v3.1 <=320M heap: Packed2BitSequence",
+        "  slice novelty via storeUnitMosaic()",
+        "• Mode S/R/C + 100% SHA-256 identity",
+    ], C_BLUE, body_size=7.9, mono_footer="HGS3-Java FASTQ: 6,056,142 B (1.418 bpb)")
+
+    draw_card(ax, 2.2, 37.8, 28.8, 25.0, "Native C++23 + Rust 2024 (eimdl)", [
+        "• Rust 2024 streaming CLI + hgs2/hgs3 codecs",
+        "• C++23 64-bit CSR Index (>2.14 Gbp panel)",
+        "• Zero JVM GC pause; cuts encoder Peak RSS:",
+        "  GRCh38 Chr21: 246.7 MB vs 630.3 MB (-61%)",
+        "  GRCh38 Chr1: 1,111.0 MB vs 1,554.9 MB",
+    ], C_NAVY, body_size=7.9, mono_footer="GRCh38 Chr21: 7,857,257 B (< Java)")
+
+    draw_card(ax, 2.2, 10.2, 28.8, 24.6, "C23 SIMD + Entropy Kernels (c_kernels)", [
+        "• Runtime CPUID AVX2/SWAR 2-bit DNA pack",
+        "• hgs_ans.c: 32-bit 4-stripe Byte-rANS",
+        "  (PROB_BITS=12, ANS_L=2^23, Order 0/2/4/6)",
+        "• v3.1: SA-IS O(n) BWT + MTF + RUNA/B",
+        "  + 3-context 4x-rANS Phred quality coder",
+    ], C_TEAL, body_size=7.9, mono_footer="10M Crypto Noise: 0.42s dec @ 91.5 MB RSS")
+
+    draw_arrow(ax, 15.8, 62.8, 15.8, 65.8, C_BLUE, lw=1.4)
+    draw_arrow(ax, 17.4, 65.8, 17.4, 62.8, C_NAVY, lw=1.4)
+    draw_arrow(ax, 16.6, 34.8, 16.6, 37.8, C_TEAL, lw=1.6)
+
+    # Zone 2: .hgs3 Multi-Omic Container Specification
+    draw_zone(ax, 34.0, 8.6, 32.0, 84.4, "2. .hgs3 Multi-Omic Container", C_TEAL, C_TEAL_BG, badge="Magic: HGS3")
+    draw_card(ax, 35.2, 68.5, 29.6, 20.3, "Header, Regime Pin & Proteome +CDS", [
+        "• Magic 'HGS3' + flags (Mode S/R/C, FASTQ=0x10,",
+        "  HAS_CDS=0x20, FLAT_ACGT=0x04, RNA_U=0x08)",
+        "• rawBytes (u64) + CRC-32 + 32-B Panel SHA-256",
+        "• +CDS: orfCount, longestAa, totalAa, protSha256",
+    ], C_TEAL, body_size=7.9, mono_footer="E. coli 27,176 ORFs | Chr21 252,280 ORFs")
+
+    draw_card(ax, 35.2, 42.5, 29.6, 23.8, "Coupled FASTQ Meta + DNA Mosaic Streams", [
+        "• Header LCP prefix delta + CRLF/'+' flags",
+        "• Ambiguity & soft-mask restoration streams",
+        "• DNA: Pangenome Mosaic + 4-stripe rANS",
+        "• Pangenome+CDS DNA coupling cuts novelty:",
+        "  1,202,140 B (NoPanel) -> 63,666 B (+CDS)",
+    ], C_GREEN, body_size=7.9, mono_footer="-1,309,907 B (-17.4%) vs HGS3-NoPanel")
+
+    draw_card(ax, 35.2, 10.2, 29.6, 30.1, "Pangenome-Stratified Phred Coder", [
+        "• Zero-cost mismatch_mask regenerated from DNA",
+        "  (panel match=0 vs variant/literal=1)",
+        "• v3.0 Mode 3: Hierarchical residual (coarse/",
+        "  fine/nibble) | 4.89 MB (78.55% in v3.0)",
+        "• v3.1 Mode 4: 2,000,000-B Stratified SA-IS BWT",
+        "  -> MTF -> RUNA/RUNB -> 3-ctx 4x-rANS",
+        "• Strict Law-IV gate: min(raw, mode3, mode4)",
+    ], C_AMBER, body_size=7.85, mono_footer="ANS_MODE_RANS4_QUAL=3 | BWT=4 (v3.1)")
+
+    draw_arrow(ax, 50.0, 68.5, 50.0, 66.3, C_TEAL, lw=1.4)
+    draw_arrow(ax, 50.0, 42.5, 50.0, 40.3, C_GREEN, lw=1.4)
+    draw_arrow(ax, 32.2, 56.0, 34.0, 56.0, C_NAVY, lw=1.7)
+
+    # Zone 3: Zero-FASTA Compressed-Domain Compute
+    draw_zone(ax, 67.8, 8.6, 31.2, 84.4, "3. Compressed-Domain Compute", C_VIOLET, C_VIOLET_BG, badge="Zero-FASTA")
+    draw_card(ax, 69.0, 65.8, 28.8, 23.0, "eimdl analyze (Evolution & Selection)", [
+        "• Scans compressed tokens directly (no FASTA)",
+        "• Kimura Ti/Tv + kappa + mod-3 codon wobble",
+        "• E. coli: 31,334 SNPs (61.96% mod-3 wobble)",
+        "• Human Chr21: 285,603 SNPs, 33,540 splices",
+        "  in 1.47s @ 66.9 MB RSS (-34.5% vs decomp)",
+    ], C_VIOLET, body_size=7.9, mono_footer="5/5 Java <-> Native Parity = TRUE")
+
+    draw_card(ax, 69.0, 37.8, 28.8, 25.0, "eimdl variants (Streaming VCF v4.2)", [
+        "• Direct normalized 1-base anchored VCF",
+        "• E. coli FASTA: 33,293 calls in 3.08s",
+        "• E. coli FASTQ: 76,886 calls in 3.40s (1.67x)",
+        "• Human Chr21: 172,088 calls in 1.60s",
+        "  (146,427 SNV, 5,941 INS, 9,465 DEL, 10,255 CPLX)",
+    ], C_BLUE, body_size=7.9, mono_footer="Chr21 VCF RSS: 72.73 MB (vs 240.6 MB Java)")
+
+    draw_card(ax, 69.0, 10.2, 28.8, 24.6, "eimdl kmer & query (Lazy Zero-Alloc)", [
+        "• Scans donor panel references directly",
+        "  (zero target buffer allocation per donor span)",
+        "• v3.1: Lazy decode strictly when kind>=2",
+        "  & has_self_edits (exact_zero_target_spans>0)",
+        "• query: exact 200-bp slices (1.22s @ 61.5 MB)",
+    ], C_CORAL, body_size=7.9, mono_footer="FASTQ kmer: 1.51x faster than full decomp")
+
+    draw_arrow(ax, 66.0, 77.0, 67.8, 77.0, C_VIOLET, lw=1.6)
+    draw_arrow(ax, 66.0, 50.3, 67.8, 50.3, C_BLUE, lw=1.6)
+    draw_arrow(ax, 66.0, 22.5, 67.8, 22.5, C_CORAL, lw=1.6)
+
+    draw_footer_strip(ax, [
+        ("E. coli .hgs3+CDS", "58,987 B (83.50x) | 1.64s xdec"),
+        ("CHM13 chr21 .hgs3", "1,024,592 B (44.56x) | 252k ORFs"),
+        ("Native Chr21 RSS", "246.7 MB (-61% vs JVM 630.3 MB)"),
+        ("Direct Chr21 VCF", "172,088 calls in 1.60s @ 72.7 MB"),
+        ("Verified CI + v3", "8/8 Java Suites + 7/7 Native Tests"),
+    ])
+
+    save_arch(fig, "arch5_eimdl_v3_paradigm")
+
+
 def main():
     make_arch1()
     make_arch2()
     make_arch3()
     make_arch4()
-    print("[DONE] Generated all 4 massive architectural diagrams (PDF + 300 DPI PNG).")
+    make_arch5()
+    print("[DONE] Generated all 5 massive architectural diagrams (PDF + 300 DPI PNG).")
 
 
 if __name__ == "__main__":
