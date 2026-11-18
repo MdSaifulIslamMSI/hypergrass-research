@@ -2,14 +2,15 @@
 
 This step-by-step launch guide turns **HyperGraSS / RC-MDL / EIMDL** (`HGS2` / `.hgs3` + Lean 4 proofs) from a verified open repository into a cited, package-installed community standard across **bioRxiv**, **Zenodo DOI**, **Bioconda**, **Nextflow/Snakemake**, and **computational genomics / formal-methods communities**.
 
-### Current Live Launch Status (`2026-11-18`)
+### Current Live Launch Status (`2026-11-19`)
 
 | Track | Identifier / URL | Status |
 |---|---|---|
 | **Author ORCID** | [`0009-0006-0570-9934`](https://orcid.org/0009-0006-0570-9934) (`Academy of Technology`) | Linked in repo, papers, Zenodo & bioRxiv |
-| **Zenodo Permanent Archive** | Concept DOI [`10.5281/zenodo.24344825`](https://doi.org/10.5281/zenodo.24344825) (`v3.1.1`: [`10.5281/zenodo.24344826`](https://doi.org/10.5281/zenodo.24344826)) | Live at CERN/Zenodo + `CITATION.cff` / `README.md` / PDFs |
+| **Zenodo Permanent Archive** | Concept DOI [`10.5281/zenodo.24344825`](https://doi.org/10.5281/zenodo.24344825) (`v3.1.1`: [`10.5281/zenodo.24344826`](https://doi.org/10.5281/zenodo.24344826)) | Live at CERN/Zenodo + `CITATION.cff` / `README.md` / PDFs (`v3.2.0` syncs via Concept DOI) |
 | **Bioconda Recipe PR** | [`bioconda/bioconda-recipes#71846`](https://github.com/bioconda/bioconda-recipes/pull/71846) (`eimdl 3.1.0`) | `Lint`, `Linux`, `OSX-64`, `ARM` PASS · `please review & merge` |
 | **bioRxiv Preprint** | `BIORXIV/2026/767583` (`Version 1`, submitted `2026-11-18`) | Submitted (`7p` main + `33p` supp PDF); awaiting screening & DOI |
+| **Real Human Validation (`v3.2.0`)** | [`benchmarks/kaggle/results/hprc_giab_v3_2_results.json`](../benchmarks/kaggle/results/hprc_giab_v3_2_results.json) | 14-hap HPRC `chr21` (`9,959,347 B`, `47.22x`, `1.69x` < `MBGC`, `10.57x` < `AGC`) & GIAB `HG002` `2x250bp` (`rtg vcfeval F1=0.9216`, BED `F1=0.9283` across `5,753` NIST v4.2.1 variants) |
 
 ---
 

@@ -1,0 +1,278 @@
+{
+  "schema_version": "hprc_giab_v3_2_real",
+  "system": {
+    "cpu_count": 4,
+    "python": "3.13.18",
+    "uname": "Linux 7cdaf7fc6158 6.18.55+ #1 SMP Thu Oct 22 16:37:21 UTC 2026 x86_64 x86_64 x86_64 GNU/Linux",
+    "lscpu": "Architecture:                            x86_64\nCPU op-mode(s):                          32-bit, 64-bit\nAddress sizes:                           46 bits physical, 48 bits virtual\nByte Order:                              Little Endian\nCPU(s):                                  4\nOn-line CPU(s) list:                     0-3\nVendor ID:                               GenuineIntel\nModel name:                              Intel(R) Xeon(R) CPU @ 2.20GHz\nCPU family:                              6\nModel:                                   79\nThread(s) per core:                      2\nCore(s) per socket:                      2\nSocket(s):                               1\nStepping:                                0\nBogoMIPS:                                4400.32\nFlags:                                   fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ss ht syscall nx pdpe1gb rdtscp lm constant_tsc rep_good nopl xtopology nonstop_tsc cpuid tsc_known_freq pni pclmulqdq ssse3 fma cx16 pcid sse4_1 sse4_2 x2apic movbe popcnt aes xsave avx f16c rdrand hypervisor lahf_lm abm 3dnowprefetch pti ssbd ibrs ibpb stibp fsgsbase tsc_adjust bmi1 hle avx2 smep bmi2 erms invpcid rtm rdseed adx smap xsaveopt arat md_clear arch_capabilities\nHypervisor vendor:                       KVM\nVirtualization type:                     full\nL1d cache:                               64 KiB (2 instances)\nL1i cache:                               64 KiB (2 instances)\nL2 cache:                                512 KiB (2 instances)\nL3 cache:                                55 MiB (1 instance)\nNUMA node(s):                            1\nNUMA node0 CPU(s):                       0-3\nVulnerability Gather data sampling:      Not affected\nVulnerability Ghostwrite:                Not affected\nVulnerability Indirect target selection: Mitigation; Aligned branch/return thunks\nVulnerability Itlb multihit:             Not affected\nVulnerability L1tf:                      Mitigation; PTE Inversion\nVulnerability Mds:                       Mitigation; Clear CPU buffers; SMT Host state unknown\nVulnerability Meltdown:                  Mitigation; PTI\nVulnerability Mmio stale data:           Vulnerable: Clear CPU buffers attempted, no microcode; SMT Host state unknown\nVulnerability Old microcode:             Not affected\nVulnerability Reg file data sampling:    Not affected\nVulnerability Retbleed:                  Mitigation; IBRS\nVulnerability Spec rstack overflow:      Not affected\nVulnerability Spec store bypass:         Mitigation; Speculative Store Bypass disabled via prctl\nVulnerability Spectre v1:                Mitigation; usercopy/swapgs barriers and __user pointer sanitization\nVulnerability Spectre v2:                Mitigation; IBRS; IBPB conditional; STIBP conditional; RSB filling; PBRSB-eIBRS Not affected; BHI SW loop, KVM SW loop\nVulnerability Srbds:                     Not affected\nVulnerability Tsa:                       Not affected\nVulnerability Tsx async abort:           Mitigation; Clear CPU buffers; SMT Host state unknown\nVulnerability Vmscape:                   Not affected",
+    "meminfo": "MemTotal:       32869296 kB\nMemFree:        24272900 kB\nMemAvailable:   31580716 kB\nBuffers:          121376 kB\nCached:          7165324 kB\nSwapCached:            0 kB",
+    "df": "Filesystem      Size  Used Avail Use% Mounted on\n/dev/loop2       20G  9.2M   20G   1% /kaggle/working\noverlay         8.0T  7.1T  965G  89% /",
+    "nvidia_smi": "unavailable: [Errno 2] No such file or directory: 'nvidia-smi'"
+  },
+  "tools_detected": {
+    "agc": true,
+    "mbgc": true,
+    "spring": false,
+    "zstd": true,
+    "xz": true,
+    "libbsc": false,
+    "bsc": true,
+    "hap.py": false,
+    "rtg": true
+  },
+  "hprc_chr21_metadata": {
+    "haplotypes": 14,
+    "vg_haps_added": 10,
+    "names": [
+      "GRCh38#0#chr21",
+      "CHM13#0#chr21",
+      "HG002#2#chr21",
+      "HG002#1#chr21",
+      "HG00673#1#JAHBBZ010000060.1#0[498-31439331]",
+      "HG01175#1#JAHAMA010000052.1#0[0-31440721]",
+      "HG01175#2#JAHALZ010000024.1#0[1350180-32841034]",
+      "HG02080#1#JAHEOW010000061.1#0[0-24380955]",
+      "HG02717#1#JAHAOS010000033.1#0[0-24113733]",
+      "HG02818#2#JAHEOR010000032.1#0",
+      "HG03098#1#JAHEPM010000099.1#0[0-23571633]",
+      "HG03486#1#JAHEOQ010000107.1#0[0-31438878]",
+      "HG03516#2#JAGYYS010000033.1#0[1626997-33103009]",
+      "HG03579#2#JAGYVT010000012.1#0[1432606-32896966]"
+    ],
+    "raw_bytes": 470323902
+  },
+  "hprc_chr21": {
+    "dataset": "hprc_chr21_real.fa",
+    "raw_bytes": 470323902,
+    "raw_sha256": "7c5d1252204cca2916e7379e5a403fa981091be5f50ede2bcd67b30d2f98bedd",
+    "runs": [
+      {
+        "status": "ok",
+        "codec": "EIMDL_Native_collection",
+        "archive_bytes": 9959347,
+        "bpb": 0.169404,
+        "ratio": 47.2244,
+        "enc_wall_s": 213.4444,
+        "dec_wall_s": 42.2047,
+        "enc_peak_rss_mb": 1653.8,
+        "dec_peak_rss_mb": 567.38,
+        "sha256_verified": true
+      },
+      {
+        "status": "ok",
+        "codec": "AGC",
+        "archive_bytes": 105239515,
+        "bpb": 1.790077,
+        "ratio": 4.4691,
+        "enc_wall_s": 53.4061,
+        "dec_wall_s": null,
+        "enc_peak_rss_mb": 4160.93,
+        "dec_peak_rss_mb": null,
+        "sha256_verified": null
+      },
+      {
+        "status": "ok",
+        "codec": "MBGC-m3",
+        "archive_bytes": 16801144,
+        "bpb": 0.28578,
+        "ratio": 27.9936,
+        "enc_wall_s": 510.9672,
+        "dec_wall_s": 4.8558,
+        "enc_peak_rss_mb": 2997.21,
+        "dec_peak_rss_mb": 617.06,
+        "sha256_verified": true
+      },
+      {
+        "status": "ok",
+        "codec": "zstd-19",
+        "archive_bytes": 112536914,
+        "bpb": 1.914203,
+        "ratio": 4.1793,
+        "enc_wall_s": 322.6857,
+        "dec_wall_s": 1.3405,
+        "enc_peak_rss_mb": 593.02,
+        "dec_peak_rss_mb": 12.09,
+        "sha256_verified": true
+      }
+    ]
+  },
+  "giab_hg002_chr21_region": "chr21:20000000-23000000",
+  "giab_hg002_chr21_runs": {
+    "ms2_q10_af0.10": {
+      "dataset": "HG002_chr21_20M_23M.fastq",
+      "raw_bytes": 457245491,
+      "hgs3_archive_bytes": 72240847,
+      "bpb": 1.263931,
+      "ratio": 6.3295,
+      "enc_wall_s": 85.3827,
+      "dec_wall_s": 19.1808,
+      "enc_peak_rss_mb": 3488.51,
+      "dec_peak_rss_mb": 1213.34,
+      "sha256_verified": true,
+      "baselines": [
+        {
+          "status": "ok",
+          "codec": "EIMDL_Native_HGS3_CDS",
+          "archive_bytes": 72240847,
+          "bpb": 1.263931,
+          "ratio": 6.3295,
+          "enc_wall_s": 85.3827,
+          "dec_wall_s": 19.1808,
+          "enc_peak_rss_mb": 3488.51,
+          "dec_peak_rss_mb": 1213.34,
+          "sha256_verified": true
+        },
+        {
+          "status": "ok",
+          "codec": "libbsc",
+          "archive_bytes": 66748702,
+          "bpb": 1.16784,
+          "ratio": 6.8503,
+          "enc_wall_s": 17.1606,
+          "dec_wall_s": 8.7271,
+          "enc_peak_rss_mb": 1284.36,
+          "dec_peak_rss_mb": 1288.59,
+          "sha256_verified": true
+        },
+        {
+          "status": "ok",
+          "codec": "zstd-19",
+          "archive_bytes": 77236258,
+          "bpb": 1.351331,
+          "ratio": 5.9201,
+          "enc_wall_s": 288.8709,
+          "dec_wall_s": 1.3771,
+          "enc_peak_rss_mb": 572.97,
+          "dec_peak_rss_mb": 11.63,
+          "sha256_verified": true
+        },
+        {
+          "status": "ok",
+          "codec": "xz-9",
+          "archive_bytes": 74608508,
+          "bpb": 1.305356,
+          "ratio": 6.1286,
+          "enc_wall_s": 281.1378,
+          "dec_wall_s": 7.0315,
+          "enc_peak_rss_mb": 2276.11,
+          "dec_peak_rss_mb": 66.16,
+          "sha256_verified": true
+        }
+      ],
+      "encode_telemetry": {
+        "container": "HGS3",
+        "is_fastq": true,
+        "mode": 1,
+        "engine": "native-c-cpp-rust-ans4",
+        "compress_seconds": 85.261563,
+        "raw_bytes": 457245491,
+        "archive_bytes": 72240847,
+        "bpb": 1.263931,
+        "ratio": 6.3295,
+        "records": 842463,
+        "dna_bases": 209459557,
+        "qual_bytes": 209459557,
+        "meta_comp_bytes": 8155521,
+        "mosaic_comp_bytes": 3455464,
+        "novelty_comp_bytes": 665777,
+        "qual_comp_bytes": 59963925,
+        "cds_orfs": 1011194
+      },
+      "compressed_domain": {
+        "analyze": {
+          "wall_s": 2.0416,
+          "peak_rss_mb": 406.19,
+          "report": {
+            "format": "HGS3-FASTQ",
+            "is_fastq": true,
+            "mode": 1,
+            "raw_bytes": 457245491,
+            "total_bases": 209459557,
+            "panel_match_bases": 97275131,
+            "self_match_bases": 109327375,
+            "tandem_match_bases": 10827,
+            "literal_bases": 2329483,
+            "panel_tokens": 408418,
+            "snps": 1178003,
+            "transitions": 391541,
+            "transversions": 786462,
+            "ti_tv": 0.497851,
+            "kappa_proxy": 0.995702,
+            "wobble_mod3_hits": 260828,
+            "wobble_mod3_pct": 22.1415,
+            "splices": 212748,
+            "inserted_bases": 516741,
+            "deleted_bases": 1654646,
+            "recombination_switches": 0,
+            "elapsed_seconds": 2.025953
+          }
+        },
+        "variants": {
+          "wall_s": 20.1387,
+          "peak_rss_mb": 1264.14,
+          "report": {
+            "total_variants": 8696,
+            "snvs": 3011,
+            "insertions": 702,
+            "deletions": 1026,
+            "complex_indels": 3957,
+            "literal_runs_skipped": 228465,
+            "read_boundary_filtered": 145503,
+            "min_support": 2,
+            "min_qual": 10.0,
+            "min_af": 0.1,
+            "elapsed_seconds": 20.075164
+          }
+        }
+      },
+      "giab_exact_concordance": {
+        "min_support": 2,
+        "min_qual": 10.0,
+        "min_af": 0.1,
+        "truth_variants": 5753,
+        "predicted_variants": 6334,
+        "tp": 5527,
+        "fp": 807,
+        "fn": 226,
+        "precision": 0.872592,
+        "recall": 0.960716,
+        "f1": 0.914536,
+        "rtg_vcfeval": {
+          "summary": "Threshold  True-pos-baseline  True-pos-call  False-pos  False-neg  Precision  Sensitivity  F-measure\n----------------------------------------------------------------------------------------------------\n   18.000               5387           5561        617        319     0.9001       0.9441     0.9216\n     None               5437           5613        720        269     0.8863       0.9529     0.9184",
+          "tp_baseline": 5437,
+          "tp_call": 5613,
+          "fp": 720,
+          "fn": 269,
+          "precision": 0.8863,
+          "recall": 0.9529,
+          "f1": 0.9184
+        },
+        "happy_available": false,
+        "rtg_available": true
+      }
+    },
+    "ms3_q15_af0.15": {
+      "variants_report": {
+        "total_variants": 7736,
+        "snvs": 2616,
+        "insertions": 537,
+        "deletions": 827,
+        "complex_indels": 3756,
+        "literal_runs_skipped": 228465,
+        "read_boundary_filtered": 145503,
+        "min_support": 3,
+        "min_qual": 15.0,
+        "min_af": 0.15,
+        "elapsed_seconds": 20.255934
+      },
+      "truth_variants": 5753,
+      "predicted_variants": 6036,
+      "tp": 5472,
+      "fp": 564,
+      "fn": 281,
+      "precision": 0.906561,
+      "recall": 0.951156,
+      "f1": 0.928323
+    }
+  }
+}

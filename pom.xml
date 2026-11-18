@@ -6,7 +6,7 @@
 
   <groupId>org.hypergrass</groupId>
   <artifactId>hypergrass</artifactId>
-  <version>3.1.1</version>
+  <version>3.2.0</version>
   <packaging>jar</packaging>
 
   <name>HyperGraSS</name>

@@ -28,6 +28,7 @@ KERNELS = {
     "shootout": REPO_ROOT / "benchmarks" / "kaggle" / "world_shootout",
     "gpu": REPO_ROOT / "benchmarks" / "kaggle" / "gpu_largescale",
     "tpu": REPO_ROOT / "benchmarks" / "kaggle" / "tpu_scale",
+    "hprc": REPO_ROOT / "benchmarks" / "kaggle" / "hprc_giab",
 }
 
 
@@ -57,6 +58,7 @@ def stage_dataset(stage_dir: Path) -> None:
     (sub / "benchmarks" / "pangenome").mkdir(parents=True)
     (sub / "benchmarks" / "independent" / "data" / "salmonella").mkdir(parents=True)
     (sub / "benchmarks" / "independent" / "data" / "klebsiella").mkdir(parents=True)
+    (sub / "benchmarks" / "hprc_giab").mkdir(parents=True)
     (sub / "grass_fixtures").mkdir(parents=True)
 
     for rel in (
@@ -66,6 +68,8 @@ def stage_dataset(stage_dir: Path) -> None:
         "benchmarks/pangenome/manifest.json",
         "benchmarks/independent/data/salmonella/manifest.json",
         "benchmarks/independent/data/klebsiella/manifest.json",
+        "benchmarks/hprc_giab/run_hprc_giab_bench.py",
+        "benchmarks/hprc_giab/test_hprc_giab_smoke.py",
     ):
         shutil.copy2(REPO_ROOT / rel, sub / rel)
 
@@ -99,7 +103,7 @@ def stage_dataset(stage_dir: Path) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Push and verify HyperGraSS/EIMDL end-to-end strictly on Kaggle.")
-    ap.add_argument("--target", choices=["shootout", "gpu", "tpu", "all"], default="shootout")
+    ap.add_argument("--target", choices=["shootout", "gpu", "tpu", "hprc", "all"], default="shootout")
     ap.add_argument("--message", "-m", default="E2E world shootout + 7-suite cloud verification")
     ap.add_argument("--skip-dataset", action="store_true")
     args = ap.parse_args()

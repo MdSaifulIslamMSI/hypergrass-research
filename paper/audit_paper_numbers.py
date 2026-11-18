@@ -387,6 +387,36 @@ def main():
     require_number(fq_nat_run["telemetry"]["qual_comp_bytes"], "ws3_fastq_nat_qual")
     require_number(fq_jav_run["telemetry"]["qual_comp_bytes"], "ws3_fastq_jav_qual")
     require_number(ec3["compressed_domain"]["native"]["kmer"]["report"]["exact_zero_target_spans"], "ws3_ecoli_kmer_zero_spans")
+
+    # 11b. Verify Real HPRC chr21 & NIST GIAB HG002 results (benchmarks/kaggle/results/hprc_giab_v3_2_results.json)
+    hg = load_json("benchmarks/kaggle/results/hprc_giab_v3_2_results.json")
+    hprc = hg["hprc_chr21"]
+    require_number(hprc["raw_bytes"], "hg_hprc_raw")
+    require_in_readme_and_handoff(hprc["raw_bytes"], "hg_hprc_raw")
+    for codec_name in ("EIMDL_Native_collection", "MBGC-m3", "AGC", "zstd-19"):
+        c_run = find_codec(hprc["runs"], codec_name)
+        require_number(c_run["archive_bytes"], f"hg_hprc_{codec_name}")
+        require_in_readme_and_handoff(c_run["archive_bytes"], f"hg_hprc_{codec_name}")
+
+    giab2 = hg["giab_hg002_chr21_runs"]["ms2_q10_af0.10"]
+    require_number(giab2["raw_bytes"], "hg_giab_raw")
+    require_in_readme_and_handoff(giab2["raw_bytes"], "hg_giab_raw")
+    for codec_name in ("EIMDL_Native_HGS3_CDS", "libbsc", "xz-9", "zstd-19"):
+        b_run = find_codec(giab2["baselines"], codec_name)
+        require_number(b_run["archive_bytes"], f"hg_giab_{codec_name}")
+        require_in_readme_and_handoff(b_run["archive_bytes"], f"hg_giab_{codec_name}")
+
+    ec2 = giab2["giab_exact_concordance"]
+    for val, lbl in [
+        (ec2["truth_variants"], "hg_giab_truth"),
+        (ec2["tp"], "hg_giab_ms2_tp"),
+        (ec2["rtg_vcfeval"]["tp_baseline"], "hg_giab_rtg_none_tp"),
+        (5387, "hg_giab_rtg_q18_tp"),
+        (hg["giab_hg002_chr21_runs"]["ms3_q15_af0.15"]["tp"], "hg_giab_ms3_tp"),
+    ]:
+        require_number(val, lbl)
+        require_in_readme_and_handoff(val, lbl)
+    assert "5387" in ec2["rtg_vcfeval"]["summary"], "Expected rtg_vcfeval QUAL>=18 TP=5387"
     require_number(fq3["compressed_domain_fastq"]["native"]["analyze"]["report"]["snps"], "ws3_fastq_cd_snps")
     require_number(fq3["compressed_domain_fastq"]["native"]["variants"]["report"]["total_variants"], "ws3_fastq_cd_vcf")
     for val, lbl in [

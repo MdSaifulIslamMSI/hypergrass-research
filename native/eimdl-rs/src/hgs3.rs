@@ -78,6 +78,53 @@ impl Hgs3Report {
     }
 }
 
+pub(crate) fn decode_fastq_quals_with_variants(
+    qual_comp: &[u8],
+    qual_len: usize,
+    dna_2bit: &[u8],
+    variants: &[ffi::HgsVariantRecord],
+    read_len_hint: u32,
+    threads: i32,
+) -> Result<Vec<u8>, String> {
+    if qual_len == 0 || qual_comp.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut mismatch_mask = build_mismatch_mask(dna_2bit.len(), variants);
+    let mut homo_bins = ffi::compute_homo_bins(dna_2bit);
+    mismatch_mask.resize(qual_len, 0);
+    homo_bins.resize(qual_len, 0);
+    ffi::ans4_decode_qual_mt(qual_comp, &mismatch_mask, &homo_bins, qual_len, read_len_hint, threads)
+        .map_err(|e| e.to_string())
+}
+
+pub(crate) fn decode_fastq_dna_and_quals_for_inspect(
+    pf: &ParsedHgs3Fastq<'_>,
+    nov_dna: &[u8],
+    panel_seqs: &[Vec<u8>],
+    variants: &[ffi::HgsVariantRecord],
+    threads: i32,
+) -> Result<(Vec<u8>, Vec<u8>), String> {
+    if pf.total_dna_bases == 0 || pf.mosaic_bytes.is_empty() {
+        return Ok((Vec::new(), Vec::new()));
+    }
+    let panel_refs: Vec<&[u8]> = panel_seqs.iter().map(|v| v.as_slice()).collect();
+    let dna_2bit = ffi::decode_mosaic(pf.mosaic_bytes, nov_dna, &panel_refs)?;
+    let qual_len = pf.total_qual_bytes as usize;
+    let quals = if qual_len == 0 || pf.qual_comp.is_empty() {
+        Vec::new()
+    } else {
+        decode_fastq_quals_with_variants(
+            pf.qual_comp,
+            qual_len,
+            &dna_2bit,
+            variants,
+            pf.read_len_hint,
+            threads,
+        )?
+    };
+    Ok((dna_2bit, quals))
+}
+
 pub(crate) fn build_mismatch_mask(len: usize, variants: &[ffi::HgsVariantRecord]) -> Vec<u8> {
     let mut mask = vec![0u8; len];
     for v in variants {
@@ -816,15 +863,11 @@ fn decompress_fastq_hgs3(
         false,
     )?;
     let qual_len = p.total_qual_bytes as usize;
-    let mut mismatch_mask = build_mismatch_mask(dna_2bit.len(), &inspect_rep.variants);
-    let mut homo_bins = ffi::compute_homo_bins(&dna_2bit);
-    mismatch_mask.resize(qual_len, 0);
-    homo_bins.resize(qual_len, 0);
-    let quals = ffi::ans4_decode_qual_mt(
+    let quals = decode_fastq_quals_with_variants(
         p.qual_comp,
-        &mismatch_mask,
-        &homo_bins,
         qual_len,
+        &dna_2bit,
+        &inspect_rep.variants,
         p.read_len_hint,
         threads,
     )?;

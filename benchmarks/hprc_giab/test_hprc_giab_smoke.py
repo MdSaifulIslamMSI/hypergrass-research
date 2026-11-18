@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import random
 import subprocess
@@ -15,7 +16,8 @@ def main() -> None:
     repo = Path(__file__).resolve().parents[2]
     bench_script = repo / "benchmarks" / "hprc_giab" / "run_hprc_giab_bench.py"
 
-    candidates = [
+    env_bin = os.environ.get("EIMDL_BIN")
+    candidates = ([Path(env_bin)] if env_bin else []) + [
         repo / "native" / "eimdl-rs" / "target" / "release" / "eimdl",
         repo / "native" / "eimdl-rs" / "target" / "release" / "eimdl.exe",
         repo / "native" / "eimdl-rs" / "target" / "debug" / "eimdl",

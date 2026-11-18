@@ -10,7 +10,7 @@ use eimdl_native::hgs3::{self, Hgs3CompressOptions, OmicInputKind};
 
 fn print_usage() {
     eprintln!(
-        "EIMDL / HyperGraSS v3.1.1 Native Engine (C23 AVX2/4x-rANS/SA-IS BWT + C++23 64-bit DAG/CRM + Rust 2024)\n\
+        "EIMDL / HyperGraSS v3.2.0 Native Engine (C23 AVX2/4x-rANS/SA-IS BWT + C++23 64-bit DAG/CRM + Rust 2024)\n\
          Usage:\n\
            eimdl --version\n\
            eimdl compress --target <file> --out <archive.hgs2> [--panel <dir|file>] [--collection] [--single] [--bounded] [--threads <N>]\n\
@@ -18,7 +18,7 @@ fn print_usage() {
            eimdl compress-omics --target <fasta|fastq> --out <archive.hgs3> [--format auto|fasta|fastq] [--panel <dir|file>] [--cds] [--threads <N>]\n\
            eimdl decompress-omics --archive <archive.hgs3|hgs2> [--panel <dir|file>] [--threads <N>] --out <file>\n\
            eimdl analyze --archive <archive.hgs2|hgs3> [--panel <dir|file>] [--json] [--threads <N>]\n\
-           eimdl variants --archive <archive.hgs2|hgs3> --panel <dir|file> [--out <out.vcf>] [--json]\n\
+           eimdl variants --archive <archive.hgs2|hgs3> --panel <dir|file> [--out <out.vcf>] [--min-support <N>] [--min-qual <F>] [--min-af <F>] [--json]\n\
            eimdl kmer --archive <archive.hgs2|hgs3> [--panel <dir|file>] --query <ACGT> [--both-strands] [--json]\n\
            eimdl query --archive <archive.hgs2|hgs3> [--panel <dir|file>] [--unit <N>] --start <pos> --end <pos>\n\
            eimdl inspect --archive <archive.hgs2>"
@@ -28,7 +28,7 @@ fn print_usage() {
 fn dispatch_subcommand(sub: &str, rest: &[String]) -> Result<(), String> {
     match sub {
         "--version" | "-V" | "version" => {
-            println!("hypergrass-eimdl-native 3.1.1 (avx2={})", ffi::has_avx2());
+            println!("hypergrass-eimdl-native 3.2.0 (avx2={})", ffi::has_avx2());
             Ok(())
         }
         "compress" => run_compress(rest),
@@ -260,6 +260,8 @@ fn run_variants(args: &[String]) -> Result<(), String> {
     let mut json = false;
     let mut bounded = false;
     let mut min_support: usize = 1;
+    let mut min_qual: f64 = 0.0;
+    let mut min_af: f64 = 0.0;
     let mut threads = std::thread::available_parallelism().map_or(4, |n| n.get() as i32);
 
     let mut i = 0;
@@ -271,17 +273,19 @@ fn run_variants(args: &[String]) -> Result<(), String> {
             "--json" => json = true,
             "--bounded" => bounded = true,
             "--min-support" => { min_support = next_val(args, &mut i, "--min-support")?.parse::<usize>().map_err(|_| "Invalid --min-support".to_string())?.max(1); }
+            "--min-qual" => { min_qual = next_val(args, &mut i, "--min-qual")?.parse::<f64>().map_err(|_| "Invalid --min-qual".to_string())?.max(0.0); }
+            "--min-af" => { min_af = next_val(args, &mut i, "--min-af")?.parse::<f64>().map_err(|_| "Invalid --min-af".to_string())?.clamp(0.0, 1.0); }
             "--threads" => { threads = next_val(args, &mut i, "--threads")?.parse::<i32>().map_err(|_| "Invalid --threads".to_string())?.max(1); }
             other => return Err(format!("Unknown variants option: {other}")),
         }
         i += 1;
     }
     let arc = archive.ok_or("variants requires --archive <path>")?;
-    let res = compute::extract_variants_vcf_with_support(&arc, panel.as_deref(), out_vcf.as_deref(), threads, bounded, min_support)?;
+    let res = compute::extract_variants_vcf_with_options(&arc, panel.as_deref(), out_vcf.as_deref(), threads, bounded, min_support, min_qual, min_af)?;
     if json {
         println!(
-            "{{\"total_variants\":{},\"snvs\":{},\"insertions\":{},\"deletions\":{},\"complex_indels\":{},\"literal_runs_skipped\":{},\"read_boundary_filtered\":{},\"min_support\":{},\"elapsed_seconds\":{:.6}}}",
-            res.total_variants, res.snvs, res.insertions, res.deletions, res.complex_indels, res.literal_runs_skipped, res.read_boundary_filtered, min_support, res.seconds
+            "{{\"total_variants\":{},\"snvs\":{},\"insertions\":{},\"deletions\":{},\"complex_indels\":{},\"literal_runs_skipped\":{},\"read_boundary_filtered\":{},\"min_support\":{},\"min_qual\":{:.2},\"min_af\":{:.4},\"elapsed_seconds\":{:.6}}}",
+            res.total_variants, res.snvs, res.insertions, res.deletions, res.complex_indels, res.literal_runs_skipped, res.read_boundary_filtered, min_support, min_qual, min_af, res.seconds
         );
     } else if out_vcf.is_some() {
         println!(

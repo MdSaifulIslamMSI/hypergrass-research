@@ -569,6 +569,12 @@ fn compressed_domain_fastq_vcf_consensus_accuracy() {
     assert!(prec2 >= 0.97, "Expected min_support=2 precision >= 0.97, got {prec2} ({tp2}/{})", preds2.len());
     assert!(rec2 >= 0.90, "Expected min_support=2 recall >= 0.90, got {rec2} ({tp2}/{})", truth.len());
 
+    let res_phred = compute::extract_variants_vcf_with_options(&arc, Some(&pdir), Some(&vcf), 4, false, 2, 15.0, 0.15).unwrap();
+    let preds_phred = parse_snvs(&res_phred.vcf_text);
+    let tp_phred = preds_phred.intersection(&truth).count();
+    assert_eq!(preds_phred.len(), tp_phred, "Expected zero false positives with min_qual=15 + min_af=0.15, got ({tp_phred}/{})", preds_phred.len());
+    assert!(tp_phred as f64 / truth.len().max(1) as f64 >= 0.90);
+
     let res3 = compute::extract_variants_vcf_with_support(&arc, Some(&pdir), Some(&vcf), 4, false, 3).unwrap();
     let preds3 = parse_snvs(&res3.vcf_text);
     let tp3 = preds3.intersection(&truth).count();
@@ -576,6 +582,189 @@ fn compressed_domain_fastq_vcf_consensus_accuracy() {
     let rec3 = tp3 as f64 / truth.len().max(1) as f64;
     assert_eq!(preds3.len(), tp3, "Expected zero false positives at min_support=3, got {prec3} ({tp3}/{})", preds3.len());
     assert!(rec3 >= 0.90, "Expected min_support=3 recall >= 0.90, got {rec3} ({tp3}/{})", truth.len());
+
+    let _ = fs::remove_dir_all(&tmp);
+}
+
+#[test]
+fn compressed_domain_phred_diploid_genotyping_filters_low_bq() {
+    let tmp = make_temp_dir("fq_vcf_phred_gt");
+    let pdir = tmp.join("panel");
+    fs::create_dir_all(&pdir).unwrap();
+
+    let ref_dna = lcg_dna(0x2026_1118, 20_000);
+    let ref_ascii: Vec<u8> = ref_dna.iter().map(|&b| b"ACGT"[b as usize]).collect();
+    let mut ref_fa = b">chr_diploid\n".to_vec();
+    ref_fa.extend_from_slice(&ref_ascii);
+    ref_fa.push(b'\n');
+    fs::write(pdir.join("chr_diploid.fa"), &ref_fa).unwrap();
+
+    let flip = |b: u8| -> u8 {
+        match b {
+            b'A' => b'G',
+            b'C' => b'T',
+            b'G' => b'A',
+            _ => b'C',
+        }
+    };
+
+    // Plant homozygous ALT at 0-based 2000 (1-based 2001) and heterozygous ALT at 0-based 6000 (1-based 6001)
+    let mut hap_hom = ref_ascii.clone();
+    hap_hom[2000] = flip(hap_hom[2000]);
+    hap_hom[6000] = flip(hap_hom[6000]);
+    let mut hap_wt = ref_ascii.clone();
+    hap_wt[2000] = flip(hap_wt[2000]);
+
+    let mut fq = Vec::new();
+    let hi_qual = vec![b'I'; 150]; // Phred Q=40
+    // 20 reads across homozygous region + 20 reads (10 alt, 10 ref) across heterozygous region,
+    // mixing sliding offsets and tandem/self duplicates plus a 3-read Q=2 error cluster at pos1=2011.
+    for r in 0..20usize {
+        let off = if r < 3 { 1930 } else { 1920 + (r % 5) * 4 };
+        let err_i = 2010usize - off;
+        let mut s_hom = hap_hom[off..off + 150].to_vec();
+        let mut q_hom = hi_qual.clone();
+        if r < 3 {
+            s_hom[err_i] = flip(s_hom[err_i]);
+            q_hom[err_i] = b'#'; // Q=2 sequencing error cluster
+        }
+        fq.extend_from_slice(format!("@HOM.{r}\n").as_bytes());
+        fq.extend_from_slice(&s_hom);
+        fq.extend_from_slice(b"\n+\n");
+        fq.extend_from_slice(&q_hom);
+        fq.push(b'\n');
+
+        let h_off = 5920 + (r % 4) * 3;
+        let s_het = if r % 2 == 0 { &hap_hom[h_off..h_off + 150] } else { &hap_wt[h_off..h_off + 150] };
+        fq.extend_from_slice(format!("@HET.{r}\n").as_bytes());
+        fq.extend_from_slice(s_het);
+        fq.extend_from_slice(b"\n+\n");
+        fq.extend_from_slice(&hi_qual);
+        fq.push(b'\n');
+    }
+
+    let fq_path = tmp.join("diploid.fastq");
+    let arc = tmp.join("diploid.hgs3");
+    fs::write(&fq_path, &fq).unwrap();
+
+    let opts = Hgs3CompressOptions {
+        format: OmicInputKind::Fastq,
+        emit_cds_digest: false,
+        base: CompressOptions { reference_panel: Some(pdir.clone()), threads: 2, ..Default::default() },
+    };
+    hgs3::compress_omics(&fq_path, &arc, &opts).unwrap();
+
+    // Even with min_support=2, Phred filter min_qual=10.0 must suppress Q=2 error cluster at pos1=2011!
+    let res = compute::extract_variants_vcf_with_options(&arc, Some(&pdir), None, 2, false, 2, 10.0, 0.10).unwrap();
+    let mut gts = Vec::new();
+    for line in res.vcf_text.lines() {
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let cols: Vec<&str> = line.split('\t').collect();
+        let pos1: usize = cols[1].parse().unwrap();
+        let sample = cols[9];
+        let gt = sample.split(':').next().unwrap().to_string();
+        gts.push((pos1, gt));
+    }
+    assert_eq!(gts, vec![(2001, "1/1".to_string()), (6001, "0/1".to_string())], "VCF:\n{}", res.vcf_text);
+    assert!(res.vcf_text.contains("##FORMAT=<ID=GT"), "Missing FORMAT GT header");
+
+    let _ = fs::remove_dir_all(&tmp);
+}
+
+#[test]
+fn compressed_domain_n_gap_panel_preserves_hg38_vcf_coords() {
+    let tmp = make_temp_dir("ngap_panel_vcf");
+    let pdir = tmp.join("panel");
+    fs::create_dir_all(&pdir).unwrap();
+
+    // Mimic GRCh38 chr21 telomere (10,000 Ns) + internal centromere gap (2,500 Ns)
+    let arm_dna = lcg_dna(0x4242_2026, 20_000);
+    let arm_ascii: Vec<u8> = arm_dna.iter().map(|&b| b"ACGT"[b as usize]).collect();
+    let n_telomere = vec![b'N'; 10_000];
+    let n_centro = vec![b'N'; 2_500];
+
+    let mut full_ref = Vec::with_capacity(32_500);
+    full_ref.extend_from_slice(&n_telomere);
+    full_ref.extend_from_slice(&arm_ascii[..8_000]);
+    full_ref.extend_from_slice(&n_centro);
+    full_ref.extend_from_slice(&arm_ascii[8_000..]);
+
+    let mut ref_fa = b">chr21\n".to_vec();
+    ref_fa.extend_from_slice(&full_ref);
+    ref_fa.push(b'\n');
+    fs::write(pdir.join("chr21.fa"), &ref_fa).unwrap();
+
+    let flip = |b: u8| -> u8 {
+        match b {
+            b'A' => b'G',
+            b'C' => b'T',
+            b'G' => b'A',
+            _ => b'C',
+        }
+    };
+
+    // Mutate true biological positions:
+    //   arm[1000]  -> FASTA 0-based 10,000 + 1,000 = 11,000 -> VCF 1-based 11,001
+    //   arm[12000] -> FASTA 0-based 10,000 + 8,000 + 2,500 + 4,000 = 24,500 -> VCF 1-based 24,501
+    let mut alt_full = full_ref.clone();
+    alt_full[11_000] = flip(alt_full[11_000]);
+    alt_full[24_500] = flip(alt_full[24_500]);
+
+    let mut fq = Vec::new();
+    let q150 = vec![b'I'; 150];
+    for r in 0..10usize {
+        let o1 = 10_925 + (r % 5) * 3;
+        fq.extend_from_slice(format!("@P.{r}\n").as_bytes());
+        fq.extend_from_slice(&alt_full[o1..o1 + 150]);
+        fq.extend_from_slice(b"\n+\n");
+        fq.extend_from_slice(&q150);
+        fq.push(b'\n');
+
+        let o2 = 24_425 + (r % 5) * 3;
+        fq.extend_from_slice(format!("@Q.{r}\n").as_bytes());
+        fq.extend_from_slice(&alt_full[o2..o2 + 150]);
+        fq.extend_from_slice(b"\n+\n");
+        fq.extend_from_slice(&q150);
+        fq.push(b'\n');
+
+        // Diverged paralogous repeat reads (~10% diverged) must be ignored by the <=4% divergence filter
+        let o3 = 15_000 + (r % 4) * 3;
+        let mut para = alt_full[o3..o3 + 150].to_vec();
+        for p in (25..130).step_by(9) {
+            para[p] = flip(para[p]);
+        }
+        fq.extend_from_slice(format!("@PARA.{r}\n").as_bytes());
+        fq.extend_from_slice(&para);
+        fq.extend_from_slice(b"\n+\n");
+        fq.extend_from_slice(&q150);
+        fq.push(b'\n');
+    }
+
+    let fq_path = tmp.join("ngap.fastq");
+    let arc = tmp.join("ngap.hgs3");
+    fs::write(&fq_path, &fq).unwrap();
+    hgs3::compress_omics(
+        &fq_path,
+        &arc,
+        &Hgs3CompressOptions {
+            format: OmicInputKind::Fastq,
+            emit_cds_digest: false,
+            base: CompressOptions { reference_panel: Some(pdir.clone()), threads: 2, ..Default::default() },
+        },
+    )
+    .unwrap();
+
+    let res = compute::extract_variants_vcf_with_options(&arc, Some(&pdir), None, 2, false, 2, 10.0, 0.10).unwrap();
+    assert!(res.vcf_text.contains("##contig=<ID=chr21.fa,length=32500>"), "VCF:\n{}", res.vcf_text);
+    let pos_calls: Vec<usize> = res
+        .vcf_text
+        .lines()
+        .filter(|l| !l.is_empty() && !l.starts_with('#'))
+        .map(|l| l.split('\t').nth(1).unwrap().parse::<usize>().unwrap())
+        .collect();
+    assert_eq!(pos_calls, vec![11_001, 24_501], "VCF:\n{}", res.vcf_text);
 
     let _ = fs::remove_dir_all(&tmp);
 }

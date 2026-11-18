@@ -418,18 +418,19 @@ fn append_two_bit_ascii(out: &mut String, seq: &[u8]) {
     }
 }
 
-fn crosses_fastq_read_edge(tgt_pos: u64, alt_len: u32, fixed_len: usize, read_ends: &[u64]) -> bool {
+fn crosses_fastq_read_edge(tgt_pos: u64, alt_len: u32, kind: u8, fixed_len: usize, read_ends: &[u64]) -> bool {
     let span = u64::from(alt_len.max(1));
+    let margin = if kind == 0 { 3u64 } else { 8u64 };
     if fixed_len > 0 {
         let r = fixed_len as u64;
         let r_start = (tgt_pos / r) * r;
         let r_end = r_start + r;
-        tgt_pos < r_start + 8 || tgt_pos.saturating_add(span).saturating_add(8) > r_end
+        tgt_pos < r_start + margin || tgt_pos.saturating_add(span).saturating_add(margin) > r_end
     } else if !read_ends.is_empty() {
         let idx = read_ends.partition_point(|&e| e <= tgt_pos);
         let r_start = if idx == 0 { 0 } else { read_ends[idx - 1] };
         let r_end = *read_ends.get(idx).unwrap_or(&u64::MAX);
-        tgt_pos < r_start + 8 || tgt_pos.saturating_add(span).saturating_add(8) > r_end
+        tgt_pos < r_start + margin || tgt_pos.saturating_add(span).saturating_add(margin) > r_end
     } else {
         false
     }
@@ -442,7 +443,7 @@ pub fn extract_variants_vcf(
     threads: i32,
     bounded: bool,
 ) -> Result<ExtractedVcf, String> {
-    extract_variants_vcf_with_support(archive, panel, out_vcf, threads, bounded, 1)
+    extract_variants_vcf_with_options(archive, panel, out_vcf, threads, bounded, 1, 0.0, 0.0)
 }
 
 pub fn extract_variants_vcf_with_support(
@@ -453,20 +454,85 @@ pub fn extract_variants_vcf_with_support(
     bounded: bool,
     min_support: usize,
 ) -> Result<ExtractedVcf, String> {
+    extract_variants_vcf_with_options(archive, panel, out_vcf, threads, bounded, min_support, 0.0, 0.0)
+}
+
+fn obs_base_phred(quals: &[u8], kind: u8, tgt_pos: u64, alt_len: u32) -> u64 {
+    if quals.is_empty() {
+        return 40;
+    }
+    let idx = (tgt_pos as usize).min(quals.len().saturating_sub(1));
+    if kind == 0 || alt_len <= 1 {
+        return u64::from(quals[idx].saturating_sub(33).min(60));
+    }
+    let lo = (tgt_pos as usize).min(quals.len());
+    let hi = lo.saturating_add(alt_len as usize).min(quals.len());
+    if hi <= lo {
+        return 30;
+    }
+    let sum: u64 = quals[lo..hi].iter().map(|&q| u64::from(q.saturating_sub(33).min(60))).sum();
+    sum / ((hi - lo) as u64)
+}
+
+fn score_diploid_genotype(ac: usize, dp: usize, mbq: u32, is_fastq: bool) -> (f64, u32, &'static str, f64, usize) {
+    let site_dp = dp.max(ac).max(1);
+    let af = (ac as f64 / site_dp as f64).min(1.0);
+    if !is_fastq {
+        return (40.0, 40, "1/1", af, 0);
+    }
+    let eps_alt = 10f64.powf(-(mbq as f64) / 10.0).clamp(5e-4, 0.45);
+    let eps_ref = 1e-3f64;
+    let ref_cnt = site_dp.saturating_sub(ac);
+
+    let ll_00 = (ac as f64) * eps_alt.log10() + (ref_cnt as f64) * (1.0 - eps_ref).log10();
+    let ll_01 = (site_dp as f64) * 0.5f64.log10();
+    let ll_11 = (ref_cnt as f64) * eps_ref.log10() + (ac as f64) * (1.0 - eps_alt).log10();
+    let ll_alt = ll_01.max(ll_11);
+    let qual = (10.0 * (ll_alt - ll_00)).clamp(0.0, 999.0);
+
+    let mut sorted = [ll_00, ll_01, ll_11];
+    sorted.sort_by(|a, b| b.total_cmp(a));
+    let gq = (10.0 * (sorted[0] - sorted[1])).clamp(0.0, 99.0).round() as u32;
+    let gt = if ll_11 >= ll_01 { "1/1" } else { "0/1" };
+    (qual, gq, gt, af, ref_cnt)
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn extract_variants_vcf_with_options(
+    archive: &Path,
+    panel: Option<&Path>,
+    out_vcf: Option<&Path>,
+    threads: i32,
+    bounded: bool,
+    min_support: usize,
+    min_qual: f64,
+    min_af: f64,
+) -> Result<ExtractedVcf, String> {
     use std::collections::BTreeMap;
 
     let t0 = Instant::now();
     let bytes = std::fs::read(archive).map_err(|e| e.to_string())?;
     let c = load_container(&bytes, panel, threads, bounded)?;
-    let (units, _) = inspect_all_ranks(&c, true, false)?;
-
-    let (fq_fixed, fq_ends) = if c.is_fastq && bytes.len() >= 5 && &bytes[..4] == MAGIC3 {
-        let pf = parse_hgs3_fastq(&bytes, false)?;
-        hgs3::extract_fastq_read_bounds(pf.meta_comp, pf.total_records as usize)
-            .unwrap_or((pf.read_len_hint as usize, Vec::new()))
+    let panel_gaps = if c.mode == MODE_REF && !c.panel_names.is_empty() {
+        hgs2::load_panel_gap_maps(panel, &c.panel_names)
     } else {
-        (0usize, Vec::new())
+        Vec::new()
     };
+    let (units, _) = inspect_all_ranks(&c, true, c.is_fastq)?;
+
+    let (fq_fixed, fq_ends, fq_dna, fq_quals) = if c.is_fastq && bytes.len() >= 5 && &bytes[..4] == MAGIC3 {
+        let pf = parse_hgs3_fastq(&bytes, false)?;
+        let (fx, ends) = hgs3::extract_fastq_read_bounds(pf.meta_comp, pf.total_records as usize)
+            .unwrap_or((pf.read_len_hint as usize, Vec::new()));
+        let empty_vars: &[ffi::HgsVariantRecord] = &[];
+        let vars_ref = units.first().map_or(empty_vars, |u| u.variants.as_slice());
+        let (dna, quals) = hgs3::decode_fastq_dna_and_quals_for_inspect(&pf, &c.nov_super, &c.panel_seqs, vars_ref, threads)?;
+        (fx, ends, dna, quals)
+    } else {
+        (0usize, Vec::new(), Vec::new(), Vec::new())
+    };
+
+    type AggKey = (usize, u64, Vec<u8>, Vec<u8>);
 
     struct AggCall {
         kind: u8,
@@ -477,9 +543,11 @@ pub fn extract_variants_vcf_with_support(
         is_transition: u8,
         prev_mod3: u8,
         ac: usize,
+        bq_sum: u64,
     }
 
-    let mut agg: BTreeMap<(usize, u64, Vec<u8>, Vec<u8>), AggCall> = BTreeMap::new();
+    let mut agg: BTreeMap<AggKey, AggCall> = BTreeMap::new();
+    let mut direct_vars: Vec<(u64, AggKey, u8, u32)> = Vec::new();
     let mut literal_runs_skipped = 0usize;
     let mut read_boundary_filtered = 0usize;
 
@@ -489,7 +557,11 @@ pub fn extract_variants_vcf_with_support(
                 literal_runs_skipped += 1;
                 continue;
             }
-            if c.is_fastq && v.kind != 0 && crosses_fastq_read_edge(v.tgt_pos, v.alt_len, fq_fixed, &fq_ends) {
+            // In FASTQ mode, all SNVs across panel/self/tandem spans are scanned directly against decoded reads below.
+            if c.is_fastq && v.kind == 0 {
+                continue;
+            }
+            if c.is_fastq && crosses_fastq_read_edge(v.tgt_pos, v.alt_len, v.kind, fq_fixed, &fq_ends) {
                 read_boundary_filtered += 1;
                 continue;
             }
@@ -548,9 +620,17 @@ pub fn extract_variants_vcf_with_support(
                 2 => "DEL",
                 _ => "COMPLEX",
             };
+            let bq = obs_base_phred(&fq_quals, v.kind, v.tgt_pos, v.alt_len);
+            let key = (did, pos1, fwd_ref, fwd_alt);
+            if c.is_fastq {
+                direct_vars.push((v.tgt_pos, key.clone(), v.kind, v.alt_len));
+            }
 
-            agg.entry((did, pos1, fwd_ref, fwd_alt))
-                .and_modify(|e| e.ac += 1)
+            agg.entry(key)
+                .and_modify(|e| {
+                    e.ac += 1;
+                    e.bq_sum += bq;
+                })
                 .or_insert(AggCall {
                     kind: v.kind,
                     kind_str,
@@ -560,7 +640,297 @@ pub fn extract_variants_vcf_with_support(
                     is_transition: v.is_transition,
                     prev_mod3: v.prev_mod3,
                     ac: 1,
+                    bq_sum: bq,
                 });
+        }
+    }
+
+    let mut cov_events: Vec<Vec<(u64, i32)>> = if c.is_fastq {
+        vec![Vec::new(); c.panel_seqs.len()]
+    } else {
+        Vec::new()
+    };
+    if c.is_fastq {
+        #[derive(Clone, Copy)]
+        struct TargetSeg {
+            tgt_s: u64,
+            tgt_e: u64,
+            did: usize,
+            d_s: u64,
+            d_e: u64,
+            rev: bool,
+        }
+        direct_vars.sort_unstable_by_key(|x| x.0);
+        let mut resolved_segs: Vec<TargetSeg> = Vec::new();
+        let mut resolved_vars: Vec<(u64, AggKey, u8, u32)> = Vec::with_capacity(direct_vars.len());
+        let mut dv_idx = 0usize;
+
+        for u in &units {
+            for sp in &u.spans {
+                while dv_idx < direct_vars.len() && direct_vars[dv_idx].0 < sp.tgt_pos {
+                    resolved_vars.push(direct_vars[dv_idx].clone());
+                    dv_idx += 1;
+                }
+                if sp.kind == 1 {
+                    let did = sp.donor_id as usize;
+                    if did < c.panel_seqs.len() && sp.ref_len > 0 {
+                        let dlen = c.panel_seqs[did].len() as u64;
+                        let (s, e) = if sp.strand == 0 {
+                            (sp.ref_pos.min(dlen), sp.ref_pos.saturating_add(sp.ref_len).min(dlen))
+                        } else {
+                            let end = dlen.saturating_sub(sp.ref_pos);
+                            let start = end.saturating_sub(sp.ref_len);
+                            (start, end)
+                        };
+                        if s < e {
+                            resolved_segs.push(TargetSeg {
+                                tgt_s: sp.tgt_pos,
+                                tgt_e: sp.tgt_pos.saturating_add(sp.tgt_len),
+                                did,
+                                d_s: s,
+                                d_e: e,
+                                rev: sp.strand != 0,
+                            });
+                        }
+                    }
+                    let span_end = sp.tgt_pos.saturating_add(sp.tgt_len);
+                    while dv_idx < direct_vars.len() && direct_vars[dv_idx].0 < span_end {
+                        resolved_vars.push(direct_vars[dv_idx].clone());
+                        dv_idx += 1;
+                    }
+                } else if (sp.kind == 2 || sp.kind == 3) && sp.tgt_len > 0 {
+                    let project_slice = |dst_tgt: u64,
+                                         src_lo: u64,
+                                         src_hi: u64,
+                                         rev_strand: bool,
+                                         copy_vars: bool,
+                                         resolved_segs: &mut Vec<TargetSeg>,
+                                         resolved_vars: &mut Vec<(u64, AggKey, u8, u32)>,
+                                         agg: &mut BTreeMap<AggKey, AggCall>| {
+                        if src_lo >= src_hi || src_hi > dst_tgt {
+                            return;
+                        }
+                        let mut seg_i = resolved_segs.partition_point(|sg| sg.tgt_e <= src_lo);
+                        let mut tmp_segs = Vec::new();
+                        while seg_i < resolved_segs.len() && resolved_segs[seg_i].tgt_s < src_hi {
+                            let sg = resolved_segs[seg_i];
+                            let ov_s = sg.tgt_s.max(src_lo);
+                            let ov_e = sg.tgt_e.min(src_hi);
+                            if ov_s < ov_e && sg.tgt_e - sg.tgt_s == sg.d_e - sg.d_s {
+                                let sub_len = ov_e - ov_s;
+                                let off = ov_s - sg.tgt_s;
+                                let (sub_ds, sub_de) = if !sg.rev {
+                                    (sg.d_s + off, sg.d_s + off + sub_len)
+                                } else {
+                                    (sg.d_e - off - sub_len, sg.d_e - off)
+                                };
+                                let new_ts = if !rev_strand {
+                                    dst_tgt + (ov_s - src_lo)
+                                } else {
+                                    dst_tgt + (src_hi - ov_e)
+                                };
+                                tmp_segs.push(TargetSeg {
+                                    tgt_s: new_ts,
+                                    tgt_e: new_ts + sub_len,
+                                    did: sg.did,
+                                    d_s: sub_ds,
+                                    d_e: sub_de,
+                                    rev: if !rev_strand { sg.rev } else { !sg.rev },
+                                });
+                            }
+                            seg_i += 1;
+                        }
+                        if rev_strand {
+                            tmp_segs.sort_unstable_by_key(|x| x.tgt_s);
+                        }
+                        if resolved_segs.len() + tmp_segs.len() <= 16_000_000 {
+                            resolved_segs.extend(tmp_segs);
+                        }
+
+                        if copy_vars {
+                            let mut var_i = resolved_vars.partition_point(|vr| vr.0 < src_lo);
+                            let mut tmp_vars = Vec::new();
+                            while var_i < resolved_vars.len() && resolved_vars[var_i].0 < src_hi {
+                                let (v_src_tgt, ref key, v_kind, v_alt_len) = resolved_vars[var_i];
+                                let new_tgt = if !rev_strand {
+                                    dst_tgt + (v_src_tgt - src_lo)
+                                } else {
+                                    dst_tgt + (src_hi - 1 - v_src_tgt)
+                                };
+                                if !crosses_fastq_read_edge(new_tgt, v_alt_len, v_kind, fq_fixed, &fq_ends) {
+                                    let bq = obs_base_phred(&fq_quals, v_kind, new_tgt, v_alt_len);
+                                    if let Some(call) = agg.get_mut(key) {
+                                        call.ac += 1;
+                                        call.bq_sum += bq;
+                                    }
+                                    tmp_vars.push((new_tgt, key.clone(), v_kind, v_alt_len));
+                                }
+                                var_i += 1;
+                            }
+                            if rev_strand {
+                                tmp_vars.sort_unstable_by_key(|x| x.0);
+                            }
+                            if resolved_vars.len() + tmp_vars.len() <= 16_000_000 {
+                                resolved_vars.extend(tmp_vars);
+                            }
+                        }
+                    };
+
+                    if sp.kind == 2 && sp.ref_len == sp.tgt_len {
+                        let (src_lo, src_hi) = if sp.strand == 0 {
+                            (sp.ref_pos, sp.ref_pos.saturating_add(sp.ref_len))
+                        } else {
+                            let hi = sp.tgt_pos.saturating_sub(sp.ref_pos);
+                            (hi.saturating_sub(sp.ref_len), hi)
+                        };
+                        project_slice(
+                            sp.tgt_pos,
+                            src_lo,
+                            src_hi,
+                            sp.strand != 0,
+                            sp.has_edits == 0,
+                            &mut resolved_segs,
+                            &mut resolved_vars,
+                            &mut agg,
+                        );
+                    } else if sp.kind == 3 && sp.ref_pos > 0 && sp.ref_pos <= sp.tgt_pos {
+                        let period = sp.ref_pos;
+                        let mut done = 0u64;
+                        while done < sp.tgt_len {
+                            let chunk = period.min(sp.tgt_len - done);
+                            let dst = sp.tgt_pos + done;
+                            let src_lo = dst - period;
+                            project_slice(
+                                dst,
+                                src_lo,
+                                src_lo + chunk,
+                                false,
+                                true,
+                                &mut resolved_segs,
+                                &mut resolved_vars,
+                                &mut agg,
+                            );
+                            done += chunk;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Split resolved spans along FASTQ read boundaries and drop short chimeric cross-read overhangs (< 28 bp).
+        let mut read_segs: Vec<TargetSeg> = Vec::with_capacity(resolved_segs.len());
+        let read_bounds = |pos: u64| -> (u64, u64) {
+            if fq_fixed > 0 {
+                let r = fq_fixed as u64;
+                let rs = (pos / r) * r;
+                (rs, rs + r)
+            } else if !fq_ends.is_empty() {
+                let idx = fq_ends.partition_point(|&e| e <= pos);
+                let rs = if idx == 0 { 0 } else { fq_ends[idx - 1] };
+                let re = *fq_ends.get(idx).unwrap_or(&u64::MAX);
+                (rs, re)
+            } else {
+                (0, u64::MAX)
+            }
+        };
+        for sg in resolved_segs {
+            if sg.tgt_e <= sg.tgt_s || sg.tgt_e - sg.tgt_s != sg.d_e - sg.d_s {
+                continue;
+            }
+            let mut cur = sg.tgt_s;
+            while cur < sg.tgt_e {
+                let (rs, re) = read_bounds(cur);
+                let sub_e = sg.tgt_e.min(re);
+                let sub_len = sub_e.saturating_sub(cur);
+                let min_anchor = (re.saturating_sub(rs) / 2).clamp(24, 120);
+                if sub_len >= min_anchor {
+                    let off = cur - sg.tgt_s;
+                    let (sub_ds, sub_de) = if !sg.rev {
+                        (sg.d_s + off, sg.d_s + off + sub_len)
+                    } else {
+                        (sg.d_e - off - sub_len, sg.d_e - off)
+                    };
+                    read_segs.push(TargetSeg {
+                        tgt_s: cur,
+                        tgt_e: sub_e,
+                        did: sg.did,
+                        d_s: sub_ds,
+                        d_e: sub_de,
+                        rev: sg.rev,
+                    });
+                }
+                if sub_e == sg.tgt_e {
+                    break;
+                }
+                cur = sub_e;
+            }
+        }
+        // Exhaustively scan all clipped intra-read FASTQ segments (panel + self + tandem) for SNVs,
+        // rejecting multi-copy paralogous repeat alignments exceeding 4% divergence before counting DP.
+        for sg in &read_segs {
+            let t_lo = sg.tgt_s as usize;
+            let t_hi = sg.tgt_e as usize;
+            let d_lo = sg.d_s as usize;
+            let d_hi = sg.d_e as usize;
+            let donor = &c.panel_seqs[sg.did];
+            if t_hi > fq_dna.len() || d_hi > donor.len() || t_hi - t_lo != d_hi - d_lo {
+                continue;
+            }
+            let tslice = &fq_dna[t_lo..t_hi];
+            let strand_u8 = u8::from(sg.rev);
+            let mut local_mm: Vec<(u64, u64, u8, u8, u64)> = Vec::new();
+            let max_mm = (tslice.len() / 25).max(3);
+            for (off, &tb_raw) in tslice.iter().enumerate() {
+                let dpos = if !sg.rev { d_lo + off } else { d_hi - 1 - off };
+                let rb = donor[dpos] & 3;
+                let tb = (if !sg.rev { tb_raw } else { tb_raw ^ 3 }) & 3;
+                if tb == rb {
+                    continue;
+                }
+                let tpos = sg.tgt_s + (off as u64);
+                let bq = obs_base_phred(&fq_quals, 0, tpos, 1);
+                if min_qual > 0.0 && bq < 10 {
+                    continue;
+                }
+                if crosses_fastq_read_edge(tpos, 1, 0, fq_fixed, &fq_ends) {
+                    read_boundary_filtered += 1;
+                    continue;
+                }
+                local_mm.push((dpos as u64, tpos, rb, tb, bq));
+                if local_mm.len() > max_mm {
+                    break;
+                }
+            }
+            if local_mm.len() > max_mm {
+                continue;
+            }
+            cov_events[sg.did].push((sg.d_s, 1));
+            cov_events[sg.did].push((sg.d_e, -1));
+            let mut prev_pos0 = u64::MAX;
+            for (pos0, tpos, rb, tb, bq) in local_mm {
+                let prev_mod3 = u8::from(prev_pos0 != u64::MAX && pos0.abs_diff(prev_pos0) % 3 == 0);
+                prev_pos0 = pos0;
+                let is_ti = u8::from((rb ^ tb) == 2);
+                agg.entry((sg.did, pos0 + 1, vec![rb], vec![tb]))
+                    .and_modify(|e| {
+                        e.ac += 1;
+                        e.bq_sum += bq;
+                    })
+                    .or_insert(AggCall {
+                        kind: 0,
+                        kind_str: "SNV",
+                        tgt_pos: tpos,
+                        unit_index: 0,
+                        strand: strand_u8,
+                        is_transition: is_ti,
+                        prev_mod3,
+                        ac: 1,
+                        bq_sum: bq,
+                    });
+            }
+        }
+        for evs in &mut cov_events {
+            evs.sort_unstable_by_key(|x| x.0);
         }
     }
 
@@ -574,11 +944,21 @@ pub fn extract_variants_vcf_with_support(
     vcf.push_str("##INFO=<ID=TI,Number=1,Type=Integer,Description=\"1 if transition SNP else 0\">\n");
     vcf.push_str("##INFO=<ID=MOD3,Number=1,Type=Integer,Description=\"1 if SNP step % 3 == 0 codon-wobble spaced\">\n");
     vcf.push_str("##INFO=<ID=AC,Number=1,Type=Integer,Description=\"Supporting allele observations across units/reads\">\n");
+    vcf.push_str("##INFO=<ID=DP,Number=1,Type=Integer,Description=\"Compressed-domain mosaic span coverage depth\">\n");
+    vcf.push_str("##INFO=<ID=AF,Number=1,Type=Float,Description=\"Alternate allele fraction AC/DP\">\n");
+    vcf.push_str("##INFO=<ID=MBQ,Number=1,Type=Integer,Description=\"Mean base Phred quality of supporting observations\">\n");
+    vcf.push_str("##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Diploid genotype from compressed-domain binomial likelihood\">\n");
+    vcf.push_str("##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Read coverage depth\">\n");
+    vcf.push_str("##FORMAT=<ID=AD,Number=R,Type=Integer,Description=\"Allelic depths (ref,alt)\">\n");
+    vcf.push_str("##FORMAT=<ID=AF,Number=1,Type=Float,Description=\"Alternate allele fraction\">\n");
+    vcf.push_str("##FORMAT=<ID=GQ,Number=1,Type=Integer,Description=\"Genotype quality (Phred)\">\n");
+    vcf.push_str("##FORMAT=<ID=MBQ,Number=1,Type=Integer,Description=\"Mean base quality (Phred)\">\n");
     for (i, dname) in c.panel_names.iter().enumerate() {
-        let dlen = c.panel_seqs.get(i).map_or(0, |v| v.len());
+        let two_bit_len = c.panel_seqs.get(i).map_or(0, |v| v.len());
+        let dlen = panel_gaps.get(i).map_or(two_bit_len, |gm| (gm.fasta_len as usize).max(two_bit_len));
         vcf.push_str(&format!("##contig=<ID={dname},length={dlen}>\n"));
     }
-    vcf.push_str("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n");
+    vcf.push_str("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tEIMDL_SAMPLE\n");
 
     let min_sup = min_support.max(1);
     let mut total_variants = 0usize;
@@ -587,8 +967,32 @@ pub fn extract_variants_vcf_with_support(
     let mut deletions = 0usize;
     let mut complex_indels = 0usize;
 
+    let mut active_did = usize::MAX;
+    let mut ev_idx = 0usize;
+    let mut cur_dp = 0i64;
+
     for ((did, pos1, fwd_ref, fwd_alt), call) in agg {
-        if call.ac < min_sup {
+        let dp = if c.is_fastq && did < cov_events.len() {
+            if did != active_did {
+                active_did = did;
+                ev_idx = 0;
+                cur_dp = 0;
+            }
+            let pos0 = pos1.saturating_sub(1);
+            let evs = &cov_events[did];
+            while ev_idx < evs.len() && evs[ev_idx].0 <= pos0 {
+                cur_dp += i64::from(evs[ev_idx].1);
+                ev_idx += 1;
+            }
+            usize::try_from(cur_dp.max(0)).unwrap_or(0)
+        } else {
+            1usize
+        };
+
+        let mbq = (call.bq_sum / call.ac as u64).min(60) as u32;
+        let (qual, gq, gt, af, ref_cnt) = score_diploid_genotype(call.ac, dp, mbq, c.is_fastq);
+
+        if call.ac < min_sup || qual < min_qual || af < min_af {
             continue;
         }
         match call.kind {
@@ -599,15 +1003,19 @@ pub fn extract_variants_vcf_with_support(
         }
         total_variants += 1;
         let chrom = &c.panel_names[did];
+        let out_pos1 = panel_gaps
+            .get(did)
+            .map_or(pos1, |gm| gm.to_fasta_pos0(pos1.saturating_sub(1)) + 1);
         let mut ref_str = String::with_capacity(fwd_ref.len());
         let mut alt_str = String::with_capacity(fwd_alt.len());
         append_two_bit_ascii(&mut ref_str, &fwd_ref);
         append_two_bit_ascii(&mut alt_str, &fwd_alt);
         let strand_ch = if call.strand == 0 { '+' } else { '-' };
+        let site_dp = dp.max(call.ac);
 
         vcf.push_str(&format!(
-            "{chrom}\t{pos1}\t.\t{ref_str}\t{alt_str}\t.\tPASS\tTGT_POS={};UNIT={};STRAND={strand_ch};TYPE={};TI={};MOD3={};AC={}\n",
-            call.tgt_pos, call.unit_index, call.kind_str, call.is_transition, call.prev_mod3, call.ac
+            "{chrom}\t{out_pos1}\t.\t{ref_str}\t{alt_str}\t{qual:.1}\tPASS\tTGT_POS={};UNIT={};STRAND={strand_ch};TYPE={};TI={};MOD3={};AC={};DP={site_dp};AF={af:.4};MBQ={mbq}\tGT:DP:AD:AF:GQ:MBQ\t{gt}:{site_dp}:{ref_cnt},{}:{af:.4}:{gq}:{mbq}\n",
+            call.tgt_pos, call.unit_index, call.kind_str, call.is_transition, call.prev_mod3, call.ac, call.ac
         ));
     }
 

@@ -365,12 +365,69 @@ pub(crate) fn load_panel_for_compress(opts: &CompressOptions) -> Result<LoadedPa
     Ok(LoadedPanel { names, seqs, manifest_sha256, total_bases })
 }
 
-pub(crate) fn verify_and_load_panel_for_decode(
-    panel_path: Option<&Path>,
-    expected_names: &[String],
-    expected_sha: &[u8; 32],
-) -> Result<Vec<Vec<u8>>, String> {
-    let pp = panel_path.ok_or("Mode R archive requires --panel / --ref path to decode")?;
+pub(crate) struct GapCoordMap {
+    pub fasta_len: u64,
+    pub runs: Vec<(u64, u64)>,
+}
+
+impl GapCoordMap {
+    pub(crate) fn to_fasta_pos0(&self, two_bit_pos0: u64) -> u64 {
+        if self.runs.is_empty() {
+            return two_bit_pos0;
+        }
+        let idx = self.runs.partition_point(|&(tb, _)| tb <= two_bit_pos0);
+        let skipped = if idx == 0 { 0 } else { self.runs[idx - 1].1 };
+        two_bit_pos0.saturating_add(skipped)
+    }
+}
+
+fn scan_fasta_gap_map(path: &Path) -> Result<GapCoordMap, String> {
+    let mut f = File::open(path).map_err(|e| e.to_string())?;
+    let mut reader = BufReader::with_capacity(65536, &mut f);
+    let mut buf = [0u8; 65536];
+    let mut runs = Vec::new();
+    let mut tb_pos = 0u64;
+    let mut skipped = 0u64;
+    let mut in_gap = false;
+    let mut in_hdr = false;
+    let mut at_line_start = true;
+    loop {
+        let n = reader.read(&mut buf).map_err(|e| e.to_string())?;
+        if n == 0 { break; }
+        for &b in &buf[..n] {
+            if in_hdr {
+                if b == b'\n' {
+                    in_hdr = false;
+                    at_line_start = true;
+                }
+                continue;
+            }
+            if b == b'>' && at_line_start {
+                in_hdr = true;
+                at_line_start = false;
+                continue;
+            }
+            at_line_start = b == b'\n' || b == b'\r';
+            match b {
+                b'A' | b'a' | b'C' | b'c' | b'G' | b'g' | b'T' | b't' | b'U' | b'u' => {
+                    if in_gap {
+                        runs.push((tb_pos, skipped));
+                        in_gap = false;
+                    }
+                    tb_pos += 1;
+                }
+                b if b.is_ascii_alphabetic() => {
+                    skipped += 1;
+                    in_gap = true;
+                }
+                _ => {}
+            }
+        }
+    }
+    Ok(GapCoordMap { fasta_len: tb_pos + skipped, runs })
+}
+
+fn resolve_panel_files(pp: &Path, expected_names: &[String]) -> Result<Vec<PathBuf>, String> {
     let mut files = Vec::with_capacity(expected_names.len());
     if pp.is_file() {
         let got_name = pp.file_name().and_then(|n| n.to_str()).unwrap_or("");
@@ -389,6 +446,22 @@ pub(crate) fn verify_and_load_panel_for_decode(
     } else {
         return Err("Reference panel path not found".into());
     }
+    Ok(files)
+}
+
+pub(crate) fn load_panel_gap_maps(panel_path: Option<&Path>, expected_names: &[String]) -> Vec<GapCoordMap> {
+    let Some(pp) = panel_path else { return Vec::new(); };
+    let Ok(files) = resolve_panel_files(pp, expected_names) else { return Vec::new(); };
+    files.into_iter().map(|p| scan_fasta_gap_map(&p).unwrap_or(GapCoordMap { fasta_len: 0, runs: Vec::new() })).collect()
+}
+
+pub(crate) fn verify_and_load_panel_for_decode(
+    panel_path: Option<&Path>,
+    expected_names: &[String],
+    expected_sha: &[u8; 32],
+) -> Result<Vec<Vec<u8>>, String> {
+    let pp = panel_path.ok_or("Mode R archive requires --panel / --ref path to decode")?;
+    let files = resolve_panel_files(pp, expected_names)?;
 
     let mut seqs = Vec::with_capacity(files.len());
     let mut hashes = Vec::with_capacity(files.len());
