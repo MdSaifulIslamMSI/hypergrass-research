@@ -259,6 +259,7 @@ fn run_variants(args: &[String]) -> Result<(), String> {
     let mut out_vcf: Option<PathBuf> = None;
     let mut json = false;
     let mut bounded = false;
+    let mut min_support: usize = 1;
     let mut threads = std::thread::available_parallelism().map_or(4, |n| n.get() as i32);
 
     let mut i = 0;
@@ -269,17 +270,18 @@ fn run_variants(args: &[String]) -> Result<(), String> {
             "--out" | "--output" => out_vcf = Some(PathBuf::from(next_val(args, &mut i, "--out")?)),
             "--json" => json = true,
             "--bounded" => bounded = true,
+            "--min-support" => { min_support = next_val(args, &mut i, "--min-support")?.parse::<usize>().map_err(|_| "Invalid --min-support".to_string())?.max(1); }
             "--threads" => { threads = next_val(args, &mut i, "--threads")?.parse::<i32>().map_err(|_| "Invalid --threads".to_string())?.max(1); }
             other => return Err(format!("Unknown variants option: {other}")),
         }
         i += 1;
     }
     let arc = archive.ok_or("variants requires --archive <path>")?;
-    let res = compute::extract_variants_vcf(&arc, panel.as_deref(), out_vcf.as_deref(), threads, bounded)?;
+    let res = compute::extract_variants_vcf_with_support(&arc, panel.as_deref(), out_vcf.as_deref(), threads, bounded, min_support)?;
     if json {
         println!(
-            "{{\"total_variants\":{},\"snvs\":{},\"insertions\":{},\"deletions\":{},\"complex_indels\":{},\"literal_runs_skipped\":{},\"elapsed_seconds\":{:.6}}}",
-            res.total_variants, res.snvs, res.insertions, res.deletions, res.complex_indels, res.literal_runs_skipped, res.seconds
+            "{{\"total_variants\":{},\"snvs\":{},\"insertions\":{},\"deletions\":{},\"complex_indels\":{},\"literal_runs_skipped\":{},\"read_boundary_filtered\":{},\"min_support\":{},\"elapsed_seconds\":{:.6}}}",
+            res.total_variants, res.snvs, res.insertions, res.deletions, res.complex_indels, res.literal_runs_skipped, res.read_boundary_filtered, min_support, res.seconds
         );
     } else if out_vcf.is_some() {
         println!(

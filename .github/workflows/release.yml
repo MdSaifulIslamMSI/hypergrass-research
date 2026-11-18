@@ -130,6 +130,7 @@ jobs:
             "${ARCHIVE_REF}"
           cp paper/EIMDL_Main_Manuscript.pdf "${OUT}/EIMDL_Main_Manuscript.pdf"
           cp paper/HGS2_EIMDL_Research_Paper.pdf "${OUT}/HGS2_EIMDL_Research_Paper.pdf"
+          cp paper/EIMDL_Lean4_Paper.pdf "${OUT}/EIMDL_Lean4_Paper.pdf"
           cp paper/figures/fig8_kaggle_world_shootout_and_human.png "${OUT}/fig8_kaggle_world_shootout_and_human.png"
           cp paper/figures/fig9_nextgen_eimdl_v3_paradigm.png "${OUT}/fig9_nextgen_eimdl_v3_paradigm.png"
           cp paper/figures/arch5_eimdl_v3_paradigm.png "${OUT}/arch5_eimdl_v3_paradigm.png"
@@ -141,6 +142,7 @@ jobs:
               "hypergrass-eimdl-${TAG}-macos-arm64" \
               "EIMDL_Main_Manuscript.pdf" \
               "HGS2_EIMDL_Research_Paper.pdf" \
+              "EIMDL_Lean4_Paper.pdf" \
               "fig8_kaggle_world_shootout_and_human.png" \
               "fig9_nextgen_eimdl_v3_paradigm.png" \
               "arch5_eimdl_v3_paradigm.png" \

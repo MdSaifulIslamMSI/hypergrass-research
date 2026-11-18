@@ -150,6 +150,7 @@ jobs:
               assert km_n["hit_count"] == km_j["hit_count"] >= 1
               print("PASS: Bidirectional Java<->Native C23/C++23/Rust 2024 HGS2+HGS3 parity verified.")
           PY
+          python3 benchmarks/hprc_giab/test_hprc_giab_smoke.py
 
       - name: Verify Bioconda offline packaging recipe (build.sh + run_test.sh)
         if: matrix.java == '25' && runner.os == 'Linux'

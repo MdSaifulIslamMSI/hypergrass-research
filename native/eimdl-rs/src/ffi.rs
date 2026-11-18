@@ -186,6 +186,43 @@ unsafe extern "C" {
         out_buf: *mut *mut u8,
         out_len: *mut usize,
     ) -> i32;
+    fn hgs_ans_qual_bwt_block_cap() -> usize;
+    fn hgs_ans_qual_bwt_peek_block_len(block_payload: *const u8, avail: usize) -> usize;
+    fn hgs_ans_qual_bwt_encode_block(
+        blk: *const u8,
+        bn: usize,
+        out_buf: *mut *mut u8,
+        out_len: *mut usize,
+    ) -> i32;
+    fn hgs_ans_qual_bwt_decode_block(
+        block_payload: *const u8,
+        block_avail: usize,
+        expected_bn: usize,
+        out_consumed: *mut usize,
+        out_blk: *mut u8,
+    ) -> i32;
+    fn hgs_ans4_encode_qual_ctx_lane(
+        quals_raw: *const u8,
+        mismatch_mask: *const u8,
+        homo_bins: *const u8,
+        total_len: usize,
+        read_len_hint: u32,
+        lane: usize,
+        out_state: *mut u32,
+        out_fwd_buf: *mut *mut u8,
+        out_fwd_len: *mut usize,
+    ) -> i32;
+    fn hgs_ans4_decode_qual_ctx_lane(
+        lane_payload: *const u8,
+        lane_payload_len: usize,
+        init_state: u32,
+        mismatch_mask: *const u8,
+        homo_bins: *const u8,
+        total_len: usize,
+        read_len_hint: u32,
+        lane: usize,
+        out_lane_buf: *mut u8,
+    ) -> i32;
 
     // C++23 Compressed-Domain Mosaic Inspector & Parallel rANS Novelty Wrapper
     fn hgs_cpp_free_inspect_result(res: *mut HgsMosaicInspectResult);
@@ -684,4 +721,350 @@ pub fn ans4_decode_qual(
         return Err("hgs_ans4_decode_qual failed");
     }
     Ok(take_ans_bytes(ptr, len))
+}
+
+enum QualEncOut {
+    Bwt(Vec<u8>),
+    Ctx(u32, Vec<u8>),
+}
+
+pub fn ans4_encode_qual_mt(
+    quals_raw: &[u8],
+    mismatch_mask: &[u8],
+    homo_bins: &[u8],
+    read_len_hint: u32,
+    threads: i32,
+) -> Result<Vec<u8>, &'static str> {
+    if quals_raw.len() != mismatch_mask.len() || quals_raw.len() != homo_bins.len() {
+        return Err("quality conditioning array length mismatch");
+    }
+    if threads <= 1 || quals_raw.len() < 4096 {
+        return ans4_encode_qual(quals_raw, mismatch_mask, homo_bins, read_len_hint);
+    }
+
+    let n1: usize = mismatch_mask.iter().map(|&m| (m & 1) as usize).sum();
+    let n0 = quals_raw.len() - n1;
+    let split = n0 >= 16 && n1 >= 16;
+
+    let mut s0 = Vec::new();
+    let mut s1 = Vec::new();
+    if split {
+        s0.reserve_exact(n0);
+        s1.reserve_exact(n1);
+        for (&q, &m) in quals_raw.iter().zip(mismatch_mask.iter()) {
+            if (m & 1) != 0 {
+                s1.push(q);
+            } else {
+                s0.push(q);
+            }
+        }
+    }
+
+    let blk_cap = unsafe { hgs_ans_qual_bwt_block_cap() }.max(1);
+    let mut bwt_chunks: Vec<&[u8]> = Vec::new();
+    if split {
+        bwt_chunks.extend(s0.chunks(blk_cap));
+        bwt_chunks.extend(s1.chunks(blk_cap));
+    } else {
+        bwt_chunks.extend(quals_raw.chunks(blk_cap));
+    }
+
+    let nbwt = bwt_chunks.len();
+    let total_jobs = nbwt + 4;
+
+    let mut bwt_done: Vec<Option<Vec<u8>>> = vec![None; nbwt];
+    let mut ctx_done: Vec<Option<(u32, Vec<u8>)>> = vec![None; 4];
+
+    let n_workers = (threads as usize).clamp(1, total_jobs);
+    let next_idx = std::sync::atomic::AtomicUsize::new(0);
+    std::thread::scope(|sc| {
+        let mut handles = Vec::with_capacity(n_workers);
+        for _ in 0..n_workers {
+            handles.push(sc.spawn(|| -> Result<Vec<(usize, QualEncOut)>, &'static str> {
+                let mut local = Vec::new();
+                loop {
+                    let j = next_idx.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                    if j >= total_jobs {
+                        break;
+                    }
+                    if j < nbwt {
+                        let ch = bwt_chunks[j];
+                        let mut ptr = ptr::null_mut();
+                        let mut len = 0usize;
+                        let rc = unsafe {
+                            hgs_ans_qual_bwt_encode_block(ch.as_ptr(), ch.len(), &mut ptr, &mut len)
+                        };
+                        if rc != 0 {
+                            return Err("hgs_ans_qual_bwt_encode_block failed");
+                        }
+                        local.push((j, QualEncOut::Bwt(take_ans_bytes(ptr, len))));
+                    } else {
+                        let lane = j - nbwt;
+                        let mut st = 0u32;
+                        let mut ptr = ptr::null_mut();
+                        let mut len = 0usize;
+                        let rc = unsafe {
+                            hgs_ans4_encode_qual_ctx_lane(
+                                quals_raw.as_ptr(),
+                                mismatch_mask.as_ptr(),
+                                homo_bins.as_ptr(),
+                                quals_raw.len(),
+                                read_len_hint,
+                                lane,
+                                &mut st,
+                                &mut ptr,
+                                &mut len,
+                            )
+                        };
+                        if rc != 0 {
+                            return Err("hgs_ans4_encode_qual_ctx_lane failed");
+                        }
+                        local.push((j, QualEncOut::Ctx(st, take_ans_bytes(ptr, len))));
+                    }
+                }
+                Ok(local)
+            }));
+        }
+        for h in handles {
+            let chunk_res = h.join().map_err(|_| "ans4_encode_qual_mt worker panicked")??;
+            for (idx, item) in chunk_res {
+                match item {
+                    QualEncOut::Bwt(v) => bwt_done[idx] = Some(v),
+                    QualEncOut::Ctx(st, v) => ctx_done[idx - nbwt] = Some((st, v)),
+                }
+            }
+        }
+        Ok::<(), &'static str>(())
+    })?;
+
+    let mut bwt_len = 2usize;
+    for b in &bwt_done {
+        bwt_len = bwt_len.saturating_add(b.as_ref().ok_or("missing BWT block")?.len());
+    }
+    let raw_len = 1usize + quals_raw.len();
+    let mut ctx_len = 33usize;
+    for c in &ctx_done {
+        ctx_len = ctx_len.saturating_add(c.as_ref().ok_or("missing CTX lane")?.1.len());
+    }
+
+    if bwt_len < ctx_len && bwt_len < raw_len {
+        let mut out = Vec::with_capacity(bwt_len);
+        out.push(4u8);
+        out.push(u8::from(split));
+        for b in bwt_done.into_iter().flatten() {
+            out.extend_from_slice(&b);
+        }
+        return Ok(out);
+    }
+    if ctx_len < raw_len {
+        let mut out = Vec::with_capacity(ctx_len);
+        out.push(3u8);
+        for c in &ctx_done {
+            let st = c.as_ref().ok_or("missing CTX state")?.0;
+            out.extend_from_slice(&st.to_le_bytes());
+        }
+        for c in &ctx_done {
+            let fl = c.as_ref().ok_or("missing CTX len")?.1.len() as u32;
+            out.extend_from_slice(&fl.to_le_bytes());
+        }
+        for (_, buf) in ctx_done.into_iter().flatten() {
+            out.extend_from_slice(&buf);
+        }
+        return Ok(out);
+    }
+    let mut out = Vec::with_capacity(raw_len);
+    out.push(2u8);
+    out.extend_from_slice(quals_raw);
+    Ok(out)
+}
+
+pub fn ans4_decode_qual_mt(
+    payload: &[u8],
+    mismatch_mask: &[u8],
+    homo_bins: &[u8],
+    expected_len: usize,
+    read_len_hint: u32,
+    threads: i32,
+) -> Result<Vec<u8>, &'static str> {
+    if mismatch_mask.len() != expected_len || homo_bins.len() != expected_len {
+        return Err("quality decode mask length mismatch");
+    }
+    if threads <= 1 || expected_len < 4096 || payload.is_empty() {
+        return ans4_decode_qual(payload, mismatch_mask, homo_bins, expected_len, read_len_hint);
+    }
+
+    match payload[0] {
+        2 => {
+            if payload.len() < 1 + expected_len {
+                return Err("hgs_ans4_decode_qual raw truncated");
+            }
+            Ok(payload[1..1 + expected_len].to_vec())
+        }
+        4 => {
+            if payload.len() < 2 {
+                return Err("hgs_ans4_decode_qual BWT truncated");
+            }
+            let split = payload[1] != 0;
+            let blk_cap = unsafe { hgs_ans_qual_bwt_block_cap() }.max(1);
+            let mut pos = 2usize;
+
+            let decode_chunks = |jobs: Vec<(&[u8], &mut [u8])>| -> Result<(), &'static str> {
+                if jobs.is_empty() {
+                    return Ok(());
+                }
+                let nw = (threads as usize).clamp(1, jobs.len());
+                let iter_lock = std::sync::Mutex::new(jobs.into_iter());
+                std::thread::scope(|sc| {
+                    let mut handles = Vec::with_capacity(nw);
+                    for _ in 0..nw {
+                        handles.push(sc.spawn(|| -> Result<(), &'static str> {
+                            loop {
+                                let next = { iter_lock.lock().map_err(|_| "lock poisoned")?.next() };
+                                let Some((in_sl, out_sl)) = next else { break };
+                                let mut cons = 0usize;
+                                let rc = unsafe {
+                                    hgs_ans_qual_bwt_decode_block(
+                                        in_sl.as_ptr(),
+                                        in_sl.len(),
+                                        out_sl.len(),
+                                        &mut cons,
+                                        out_sl.as_mut_ptr(),
+                                    )
+                                };
+                                if rc != 0 || cons != in_sl.len() {
+                                    return Err("hgs_ans_qual_bwt_decode_block failed");
+                                }
+                            }
+                            Ok(())
+                        }));
+                    }
+                    for h in handles {
+                        h.join().map_err(|_| "ans4_decode_qual_mt worker panicked")??;
+                    }
+                    Ok(())
+                })
+            };
+
+            if !split {
+                let mut out = vec![0u8; expected_len];
+                let mut jobs = Vec::new();
+                for ch in out.chunks_mut(blk_cap) {
+                    let blen = unsafe { hgs_ans_qual_bwt_peek_block_len(payload[pos..].as_ptr(), payload.len() - pos) };
+                    if blen == 0 || pos + blen > payload.len() {
+                        return Err("invalid BWT quality block length");
+                    }
+                    jobs.push((&payload[pos..pos + blen], ch));
+                    pos += blen;
+                }
+                if pos != payload.len() {
+                    return Err("trailing bytes in BWT quality payload");
+                }
+                decode_chunks(jobs)?;
+                Ok(out)
+            } else {
+                let n1: usize = mismatch_mask.iter().map(|&m| (m & 1) as usize).sum();
+                let n0 = expected_len - n1;
+                let mut s0 = vec![0u8; n0];
+                let mut s1 = vec![0u8; n1];
+                let mut jobs = Vec::new();
+                for ch in s0.chunks_mut(blk_cap) {
+                    let blen = unsafe { hgs_ans_qual_bwt_peek_block_len(payload[pos..].as_ptr(), payload.len() - pos) };
+                    if blen == 0 || pos + blen > payload.len() {
+                        return Err("invalid BWT quality s0 block length");
+                    }
+                    jobs.push((&payload[pos..pos + blen], ch));
+                    pos += blen;
+                }
+                for ch in s1.chunks_mut(blk_cap) {
+                    let blen = unsafe { hgs_ans_qual_bwt_peek_block_len(payload[pos..].as_ptr(), payload.len() - pos) };
+                    if blen == 0 || pos + blen > payload.len() {
+                        return Err("invalid BWT quality s1 block length");
+                    }
+                    jobs.push((&payload[pos..pos + blen], ch));
+                    pos += blen;
+                }
+                if pos != payload.len() {
+                    return Err("trailing bytes in split BWT quality payload");
+                }
+                decode_chunks(jobs)?;
+                let mut out = Vec::with_capacity(expected_len);
+                let mut i0 = 0usize;
+                let mut i1 = 0usize;
+                for &m in mismatch_mask {
+                    if (m & 1) != 0 {
+                        out.push(s1[i1]);
+                        i1 += 1;
+                    } else {
+                        out.push(s0[i0]);
+                        i0 += 1;
+                    }
+                }
+                Ok(out)
+            }
+        }
+        3 => {
+            if payload.len() < 33 {
+                return Err("hgs_ans4_decode_qual ctx truncated");
+            }
+            let mut states = [0u32; 4];
+            let mut blens = [0usize; 4];
+            for l in 0..4 {
+                states[l] = u32::from_le_bytes(payload[1 + l * 4..5 + l * 4].try_into().unwrap());
+                blens[l] = u32::from_le_bytes(payload[17 + l * 4..21 + l * 4].try_into().unwrap()) as usize;
+            }
+            let mut pos = 33usize;
+            let mut in_lanes: [&[u8]; 4] = [&[]; 4];
+            for l in 0..4 {
+                if pos + blens[l] > payload.len() {
+                    return Err("hgs_ans4_decode_qual lane out of bounds");
+                }
+                in_lanes[l] = &payload[pos..pos + blens[l]];
+                pos += blens[l];
+            }
+            let base_q = expected_len >> 2;
+            let rem = expected_len & 3;
+            let ll0 = base_q + usize::from(0 < rem);
+            let ll1 = base_q + usize::from(1 < rem);
+            let ll2 = base_q + usize::from(2 < rem);
+
+            let mut out = vec![0u8; expected_len];
+            let (o0, r1) = out.split_at_mut(ll0);
+            let (o1, r2) = r1.split_at_mut(ll1);
+            let (o2, o3) = r2.split_at_mut(ll2);
+            let out_lanes: [(usize, &mut [u8]); 4] = [(0, o0), (1, o1), (2, o2), (3, o3)];
+
+            std::thread::scope(|sc| {
+                let mut handles = Vec::with_capacity(4);
+                for (lane, out_buf) in out_lanes {
+                    let inp = in_lanes[lane];
+                    let st = states[lane];
+                    handles.push(sc.spawn(move || -> Result<(), &'static str> {
+                        let rc = unsafe {
+                            hgs_ans4_decode_qual_ctx_lane(
+                                inp.as_ptr(),
+                                inp.len(),
+                                st,
+                                mismatch_mask.as_ptr(),
+                                homo_bins.as_ptr(),
+                                expected_len,
+                                read_len_hint,
+                                lane,
+                                out_buf.as_mut_ptr(),
+                            )
+                        };
+                        if rc != 0 {
+                            return Err("hgs_ans4_decode_qual_ctx_lane failed");
+                        }
+                        Ok(())
+                    }));
+                }
+                for h in handles {
+                    h.join().map_err(|_| "ans4 ctx decode panicked")??;
+                }
+                Ok::<(), &'static str>(())
+            })?;
+            Ok(out)
+        }
+        _ => ans4_decode_qual(payload, mismatch_mask, homo_bins, expected_len, read_len_hint),
+    }
 }

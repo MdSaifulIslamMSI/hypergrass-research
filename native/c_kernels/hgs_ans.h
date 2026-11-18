@@ -76,6 +76,45 @@ HGS_ANS_NODISCARD int hgs_ans4_decode_qual(
     uint8_t** out_buf,
     size_t* out_len);
 
+/** Parallel block/lane building blocks for multi-threaded Rust/C quality compression & decoding. */
+size_t hgs_ans_qual_bwt_block_cap(void);
+size_t hgs_ans_qual_bwt_peek_block_len(const uint8_t* block_payload, size_t avail);
+
+HGS_ANS_NODISCARD int hgs_ans_qual_bwt_encode_block(
+    const uint8_t* blk,
+    size_t bn,
+    uint8_t** out_buf,
+    size_t* out_len);
+
+HGS_ANS_NODISCARD int hgs_ans_qual_bwt_decode_block(
+    const uint8_t* block_payload,
+    size_t block_avail,
+    size_t expected_bn,
+    size_t* out_consumed,
+    uint8_t* out_blk);
+
+HGS_ANS_NODISCARD int hgs_ans4_encode_qual_ctx_lane(
+    const uint8_t* quals_raw,
+    const uint8_t* mismatch_mask,
+    const uint8_t* homo_bins,
+    size_t total_len,
+    uint32_t read_len_hint,
+    size_t lane,
+    uint32_t* out_state,
+    uint8_t** out_fwd_buf,
+    size_t* out_fwd_len);
+
+HGS_ANS_NODISCARD int hgs_ans4_decode_qual_ctx_lane(
+    const uint8_t* lane_payload,
+    size_t lane_payload_len,
+    uint32_t init_state,
+    const uint8_t* mismatch_mask,
+    const uint8_t* homo_bins,
+    size_t total_len,
+    uint32_t read_len_hint,
+    size_t lane,
+    uint8_t* out_lane_buf);
+
 #ifdef __cplusplus
 }
 #endif

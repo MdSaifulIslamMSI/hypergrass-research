@@ -456,3 +456,126 @@ fn compressed_domain_analyze_variants_kmer_and_query() {
 
     let _ = fs::remove_dir_all(&tmp);
 }
+
+#[test]
+fn ans4_qual_mt_matches_1t_exact_and_large_bwt() {
+    let n = 350_000usize;
+    let dna = lcg_dna(0x98765432, n);
+    let homo = ffi::compute_homo_bins(&dna);
+    let mut mm = vec![0u8; n];
+    let mut quals = vec![b'I'; n];
+    for (i, q) in quals.iter_mut().enumerate() {
+        let cyc = i % 150;
+        if i % 97 == 0 {
+            mm[i] = 1;
+            *q = b'#';
+        } else if cyc > 125 {
+            *q = b'?';
+        } else if homo[i] >= 2 {
+            *q = b'G';
+        }
+    }
+    let q1 = ffi::ans4_encode_qual_mt(&quals, &mm, &homo, 150, 1).unwrap();
+    let q4 = ffi::ans4_encode_qual_mt(&quals, &mm, &homo, 150, 4).unwrap();
+    assert_eq!(q1, q4, "Multi-threaded FASTQ BWT quality must match 1T bit-for-bit");
+    let dec = ffi::ans4_decode_qual_mt(&q4, &mm, &homo, n, 150, 4).unwrap();
+    assert_eq!(dec, quals);
+}
+
+#[test]
+fn compressed_domain_fastq_vcf_consensus_accuracy() {
+    use std::collections::HashSet;
+
+    let tmp = make_temp_dir("fq_vcf_acc");
+    let pdir = tmp.join("panel");
+    fs::create_dir_all(&pdir).unwrap();
+
+    let ref_dna = lcg_dna(0x13572468, 80_000);
+    let ref_ascii: Vec<u8> = ref_dna.iter().map(|&b| b"ACGT"[b as usize]).collect();
+    let mut ref_fa = b">sim_chr\n".to_vec();
+    ref_fa.extend_from_slice(&ref_ascii);
+    ref_fa.push(b'\n');
+    fs::write(pdir.join("sim_chr.fa"), &ref_fa).unwrap();
+
+    let mut alt_ascii = ref_ascii.clone();
+    let mut truth = HashSet::new();
+    for pos in (600..79_000).step_by(2_000) {
+        let old_b = alt_ascii[pos];
+        let new_b = match old_b {
+            b'A' => b'G',
+            b'C' => b'T',
+            b'G' => b'A',
+            _ => b'C',
+        };
+        alt_ascii[pos] = new_b;
+        truth.insert((pos + 1, old_b, new_b));
+    }
+
+    // 10,000 x 150bp reads (~18.75x coverage) with occasional single-read errors
+    let mut x = 0xCAFEBABE12345678u64;
+    let mut fq = Vec::new();
+    let qual = vec![b'I'; 150];
+    for r in 0..10_000usize {
+        x = x.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        let start = ((x >> 16) as usize) % (alt_ascii.len() - 150);
+        let mut read = alt_ascii[start..start + 150].to_vec();
+        if r % 19 == 0 {
+            read[75] = if read[75] == b'A' { b'T' } else { b'A' }; // rare sequencing error
+        }
+        fq.extend_from_slice(format!("@READ.{r}\n").as_bytes());
+        fq.extend_from_slice(&read);
+        fq.extend_from_slice(b"\n+\n");
+        fq.extend_from_slice(&qual);
+        fq.push(b'\n');
+    }
+
+    let fq_path = tmp.join("reads.fastq");
+    let arc = tmp.join("reads.hgs3");
+    let vcf = tmp.join("calls.vcf");
+    fs::write(&fq_path, &fq).unwrap();
+
+    let opts = Hgs3CompressOptions {
+        format: OmicInputKind::Auto,
+        emit_cds_digest: false,
+        base: CompressOptions {
+            reference_panel: Some(pdir.clone()),
+            threads: 4,
+            ..Default::default()
+        },
+    };
+    hgs3::compress_omics(&fq_path, &arc, &opts).unwrap();
+    let parse_snvs = |vcf_txt: &str| -> HashSet<(usize, u8, u8)> {
+        let mut s = HashSet::new();
+        for line in vcf_txt.lines() {
+            if line.is_empty() || line.starts_with('#') {
+                continue;
+            }
+            let cols: Vec<&str> = line.split('\t').collect();
+            let pos1: usize = cols[1].parse().unwrap();
+            let rb = cols[3].as_bytes()[0];
+            let ab = cols[4].as_bytes()[0];
+            if cols[3].len() == 1 && cols[4].len() == 1 {
+                s.insert((pos1, rb, ab));
+            }
+        }
+        s
+    };
+
+    let res2 = compute::extract_variants_vcf_with_support(&arc, Some(&pdir), Some(&vcf), 4, false, 2).unwrap();
+    let preds2 = parse_snvs(&res2.vcf_text);
+    let tp2 = preds2.intersection(&truth).count();
+    let prec2 = tp2 as f64 / preds2.len().max(1) as f64;
+    let rec2 = tp2 as f64 / truth.len().max(1) as f64;
+    assert!(prec2 >= 0.97, "Expected min_support=2 precision >= 0.97, got {prec2} ({tp2}/{})", preds2.len());
+    assert!(rec2 >= 0.90, "Expected min_support=2 recall >= 0.90, got {rec2} ({tp2}/{})", truth.len());
+
+    let res3 = compute::extract_variants_vcf_with_support(&arc, Some(&pdir), Some(&vcf), 4, false, 3).unwrap();
+    let preds3 = parse_snvs(&res3.vcf_text);
+    let tp3 = preds3.intersection(&truth).count();
+    let prec3 = tp3 as f64 / preds3.len().max(1) as f64;
+    let rec3 = tp3 as f64 / truth.len().max(1) as f64;
+    assert_eq!(preds3.len(), tp3, "Expected zero false positives at min_support=3, got {prec3} ({tp3}/{})", preds3.len());
+    assert!(rec3 >= 0.90, "Expected min_support=3 recall >= 0.90, got {rec3} ({tp3}/{})", truth.len());
+
+    let _ = fs::remove_dir_all(&tmp);
+}

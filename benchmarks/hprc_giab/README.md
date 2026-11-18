@@ -22,5 +22,9 @@ python benchmarks/hprc_giab/run_hprc_giab_bench.py \
   --giab-fastq /data/hg002_chr21_reads.fastq \
   --giab-truth-vcf /data/HG002_GRCh38_1_22_v4.2.1_benchmark.vcf.gz \
   --giab-truth-bed /data/HG002_GRCh38_1_22_v4.2.1_benchmark_noinconsistent.bed \
+  --min-support 2 \
   --out benchmarks/hprc_giab/hprc_giab_results.json
+
+# Offline end-to-end synthetic smoke check (runs in CI)
+python benchmarks/hprc_giab/test_hprc_giab_smoke.py
 ```

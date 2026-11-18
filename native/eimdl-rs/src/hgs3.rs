@@ -367,6 +367,38 @@ pub(crate) fn parse_hgs3_fastq<'a>(
     })
 }
 
+pub(crate) fn extract_fastq_read_bounds(
+    meta_comp: &[u8],
+    n_recs: usize,
+) -> Result<(usize, Vec<u64>), String> {
+    if n_recs == 0 || meta_comp.is_empty() {
+        return Ok((0, Vec::new()));
+    }
+    let meta_raw = ffi::zlib_decompress(meta_comp).map_err(|e| e.to_string())?;
+    let mut mr = ByteReader::new(&meta_raw);
+    let uflags = mr.read_u8()?;
+    let eol_mode = uflags & 3;
+    let fixed_seq_len = (uflags & 16) != 0;
+    let _final_eol = mr.read_u8()?;
+    let cp_len = mr.read_var_u64()? as usize;
+    let _common_prefix = mr.read_bytes(cp_len)?;
+    if eol_mode == 2 {
+        let _eols = mr.read_bytes(n_recs * 4)?;
+    }
+    if fixed_seq_len {
+        let fl = mr.read_var_u64()? as usize;
+        Ok((fl, Vec::new()))
+    } else {
+        let mut ends = Vec::with_capacity(n_recs);
+        let mut acc = 0u64;
+        for _ in 0..n_recs {
+            acc += mr.read_var_u64()?;
+            ends.push(acc);
+        }
+        Ok((0, ends))
+    }
+}
+
 fn lcp_len(a: &[u8], b: &[u8]) -> usize {
     let lim = a.len().min(b.len());
     let mut i = 0;
@@ -677,7 +709,7 @@ fn compress_fastq_to_hgs3(
     let mut homo_bins = ffi::compute_homo_bins(&dna_2bit);
     mismatch_mask.resize(quals_all.len(), 0);
     homo_bins.resize(quals_all.len(), 0);
-    let qual_comp = ffi::ans4_encode_qual(&quals_all, &mismatch_mask, &homo_bins, read_len_hint)?;
+    let qual_comp = ffi::ans4_encode_qual_mt(&quals_all, &mismatch_mask, &homo_bins, read_len_hint, threads)?;
 
     let cds_summary = if opts.emit_cds_digest {
         scan_cds_summary(&dna_2bit)
@@ -788,12 +820,13 @@ fn decompress_fastq_hgs3(
     let mut homo_bins = ffi::compute_homo_bins(&dna_2bit);
     mismatch_mask.resize(qual_len, 0);
     homo_bins.resize(qual_len, 0);
-    let quals = ffi::ans4_decode_qual(
+    let quals = ffi::ans4_decode_qual_mt(
         p.qual_comp,
         &mismatch_mask,
         &homo_bins,
         qual_len,
         p.read_len_hint,
+        threads,
     )?;
 
     let meta_raw = ffi::zlib_decompress(p.meta_comp).map_err(|e| e.to_string())?;

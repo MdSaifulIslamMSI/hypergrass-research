@@ -8,7 +8,7 @@ use crate::hgs2::{
     self, MAGIC, MAGIC3, MODE_COLLECTION, MODE_REF, ParsedHgs2, parse_container,
     verify_and_load_panel_for_decode,
 };
-use crate::hgs3::{CdsSummary, deserialize_cds_summary, parse_hgs3_fastq};
+use crate::hgs3::{self, CdsSummary, deserialize_cds_summary, parse_hgs3_fastq};
 
 pub struct UnitInspectData {
     pub unit_index: usize,
@@ -407,6 +407,7 @@ pub struct ExtractedVcf {
     pub deletions: usize,
     pub complex_indels: usize,
     pub literal_runs_skipped: usize,
+    pub read_boundary_filtered: usize,
     pub seconds: f64,
 }
 
@@ -417,6 +418,23 @@ fn append_two_bit_ascii(out: &mut String, seq: &[u8]) {
     }
 }
 
+fn crosses_fastq_read_edge(tgt_pos: u64, alt_len: u32, fixed_len: usize, read_ends: &[u64]) -> bool {
+    let span = u64::from(alt_len.max(1));
+    if fixed_len > 0 {
+        let r = fixed_len as u64;
+        let r_start = (tgt_pos / r) * r;
+        let r_end = r_start + r;
+        tgt_pos < r_start + 8 || tgt_pos.saturating_add(span).saturating_add(8) > r_end
+    } else if !read_ends.is_empty() {
+        let idx = read_ends.partition_point(|&e| e <= tgt_pos);
+        let r_start = if idx == 0 { 0 } else { read_ends[idx - 1] };
+        let r_end = *read_ends.get(idx).unwrap_or(&u64::MAX);
+        tgt_pos < r_start + 8 || tgt_pos.saturating_add(span).saturating_add(8) > r_end
+    } else {
+        false
+    }
+}
+
 pub fn extract_variants_vcf(
     archive: &Path,
     panel: Option<&Path>,
@@ -424,37 +442,55 @@ pub fn extract_variants_vcf(
     threads: i32,
     bounded: bool,
 ) -> Result<ExtractedVcf, String> {
+    extract_variants_vcf_with_support(archive, panel, out_vcf, threads, bounded, 1)
+}
+
+pub fn extract_variants_vcf_with_support(
+    archive: &Path,
+    panel: Option<&Path>,
+    out_vcf: Option<&Path>,
+    threads: i32,
+    bounded: bool,
+    min_support: usize,
+) -> Result<ExtractedVcf, String> {
+    use std::collections::BTreeMap;
+
     let t0 = Instant::now();
     let bytes = std::fs::read(archive).map_err(|e| e.to_string())?;
     let c = load_container(&bytes, panel, threads, bounded)?;
     let (units, _) = inspect_all_ranks(&c, true, false)?;
 
-    let mut vcf = String::with_capacity(4096);
-    vcf.push_str("##fileformat=VCFv4.2\n");
-    vcf.push_str("##source=EIMDL-HyperGraSS-CompressedDomain\n");
-    vcf.push_str("##INFO=<ID=TGT_POS,Number=1,Type=Integer,Description=\"0-based coordinate in target archive\">\n");
-    vcf.push_str("##INFO=<ID=UNIT,Number=1,Type=Integer,Description=\"Target archive unit index\">\n");
-    vcf.push_str("##INFO=<ID=STRAND,Number=1,Type=String,Description=\"Donor alignment strand (+ or -)\">\n");
-    vcf.push_str("##INFO=<ID=TYPE,Number=1,Type=String,Description=\"Variant class (SNV, INS, DEL, COMPLEX)\">\n");
-    vcf.push_str("##INFO=<ID=TI,Number=1,Type=Integer,Description=\"1 if transition SNP else 0\">\n");
-    vcf.push_str("##INFO=<ID=MOD3,Number=1,Type=Integer,Description=\"1 if SNP step % 3 == 0 codon-wobble spaced\">\n");
-    for (i, dname) in c.panel_names.iter().enumerate() {
-        let dlen = c.panel_seqs.get(i).map_or(0, |v| v.len());
-        vcf.push_str(&format!("##contig=<ID={dname},length={dlen}>\n"));
-    }
-    vcf.push_str("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n");
+    let (fq_fixed, fq_ends) = if c.is_fastq && bytes.len() >= 5 && &bytes[..4] == MAGIC3 {
+        let pf = parse_hgs3_fastq(&bytes, false)?;
+        hgs3::extract_fastq_read_bounds(pf.meta_comp, pf.total_records as usize)
+            .unwrap_or((pf.read_len_hint as usize, Vec::new()))
+    } else {
+        (0usize, Vec::new())
+    };
 
-    let mut total_variants = 0usize;
-    let mut snvs = 0usize;
-    let mut insertions = 0usize;
-    let mut deletions = 0usize;
-    let mut complex_indels = 0usize;
+    struct AggCall {
+        kind: u8,
+        kind_str: &'static str,
+        tgt_pos: u64,
+        unit_index: usize,
+        strand: u8,
+        is_transition: u8,
+        prev_mod3: u8,
+        ac: usize,
+    }
+
+    let mut agg: BTreeMap<(usize, u64, Vec<u8>, Vec<u8>), AggCall> = BTreeMap::new();
     let mut literal_runs_skipped = 0usize;
+    let mut read_boundary_filtered = 0usize;
 
     for u in &units {
         for v in &u.variants {
             if v.kind == 4 {
                 literal_runs_skipped += 1;
+                continue;
+            }
+            if c.is_fastq && v.kind != 0 && crosses_fastq_read_edge(v.tgt_pos, v.alt_len, fq_fixed, &fq_ends) {
+                read_boundary_filtered += 1;
                 continue;
             }
             let did = v.donor_id as usize;
@@ -463,13 +499,12 @@ pub fn extract_variants_vcf(
             }
             let donor = &c.panel_seqs[did];
             let dlen = donor.len() as u64;
-            let chrom = &c.panel_names[did];
 
             let (fwd_start, fwd_end) = if v.strand == 0 {
-                (v.ref_pos, v.ref_pos + v.ref_len as u64)
+                (v.ref_pos, v.ref_pos + u64::from(v.ref_len))
             } else {
                 let end = dlen.saturating_sub(v.ref_pos);
-                let start = end.saturating_sub(v.ref_len as u64);
+                let start = end.saturating_sub(u64::from(v.ref_len));
                 (start, end)
             };
             if fwd_end > dlen {
@@ -489,13 +524,12 @@ pub fn extract_variants_vcf(
                 }
             };
 
-            // Enforce VCF v4.2 non-empty REF/ALT alleles via 1-base anchor when needed
             let pos1: u64 = if fwd_ref.is_empty() || fwd_alt.is_empty() {
                 if fwd_start > 0 {
                     let anc = donor[(fwd_start - 1) as usize] & 3;
                     fwd_ref.insert(0, anc);
                     fwd_alt.insert(0, anc);
-                    fwd_start // (fwd_start - 1) + 1
+                    fwd_start
                 } else if fwd_end < dlen {
                     let anc = donor[fwd_end as usize] & 3;
                     fwd_ref.push(anc);
@@ -509,36 +543,72 @@ pub fn extract_variants_vcf(
             };
 
             let kind_str = match v.kind {
-                0 => {
-                    snvs += 1;
-                    "SNV"
-                }
-                1 => {
-                    insertions += 1;
-                    "INS"
-                }
-                2 => {
-                    deletions += 1;
-                    "DEL"
-                }
-                _ => {
-                    complex_indels += 1;
-                    "COMPLEX"
-                }
+                0 => "SNV",
+                1 => "INS",
+                2 => "DEL",
+                _ => "COMPLEX",
             };
-            total_variants += 1;
 
-            let mut ref_str = String::with_capacity(fwd_ref.len());
-            let mut alt_str = String::with_capacity(fwd_alt.len());
-            append_two_bit_ascii(&mut ref_str, &fwd_ref);
-            append_two_bit_ascii(&mut alt_str, &fwd_alt);
-            let strand_ch = if v.strand == 0 { '+' } else { '-' };
-
-            vcf.push_str(&format!(
-                "{chrom}\t{pos1}\t.\t{ref_str}\t{alt_str}\t.\tPASS\tTGT_POS={};UNIT={};STRAND={strand_ch};TYPE={kind_str};TI={};MOD3={}\n",
-                v.tgt_pos, u.unit_index, v.is_transition, v.prev_mod3
-            ));
+            agg.entry((did, pos1, fwd_ref, fwd_alt))
+                .and_modify(|e| e.ac += 1)
+                .or_insert(AggCall {
+                    kind: v.kind,
+                    kind_str,
+                    tgt_pos: v.tgt_pos,
+                    unit_index: u.unit_index,
+                    strand: v.strand,
+                    is_transition: v.is_transition,
+                    prev_mod3: v.prev_mod3,
+                    ac: 1,
+                });
         }
+    }
+
+    let mut vcf = String::with_capacity(4096);
+    vcf.push_str("##fileformat=VCFv4.2\n");
+    vcf.push_str("##source=EIMDL-HyperGraSS-CompressedDomain\n");
+    vcf.push_str("##INFO=<ID=TGT_POS,Number=1,Type=Integer,Description=\"0-based coordinate in target archive\">\n");
+    vcf.push_str("##INFO=<ID=UNIT,Number=1,Type=Integer,Description=\"Target archive unit index\">\n");
+    vcf.push_str("##INFO=<ID=STRAND,Number=1,Type=String,Description=\"Donor alignment strand (+ or -)\">\n");
+    vcf.push_str("##INFO=<ID=TYPE,Number=1,Type=String,Description=\"Variant class (SNV, INS, DEL, COMPLEX)\">\n");
+    vcf.push_str("##INFO=<ID=TI,Number=1,Type=Integer,Description=\"1 if transition SNP else 0\">\n");
+    vcf.push_str("##INFO=<ID=MOD3,Number=1,Type=Integer,Description=\"1 if SNP step % 3 == 0 codon-wobble spaced\">\n");
+    vcf.push_str("##INFO=<ID=AC,Number=1,Type=Integer,Description=\"Supporting allele observations across units/reads\">\n");
+    for (i, dname) in c.panel_names.iter().enumerate() {
+        let dlen = c.panel_seqs.get(i).map_or(0, |v| v.len());
+        vcf.push_str(&format!("##contig=<ID={dname},length={dlen}>\n"));
+    }
+    vcf.push_str("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n");
+
+    let min_sup = min_support.max(1);
+    let mut total_variants = 0usize;
+    let mut snvs = 0usize;
+    let mut insertions = 0usize;
+    let mut deletions = 0usize;
+    let mut complex_indels = 0usize;
+
+    for ((did, pos1, fwd_ref, fwd_alt), call) in agg {
+        if call.ac < min_sup {
+            continue;
+        }
+        match call.kind {
+            0 => snvs += 1,
+            1 => insertions += 1,
+            2 => deletions += 1,
+            _ => complex_indels += 1,
+        }
+        total_variants += 1;
+        let chrom = &c.panel_names[did];
+        let mut ref_str = String::with_capacity(fwd_ref.len());
+        let mut alt_str = String::with_capacity(fwd_alt.len());
+        append_two_bit_ascii(&mut ref_str, &fwd_ref);
+        append_two_bit_ascii(&mut alt_str, &fwd_alt);
+        let strand_ch = if call.strand == 0 { '+' } else { '-' };
+
+        vcf.push_str(&format!(
+            "{chrom}\t{pos1}\t.\t{ref_str}\t{alt_str}\t.\tPASS\tTGT_POS={};UNIT={};STRAND={strand_ch};TYPE={};TI={};MOD3={};AC={}\n",
+            call.tgt_pos, call.unit_index, call.kind_str, call.is_transition, call.prev_mod3, call.ac
+        ));
     }
 
     if let Some(p) = out_vcf {
@@ -555,6 +625,7 @@ pub fn extract_variants_vcf(
         deletions,
         complex_indels,
         literal_runs_skipped,
+        read_boundary_filtered,
         seconds: t0.elapsed().as_secs_f64(),
     })
 }

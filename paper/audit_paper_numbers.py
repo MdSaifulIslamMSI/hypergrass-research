@@ -431,6 +431,10 @@ def main():
     checks += 1
     if not os.path.exists(main_pdf_path) or os.path.getsize(main_pdf_path) < 100_000:
         failures.append(f"[MAIN MANUSCRIPT PDF MISSING OR TOO SMALL]: {main_pdf_path}")
+    lean_pdf_path = os.path.join(BASE_DIR, "paper", "EIMDL_Lean4_Paper.pdf")
+    checks += 1
+    if not os.path.exists(lean_pdf_path) or os.path.getsize(lean_pdf_path) < 100_000:
+        failures.append(f"[LEAN4 PAPER PDF MISSING OR TOO SMALL]: {lean_pdf_path}")
 
     # 13. Verify Lean 4 formal proof package exists with 0 `sorry` and expected theorems
     lean_required = [

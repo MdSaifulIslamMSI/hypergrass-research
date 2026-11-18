@@ -78,8 +78,41 @@ static inline uint32_t read_u32_le(const uint8_t* p) {
     return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
 }
 
+static inline void ans_normalize_cdf_with_tot(
+    const uint32_t* weights,
+    size_t n,
+    uint32_t tot,
+    size_t best,
+    uint16_t* out_cum,
+    uint16_t* out_freq) {
+    uint32_t budget = ANS_SCALE - (uint32_t)n;
+    uint32_t sum = 0;
+    if (tot <= 8192U) {
+        /* Exact over 1 <= tot <= 8192 for (w + 1) * budget < 2^23 (verified zero boundary error). */
+        uint64_t inv = ((1ULL << 42) + (uint64_t)tot - 1ULL) / (uint64_t)tot;
+        for (size_t i = 0; i < n; i++) {
+            uint64_t num = (uint64_t)(weights[i] + 1U) * (uint64_t)budget;
+            uint32_t f = 1U + (uint32_t)((num * inv) >> 42);
+            out_freq[i] = (uint16_t)f;
+            sum += f;
+        }
+    } else {
+        for (size_t i = 0; i < n; i++) {
+            uint32_t f = 1U + (uint32_t)(((uint64_t)(weights[i] + 1U) * (uint64_t)budget) / (uint64_t)tot);
+            out_freq[i] = (uint16_t)f;
+            sum += f;
+        }
+    }
+    out_freq[best] = (uint16_t)(out_freq[best] + (ANS_SCALE - sum));
+    uint16_t c = 0;
+    for (size_t i = 0; i < n; i++) {
+        out_cum[i] = c;
+        c = (uint16_t)(c + out_freq[i]);
+    }
+}
+
 static inline void ans_normalize_cdf(const uint32_t* weights, size_t n, uint16_t* out_cum, uint16_t* out_freq) {
-    uint64_t tot = 0;
+    uint32_t tot = 0;
     size_t best = 0;
     uint32_t best_w = 0;
     for (size_t i = 0; i < n; i++) {
@@ -90,19 +123,7 @@ static inline void ans_normalize_cdf(const uint32_t* weights, size_t n, uint16_t
             best = i;
         }
     }
-    uint32_t budget = ANS_SCALE - (uint32_t)n;
-    uint32_t sum = 0;
-    for (size_t i = 0; i < n; i++) {
-        uint32_t f = 1U + (uint32_t)(((uint64_t)(weights[i] + 1U) * budget) / tot);
-        out_freq[i] = (uint16_t)f;
-        sum += f;
-    }
-    out_freq[best] = (uint16_t)(out_freq[best] + (ANS_SCALE - sum));
-    uint16_t c = 0;
-    for (size_t i = 0; i < n; i++) {
-        out_cum[i] = c;
-        c = (uint16_t)(c + out_freq[i]);
-    }
+    ans_normalize_cdf_with_tot(weights, n, tot, best, out_cum, out_freq);
 }
 
 static inline int ans_encode_one(uint32_t* state, AnsVec* rev_bytes, uint16_t cum, uint16_t freq) {
@@ -626,6 +647,41 @@ static int flush_zero_run(SymU16Vec* out, size_t run) {
     return 0;
 }
 
+static inline void bwt_update_cdf_state(
+    uint32_t* w,
+    size_t nsym,
+    size_t sym,
+    uint32_t* row_sum,
+    size_t* best_idx,
+    uint32_t* best_w) {
+    w[sym] += 8U;
+    *row_sum += 8U;
+    if (*row_sum > 2048U) {
+        uint32_t ns = 0U;
+        size_t mb = 0U;
+        uint32_t mbw = 0U;
+        for (size_t s0 = 0; s0 < nsym; s0++) {
+            uint32_t hv = w[s0] >> 1;
+            w[s0] = hv;
+            ns += hv;
+            uint32_t bw = hv + 1U;
+            if (bw > mbw) {
+                mbw = bw;
+                mb = s0;
+            }
+        }
+        *row_sum = ns;
+        *best_idx = mb;
+        *best_w = mbw;
+    } else {
+        uint32_t nw = w[sym] + 1U;
+        if (nw > *best_w || (nw == *best_w && sym < *best_idx)) {
+            *best_w = nw;
+            *best_idx = sym;
+        }
+    }
+}
+
 static int bwt_encode_block(const uint8_t* blk, size_t bn, AnsVec* dst) {
     int32_t n = (int32_t)bn;
     int32_t* s = (int32_t*)malloc((size_t)(n + 1) * sizeof(int32_t));
@@ -696,27 +752,28 @@ static int bwt_encode_block(const uint8_t* blk, size_t bn, AnsVec* dst) {
 
     uint16_t cums[257], freqs[257];
     uint32_t row_sum[4][3];
+    size_t best_idx[4][3];
+    uint32_t best_w[4][3];
     memset(row_sum, 0, sizeof(row_sum));
+    for (size_t l = 0; l < 4U; l++) {
+        for (size_t c = 0; c < 3U; c++) {
+            best_idx[l][c] = 0U;
+            best_w[l][c] = 1U;
+        }
+    }
     for (size_t l = 0; l < 4U; l++) {
         size_t ctx = 2U;
         for (size_t k = 0; k < lane_len[l]; k++) {
             uint16_t sym = syms.data[lane_off[l] + k];
-            ans_normalize_cdf(weights[l][ctx], nsym, cums, freqs);
+            ans_normalize_cdf_with_tot(
+                weights[l][ctx], nsym, row_sum[l][ctx] + (uint32_t)nsym, best_idx[l][ctx], cums, freqs);
             if (qrec_push(&recs[l], cums[sym], freqs[sym]) != 0) {
                 free(weights); free(syms.data);
                 for (size_t x = 0; x < 4U; x++) free(recs[x].data);
                 return -1;
             }
-            weights[l][ctx][sym] += 8U;
-            row_sum[l][ctx] += 8U;
-            if (row_sum[l][ctx] > 2048U) {
-                uint32_t ns = 0U;
-                for (size_t s0 = 0; s0 < nsym; s0++) {
-                    weights[l][ctx][s0] >>= 1;
-                    ns += weights[l][ctx][s0];
-                }
-                row_sum[l][ctx] = ns;
-            }
+            bwt_update_cdf_state(
+                weights[l][ctx], nsym, (size_t)sym, &row_sum[l][ctx], &best_idx[l][ctx], &best_w[l][ctx]);
             ctx = (sym == 0U) ? 0U : (sym == 1U ? 1U : 2U);
         }
     }
@@ -800,26 +857,27 @@ static int bwt_decode_block(const uint8_t* p_base, size_t p_avail, size_t* consu
 
     uint16_t cums[257], freqs[257];
     uint32_t row_sum[4][3];
+    size_t best_idx[4][3];
+    uint32_t best_w[4][3];
     memset(row_sum, 0, sizeof(row_sum));
+    for (size_t l = 0; l < 4U; l++) {
+        for (size_t c = 0; c < 3U; c++) {
+            best_idx[l][c] = 0U;
+            best_w[l][c] = 1U;
+        }
+    }
     for (size_t l = 0; l < 4U; l++) {
         size_t ctx = 2U;
         for (size_t k = 0; k < lane_len[l]; k++) {
-            ans_normalize_cdf(weights[l][ctx], nsym, cums, freqs);
+            ans_normalize_cdf_with_tot(
+                weights[l][ctx], nsym, row_sum[l][ctx] + (uint32_t)nsym, best_idx[l][ctx], cums, freqs);
             size_t sym = 0U;
             if (ans_decode_find_and_step(&state[l], &p_cur[l], p_end[l], cums, freqs, nsym, &sym) != 0) {
                 free(syms); free(weights); return -1;
             }
             syms[lane_off[l] + k] = (uint16_t)sym;
-            weights[l][ctx][sym] += 8U;
-            row_sum[l][ctx] += 8U;
-            if (row_sum[l][ctx] > 2048U) {
-                uint32_t ns = 0U;
-                for (size_t s0 = 0; s0 < nsym; s0++) {
-                    weights[l][ctx][s0] >>= 1;
-                    ns += weights[l][ctx][s0];
-                }
-                row_sum[l][ctx] = ns;
-            }
+            bwt_update_cdf_state(
+                weights[l][ctx], nsym, sym, &row_sum[l][ctx], &best_idx[l][ctx], &best_w[l][ctx]);
             ctx = (sym == 0U) ? 0U : (sym == 1U ? 1U : 2U);
         }
         if (state[l] != ANS_L || p_cur[l] != p_end[l]) { free(syms); free(weights); return -1; }
@@ -968,6 +1026,256 @@ static int decode_qual_bwt(const uint8_t* payload, size_t payload_len, const uin
     return 0;
 }
 
+static inline void compute_4_lanes(size_t total_len, size_t lane_len[4], size_t lane_off[4]) {
+    size_t base_q = total_len >> 2;
+    size_t rem = total_len & 3U;
+    size_t cur = 0U;
+    for (size_t l = 0; l < 4U; l++) {
+        lane_len[l] = base_q + (l < rem ? 1U : 0U);
+        lane_off[l] = cur;
+        cur += lane_len[l];
+    }
+}
+
+size_t hgs_ans_qual_bwt_block_cap(void) {
+    return (size_t)QUAL_BWT_BLK;
+}
+
+size_t hgs_ans_qual_bwt_peek_block_len(const uint8_t* block_payload, size_t avail) {
+    if (!block_payload || avail < 72U) return 0U;
+    uint64_t tot = 72ULL;
+    for (size_t l = 0; l < 4U; l++) {
+        tot += (uint64_t)read_u32_le(block_payload + 56U + l * 4U);
+    }
+    return (tot <= (uint64_t)avail) ? (size_t)tot : 0U;
+}
+
+int hgs_ans_qual_bwt_encode_block(
+    const uint8_t* blk,
+    size_t bn,
+    uint8_t** out_buf,
+    size_t* out_len) {
+    if (!out_buf || !out_len) return -1;
+    *out_buf = NULL;
+    *out_len = 0U;
+    if (!blk || bn == 0U) return -1;
+    AnsVec v = {NULL, 0, 0};
+    if (bwt_encode_block(blk, bn, &v) != 0) {
+        free(v.data);
+        return -1;
+    }
+    *out_buf = v.data;
+    *out_len = v.len;
+    return 0;
+}
+
+int hgs_ans_qual_bwt_decode_block(
+    const uint8_t* block_payload,
+    size_t block_avail,
+    size_t expected_bn,
+    size_t* out_consumed,
+    uint8_t* out_blk) {
+    if (!block_payload || !out_consumed || !out_blk || expected_bn == 0U) return -1;
+    return bwt_decode_block(block_payload, block_avail, out_consumed, out_blk, expected_bn);
+}
+
+int hgs_ans4_encode_qual_ctx_lane(
+    const uint8_t* quals_raw,
+    const uint8_t* mismatch_mask,
+    const uint8_t* homo_bins,
+    size_t total_len,
+    uint32_t read_len_hint,
+    size_t lane,
+    uint32_t* out_state,
+    uint8_t** out_fwd_buf,
+    size_t* out_fwd_len) {
+    if (!out_state || !out_fwd_buf || !out_fwd_len || lane >= 4U) return -1;
+    *out_state = ANS_L;
+    *out_fwd_buf = NULL;
+    *out_fwd_len = 0U;
+
+    size_t lane_len[4], lane_off[4];
+    compute_4_lanes(total_len, lane_len, lane_off);
+
+    QualModel* m = (QualModel*)calloc(1U, sizeof(QualModel));
+    if (!m) return -1;
+    QualRecVec recs = {NULL, 0, 0};
+    AnsVec rev = {NULL, 0, 0};
+
+    uint32_t uniform16_w[16] = {0};
+    uint16_t u16_cum[16], u16_freq[16];
+    ans_normalize_cdf(uniform16_w, 16U, u16_cum, u16_freq);
+
+    uint8_t prev_q = 66U;
+    for (size_t k = 0; k < lane_len[lane]; k++) {
+        size_t gpos = lane_off[lane] + k;
+        uint8_t q = quals_raw[gpos];
+        uint8_t mm = mismatch_mask ? (mismatch_mask[gpos] & 1U) : 0U;
+        uint8_t hb = homo_bins ? (homo_bins[gpos] & 3U) : 0U;
+        uint32_t ctx = qual_ctx(prev_q, mm, hb, gpos, read_len_hint);
+
+        uint32_t sw[2] = {m->same[ctx][0], m->same[ctx][1]};
+        uint16_t scum[2], sfreq[2];
+        ans_normalize_cdf(sw, 2U, scum, sfreq);
+        int is_same = (q == prev_q) ? 1 : 0;
+        if (qrec_push(&recs, scum[is_same], sfreq[is_same]) != 0) goto fail;
+        if (++m->same[ctx][is_same] > 4096U) {
+            m->same[ctx][0] >>= 1;
+            m->same[ctx][1] >>= 1;
+        }
+
+        if (!is_same) {
+            uint32_t cw[9];
+            for (int c = 0; c < 9; c++) cw[c] = m->coarse[ctx][c];
+            uint16_t ccum[9], cfreq[9];
+            ans_normalize_cdf(cw, 9U, ccum, cfreq);
+            if (q >= 33U && q <= 96U) {
+                uint32_t rel = (uint32_t)(q - 33U);
+                uint32_t cbin = rel >> 3;
+                uint32_t fbin = rel & 7U;
+                if (qrec_push(&recs, ccum[cbin], cfreq[cbin]) != 0) goto fail;
+                if (++m->coarse[ctx][cbin] > 4096U) {
+                    for (int c = 0; c < 9; c++) m->coarse[ctx][c] >>= 1;
+                }
+                uint32_t fctx = qual_fine_ctx(cbin, mm, prev_q);
+                uint32_t fw[8];
+                for (int f = 0; f < 8; f++) fw[f] = m->fine[fctx][f];
+                uint16_t fcum[8], ffreq[8];
+                ans_normalize_cdf(fw, 8U, fcum, ffreq);
+                if (qrec_push(&recs, fcum[fbin], ffreq[fbin]) != 0) goto fail;
+                if (++m->fine[fctx][fbin] > 4096U) {
+                    for (int f = 0; f < 8; f++) m->fine[fctx][f] >>= 1;
+                }
+            } else {
+                if (qrec_push(&recs, ccum[8], cfreq[8]) != 0) goto fail;
+                if (++m->coarse[ctx][8] > 4096U) {
+                    for (int c = 0; c < 9; c++) m->coarse[ctx][c] >>= 1;
+                }
+                uint32_t hi = (uint32_t)((q >> 4) & 0xFU);
+                uint32_t lo = (uint32_t)(q & 0xFU);
+                if (qrec_push(&recs, u16_cum[hi], u16_freq[hi]) != 0) goto fail;
+                if (qrec_push(&recs, u16_cum[lo], u16_freq[lo]) != 0) goto fail;
+            }
+        }
+        prev_q = q;
+    }
+
+    uint32_t st = ANS_L;
+    for (size_t i = recs.len; i > 0; i--) {
+        if (ans_encode_one(&st, &rev, recs.data[i - 1U].cum, recs.data[i - 1U].freq) != 0) goto fail;
+    }
+    free(recs.data);
+    free(m);
+
+    uint8_t* fwd = (uint8_t*)malloc(rev.len ? rev.len : 1U);
+    if (!fwd) {
+        free(rev.data);
+        return -1;
+    }
+    for (size_t i = 0; i < rev.len; i++) {
+        fwd[i] = rev.data[rev.len - 1U - i];
+    }
+    free(rev.data);
+
+    *out_state = st;
+    *out_fwd_buf = fwd;
+    *out_fwd_len = rev.len;
+    return 0;
+
+fail:
+    free(recs.data);
+    free(rev.data);
+    free(m);
+    return -1;
+}
+
+int hgs_ans4_decode_qual_ctx_lane(
+    const uint8_t* lane_payload,
+    size_t lane_payload_len,
+    uint32_t init_state,
+    const uint8_t* mismatch_mask,
+    const uint8_t* homo_bins,
+    size_t total_len,
+    uint32_t read_len_hint,
+    size_t lane,
+    uint8_t* out_lane_buf) {
+    if (lane >= 4U || (!lane_payload && lane_payload_len > 0U)) return -1;
+
+    size_t lane_len[4], lane_off[4];
+    compute_4_lanes(total_len, lane_len, lane_off);
+    if (lane_len[lane] > 0U && !out_lane_buf) return -1;
+
+    QualModel* m = (QualModel*)calloc(1U, sizeof(QualModel));
+    if (!m) return -1;
+
+    uint32_t uniform16_w[16] = {0};
+    uint16_t u16_cum[16], u16_freq[16];
+    ans_normalize_cdf(uniform16_w, 16U, u16_cum, u16_freq);
+
+    uint32_t st = init_state;
+    const uint8_t* p_cur = lane_payload;
+    const uint8_t* p_end = lane_payload + lane_payload_len;
+    uint8_t prev_q = 66U;
+
+    for (size_t k = 0; k < lane_len[lane]; k++) {
+        size_t gpos = lane_off[lane] + k;
+        uint8_t mm = mismatch_mask ? (mismatch_mask[gpos] & 1U) : 0U;
+        uint8_t hb = homo_bins ? (homo_bins[gpos] & 3U) : 0U;
+        uint32_t ctx = qual_ctx(prev_q, mm, hb, gpos, read_len_hint);
+
+        uint32_t sw[2] = {m->same[ctx][0], m->same[ctx][1]};
+        uint16_t scum[2], sfreq[2];
+        ans_normalize_cdf(sw, 2U, scum, sfreq);
+        size_t is_same = 0;
+        if (ans_decode_find_and_step(&st, &p_cur, p_end, scum, sfreq, 2U, &is_same) != 0) goto fail;
+        if (++m->same[ctx][is_same] > 4096U) {
+            m->same[ctx][0] >>= 1;
+            m->same[ctx][1] >>= 1;
+        }
+
+        uint8_t q = prev_q;
+        if (!is_same) {
+            uint32_t cw[9];
+            for (int c = 0; c < 9; c++) cw[c] = m->coarse[ctx][c];
+            uint16_t ccum[9], cfreq[9];
+            ans_normalize_cdf(cw, 9U, ccum, cfreq);
+            size_t cbin = 0;
+            if (ans_decode_find_and_step(&st, &p_cur, p_end, ccum, cfreq, 9U, &cbin) != 0) goto fail;
+            if (++m->coarse[ctx][cbin] > 4096U) {
+                for (int c = 0; c < 9; c++) m->coarse[ctx][c] >>= 1;
+            }
+            if (cbin < 8U) {
+                uint32_t fctx = qual_fine_ctx((uint32_t)cbin, mm, prev_q);
+                uint32_t fw[8];
+                for (int f = 0; f < 8; f++) fw[f] = m->fine[fctx][f];
+                uint16_t fcum[8], ffreq[8];
+                ans_normalize_cdf(fw, 8U, fcum, ffreq);
+                size_t fbin = 0;
+                if (ans_decode_find_and_step(&st, &p_cur, p_end, fcum, ffreq, 8U, &fbin) != 0) goto fail;
+                if (++m->fine[fctx][fbin] > 4096U) {
+                    for (int f = 0; f < 8; f++) m->fine[fctx][f] >>= 1;
+                }
+                q = (uint8_t)(33U + (cbin << 3) + fbin);
+            } else {
+                size_t hi = 0, lo = 0;
+                if (ans_decode_find_and_step(&st, &p_cur, p_end, u16_cum, u16_freq, 16U, &hi) != 0) goto fail;
+                if (ans_decode_find_and_step(&st, &p_cur, p_end, u16_cum, u16_freq, 16U, &lo) != 0) goto fail;
+                q = (uint8_t)((hi << 4) | lo);
+            }
+        }
+        out_lane_buf[k] = q;
+        prev_q = q;
+    }
+
+    if (st != ANS_L || p_cur != p_end) goto fail;
+    free(m);
+    return 0;
+
+fail:
+    free(m);
+    return -1;
+}
+
 int hgs_ans4_encode_qual(
     const uint8_t* quals_raw,
     const uint8_t* mismatch_mask,
@@ -986,98 +1294,20 @@ int hgs_ans4_encode_qual(
         return 0;
     }
 
-    QualModel* models = (QualModel*)calloc(4, sizeof(QualModel));
-    QualRecVec recs[4] = {{NULL,0,0},{NULL,0,0},{NULL,0,0},{NULL,0,0}};
-    AnsVec rev[4] = {{NULL,0,0},{NULL,0,0},{NULL,0,0},{NULL,0,0}};
-    if (!models) return -1;
-
-    uint32_t uniform16_w[16] = {0};
-    uint16_t u16_cum[16], u16_freq[16];
-    ans_normalize_cdf(uniform16_w, 16, u16_cum, u16_freq);
-
-    size_t base_q = len >> 2;
-    size_t rem = len & 3U;
-    size_t lane_len[4], lane_off[4];
-    size_t cur = 0;
-    for (size_t l = 0; l < 4U; l++) {
-        lane_len[l] = base_q + (l < rem ? 1U : 0U);
-        lane_off[l] = cur;
-        cur += lane_len[l];
-    }
-
-    /* Pass 1: forward hierarchical causal probability snapshot */
-    for (size_t l = 0; l < 4U; l++) {
-        uint8_t prev_q = 66U; /* typical Phred+33 start */
-        QualModel* m = &models[l];
-        for (size_t k = 0; k < lane_len[l]; k++) {
-            size_t gpos = lane_off[l] + k;
-            uint8_t q = quals_raw[gpos];
-            uint8_t mm = mismatch_mask ? (mismatch_mask[gpos] & 1U) : 0U;
-            uint8_t hb = homo_bins ? (homo_bins[gpos] & 3U) : 0U;
-            uint32_t ctx = qual_ctx(prev_q, mm, hb, gpos, read_len_hint);
-
-            uint32_t sw[2] = {m->same[ctx][0], m->same[ctx][1]};
-            uint16_t scum[2], sfreq[2];
-            ans_normalize_cdf(sw, 2U, scum, sfreq);
-            int is_same = (q == prev_q) ? 1 : 0;
-            if (qrec_push(&recs[l], scum[is_same], sfreq[is_same]) != 0) goto fail_oom;
-            if (++m->same[ctx][is_same] > 4096U) {
-                m->same[ctx][0] >>= 1;
-                m->same[ctx][1] >>= 1;
-            }
-
-            if (!is_same) {
-                uint32_t cw[9];
-                for (int c = 0; c < 9; c++) cw[c] = m->coarse[ctx][c];
-                uint16_t ccum[9], cfreq[9];
-                ans_normalize_cdf(cw, 9U, ccum, cfreq);
-                if (q >= 33U && q <= 96U) {
-                    uint32_t rel = (uint32_t)(q - 33U);
-                    uint32_t cbin = rel >> 3;
-                    uint32_t fbin = rel & 7U;
-                    if (qrec_push(&recs[l], ccum[cbin], cfreq[cbin]) != 0) goto fail_oom;
-                    if (++m->coarse[ctx][cbin] > 4096U) {
-                        for (int c = 0; c < 9; c++) m->coarse[ctx][c] >>= 1;
-                    }
-                    uint32_t fctx = qual_fine_ctx(cbin, mm, prev_q);
-                    uint32_t fw[8];
-                    for (int f = 0; f < 8; f++) fw[f] = m->fine[fctx][f];
-                    uint16_t fcum[8], ffreq[8];
-                    ans_normalize_cdf(fw, 8U, fcum, ffreq);
-                    if (qrec_push(&recs[l], fcum[fbin], ffreq[fbin]) != 0) goto fail_oom;
-                    if (++m->fine[fctx][fbin] > 4096U) {
-                        for (int f = 0; f < 8; f++) m->fine[fctx][f] >>= 1;
-                    }
-                } else {
-                    if (qrec_push(&recs[l], ccum[8], cfreq[8]) != 0) goto fail_oom;
-                    if (++m->coarse[ctx][8] > 4096U) {
-                        for (int c = 0; c < 9; c++) m->coarse[ctx][c] >>= 1;
-                    }
-                    uint32_t hi = (uint32_t)((q >> 4) & 0xFU);
-                    uint32_t lo = (uint32_t)(q & 0xFU);
-                    if (qrec_push(&recs[l], u16_cum[hi], u16_freq[hi]) != 0) goto fail_oom;
-                    if (qrec_push(&recs[l], u16_cum[lo], u16_freq[lo]) != 0) goto fail_oom;
-                }
-            }
-            prev_q = q;
-        }
-    }
-
     uint32_t state[4] = {ANS_L, ANS_L, ANS_L, ANS_L};
+    uint8_t* fwd[4] = {NULL, NULL, NULL, NULL};
+    size_t flen[4] = {0, 0, 0, 0};
     int err = 0;
-    for (size_t l = 0; l < 4U && !err; l++) {
-        for (size_t i = recs[l].len; i > 0; i--) {
-            if (ans_encode_one(&state[l], &rev[l], recs[l].data[i - 1U].cum, recs[l].data[i - 1U].freq) != 0) {
-                err = -1;
-                break;
-            }
+    for (size_t l = 0; l < 4U; l++) {
+        if (hgs_ans4_encode_qual_ctx_lane(
+                quals_raw, mismatch_mask, homo_bins, len, read_len_hint, l, &state[l], &fwd[l], &flen[l]) != 0) {
+            err = -1;
+            break;
         }
     }
-    for (size_t l = 0; l < 4U; l++) free(recs[l].data);
-    free(models);
 
     size_t rans_size = 33U;
-    for (size_t l = 0; l < 4U; l++) rans_size += rev[l].len;
+    for (size_t l = 0; l < 4U; l++) rans_size += flen[l];
 
     AnsVec bwt_out = {NULL, 0, 0};
     if (len >= 256U) {
@@ -1093,7 +1323,7 @@ int hgs_ans4_encode_qual(
     size_t bwt_size = (bwt_out.data != NULL && bwt_out.len < raw_size) ? bwt_out.len : SIZE_MAX;
 
     if (bwt_size < ctx_size && bwt_size < raw_size) {
-        for (size_t l = 0; l < 4U; l++) free(rev[l].data);
+        for (size_t l = 0; l < 4U; l++) free(fwd[l]);
         *out_buf = bwt_out.data;
         *out_len = bwt_out.len;
         return 0;
@@ -1101,7 +1331,7 @@ int hgs_ans4_encode_qual(
     free(bwt_out.data);
 
     if (err != 0 || rans_size >= raw_size) {
-        for (size_t l = 0; l < 4U; l++) free(rev[l].data);
+        for (size_t l = 0; l < 4U; l++) free(fwd[l]);
         if (err != 0 || vec_push(&out, (uint8_t)ANS_MODE_RAW_QUAL) != 0 || vec_append(&out, quals_raw, len) != 0) {
             free(out.data);
             return -1;
@@ -1113,25 +1343,18 @@ int hgs_ans4_encode_qual(
 
     if (vec_push(&out, (uint8_t)ANS_MODE_RANS4_QUAL) != 0) goto fail;
     for (size_t l = 0; l < 4U; l++) { if (vec_push_u32_le(&out, state[l]) != 0) goto fail; }
-    for (size_t l = 0; l < 4U; l++) { if (vec_push_u32_le(&out, (uint32_t)rev[l].len) != 0) goto fail; }
+    for (size_t l = 0; l < 4U; l++) { if (vec_push_u32_le(&out, (uint32_t)flen[l]) != 0) goto fail; }
     for (size_t l = 0; l < 4U; l++) {
-        if (vec_reserve(&out, out.len + rev[l].len) != 0) goto fail;
-        for (size_t i = rev[l].len; i > 0; i--) out.data[out.len++] = rev[l].data[i - 1U];
-        free(rev[l].data);
-        rev[l].data = NULL;
+        if (vec_append(&out, fwd[l], flen[l]) != 0) goto fail;
+        free(fwd[l]);
+        fwd[l] = NULL;
     }
     *out_buf = out.data;
     *out_len = out.len;
     return 0;
 
-fail_oom:
-    for (size_t l = 0; l < 4U; l++) { free(recs[l].data); free(rev[l].data); }
-    free(models);
-    free(out.data);
-    return -1;
-
 fail:
-    for (size_t l = 0; l < 4U; l++) free(rev[l].data);
+    for (size_t l = 0; l < 4U; l++) free(fwd[l]);
     free(out.data);
     return -1;
 }
@@ -1175,7 +1398,6 @@ int hgs_ans4_decode_qual(
 
     uint32_t state[4], blen[4];
     const uint8_t* p_cur[4];
-    const uint8_t* p_end[4];
     for (size_t l = 0; l < 4U; l++) {
         state[l] = read_u32_le(payload + 1U + l * 4U);
         blen[l] = read_u32_le(payload + 17U + l * 4U);
@@ -1184,90 +1406,21 @@ int hgs_ans4_decode_qual(
     for (size_t l = 0; l < 4U; l++) {
         if (pos + (size_t)blen[l] > payload_len) { free(out); return -1; }
         p_cur[l] = payload + pos;
-        p_end[l] = payload + pos + (size_t)blen[l];
         pos += (size_t)blen[l];
     }
 
-    QualModel* models = (QualModel*)calloc(4, sizeof(QualModel));
-    if (!models) { free(out); return -1; }
-    uint32_t uniform16_w[16] = {0};
-    uint16_t u16_cum[16], u16_freq[16];
-    ans_normalize_cdf(uniform16_w, 16U, u16_cum, u16_freq);
-
-    size_t base_q = expected_len >> 2;
-    size_t rem = expected_len & 3U;
     size_t lane_len[4], lane_off[4];
-    size_t cur = 0;
-    for (size_t l = 0; l < 4U; l++) {
-        lane_len[l] = base_q + (l < rem ? 1U : 0U);
-        lane_off[l] = cur;
-        cur += lane_len[l];
-    }
+    compute_4_lanes(expected_len, lane_len, lane_off);
 
     for (size_t l = 0; l < 4U; l++) {
-        uint8_t prev_q = 66U;
-        QualModel* m = &models[l];
-        for (size_t k = 0; k < lane_len[l]; k++) {
-            size_t gpos = lane_off[l] + k;
-            uint8_t mm = mismatch_mask ? (mismatch_mask[gpos] & 1U) : 0U;
-            uint8_t hb = homo_bins ? (homo_bins[gpos] & 3U) : 0U;
-            uint32_t ctx = qual_ctx(prev_q, mm, hb, gpos, read_len_hint);
-
-            uint32_t sw[2] = {m->same[ctx][0], m->same[ctx][1]};
-            uint16_t scum[2], sfreq[2];
-            ans_normalize_cdf(sw, 2U, scum, sfreq);
-            size_t is_same = 0;
-            if (ans_decode_find_and_step(&state[l], &p_cur[l], p_end[l], scum, sfreq, 2U, &is_same) != 0) goto fail;
-            if (++m->same[ctx][is_same] > 4096U) {
-                m->same[ctx][0] >>= 1;
-                m->same[ctx][1] >>= 1;
-            }
-
-            uint8_t q = prev_q;
-            if (!is_same) {
-                uint32_t cw[9];
-                for (int c = 0; c < 9; c++) cw[c] = m->coarse[ctx][c];
-                uint16_t ccum[9], cfreq[9];
-                ans_normalize_cdf(cw, 9U, ccum, cfreq);
-                size_t cbin = 0;
-                if (ans_decode_find_and_step(&state[l], &p_cur[l], p_end[l], ccum, cfreq, 9U, &cbin) != 0) goto fail;
-                if (++m->coarse[ctx][cbin] > 4096U) {
-                    for (int c = 0; c < 9; c++) m->coarse[ctx][c] >>= 1;
-                }
-                if (cbin < 8U) {
-                    uint32_t fctx = qual_fine_ctx((uint32_t)cbin, mm, prev_q);
-                    uint32_t fw[8];
-                    for (int f = 0; f < 8; f++) fw[f] = m->fine[fctx][f];
-                    uint16_t fcum[8], ffreq[8];
-                    ans_normalize_cdf(fw, 8U, fcum, ffreq);
-                    size_t fbin = 0;
-                    if (ans_decode_find_and_step(&state[l], &p_cur[l], p_end[l], fcum, ffreq, 8U, &fbin) != 0) goto fail;
-                    if (++m->fine[fctx][fbin] > 4096U) {
-                        for (int f = 0; f < 8; f++) m->fine[fctx][f] >>= 1;
-                    }
-                    q = (uint8_t)(33U + (cbin << 3) + fbin);
-                } else {
-                    size_t hi = 0, lo = 0;
-                    if (ans_decode_find_and_step(&state[l], &p_cur[l], p_end[l], u16_cum, u16_freq, 16U, &hi) != 0) goto fail;
-                    if (ans_decode_find_and_step(&state[l], &p_cur[l], p_end[l], u16_cum, u16_freq, 16U, &lo) != 0) goto fail;
-                    q = (uint8_t)((hi << 4) | lo);
-                }
-            }
-            out[gpos] = q;
-            prev_q = q;
+        if (hgs_ans4_decode_qual_ctx_lane(
+                p_cur[l], (size_t)blen[l], state[l], mismatch_mask, homo_bins, expected_len, read_len_hint, l, out + lane_off[l]) != 0) {
+            free(out);
+            return -1;
         }
     }
 
-    for (size_t l = 0; l < 4U; l++) {
-        if (state[l] != ANS_L || p_cur[l] != p_end[l]) goto fail;
-    }
-    free(models);
     *out_buf = out;
     *out_len = expected_len;
     return 0;
-
-fail:
-    free(models);
-    free(out);
-    return -1;
 }

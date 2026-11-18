@@ -21,9 +21,10 @@ This step-by-step launch guide turns **HyperGraSS / RC-MDL / EIMDL** (`HGS2` / `
    - Offline Bioconda package verification (`packaging/bioconda/eimdl/build.sh` + `run_test.sh`)
    - **Formal Lean 4 Proof Verification (`proofs/lean/` — zero `sorry`)**
    - Paper number & PDF audit (`paper/audit_paper_numbers.py`)
-2. Inspect both compiled manuscripts before submission:
-   - Concise main paper (~8–10 pages, journal/bioRxiv target): [`paper/EIMDL_Main_Manuscript.pdf`](../paper/EIMDL_Main_Manuscript.pdf)
-   - Exhaustive technical monograph & 73-genome appendices: [`paper/HGS2_EIMDL_Research_Paper.pdf`](../paper/HGS2_EIMDL_Research_Paper.pdf)
+2. Inspect all three compiled manuscripts before submission:
+   - Concise main paper (~7 pages, journal/bioRxiv target): [`paper/EIMDL_Main_Manuscript.pdf`](../paper/EIMDL_Main_Manuscript.pdf)
+   - Standalone Lean 4 formal-methods pearl (~4 pages, CPP/ITP/AFP target): [`paper/EIMDL_Lean4_Paper.pdf`](../paper/EIMDL_Lean4_Paper.pdf)
+   - Exhaustive technical monograph & 73-genome appendices (~33 pages): [`paper/HGS2_EIMDL_Research_Paper.pdf`](../paper/HGS2_EIMDL_Research_Paper.pdf)
 
 ---
 
