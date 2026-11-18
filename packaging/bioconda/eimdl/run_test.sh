@@ -32,7 +32,7 @@ subprocess.run(["eimdl-java", "decompress-omics", "--archive", str(arc_n), "--pa
 assert hashlib.sha256(dec_j.read_bytes()).hexdigest() == expected_sha, "Bioconda Native->Java .hgs3 mismatch"
 
 ana = json.loads(subprocess.check_output(["eimdl", "analyze", "--archive", str(arc_n), "--panel", str(pdir), "--json"], text=True))
-assert ana["total_bases"] == len(dna_a) + len(dna_mid) + len(dna_b)
+assert ana["raw_bytes"] == len(target_raw) and ana["total_bases"] == len(dna_a) + 4 + len(dna_b)
 km = json.loads(subprocess.check_output(["eimdl", "kmer", "--archive", str(arc_n), "--panel", str(pdir), "--query", seq[16:37].decode(), "--both-strands", "--json"], text=True))
 assert km["hit_count"] >= 1 and km["exact_zero_target_spans"] >= 1
 print("PASS: Bioconda eimdl + hypergrass + eimdl-java offline package verification passed.")
