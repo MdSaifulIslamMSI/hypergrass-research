@@ -10,7 +10,7 @@ use eimdl_native::hgs3::{self, Hgs3CompressOptions, OmicInputKind};
 
 fn print_usage() {
     eprintln!(
-        "EIMDL / HyperGraSS v3.0.0 Native Engine (C23 AVX2/4x-rANS + C++23 64-bit DAG/CRM/Inspect + Rust 2024)\n\
+        "EIMDL / HyperGraSS v3.1.0 Native Engine (C23 AVX2/4x-rANS/SA-IS BWT + C++23 64-bit DAG/CRM + Rust 2024)\n\
          Usage:\n\
            eimdl --version\n\
            eimdl compress --target <file> --out <archive.hgs2> [--panel <dir|file>] [--collection] [--single] [--bounded] [--threads <N>]\n\
@@ -28,7 +28,7 @@ fn print_usage() {
 fn dispatch_subcommand(sub: &str, rest: &[String]) -> Result<(), String> {
     match sub {
         "--version" | "-V" | "version" => {
-            println!("hypergrass-eimdl-native 3.0.0 (avx2={})", ffi::has_avx2());
+            println!("hypergrass-eimdl-native 3.1.0 (avx2={})", ffi::has_avx2());
             Ok(())
         }
         "compress" => run_compress(rest),

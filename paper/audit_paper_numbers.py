@@ -321,8 +321,8 @@ def main():
     require_number(tpu["amdahl_high_core_scaling"][0]["archive_bytes"], "tpu_amdahl_group22")
     require_in_readme_and_handoff(tpu["amdahl_high_core_scaling"][0]["archive_bytes"], "tpu_amdahl_group22")
 
-    # 11. Verify Next-Gen EIMDL v3.0 results (benchmarks/kaggle/results/world_shootout_v3_results.json)
-    ws3 = load_json("benchmarks/kaggle/results/world_shootout_v3_results.json")
+    # 11. Verify Next-Gen EIMDL v3.1 results (benchmarks/kaggle/results/world_shootout_v3_1_results.json)
+    ws3 = load_json("benchmarks/kaggle/results/world_shootout_v3_1_results.json")
     wn3 = find_codec(ws3["adversarial_and_bounded"]["white_noise_10mb"], "HGS2_Native_single")
     require_number(wn3["archive_bytes"], "ws3_white_noise_native")
     require_in_readme_and_handoff(wn3["archive_bytes"], "ws3_white_noise_native")
@@ -343,6 +343,10 @@ def main():
         nr = find_codec(sc3["runs_fa"], "HGS2_Native_collection")
         require_number(nr["archive_bytes"], f"ws3_{lbl}_native")
         require_in_readme_and_handoff(nr["archive_bytes"], f"ws3_{lbl}_native")
+    chr1_bnd = [r for r in ws3["human_shootout"]["single_chromosomes"][2]["runs_fa"]
+                if r.get("codec") == "HGS2_collection" and r.get("xmx") == "-Xmx256m"][0]
+    require_number(chr1_bnd["archive_bytes"], "ws3_chr1_java_256m")
+    require_in_readme_and_handoff(chr1_bnd["archive_bytes"], "ws3_chr1_java_256m")
 
     for dp3 in ws3["human_shootout"]["diploid_mode_c"]:
         lbl = dp3["label"]
@@ -382,6 +386,7 @@ def main():
     fq_bsc_run = find_codec(fq3["runs"], "libbsc")
     require_number(fq_nat_run["telemetry"]["qual_comp_bytes"], "ws3_fastq_nat_qual")
     require_number(fq_jav_run["telemetry"]["qual_comp_bytes"], "ws3_fastq_jav_qual")
+    require_number(ec3["compressed_domain"]["native"]["kmer"]["report"]["exact_zero_target_spans"], "ws3_ecoli_kmer_zero_spans")
     require_number(fq3["compressed_domain_fastq"]["native"]["analyze"]["report"]["snps"], "ws3_fastq_cd_snps")
     require_number(fq3["compressed_domain_fastq"]["native"]["variants"]["report"]["total_variants"], "ws3_fastq_cd_vcf")
     for val, lbl in [
@@ -390,6 +395,7 @@ def main():
         (fq_nop_run["archive_bytes"], "ws3_fastq_nopanel"),
         (fq_bsc_run["archive_bytes"], "ws3_fastq_libbsc"),
         (fq_nat_run["telemetry"]["qual_comp_bytes"], "ws3_fastq_nat_qual"),
+        (ec3["compressed_domain"]["native"]["kmer"]["report"]["exact_zero_target_spans"], "ws3_ecoli_kmer_zero_spans"),
     ]:
         require_in_readme_and_handoff(val, lbl)
 

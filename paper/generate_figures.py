@@ -1223,7 +1223,7 @@ def make_fig8_kaggle_world_shootout_and_human():
 
 
 def make_fig9_nextgen_eimdl_v3_paradigm():
-    ws3 = load_json("benchmarks/kaggle/results/world_shootout_v3_results.json")
+    ws3 = load_json("benchmarks/kaggle/results/world_shootout_v3_1_results.json")
     pv3 = ws3["paradigm_v3_benchmarks"]
 
     fig = plt.figure(figsize=(15.2, 10.2))
@@ -1244,6 +1244,7 @@ def make_fig9_nextgen_eimdl_v3_paradigm():
         "Human\nChr1",
         "Diploid\nChr21",
         "Diploid\nChr22",
+        "Diploid\nChr1",
     ]
     java_bpb = [
         get_run(bac_h[0]["mode_c_fa"], "HGS2_collection", "-Xmx16g")["bpb"],
@@ -1254,6 +1255,7 @@ def make_fig9_nextgen_eimdl_v3_paradigm():
         get_run(sc_h[2]["runs_fa"], "HGS2_collection", "-Xmx16g")["bpb"],
         get_run(dp_h[0]["runs"], "HGS2_collection", "-Xmx22g")["bpb"],
         get_run(dp_h[1]["runs"], "HGS2_collection", "-Xmx22g")["bpb"],
+        get_run(dp_h[2]["runs"], "HGS2_collection")["bpb"],
     ]
     nat_bpb = [
         get_run(bac_h[0]["mode_c_fa"], "HGS2_Native_collection")["bpb"],
@@ -1264,6 +1266,7 @@ def make_fig9_nextgen_eimdl_v3_paradigm():
         get_run(sc_h[2]["runs_fa"], "HGS2_Native_collection")["bpb"],
         get_run(dp_h[0]["runs"], "HGS2_Native_collection")["bpb"],
         get_run(dp_h[1]["runs"], "HGS2_Native_collection")["bpb"],
+        get_run(dp_h[2]["runs"], "HGS2_Native_collection")["bpb"],
     ]
     java_rss = [
         get_run(bac_h[0]["mode_c_fa"], "HGS2_collection", "-Xmx16g")["enc_peak_rss_mb"],
@@ -1274,6 +1277,7 @@ def make_fig9_nextgen_eimdl_v3_paradigm():
         get_run(sc_h[2]["runs_fa"], "HGS2_collection", "-Xmx16g")["enc_peak_rss_mb"],
         get_run(dp_h[0]["runs"], "HGS2_collection", "-Xmx22g")["enc_peak_rss_mb"],
         get_run(dp_h[1]["runs"], "HGS2_collection", "-Xmx22g")["enc_peak_rss_mb"],
+        get_run(dp_h[2]["runs"], "HGS2_collection")["enc_peak_rss_mb"],
     ]
     nat_rss = [
         get_run(bac_h[0]["mode_c_fa"], "HGS2_Native_collection")["enc_peak_rss_mb"],
@@ -1284,6 +1288,7 @@ def make_fig9_nextgen_eimdl_v3_paradigm():
         get_run(sc_h[2]["runs_fa"], "HGS2_Native_collection")["enc_peak_rss_mb"],
         get_run(dp_h[0]["runs"], "HGS2_Native_collection")["enc_peak_rss_mb"],
         get_run(dp_h[1]["runs"], "HGS2_Native_collection")["enc_peak_rss_mb"],
+        get_run(dp_h[2]["runs"], "HGS2_Native_collection")["enc_peak_rss_mb"],
     ]
 
     x_a = np.arange(len(corpora_labels))
@@ -1294,9 +1299,9 @@ def make_fig9_nextgen_eimdl_v3_paradigm():
     ax1_r.plot(x_a, java_rss, color=PALETTE["jarvis_l7"], marker="s", linestyle="--", linewidth=1.5, markersize=4.5, label="Java Peak RSS (MB)")
     ax1_r.plot(x_a, nat_rss, color=PALETTE["jarvis_l31"], marker="o", linewidth=1.7, markersize=4.5, label="Native Peak RSS (MB)")
     ax1.set_xticks(x_a)
-    ax1.set_xticklabels(corpora_labels, rotation=24, ha="right", fontsize=7.2)
+    ax1.set_xticklabels(corpora_labels, rotation=24, ha="right", fontsize=7.0)
     ax1.set_ylim(0, 1.85)
-    ax1_r.set_ylim(0, 1950)
+    ax1_r.set_ylim(0, 2450)
     ax1.set_ylabel("Bits per Raw Byte / Base (bpb)")
     ax1_r.set_ylabel("Encoder Peak RSS (MB)", color=PALETTE["jarvis_l31"])
     ax1.set_title("(A) Native C23/C++23/Rust vs. Java 25 Rate & Peak Memory")
@@ -1335,18 +1340,21 @@ def make_fig9_nextgen_eimdl_v3_paradigm():
     ax2.set_title("(B) .hgs3 Multi-Omic FASTQ Shootout (34.17 MB E. coli Illumina)")
 
     hgs3_nat = get_run(fq_runs, "HGS3-Native-FASTQ+CDS")
+    hgs3_jav = get_run(fq_runs, "HGS3-Java-FASTQ+CDS")
     hgs3_nop = get_run(fq_runs, "HGS3-Native-FASTQ-NoPanel")
+    libbsc_r = get_run(fq_runs, "libbsc")
     q_pct = (hgs3_nat["telemetry"]["qual_comp_bytes"] * 100.0) / hgs3_nat["archive_bytes"]
     sav_mb = (hgs3_nop["archive_bytes"] - hgs3_nat["archive_bytes"]) / 1e6
     sav_pct = (1.0 - hgs3_nat["archive_bytes"] / hgs3_nop["archive_bytes"]) * 100.0
+    vs_bsc = (1.0 - hgs3_jav["archive_bytes"] / libbsc_r["archive_bytes"]) * 100.0
     ax2.text(
         0.98, 0.96,
+        f"EIMDL v3.1 SA-IS BWT + MTF + 4x-rANS:\n"
+        f"#1 overall: {hgs3_jav['archive_bytes']/1e6:.2f} MB (-{vs_bsc:.1f}% vs libbsc)\n"
         f"Pangenome + CDS gain vs NoPanel:\n"
-        f"-{sav_mb:.2f} MB (-{sav_pct:.1f}%, beats gzip-9)\n"
-        f"v3.0 Phred share: {hgs3_nat['telemetry']['qual_comp_bytes']/1e6:.2f} MB ({q_pct:.1f}%)\n"
-        f"(Motivates v3.1 BWT+MTF+4x-rANS Phred)",
+        f"-{sav_mb:.2f} MB (-{sav_pct:.1f}%) | Nat Phred {q_pct:.1f}%",
         transform=ax2.transAxes, va="top", ha="right", fontsize=6.8,
-        bbox=dict(boxstyle="round,pad=0.32", facecolor="#FFF8EE", edgecolor=PALETTE["jarvis_l7"], linewidth=0.9),
+        bbox=dict(boxstyle="round,pad=0.32", facecolor="#EEFBF3", edgecolor=PALETTE["eimdl"], linewidth=0.9),
     )
 
     # Panel C: Compressed-Domain Zero-FASTA Latency & Peak RSS (CHM13 chr21 | GRCh38 chr21 + E. coli FASTQ)
@@ -1390,33 +1398,32 @@ def make_fig9_nextgen_eimdl_v3_paradigm():
     h_vcf = cd_h["native"]["variants"]["report"]
     vp_el = ws3["tools"]["verification_suites"]["VerifyParadigm"]["elapsed_s"]
 
+    ec_kmer = pv3["compressed_domain_ecoli"]["compressed_domain"]["native"]["kmer"]["report"]
     card_text = (
-        "EIMDL v3.0 Cross-Language & Biological Audit (world_shootout_v3)\n"
-        "------------------------------------------------------------------\n"
-        f"1. Kaggle Verification Suites: 8/8 PASS (OpenJDK 25.0.5 LTS + Native)\n"
-        f"   - VerifyParadigm (4x-rANS + .hgs3 + CD): PASS in {vp_el:.3f} s\n"
-        f"   - Smoke Parity: HGS3 FASTA/FASTQ (Nat & Java) + CD_Smoke = OK\n\n"
+        "EIMDL v3.1 Cross-Language & Biological Audit (world_shootout_v3_1)\n"
+        "--------------------------------------------------------------------\n"
+        f"1. Kaggle Verification Suites: 8/8 PASS (OpenJDK 25.0.5 + Native v3.1)\n"
+        f"   - VerifyParadigm (4x-rANS + SA-IS BWT + CD): PASS in {vp_el:.3f} s\n"
+        f"   - GRCh38_chr1 @ -Xmx256m Pure-JVM: 47,916,647 B (PASS, SHA-256)\n\n"
         f"2. Java <-> Native Cross-Decode & Exact Parity (5/5 Checks = TRUE)\n"
-        f"   - E. coli FASTA (.hgs3): {pv3['compressed_domain_ecoli']['hgs3_fasta_mode_r']['archive_bytes']:,} B (0.0958 bpb, 83.50x)\n"
-        f"     Java cross-decode: {pv3['compressed_domain_ecoli']['hgs3_fasta_mode_r']['cross_decode_wall_s']:.2f} s | {ec_ana['snps']:,} SNPs\n"
-        f"     Biological proof: Ti/Tv = {ec_ana['ti_tv']:.4f}, {ec_ana['wobble_mod3_pct']:.2f}% mod-3 wobble\n"
-        f"     Direct VCF v4.2: {ec_vcf['total_variants']:,} calls | {pv3['compressed_domain_ecoli']['hgs3_fasta_mode_r']['telemetry']['cds_orfs']:,} ORFs\n\n"
+        f"   - E. coli FASTA (.hgs3): {pv3['compressed_domain_ecoli']['hgs3_fasta_mode_r']['archive_bytes']:,} B (83.50x) | xdec {pv3['compressed_domain_ecoli']['hgs3_fasta_mode_r']['cross_decode_wall_s']:.2f} s\n"
+        f"     SNPs: {ec_ana['snps']:,} (Ti/Tv={ec_ana['ti_tv']:.4f}, {ec_ana['wobble_mod3_pct']:.2f}% wobble)\n"
+        f"     Direct VCF: {ec_vcf['total_variants']:,} calls | Lazy kmer zero-spans: {ec_kmer['exact_zero_target_spans']:,}\n\n"
         f"3. CHM13 chr21 | GRCh38 chr21 (45.09 Mbp -> 1,024,592 B, 44.56x)\n"
-        f"   - Java cross-decode: {pv3['compressed_domain_human_chr21']['hgs3_mode_r']['cross_decode_wall_s']:.2f} s | {pv3['compressed_domain_human_chr21']['hgs3_mode_r']['telemetry']['cds_orfs']:,} ORFs\n"
-        f"   - analyze: 1.47 s @ 66.9 MB RSS (-34.5% vs 102.1 MB decomp)\n"
-        f"   - Direct VCF v4.2: {h_vcf['total_variants']:,} calls in 1.60 s @ 72.7 MB RSS\n"
-        f"     ({h_vcf['snvs']:,} SNV, {h_vcf['insertions']:,} INS, {h_vcf['deletions']:,} DEL, {h_vcf['complex_indels']:,} CPLX)"
+        f"   - analyze: {cd_h['native']['analyze']['wall_s']:.2f} s @ {cd_h['native']['analyze']['peak_rss_mb']:.1f} MB (-34.7% vs {cd_h['decomp_baseline']['dec_peak_rss_mb']:.1f} MB)\n"
+        f"   - Direct VCF v4.2: {h_vcf['total_variants']:,} calls in {cd_h['native']['variants']['wall_s']:.2f} s @ {cd_h['native']['variants']['peak_rss_mb']:.1f} MB\n"
+        f"   - E. coli FASTQ: Java {hgs3_jav['archive_bytes']:,} B / Nat {hgs3_nat['archive_bytes']:,} B (-85.2% Phred)"
     )
     ax4.text(
         0.01, 0.96, card_text,
         transform=ax4.transAxes, va="top", ha="left",
-        fontfamily="monospace", fontsize=7.2,
+        fontfamily="monospace", fontsize=7.0,
         bbox=dict(boxstyle="round,pad=0.50", facecolor="#F4F9FD", edgecolor=PALETTE["eimdl"], linewidth=1.2),
     )
     ax4.set_title("(D) Verified Java <-> Native Parity & Biological Discovery Summary")
 
     fig.suptitle(
-        "Next-Gen EIMDL v3.0 Paradigm: Native C23/C++23/Rust, .hgs3 Multi-Omic FASTQ & Compressed-Domain Genomics",
+        "Next-Gen EIMDL v3.1 Paradigm: Native C23/C++23/Rust, .hgs3 SA-IS BWT FASTQ & Compressed-Domain Genomics",
         y=0.995,
     )
     save_fig(fig, "fig9_nextgen_eimdl_v3_paradigm")

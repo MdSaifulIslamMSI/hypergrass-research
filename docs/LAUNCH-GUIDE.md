@@ -53,7 +53,7 @@ Once the release tarball (`hypergrass-research-v<TAG>.tar.gz` or GitHub source a
 
 1. Compute the exact SHA-256 of the GitHub release source archive:
    ```bash
-   curl -sL https://github.com/MdSaifulIslamMSI/hypergrass-research/archive/refs/tags/v3.0.0.tar.gz | sha256sum
+   curl -sL https://github.com/MdSaifulIslamMSI/hypergrass-research/archive/refs/tags/v3.1.0.tar.gz | sha256sum
    ```
 2. Update `packaging/bioconda/eimdl/meta.yaml` (`source.url` + `source.sha256` pointing to the GitHub archive instead of local path `../../..`).
 3. Fork `bioconda/bioconda-recipes`, copy `packaging/bioconda/eimdl/` to `recipes/eimdl/`, run `bioconda-utils lint recipes/eimdl`, and submit the PR following [`packaging/bioconda/README.md`](../packaging/bioconda/README.md).

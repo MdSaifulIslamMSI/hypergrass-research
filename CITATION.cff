@@ -1,7 +1,7 @@
 cff-version: 1.2.0
 message: "If you use HyperGraSS / HGS2 / HGS3 / EIMDL or the accompanying research monograph in your work, please cite the software and monograph using this metadata."
 title: "Evolutionary Information Minimum Description Length (EIMDL): Four-Generation Architecture, Multi-Omic .hgs3 Containers & Compressed-Domain Genomics"
-version: "3.0.0"
+version: "3.1.0"
 date-released: 2026-11-18
 license: "Apache-2.0"
 type: software
