@@ -13,9 +13,13 @@ fi
 if [[ -n "${CXX:-}" ]] && ! command -v g++ >/dev/null 2>&1; then
   ln -s "$(command -v "${CXX}")" "${SHIM_BIN}/g++"
 fi
+if [[ -n "${AR:-}" ]] && ! command -v ar >/dev/null 2>&1; then
+  ln -s "$(command -v "${AR}")" "${SHIM_BIN}/ar"
+fi
 export PATH="${SHIM_BIN}:${PATH}"
 
 # 1. Build zero-crate Native C23/C++23/Rust 2024 engine (`eimdl`) completely offline
+export CARGO_HOME="${CARGO_HOME:-${PWD}/.cargo}"
 export CARGO_NET_OFFLINE=true
 (
   cd native/eimdl-rs

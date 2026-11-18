@@ -7,35 +7,36 @@ package:
 
 source:
   url: https://github.com/MdSaifulIslamMSI/hypergrass-research/releases/download/v{{ version }}/hypergrass-research-v{{ version }}.tar.gz
-  sha256: a4da3b554437afbc8a91e5ea2723f29b5b3f36703986513d4d5699d2a73a25e6
+  sha256: b3217cd10f2ce668449c102b0b78e814aca4dbab4e41c8789e49584e4f287802
 
 build:
   number: 0
-  skip: true  # [win]
   run_exports:
     - {{ pin_subpackage(name, max_pin="x.x") }}
 
 requirements:
   build:
+    - {{ stdlib('c') }}
     - {{ compiler('c') }}
     - {{ compiler('cxx') }}
-    - {{ compiler('rust') }} >=1.85
-  host:
+    - {{ compiler('rust') }}
     - openjdk >=25
   run:
     - openjdk >=25
 
 test:
+  requires:
+    - python
   commands:
     - eimdl --version
     - hypergrass --version
 
 about:
-  home: https://github.com/MdSaifulIslamMSI/hypergrass-research
+  home: "https://github.com/MdSaifulIslamMSI/hypergrass-research"
   license: Apache-2.0
   license_family: APACHE
   license_file: LICENSE
-  summary: "Evolutionary Information Minimum Description Length (EIMDL): lossless single/reference/pangenome and multi-omic .hgs3 genomic compressor with zero-FASTA compressed-domain analytics"
+  summary: "Evolutionary MDL lossless genomic compressor and compressed-domain analytics engine (.hgs2/.hgs3)."
   description: |
     EIMDL (HyperGraSS / HGS2 / HGS3) unites deterministic seven-law evolutionary lossless DNA compression
     with zero-crate C23/C++23/Rust 2024 native execution (eimdl) and zero-dependency Java 25 LTS tooling
@@ -45,5 +46,8 @@ about:
   dev_url: https://github.com/MdSaifulIslamMSI/hypergrass-research
 
 extra:
+  additional-platforms:
+    - linux-aarch64
+    - osx-arm64
   recipe-maintainers:
     - MdSaifulIslamMSI
