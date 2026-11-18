@@ -2,7 +2,8 @@
 
 **Lossless Genomic, Reference-Conditioned, and Pangenomic Sequence Compression under Evolutionary-Information Minimum Description Length (EIMDL) & Generalized Amdahl-Memory Scaling**
 
-[![Release](https://img.shields.io/github/v/release/MdSaifulIslamMSI/hypergrass-research?label=Release&color=blue)](https://github.com/MdSaifulIslamMSI/hypergrass-research/releases/tag/v3.1.0)
+[![Release](https://img.shields.io/github/v/release/MdSaifulIslamMSI/hypergrass-research?label=Release&color=blue)](https://github.com/MdSaifulIslamMSI/hypergrass-research/releases/tag/v3.1.1)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24344825.svg)](https://doi.org/10.5281/zenodo.24344825)
 [![Java](https://img.shields.io/badge/Java-25%20LTS%20%7C%20JDK%2027-blue.svg)](src/hypergrass/)
 [![Native](https://img.shields.io/badge/Native-C23%20%7C%20C%2B%2B23%20%7C%20Rust%202024-orange.svg)](native/README.md)
 [![Container](https://img.shields.io/badge/Formats-.hgs3%20v3%20%7C%20.hgs2%20v2.0%20%7C%20.hgs%20v1.0-success.svg)](docs/HGS-FORMAT.md)
@@ -53,7 +54,8 @@ cd proofs/lean && lake build && lake exe eimdl_proofs_check
 | **Archive Container Specification** | Byte-exact binary format specification for `.hgs3` v3.0/v3.1 (`0x48475333`), `.hgs2` v2.0 (`0x48475332`), and legacy `.hgs` v1.0 (`0x48475301`) | [`docs/HGS-FORMAT.md`](docs/HGS-FORMAT.md) |
 | **Foundational Invariants & Gen 1/2 Docs** | Scientific contract ([`FOUNDATIONS.md`](docs/FOUNDATIONS.md)), specialized panels ([`SPECIALIZED.md`](docs/SPECIALIZED.md)), broad panels ([`BROAD.md`](docs/BROAD.md)), ablations ([`ABLATION.md`](docs/ABLATION.md)), entropy floor ([`ENTROPY-FLOOR.md`](docs/ENTROPY-FLOOR.md)), scaling ([`SCALING.md`](docs/SCALING.md)), RC-MDL v2 ([`RESULTS.md`](prototype/rcmdl/RESULTS.md)), handoff ([`HANDOFF.md`](HANDOFF.md)) | [`docs/`](docs/) |
 | **Latest Release (`v3.1.0`)** | Zero-dependency Java 25 executable JAR (`hypergrass-hgs3-v3.1.0.jar`), native C23/C++23/Rust binaries (`linux-x86_64`, `macos-arm64`), 7-page & 33-page PDFs, `fig8`/`fig9`/`arch5`, clean source tarball & `SHA256SUMS.txt` | [`releases/tag/v3.1.0`](https://github.com/MdSaifulIslamMSI/hypergrass-research/releases/tag/v3.1.0) |
-| **Bioconda / Workflow Ecosystem** | Offline Bioconda recipe ([`packaging/bioconda/`](packaging/bioconda/eimdl/meta.yaml)), Nextflow DSL2 (`eimdl.nf`), Snakemake wrapper, multi-stage Dockerfile, and HPRC/GIAB HG002 harness ([`benchmarks/hprc_giab/`](benchmarks/hprc_giab/README.md)) | [`packaging/`](packaging/) |
+| **Zenodo Permanent Archive (DOI)** | CERN/Zenodo Concept DOI (`10.5281/zenodo.24344825`) & `v3.1.1` Version DOI (`10.5281/zenodo.24344826`) | [`10.5281/zenodo.24344825`](https://doi.org/10.5281/zenodo.24344825) |
+| **Bioconda / Workflow Ecosystem** | Offline Bioconda recipe ([PR #71846](https://github.com/bioconda/bioconda-recipes/pull/71846), `Lint`+`Linux`+`OSX-64`+`ARM` PASS), Nextflow DSL2 (`eimdl.nf`), Snakemake wrapper, multi-stage Dockerfile, and HPRC/GIAB HG002 harness ([`benchmarks/hprc_giab/`](benchmarks/hprc_giab/README.md)) | [`packaging/`](packaging/) |
 | **Launch & Outreach Playbook** | Step-by-step templates for Zenodo DOI, bioRxiv / journal submission, `bioconda-recipes` PR, Show HN, and baseline author outreach | [`docs/LAUNCH-GUIDE.md`](docs/LAUNCH-GUIDE.md) |
 | **Citation, Zenodo & License** | GitHub Citation File Format 1.2.0 ([`CITATION.cff`](CITATION.cff)), Zenodo DOI metadata ([`.zenodo.json`](.zenodo.json)) & Apache License 2.0 ([`LICENSE`](LICENSE)) | [`CITATION.cff`](CITATION.cff) |
 
