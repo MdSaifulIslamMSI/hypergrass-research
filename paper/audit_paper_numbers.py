@@ -421,6 +421,70 @@ def main():
     if not os.path.exists(pdf_path) or os.path.getsize(pdf_path) < 100_000:
         failures.append(f"[PDF MISSING OR TOO SMALL]: {pdf_path}")
     checks += 1
+    main_pdf_path = os.path.join(BASE_DIR, "paper", "EIMDL_Main_Manuscript.pdf")
+    checks += 1
+    if not os.path.exists(main_pdf_path) or os.path.getsize(main_pdf_path) < 100_000:
+        failures.append(f"[MAIN MANUSCRIPT PDF MISSING OR TOO SMALL]: {main_pdf_path}")
+
+    # 13. Verify Lean 4 formal proof package exists with 0 `sorry` and expected theorems
+    lean_required = [
+        "proofs/lean/lean-toolchain",
+        "proofs/lean/lakefile.toml",
+        "proofs/lean/EimdlProofs.lean",
+        "proofs/lean/Main.lean",
+        "proofs/lean/README.md",
+        "proofs/lean/EimdlProofs/Law1KleinV4.lean",
+        "proofs/lean/EimdlProofs/Law2CodonWobble.lean",
+        "proofs/lean/EimdlProofs/Law3ModeCDag.lean",
+        "proofs/lean/EimdlProofs/Law4UniversalBound.lean",
+        "proofs/lean/EimdlProofs/Law6TwoAdicTaper.lean",
+    ]
+    lean_corpus = []
+    for rel in lean_required:
+        fp = os.path.join(BASE_DIR, rel)
+        checks += 1
+        if not os.path.exists(fp):
+            failures.append(f"[LEAN FILE MISSING]: {rel}")
+        elif rel.endswith(".lean"):
+            import re
+            with open(fp, "r", encoding="utf-8") as fh:
+                txt = fh.read()
+            lean_corpus.append(txt)
+            clean = re.sub(r"/-.*?-/", "", txt, flags=re.S)
+            clean = re.sub(r"--[^\n]*", "", clean)
+            clean = re.sub(r'"(?:\\.|[^"\\])*"', "", clean)
+            checks += 1
+            if re.search(r"\bsorry\b", clean) or re.search(r"(?:^|\n)\s*axiom\s+", clean):
+                failures.append(f"[LEAN UNPROVED SORRY/AXIOM]: {rel}")
+    all_lean = "\n".join(lean_corpus)
+    for thm in [
+        "diff_strand_invariant",
+        "swarReverseComplementWord32_involutive",
+        "swar_v4_diff_strand_invariant",
+        "wobble_left_inverse",
+        "wobble_right_inverse",
+        "causal_dag_acyclic",
+        "eimdl_universal_ceiling",
+        "taper20_stream_invariant",
+        "recip_mul_le_exact",
+    ]:
+        checks += 1
+        if thm not in all_lean:
+            failures.append(f"[LEAN THEOREM MISSING]: {thm}")
+
+    # 14. Verify community adoption / ecosystem files exist
+    for rel in [
+        ".zenodo.json",
+        "packaging/bioconda/eimdl/meta.yaml",
+        "packaging/nextflow/eimdl.nf",
+        "packaging/snakemake/eimdl_wrapper.py",
+        "packaging/docker/Dockerfile",
+        "benchmarks/hprc_giab/run_hprc_giab_bench.py",
+        "docs/LAUNCH-GUIDE.md",
+    ]:
+        checks += 1
+        if not os.path.exists(os.path.join(BASE_DIR, rel)):
+            failures.append(f"[ECOSYSTEM FILE MISSING]: {rel}")
     for fn in [
         "fig1_regime_overview",
         "fig2_mode_r_loo_73genomes",

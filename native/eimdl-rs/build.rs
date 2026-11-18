@@ -206,7 +206,7 @@ fn main() {
 
         println!("cargo:rustc-link-search=native={}", out_dir.display());
         println!("cargo:rustc-link-lib=static=hgs_native");
-        if cxx.contains("clang") && target_os == "macos" {
+        if (cxx.contains("clang") || target_os == "macos") && !cxx.contains("g++") {
             println!("cargo:rustc-link-lib=c++");
         } else {
             println!("cargo:rustc-link-lib=stdc++");

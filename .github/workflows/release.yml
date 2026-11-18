@@ -24,8 +24,34 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  native-macos:
+    name: Build Native Binary (macOS arm64)
+    runs-on: macos-14
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Rust stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build & test macOS arm64 eimdl
+        run: |
+          cd native/eimdl-rs
+          cargo test --release --offline
+          cargo build --release --offline
+          ./target/release/eimdl --version
+
+      - name: Upload macOS arm64 binary
+        uses: actions/upload-artifact@v7
+        with:
+          name: eimdl-macos-arm64
+          path: native/eimdl-rs/target/release/eimdl
+          if-no-files-found: error
+
   release:
     name: Verify, Package & Publish Release
+    needs: [native-macos]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -65,8 +91,14 @@ jobs:
           )
           ./native/eimdl-rs/target/release/eimdl --version
 
-      - name: Run 1,859-check paper numerical audit
+      - name: Run full paper, Lean & ecosystem audit
         run: python3 -B paper/audit_paper_numbers.py
+
+      - name: Download macOS arm64 native binary
+        uses: actions/download-artifact@v7
+        with:
+          name: eimdl-macos-arm64
+          path: ${{ runner.temp }}/macos_bin
 
       - name: Assemble checksummed release bundle
         id: pkg
@@ -86,6 +118,8 @@ jobs:
           java -jar "${OUT}/hypergrass-hgs3-${TAG}.jar" --version
           cp native/eimdl-rs/target/release/eimdl "${OUT}/hypergrass-eimdl-${TAG}-linux-x86_64"
           chmod +x "${OUT}/hypergrass-eimdl-${TAG}-linux-x86_64"
+          cp "${{ runner.temp }}/macos_bin/eimdl" "${OUT}/hypergrass-eimdl-${TAG}-macos-arm64"
+          chmod +x "${OUT}/hypergrass-eimdl-${TAG}-macos-arm64"
           ARCHIVE_REF="HEAD"
           if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
             ARCHIVE_REF="${TAG}"
@@ -94,6 +128,7 @@ jobs:
             --prefix="hypergrass-research-${TAG}/" \
             -o "${OUT}/hypergrass-research-${TAG}.tar.gz" \
             "${ARCHIVE_REF}"
+          cp paper/EIMDL_Main_Manuscript.pdf "${OUT}/EIMDL_Main_Manuscript.pdf"
           cp paper/HGS2_EIMDL_Research_Paper.pdf "${OUT}/HGS2_EIMDL_Research_Paper.pdf"
           cp paper/figures/fig8_kaggle_world_shootout_and_human.png "${OUT}/fig8_kaggle_world_shootout_and_human.png"
           cp paper/figures/fig9_nextgen_eimdl_v3_paradigm.png "${OUT}/fig9_nextgen_eimdl_v3_paradigm.png"
@@ -103,6 +138,8 @@ jobs:
             sha256sum \
               "hypergrass-hgs3-${TAG}.jar" \
               "hypergrass-eimdl-${TAG}-linux-x86_64" \
+              "hypergrass-eimdl-${TAG}-macos-arm64" \
+              "EIMDL_Main_Manuscript.pdf" \
               "HGS2_EIMDL_Research_Paper.pdf" \
               "fig8_kaggle_world_shootout_and_human.png" \
               "fig9_nextgen_eimdl_v3_paradigm.png" \

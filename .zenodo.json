@@ -1,0 +1,31 @@
+{
+  "title": "HyperGraSS / EIMDL: Four-Generation Evolutionary Lossless Genomic Compressor (.hgs2/.hgs3), Native C23/C++23/Rust Engine, and Compressed-Domain Genomics",
+  "upload_type": "software",
+  "license": "Apache-2.0",
+  "creators": [
+    {
+      "name": "Islam, Md Saiful"
+    }
+  ],
+  "keywords": [
+    "genomic compression",
+    "pangenome",
+    "compressed-domain genomics",
+    "bioinformatics",
+    "minimum description length",
+    "variant calling",
+    "VCF",
+    "FASTQ",
+    "CHM13",
+    "Rust",
+    "Java"
+  ],
+  "description": "Open-source lossless genomic, reference-conditioned, and pangenome compression engine uniting seven algebraic-biological laws (Klein V4 substitution coding, bijective mod-3 codon-wobble gaps, 6-state causal ORF HMM, two-gear coalescent haplotype copying + affine micro-indels, subsampled CSR syncmer indexing, two-adic Pitman-Yor FastCRM, and disjoint Stage-1/2 -Xmx128m heap scaling) with Next-Gen .hgs3 multi-omic FASTQ+CDS containers, wire-compatible Native C23/C++23/Rust 2024 + Java 25 LTS execution, and zero-FASTA compressed-domain analytics (analyze, VCF v4.2 variants, lazy k-mer search, and slice queries).",
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/MdSaifulIslamMSI/hypergrass-research",
+      "relation": "isSupplementTo",
+      "scheme": "url"
+    }
+  ]
+}

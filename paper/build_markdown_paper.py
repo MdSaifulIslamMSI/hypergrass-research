@@ -479,6 +479,7 @@ MD_PART2 = r"""
 - **Suite 5 (Law V Sub-Linear CSR Index Scaling & Thread Determinism):** Verifies `1.58 B/bp` ($s=0$), `0.93 B/bp` ($s=1$), and `0.59 B/bp` ($s=2$), plus byte-identical archives across `1` and `8` threads (`63,611 B` vs. `63,611 B`, `delta=0.000%`).
 - **Suite 6 (Law VI Two-Adic Tapered Adaptation & HPY Novelty Coding):** Verifies exact fixed-point convergence `p_min = 11/4096` (vs. `31/4096`) and `Novelty = 1.0897 bpb`.
 - **Suite 7 (Law VII Disjoint Lifecycle & Bounded Mode Determinism):** Verifies `Unbounded = 27,257 B` vs. `Bounded = 27,257 B` (`delta=0.000%`), plus Mode R SHA-256 donor-panel tamper rejection (`VerifyFusionEngine`).
+- **Machine-Checked Formal Proofs in Lean 4 ([`proofs/lean/`](file:///C:/Users/mdsai/.gemini/antigravity/scratch/hypergrass/proofs/lean/README.md)):** Zero-dependency, zero-`sorry` formalization (`leanprover/lean4:v4.36.0`, verified by `lake build` and `lake exe eimdl_proofs_check` in CI) strengthening finite tests into universal theorems across all 7 laws: `Law1KleinV4.lean` ($V_4$ strand invariance + SAT-certified `BitVec 64` `swarReverseComplementWord32_involutive` across all $2^{64}$ words), `Law2CodonWobble.lean` (unbounded $\mathbb{N} \leftrightarrow \mathbb{N}\times\text{Fin }3$ bijection + 64-codon antisense/sense stop duality), `Law3ModeCDag.lean` (zero-axiom DAG acyclicity), `Law4UniversalBound.lean` (5-regime non-expansion ceiling & disjoint RAM savings), and `Law6TwoAdicTaper.lean` (`[11, 4085]` arbitrary-stream range-coder safety invariant & `RECIP` quotient soundness).
 
 ---
 

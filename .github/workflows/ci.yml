@@ -160,6 +160,59 @@ jobs:
           PREFIX="${BIOCONDA_PREFIX}" SRC_DIR="${PWD}" CC="$(command -v gcc)" CXX="$(command -v g++)" AR="$(command -v ar)" bash packaging/bioconda/eimdl/build.sh
           PATH="${BIOCONDA_PREFIX}/bin:${PATH}" bash packaging/bioconda/eimdl/run_test.sh
 
+  native-macos:
+    name: Native Engine (macOS Apple Silicon ARM64)
+    runs-on: macos-14
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Rust stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Build, clippy & test native C23/C++23/Rust engine on macOS arm64
+        run: |
+          cd native/eimdl-rs
+          cargo clippy --all-targets --offline -- -D warnings
+          cargo test --release --offline
+          cargo build --release --offline
+          ./target/release/eimdl --version
+
+  lean4:
+    name: Formal Lean 4 Proofs (Laws I-VII)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Install elan (Lean 4 toolchain manager)
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+
+      - name: Build & verify zero-sorry Lean 4 formal proofs
+        run: |
+          python3 - <<'PY'
+          import pathlib, re
+          for fp in sorted(pathlib.Path("proofs/lean").rglob("*.lean")):
+              if ".lake" in fp.parts:
+                  continue
+              txt = fp.read_text(encoding="utf-8")
+              clean = re.sub(r"/-.*?-/", "", txt, flags=re.S)
+              clean = re.sub(r"--[^\n]*", "", clean)
+              clean = re.sub(r'"(?:\\.|[^"\\])*"', "", clean)
+              assert not re.search(r"\bsorry\b", clean), f"Forbidden sorry in {fp}"
+              assert not re.search(r"(?:^|\n)\s*axiom\s+", clean), f"Forbidden axiom in {fp}"
+          print("Static scan passed: 0 sorry, 0 custom axioms across proofs/lean.")
+          PY
+          cd proofs/lean
+          lake build
+          lake exe eimdl_proofs_check
+
   audit:
     name: Paper Audit & Metadata Integrity
     runs-on: ubuntu-latest
@@ -173,18 +226,21 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Run 1,859-check paper numerical audit
+      - name: Run comprehensive paper, Lean & ecosystem audit
         run: python3 -B paper/audit_paper_numbers.py
 
-      - name: Validate CITATION.cff & shell script LF line endings
+      - name: Validate CITATION.cff, .zenodo.json & shell script LF line endings
         run: |
           python3 - <<'PY'
-          import pathlib
+          import json, pathlib
           cff = pathlib.Path("CITATION.cff").read_text(encoding="utf-8")
           for req in ("cff-version: 1.2.0", "title:", "version:", "authors:", "license:", "repository-code:"):
               assert req in cff, f"Missing {req} in CITATION.cff"
+          zen = json.loads(pathlib.Path(".zenodo.json").read_text(encoding="utf-8"))
+          for k in ("title", "upload_type", "creators", "license"):
+              assert k in zen, f"Missing {k} in .zenodo.json"
           for script in ("build.sh", "test.sh", "packaging/bioconda/eimdl/build.sh", "packaging/bioconda/eimdl/run_test.sh"):
               raw = pathlib.Path(script).read_bytes()
               assert b"\r\n" not in raw, f"CRLF detected in {script}"
-          print("CITATION.cff and LF script checks passed.")
+          print("CITATION.cff, .zenodo.json, and LF script checks passed.")
           PY

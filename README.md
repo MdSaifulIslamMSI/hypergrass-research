@@ -6,30 +6,56 @@
 [![Java](https://img.shields.io/badge/Java-25%20LTS%20%7C%20JDK%2027-blue.svg)](src/hypergrass/)
 [![Native](https://img.shields.io/badge/Native-C23%20%7C%20C%2B%2B23%20%7C%20Rust%202024-orange.svg)](native/README.md)
 [![Container](https://img.shields.io/badge/Formats-.hgs3%20v3%20%7C%20.hgs2%20v2.0%20%7C%20.hgs%20v1.0-success.svg)](docs/HGS-FORMAT.md)
-[![Paper](https://img.shields.io/badge/Monograph-33%20Pages%20PDF%20%2B%20LaTeX-critical.svg)](paper/HGS2_EIMDL_Research_Paper.pdf)
+[![Paper](https://img.shields.io/badge/Main%20Paper-7%20Pages%20PDF-red.svg)](paper/EIMDL_Main_Manuscript.pdf)
+[![Monograph](https://img.shields.io/badge/Monograph-33%20Pages%20PDF%20%2B%20LaTeX-critical.svg)](paper/HGS2_EIMDL_Research_Paper.pdf)
+[![Lean 4](https://img.shields.io/badge/Lean%204-Formal%20Proofs%20(0%20sorry)-7c3aed.svg)](proofs/lean/README.md)
 [![Kaggle E2E](https://img.shields.io/badge/Kaggle%20E2E-15--Codec%20Shootout%20%2B%20T4%20GPU-20BEFF.svg)](benchmarks/kaggle/README.md)
-[![Audit](https://img.shields.io/badge/Automated%20Audit-1%2C859%20%2F%201%2C859%20PASS-brightgreen.svg)](paper/audit_paper_numbers.py)
+[![Audit](https://img.shields.io/badge/Automated%20Audit-1%2C893%20%2F%201%2C893%20PASS-brightgreen.svg)](paper/audit_paper_numbers.py)
 [![License](https://img.shields.io/badge/License-Apache_2.0-green.svg)](LICENSE)
 [![CI](https://github.com/MdSaifulIslamMSI/hypergrass-research/actions/workflows/ci.yml/badge.svg)](https://github.com/MdSaifulIslamMSI/hypergrass-research/actions/workflows/ci.yml)
 
-> **About:** Complete open-source research repository for **Evolutionary Information Minimum Description Length (`EIMDL`)** and its unified zero-dependency Java 25+ (`JDK 25 LTS` / `JDK 27`) engine **`HGS2`/`HGS3`** + wire-compatible **C23 / C++23 / Rust 2024** native engine ([`native/`](native/README.md)) (uniting Gen 1 [`HyperGraSS v1`](docs/BENCHMARKS.md) and Gen 2 [`RC-MDL v2`](prototype/rcmdl/RESULTS.md) under Formal Laws I–VII). Achieves **`#1`** across **`15/15`** bacterial pangenome shootout tracks (*E. coli*, *S. enterica*, *K. pneumoniae* across Modes S, R, and C with 100% byte-for-byte FASTA SHA-256 identity), **`89.47x`** on all 24 **`T2T-CHM13v2.0 | GRCh38`** human chromosomes (`3.156 GB` $\to$ `35.28 MB`), **`#1`** archive size on human diploid `Chr21`/`Chr22`/`Chr1`/`Chr1..4`, **`43.2x–50.77x`** Tesla T4 CUDA sketch acceleration, strict **`-Xmx128m`** pure-JVM execution, and Next-Gen **`.hgs3`** multi-omic FASTQ + compressed-domain zero-FASTA analytics (`172,088` human `chr21` VCFv4.2 calls in `1.60 s`)—verified across `1,859/1,859` automated numerical and architectural assertions and Kaggle E2E cloud harnesses.
+> **About:** Complete open-source research repository for **Evolutionary Information Minimum Description Length (`EIMDL`)** and its unified zero-dependency Java 25+ (`JDK 25 LTS` / `JDK 27`) engine **`HGS2`/`HGS3`** + wire-compatible **C23 / C++23 / Rust 2024** native engine ([`native/`](native/README.md)) (uniting Gen 1 [`HyperGraSS v1`](docs/BENCHMARKS.md) and Gen 2 [`RC-MDL v2`](prototype/rcmdl/RESULTS.md) under Formal Laws I–VII). Achieves **`#1`** across **`15/15`** bacterial pangenome shootout tracks (*E. coli*, *S. enterica*, *K. pneumoniae* across Modes S, R, and C with 100% byte-for-byte FASTA SHA-256 identity), **`89.47x`** on all 24 **`T2T-CHM13v2.0 | GRCh38`** human chromosomes (`3.156 GB` $\to$ `35.28 MB`), **`#1`** archive size on human diploid `Chr21`/`Chr22`/`Chr1`/`Chr1..4`, **`43.2x–50.77x`** Tesla T4 CUDA sketch acceleration, strict **`-Xmx128m`** pure-JVM execution, and Next-Gen **`.hgs3`** multi-omic FASTQ + compressed-domain zero-FASTA analytics (`172,088` human `chr21` VCFv4.2 calls in `1.60 s`)—verified across `1,893/1,893` automated numerical and architectural assertions, zero-`sorry` **Lean 4** formal proofs ([`proofs/lean/`](proofs/lean/README.md)), and Kaggle E2E cloud harnesses.
 
 ---
 
-## Research Monograph & Documentation Index
+## 30-Second Quick-Start Demo
+
+Build, compress against a reference, call `VCF v4.2` directly from compressed `.hgs3` without writing FASTA, and verify the Lean 4 mathematical proofs:
+
+```bash
+# 1. Build Java engine + native C23/C++23/Rust CLI `eimdl` (or install via Bioconda / Docker)
+cd native/eimdl-rs && cargo build --release --offline && cd ../..
+./native/eimdl-rs/target/release/eimdl --version
+
+# 2. Losslessly archive a genome + CDS frames, then stream VCF v4.2 variants without decompressing
+./native/eimdl-rs/target/release/eimdl compress-omics --target sample.fa --panel ref_dir/ --cds --out sample.hgs3
+./native/eimdl-rs/target/release/eimdl variants --archive sample.hgs3 --panel ref_dir/ --out calls.vcf
+./native/eimdl-rs/target/release/eimdl analyze  --archive sample.hgs3 --panel ref_dir/
+
+# 3. Verify all Lean 4 formal proofs (zero `sorry`, machine-checked SWAR + Wobble + Two-Adic bounds)
+cd proofs/lean && lake build && lake exe eimdl_proofs_check
+```
+
+---
+
+## Research Monograph, Formal Proofs & Documentation Index
 
 | Resource | Description | Path |
 |---|---|---|
-| **33-Page Research Monograph (PDF)** | Complete typeset single-column LaTeX research paper covering Generations 1–4 (`HyperGraSS v1`, `RC-MDL v2`, `HGS2`, Next-Gen EIMDL v3 `.hgs3` + Native `eimdl` + compressed-domain genomics), Laws I–VII, OpenAI `2026` ETH architectural transfer (+ §1.1.3 OVC scope boundary), Kaggle E2E 15-codec shootout, 24 tables, 9 data plots, and 5 system/wire architectural blueprints (`0` overfull boxes) | [`paper/HGS2_EIMDL_Research_Paper.pdf`](paper/HGS2_EIMDL_Research_Paper.pdf) |
+| **Main Manuscript (7-Page Flagship PDF)** | Concise bioRxiv / journal paper unifying EIMDL Laws I–VII, Lean 4 formal verification table, Mode R/C/S & `-Xmx128m` benchmarks, `.hgs3` native/FASTQ/VCF results, ecosystem wrappers, and Honest Boundaries | [`paper/EIMDL_Main_Manuscript.pdf`](paper/EIMDL_Main_Manuscript.pdf) |
+| **Formal Proofs in Lean 4 (0 `sorry`)** | Machine-checked Lean 4.36 proofs of $V_4$ strand invariance, SAT-certified `BitVec 64` SWAR 32-base involution (all $2^{64}$ words), unbounded $\psi$ codon-wobble bijection, DAG acyclicity, Law IV non-expansion, `[11,4085]` infinite-stream range-coder safety, and reciprocal soundness | [`proofs/lean/README.md`](proofs/lean/README.md) |
+| **33-Page Research Monograph (PDF)** | Exhaustive single-column technical monograph covering Generations 1–4 (`HyperGraSS v1`, `RC-MDL v2`, `HGS2`, Next-Gen EIMDL v3), 24 tables, 73-genome appendices, 9 data plots, and 5 architectural blueprints (`0` overfull boxes) | [`paper/HGS2_EIMDL_Research_Paper.pdf`](paper/HGS2_EIMDL_Research_Paper.pdf) |
 | **Research Monograph (Markdown)** | Full GitHub-flavored Markdown edition of the 33-page monograph with embedded figures, architectural blueprints, and complete tables | [`docs/PAPER-DRAFT.md`](docs/PAPER-DRAFT.md) |
-| **LaTeX Source & Reproducible Build** | Deterministic generators (`build_latex_paper.py`, `build_markdown_paper.py`, `generate_figures.py`, `generate_architecture_diagrams.py`) & `1,859`-assertion audit (`audit_paper_numbers.py`) | [`paper/README.md`](paper/README.md) |
+| **LaTeX Source & Reproducible Build** | Deterministic generators (`build_main_manuscript.py`, `build_latex_paper.py`, `build_markdown_paper.py`, `generate_figures.py`, `generate_architecture_diagrams.py`) & `1,893`-assertion audit (`audit_paper_numbers.py`) | [`paper/README.md`](paper/README.md) |
 | **Mathematical & Biological Laws (I–VII)** | Formal specification of $V_4$ Kimura-CpG algebra, 6-state causal ORF-HMM, Two-Gear coalescent copying, 5-regime MDL, Amdahl-Memory scaling, Law VI two-adic/Pitman-Yor coding, Law VII disjoint `-Xmx128m` heap lifecycle, and `openai2026eth` §1.1.3 OVC boundary | [`docs/COMPRESSION-LAW.md`](docs/COMPRESSION-LAW.md) |
 | **Unified `HGS2` / `EIMDL` Benchmarks** | Complete Mode S, Mode R (LOO + Cluster-LOO), Mode C, Amdahl scaling, `-Xmx128m` bounded-heap, and synthetic/adversarial tables | [`docs/FUSION-BENCHMARKS.md`](docs/FUSION-BENCHMARKS.md) |
 | **Locked Independent Replication** | Independent *Salmonella enterica* (25 genomes) and *Klebsiella pneumoniae* (23 genomes) Mode C, Mode S, Mode R, and tuned `JARVIS3 -l 31` evaluation | [`docs/INDEPENDENT.md`](docs/INDEPENDENT.md) |
 | **Archive Container Specification** | Byte-exact binary format specification for `.hgs3` v3.0/v3.1 (`0x48475333`), `.hgs2` v2.0 (`0x48475332`), and legacy `.hgs` v1.0 (`0x48475301`) | [`docs/HGS-FORMAT.md`](docs/HGS-FORMAT.md) |
 | **Foundational Invariants & Gen 1/2 Docs** | Scientific contract ([`FOUNDATIONS.md`](docs/FOUNDATIONS.md)), specialized panels ([`SPECIALIZED.md`](docs/SPECIALIZED.md)), broad panels ([`BROAD.md`](docs/BROAD.md)), ablations ([`ABLATION.md`](docs/ABLATION.md)), entropy floor ([`ENTROPY-FLOOR.md`](docs/ENTROPY-FLOOR.md)), scaling ([`SCALING.md`](docs/SCALING.md)), RC-MDL v2 ([`RESULTS.md`](prototype/rcmdl/RESULTS.md)), handoff ([`HANDOFF.md`](HANDOFF.md)) | [`docs/`](docs/) |
 | **Latest Release (`v3.0.0`)** | Zero-dependency Java 25 executable JAR (`hypergrass-hgs3-v3.0.0.jar`), native C23/C++23/Rust `hypergrass-eimdl-v3.0.0-linux-x86_64` binary, PDF monograph, `fig8`/`fig9`/`arch5`, clean source tarball & `SHA256SUMS.txt` | [`releases/tag/v3.0.0`](https://github.com/MdSaifulIslamMSI/hypergrass-research/releases/tag/v3.0.0) |
-| **Citation & License** | GitHub Citation File Format 1.2.0 metadata ([`CITATION.cff`](CITATION.cff)) powering the sidebar citation widget & Apache License 2.0 ([`LICENSE`](LICENSE)) | [`CITATION.cff`](CITATION.cff) |
+| **Bioconda / Workflow Ecosystem** | Offline Bioconda recipe ([`packaging/bioconda/`](packaging/bioconda/eimdl/meta.yaml)), Nextflow DSL2 (`eimdl.nf`), Snakemake wrapper, multi-stage Dockerfile, and HPRC/GIAB HG002 harness ([`benchmarks/hprc_giab/`](benchmarks/hprc_giab/README.md)) | [`packaging/`](packaging/) |
+| **Launch & Outreach Playbook** | Step-by-step templates for Zenodo DOI, bioRxiv / journal submission, `bioconda-recipes` PR, Show HN, and baseline author outreach | [`docs/LAUNCH-GUIDE.md`](docs/LAUNCH-GUIDE.md) |
+| **Citation, Zenodo & License** | GitHub Citation File Format 1.2.0 ([`CITATION.cff`](CITATION.cff)), Zenodo DOI metadata ([`.zenodo.json`](.zenodo.json)) & Apache License 2.0 ([`LICENSE`](LICENSE)) | [`CITATION.cff`](CITATION.cff) |
 
 ![Figure 1 — Cross-Regime Executive Synthesis of the Unified HGS2 / EIMDL Engine](paper/figures/fig1_regime_overview.png)
 

@@ -5,6 +5,8 @@ original-bin/
 *.class
 *.hgs
 *.hgs2
+*.hgs3
+.lake/
 *.co
 *.jc
 *.de

@@ -1,0 +1,10 @@
+name = "eimdl_proofs"
+version = "0.1.0"
+defaultTargets = ["EimdlProofs", "eimdl_proofs_check"]
+
+[[lean_lib]]
+name = "EimdlProofs"
+
+[[lean_exe]]
+name = "eimdl_proofs_check"
+root = "Main"

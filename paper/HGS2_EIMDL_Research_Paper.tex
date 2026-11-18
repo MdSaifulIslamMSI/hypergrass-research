@@ -925,6 +925,16 @@ All seven laws are continuously guarded by seven automated falsification suites 
 (6)~Law~VI two-adic tapered adaptation ($p_{\min} = 11/4096$ vs.\ $31/4096$) and HPY novelty coding ($1.0897$~bpb); and
 (7)~Law~VII disjoint lifecycle and bounded Mode~C determinism ($27,257$~B unbounded vs.\ $27,257$~B bounded, $\Delta=0.000\%$), alongside Mode~R SHA-256 tamper rejection and 6-channel exact round-trip verification.
 
+\medskip
+\noindent
+\textbf{Machine-Checked Formal Verification in Lean~4 (\texttt{proofs/lean/}):}
+Complementing the empirical runtime checks in \texttt{VerifyCompressionLaws.java}, a zero-dependency, zero-\texttt{sorry} \textbf{Lean~4} proof package (\texttt{leanprover/lean4:v4.36.0}, pure \texttt{Init}/\texttt{Std}; compiled and verified by \texttt{lake build} and \texttt{lake exe eimdl\_proofs\_check} in GitHub Actions CI) formally proves the unbounded mathematical invariants across five modules:
+(i)~\texttt{Law1KleinV4.lean} proves exact $V_4$ strand invariance (\texttt{diff\_strand\_invariant}, \texttt{diff\_general\_mask\_invariant}), transition/transversion invariance, arbitrary-length reverse-complement involution (\texttt{revComp\_involutive}), canonical min-hash reflection invariance, and SAT-certified \texttt{BitVec 64} (\texttt{bv\_decide}) kernel proofs of \texttt{swarReverseComplementWord32\_involutive} and \texttt{swar\_v4\_diff\_strand\_invariant} over all $2^{64}$ register words;
+(ii)~\texttt{Law2CodonWobble.lean} extends Java's bounded loop check ($g \le 2\times 10^6$) to a universal bijection proof $\mathbb{N} \leftrightarrow \mathbb{N}\times\text{Fin }3$ (\texttt{wobble\_left\_inverse}, \texttt{wobble\_right\_inverse}) alongside 6-frame \texttt{bioPhase\_involutive} and all-64-codon sense/antisense stop-triplet duality;
+(iii)~\texttt{Law3ModeCDag.lean} proves Mode~C phylogenetic DAG acyclicity (\texttt{causal\_dag\_acyclic}, zero axioms) and bounded chain depth from $\text{anc}(r) < r$;
+(iv)~\texttt{Law4UniversalBound.lean} proves the universal non-expansion ceiling \texttt{eimdl\_universal\_ceiling} ($\le h + \lceil n/4 \rceil$, instantiating the $125,075$~B / $2.0012$~bpb cryptographic bound at $n=500,000$) and disjoint Stage-1/Stage-2 memory reduction (\texttt{disjointPeak\_strict\_saving}); and
+(v)~\texttt{Law6TwoAdicTaper.lean} proves the exact fixed-point characterization \texttt{taperStep0\_fixed\_point\_iff} ($p \le 31-\tau$), the multi-step range-coder invariant band $[11, 4085]$ across arbitrary finite bitstreams (\texttt{taper20\_stream\_invariant}, proving division-by-zero collapse impossibility), strict Lyapunov monotonicity, $150$-step / $4096$-step convergence matching Java, and Law~VIc reciprocal ceiling soundness (\texttt{recip\_mul\_le\_exact}).
+
 \section{Cloud Verification, 15-Codec World Shootout, and Human Genome Scaling (Kaggle E2E)}
 
 To verify every claim outside the local development host, all 33 Java source files were compiled cleanly (\texttt{javac --release 21 -Xlint:all}) and executed across three independent Kaggle cloud environments (\texttt{benchmarks/kaggle/results/}):
