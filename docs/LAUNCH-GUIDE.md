@@ -2,6 +2,15 @@
 
 This step-by-step launch guide turns **HyperGraSS / RC-MDL / EIMDL** (`HGS2` / `.hgs3` + Lean 4 proofs) from a verified open repository into a cited, package-installed community standard across **bioRxiv**, **Zenodo DOI**, **Bioconda**, **Nextflow/Snakemake**, and **computational genomics / formal-methods communities**.
 
+### Current Live Launch Status (`2026-11-18`)
+
+| Track | Identifier / URL | Status |
+|---|---|---|
+| **Author ORCID** | [`0009-0006-0570-9934`](https://orcid.org/0009-0006-0570-9934) (`Academy of Technology`) | Linked in repo, papers, Zenodo & bioRxiv |
+| **Zenodo Permanent Archive** | Concept DOI [`10.5281/zenodo.24344825`](https://doi.org/10.5281/zenodo.24344825) (`v3.1.1`: [`10.5281/zenodo.24344826`](https://doi.org/10.5281/zenodo.24344826)) | Live at CERN/Zenodo + `CITATION.cff` / `README.md` / PDFs |
+| **Bioconda Recipe PR** | [`bioconda/bioconda-recipes#71846`](https://github.com/bioconda/bioconda-recipes/pull/71846) (`eimdl 3.1.0`) | `Lint`, `Linux`, `OSX-64`, `ARM` PASS · `please review & merge` |
+| **bioRxiv Preprint** | `BIORXIV/2026/767583` (`Version 1`, submitted `2026-11-18`) | Submitted (`7p` main + `33p` supp PDF); awaiting screening & DOI |
+
 ---
 
 ## 1. Pre-Launch Checklist (Verify Green CI First)
@@ -98,7 +107,7 @@ Send *only after* Zenodo DOI + bioRxiv preprint link + CI badges are live:
 >
 > Dear Prof./Dr. [Name],
 >
-> Building directly on your insights in [AGC / JARVIS3 / MBGC / GraSS / PanMAN], we recently released **EIMDL (`HGS2` / `.hgs3`)**, an open-source Apache-2.0 multi-regime evolutionary archiver and compressed-domain caller (`https://github.com/MdSaifulIslamMSI/hypergrass-research`, bioRxiv DOI: [...]).
+> Building directly on your insights in [AGC / JARVIS3 / MBGC / GraSS / PanMAN], we recently released **EIMDL (`HGS2` / `.hgs3`)**, an open-source Apache-2.0 multi-regime evolutionary archiver and compressed-domain caller (`https://github.com/MdSaifulIslamMSI/hypergrass-research`, Zenodo DOI: `10.5281/zenodo.24344825`, bioRxiv DOI: `[insert live 10.1101/... DOI from BIORXIV/2026/767583]`).
 >
 > We benchmarked against your tool across 73 Mode R Leave-One-Out bacterial genomes plus locked Docker *Salmonella*/*Klebsiella* and Kaggle *Homo sapiens* chr1/chr21 panels, preserving full reproducible scripts, SHA-256 checks, and an explicit *Honest Boundaries* section noting where existing tools remain faster or smaller (e.g., ultra-clonal viral FASTA cohorts and single-genome `JARVIS3 -l 31` rates). We also mechanized the core algebraic and range-coder invariants in **Lean 4** (`proofs/lean/`).
 >
