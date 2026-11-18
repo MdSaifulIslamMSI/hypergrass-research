@@ -162,8 +162,13 @@ fn main() {
     let has_zig = tool_exists("zig", "version");
 
     if has_env_cc || has_gcc || (target_os != "windows" && has_clang) {
-        let cc = env_cc.unwrap_or_else(|| if has_gcc { "gcc".into() } else { "clang".into() });
-        let cxx = env_cxx.unwrap_or_else(|| if has_gcc { "g++".into() } else { "clang++".into() });
+        let prefer_clang = target_os == "macos" && has_clang;
+        let cc = env_cc.unwrap_or_else(|| {
+            if prefer_clang || !has_gcc { "clang".into() } else { "gcc".into() }
+        });
+        let cxx = env_cxx.unwrap_or_else(|| {
+            if prefer_clang || !has_gcc { "clang++".into() } else { "g++".into() }
+        });
         let ar = env::var("AR")
             .ok()
             .filter(|s| !s.trim().is_empty())
@@ -206,7 +211,7 @@ fn main() {
 
         println!("cargo:rustc-link-search=native={}", out_dir.display());
         println!("cargo:rustc-link-lib=static=hgs_native");
-        if (cxx.contains("clang") || target_os == "macos") && !cxx.contains("g++") {
+        if target_os == "macos" || cxx.contains("clang") {
             println!("cargo:rustc-link-lib=c++");
         } else {
             println!("cargo:rustc-link-lib=stdc++");
