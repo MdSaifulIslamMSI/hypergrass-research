@@ -26,7 +26,7 @@ concurrency:
 jobs:
   native-macos:
     name: Build Native Binary (macOS arm64)
-    runs-on: macos-14
+    runs-on: macos-latest
     timeout-minutes: 15
     steps:
       - name: Checkout repository
