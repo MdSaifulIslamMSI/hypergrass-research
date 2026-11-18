@@ -15,9 +15,11 @@ static_assert(sizeof(uint32_t) == 4);
 #define ANS_MODE_RANS4_DNA 1U
 #define ANS_MODE_RAW_QUAL 2U
 #define ANS_MODE_RANS4_QUAL 3U
+#define ANS_MODE_RANS4_QUAL_BWT 4U
 
 #define DNA_BLK_CAP (1U << 16) /* 65536 bases per multi-lane block */
 #define QUAL_BLK_CAP (1U << 16)
+#define QUAL_BWT_BLK 2000000U  /* 2 MB BWT block cap (~10 MB peak SA-IS workspace) */
 
 void hgs_ans_free(uint8_t* ptr) {
     free(ptr);
@@ -125,8 +127,21 @@ static inline int ans_decode_find_and_step(
     uint32_t x = *state;
     uint32_t slot = x & (ANS_SCALE - 1U);
     size_t sym = 0;
-    while (sym + 1U < n_syms && slot >= (uint32_t)cums[sym + 1U]) {
-        sym++;
+    if (n_syms <= 16U) {
+        while (sym + 1U < n_syms && slot >= (uint32_t)cums[sym + 1U]) {
+            sym++;
+        }
+    } else {
+        size_t lo = 0U, hi = n_syms - 1U;
+        while (lo < hi) {
+            size_t mid = lo + ((hi - lo + 1U) >> 1);
+            if ((uint32_t)cums[mid] <= slot) {
+                lo = mid;
+            } else {
+                hi = mid - 1U;
+            }
+        }
+        sym = lo;
     }
     *out_sym = sym;
     uint32_t f = (uint32_t)freqs[sym];
@@ -466,6 +481,493 @@ static int qrec_push(QualRecVec* v, uint16_t cum, uint16_t freq) {
     return 0;
 }
 
+/* ---------------- Pangenome-Stratified BWT + MTF + RUNA/RUNB + 4x-rANS Quality Coder (Mode 4) ---------------- */
+
+static int sais_is_lms(const uint8_t* t, int32_t i) {
+    if (i <= 0) return 0;
+    int t_i = (t[i >> 3] >> (i & 7)) & 1;
+    int t_p = (t[(i - 1) >> 3] >> ((i - 1) & 7)) & 1;
+    return t_i && !t_p;
+}
+
+static inline int sais_tget(const uint8_t* t, int32_t i) {
+    return (t[i >> 3] >> (i & 7)) & 1;
+}
+
+static inline void sais_tset(uint8_t* t, int32_t i, int v) {
+    if (v) t[i >> 3] |= (uint8_t)(1U << (i & 7));
+    else t[i >> 3] &= (uint8_t)~(1U << (i & 7));
+}
+
+static void sais_get_buckets(const int32_t* s, int32_t* bkt, int32_t n, int32_t K, int end) {
+    for (int32_t i = 0; i < K; i++) bkt[i] = 0;
+    for (int32_t i = 0; i < n; i++) bkt[s[i]]++;
+    int32_t sum = 0;
+    for (int32_t i = 0; i < K; i++) {
+        sum += bkt[i];
+        bkt[i] = end ? sum : (sum - bkt[i]);
+    }
+}
+
+static void sais_induce_sal(const uint8_t* t, int32_t* sa, const int32_t* s, int32_t* bkt, int32_t n, int32_t K, int end) {
+    sais_get_buckets(s, bkt, n, K, end);
+    for (int32_t i = 0; i < n; i++) {
+        int32_t j = sa[i] - 1;
+        if (j >= 0 && !sais_tget(t, j)) sa[bkt[s[j]]++] = j;
+    }
+}
+
+static void sais_induce_sas(const uint8_t* t, int32_t* sa, const int32_t* s, int32_t* bkt, int32_t n, int32_t K, int end) {
+    sais_get_buckets(s, bkt, n, K, end);
+    for (int32_t i = n - 1; i >= 0; i--) {
+        int32_t j = sa[i] - 1;
+        if (j >= 0 && sais_tget(t, j)) sa[--bkt[s[j]]] = j;
+    }
+}
+
+static int sais_compute(const int32_t* s, int32_t* sa, int32_t n, int32_t K) {
+    size_t t_bytes = (size_t)((n + 7) >> 3);
+    uint8_t* t = (uint8_t*)calloc(t_bytes, 1U);
+    int32_t* bkt = (int32_t*)malloc((size_t)K * sizeof(int32_t));
+    if (!t || !bkt) { free(t); free(bkt); return -1; }
+
+    sais_tset(t, n - 1, 1);
+    if (n >= 2) sais_tset(t, n - 2, 0);
+    for (int32_t i = n - 3; i >= 0; i--) {
+        int v = (s[i] < s[i + 1]) || (s[i] == s[i + 1] && sais_tget(t, i + 1));
+        sais_tset(t, i, v);
+    }
+
+    sais_get_buckets(s, bkt, n, K, 1);
+    for (int32_t i = 0; i < n; i++) sa[i] = -1;
+    for (int32_t i = 1; i < n; i++) {
+        if (sais_is_lms(t, i)) sa[--bkt[s[i]]] = i;
+    }
+    sais_induce_sal(t, sa, s, bkt, n, K, 0);
+    sais_induce_sas(t, sa, s, bkt, n, K, 1);
+
+    int32_t n1 = 0;
+    for (int32_t i = 0; i < n; i++) {
+        if (sais_is_lms(t, sa[i])) sa[n1++] = sa[i];
+    }
+    for (int32_t i = n1; i < n; i++) sa[i] = -1;
+    int32_t name = 0;
+    int32_t prev = -1;
+    for (int32_t i = 0; i < n1; i++) {
+        int32_t pos = sa[i];
+        int diff = 0;
+        for (int32_t d = 0; d < n; d++) {
+            if (prev == -1 || s[pos + d] != s[prev + d] || sais_tget(t, pos + d) != sais_tget(t, prev + d)) {
+                diff = 1;
+                break;
+            } else if (d > 0 && (sais_is_lms(t, pos + d) || sais_is_lms(t, prev + d))) {
+                break;
+            }
+        }
+        if (diff) { name++; prev = pos; }
+        int32_t slot = pos >> 1;
+        sa[n1 + slot] = name - 1;
+    }
+    for (int32_t i = n - 1, j = n - 1; i >= n1; i--) {
+        if (sa[i] >= 0) sa[j--] = sa[i];
+    }
+
+    int32_t* sa1 = sa;
+    int32_t* s1 = sa + n - n1;
+    if (name < n1) {
+        if (sais_compute(s1, sa1, n1, name) != 0) { free(t); free(bkt); return -1; }
+    } else {
+        for (int32_t i = 0; i < n1; i++) sa1[s1[i]] = i;
+    }
+
+    sais_get_buckets(s, bkt, n, K, 1);
+    for (int32_t i = 1, j = 0; i < n; i++) {
+        if (sais_is_lms(t, i)) s1[j++] = i;
+    }
+    for (int32_t i = 0; i < n1; i++) sa1[i] = s1[sa1[i]];
+    for (int32_t i = n1; i < n; i++) sa[i] = -1;
+    for (int32_t i = n1 - 1; i >= 0; i--) {
+        int32_t j = sa[i];
+        sa[i] = -1;
+        sa[--bkt[s[j]]] = j;
+    }
+    sais_induce_sal(t, sa, s, bkt, n, K, 0);
+    sais_induce_sas(t, sa, s, bkt, n, K, 1);
+
+    free(t);
+    free(bkt);
+    return 0;
+}
+
+typedef struct {
+    uint16_t* data;
+    size_t len;
+    size_t cap;
+} SymU16Vec;
+
+static int sym16_push(SymU16Vec* v, uint16_t x) {
+    if (v->len + 1U > v->cap) {
+        size_t ncap = v->cap ? (v->cap << 1) : 4096U;
+        uint16_t* p = (uint16_t*)realloc(v->data, ncap * sizeof(uint16_t));
+        if (!p) return -1;
+        v->data = p;
+        v->cap = ncap;
+    }
+    v->data[v->len++] = x;
+    return 0;
+}
+
+static int flush_zero_run(SymU16Vec* out, size_t run) {
+    while (run > 0U) {
+        run--;
+        if (sym16_push(out, (uint16_t)(run & 1U)) != 0) return -1;
+        run >>= 1;
+    }
+    return 0;
+}
+
+static int bwt_encode_block(const uint8_t* blk, size_t bn, AnsVec* dst) {
+    int32_t n = (int32_t)bn;
+    int32_t* s = (int32_t*)malloc((size_t)(n + 1) * sizeof(int32_t));
+    int32_t* sa = (int32_t*)malloc((size_t)(n + 1) * sizeof(int32_t));
+    uint8_t* bwt = (uint8_t*)malloc(bn);
+    if (!s || !sa || !bwt) { free(s); free(sa); free(bwt); return -1; }
+
+    uint8_t bitmap[32] = {0};
+    for (size_t i = 0; i < bn; i++) {
+        uint8_t v = blk[i];
+        s[i] = (int32_t)v + 1;
+        bitmap[v >> 3] |= (uint8_t)(1U << (v & 7));
+    }
+    s[n] = 0;
+
+    if (sais_compute(s, sa, n + 1, 257) != 0) { free(s); free(sa); free(bwt); return -1; }
+    free(s);
+
+    uint32_t eof_idx = 0U;
+    size_t bi = 0U;
+    for (int32_t i = 0; i <= n; i++) {
+        int32_t p = sa[i];
+        if (p == 0) eof_idx = (uint32_t)i;
+        else bwt[bi++] = blk[p - 1];
+    }
+    free(sa);
+
+    uint8_t mtf[256];
+    size_t sym_cnt = 0U;
+    for (size_t c = 0; c < 256U; c++) {
+        if (bitmap[c >> 3] & (1U << (c & 7))) mtf[sym_cnt++] = (uint8_t)c;
+    }
+
+    SymU16Vec syms = {NULL, 0, 0};
+    size_t zrun = 0U;
+    for (size_t i = 0; i < bn; i++) {
+        uint8_t b = bwt[i];
+        if (b == mtf[0]) {
+            zrun++;
+        } else {
+            if (flush_zero_run(&syms, zrun) != 0) { free(syms.data); free(bwt); return -1; }
+            zrun = 0U;
+            size_t idx = 1U;
+            while (idx < sym_cnt && mtf[idx] != b) idx++;
+            for (size_t j = idx; j > 0U; j--) mtf[j] = mtf[j - 1U];
+            mtf[0] = b;
+            if (sym16_push(&syms, (uint16_t)(idx + 1U)) != 0) { free(syms.data); free(bwt); return -1; }
+        }
+    }
+    free(bwt);
+    if (flush_zero_run(&syms, zrun) != 0) { free(syms.data); return -1; }
+
+    size_t nsym = sym_cnt + 1U; /* 0=RUNA, 1=RUNB, 2..sym_cnt = MTF rank 1..sym_cnt-1 */
+    size_t rlen = syms.len;
+    size_t base_q = rlen >> 2;
+    size_t rem = rlen & 3U;
+    size_t lane_len[4], lane_off[4], cur = 0U;
+    for (size_t l = 0; l < 4U; l++) {
+        lane_len[l] = base_q + (l < rem ? 1U : 0U);
+        lane_off[l] = cur;
+        cur += lane_len[l];
+    }
+
+    uint32_t (*weights)[3][257] = (uint32_t(*)[3][257])calloc(4U, sizeof(uint32_t[3][257]));
+    QualRecVec recs[4] = {{NULL,0,0},{NULL,0,0},{NULL,0,0},{NULL,0,0}};
+    AnsVec rev[4] = {{NULL,0,0},{NULL,0,0},{NULL,0,0},{NULL,0,0}};
+    if (!weights) { free(syms.data); return -1; }
+
+    uint16_t cums[257], freqs[257];
+    uint32_t row_sum[4][3];
+    memset(row_sum, 0, sizeof(row_sum));
+    for (size_t l = 0; l < 4U; l++) {
+        size_t ctx = 2U;
+        for (size_t k = 0; k < lane_len[l]; k++) {
+            uint16_t sym = syms.data[lane_off[l] + k];
+            ans_normalize_cdf(weights[l][ctx], nsym, cums, freqs);
+            if (qrec_push(&recs[l], cums[sym], freqs[sym]) != 0) {
+                free(weights); free(syms.data);
+                for (size_t x = 0; x < 4U; x++) free(recs[x].data);
+                return -1;
+            }
+            weights[l][ctx][sym] += 8U;
+            row_sum[l][ctx] += 8U;
+            if (row_sum[l][ctx] > 2048U) {
+                uint32_t ns = 0U;
+                for (size_t s0 = 0; s0 < nsym; s0++) {
+                    weights[l][ctx][s0] >>= 1;
+                    ns += weights[l][ctx][s0];
+                }
+                row_sum[l][ctx] = ns;
+            }
+            ctx = (sym == 0U) ? 0U : (sym == 1U ? 1U : 2U);
+        }
+    }
+    free(weights);
+    free(syms.data);
+
+    uint32_t state[4] = {ANS_L, ANS_L, ANS_L, ANS_L};
+    int err = 0;
+    for (size_t l = 0; l < 4U && !err; l++) {
+        for (size_t i = recs[l].len; i > 0U; i--) {
+            if (ans_encode_one(&state[l], &rev[l], recs[l].data[i - 1U].cum, recs[l].data[i - 1U].freq) != 0) {
+                err = -1;
+                break;
+            }
+        }
+        free(recs[l].data);
+        recs[l].data = NULL;
+    }
+    for (size_t l = 0; l < 4U; l++) free(recs[l].data);
+
+    if (err != 0 ||
+        vec_push_u32_le(dst, eof_idx) != 0 ||
+        vec_append(dst, bitmap, 32U) != 0 ||
+        vec_push_u32_le(dst, (uint32_t)rlen) != 0) {
+        for (size_t l = 0; l < 4U; l++) free(rev[l].data);
+        return -1;
+    }
+    for (size_t l = 0; l < 4U; l++) { if (vec_push_u32_le(dst, state[l]) != 0) { for (size_t x = 0; x < 4U; x++) free(rev[x].data); return -1; } }
+    for (size_t l = 0; l < 4U; l++) { if (vec_push_u32_le(dst, (uint32_t)rev[l].len) != 0) { for (size_t x = 0; x < 4U; x++) free(rev[x].data); return -1; } }
+    for (size_t l = 0; l < 4U; l++) {
+        if (vec_reserve(dst, dst->len + rev[l].len) != 0) { for (size_t x = 0; x < 4U; x++) free(rev[x].data); return -1; }
+        for (size_t i = rev[l].len; i > 0U; i--) dst->data[dst->len++] = rev[l].data[i - 1U];
+        free(rev[l].data);
+        rev[l].data = NULL;
+    }
+    return 0;
+}
+
+static int bwt_decode_block(const uint8_t* p_base, size_t p_avail, size_t* consumed, uint8_t* out_blk, size_t bn) {
+    if (p_avail < 72U) return -1;
+    uint32_t eof_idx = read_u32_le(p_base);
+    if (eof_idx == 0U || (size_t)eof_idx > bn) return -1;
+    const uint8_t* bitmap = p_base + 4U;
+    uint32_t rlen = read_u32_le(p_base + 36U);
+    uint32_t state[4], blen[4];
+    for (size_t l = 0; l < 4U; l++) {
+        state[l] = read_u32_le(p_base + 40U + l * 4U);
+        blen[l] = read_u32_le(p_base + 56U + l * 4U);
+    }
+    size_t pos = 72U;
+    const uint8_t* p_cur[4];
+    const uint8_t* p_end[4];
+    for (size_t l = 0; l < 4U; l++) {
+        if (pos + (size_t)blen[l] > p_avail) return -1;
+        p_cur[l] = p_base + pos;
+        p_end[l] = p_base + pos + (size_t)blen[l];
+        pos += (size_t)blen[l];
+    }
+    *consumed = pos;
+
+    uint8_t mtf[256];
+    size_t sym_cnt = 0U;
+    for (size_t c = 0; c < 256U; c++) {
+        if (bitmap[c >> 3] & (1U << (c & 7))) mtf[sym_cnt++] = (uint8_t)c;
+    }
+    if (sym_cnt == 0U) return -1;
+    size_t nsym = sym_cnt + 1U;
+
+    uint16_t* syms = (uint16_t*)malloc(((size_t)rlen + 1U) * sizeof(uint16_t));
+    uint32_t (*weights)[3][257] = (uint32_t(*)[3][257])calloc(4U, sizeof(uint32_t[3][257]));
+    if (!syms || !weights) { free(syms); free(weights); return -1; }
+
+    size_t base_q = (size_t)rlen >> 2;
+    size_t rem = (size_t)rlen & 3U;
+    size_t lane_len[4], lane_off[4], cur = 0U;
+    for (size_t l = 0; l < 4U; l++) {
+        lane_len[l] = base_q + (l < rem ? 1U : 0U);
+        lane_off[l] = cur;
+        cur += lane_len[l];
+    }
+
+    uint16_t cums[257], freqs[257];
+    uint32_t row_sum[4][3];
+    memset(row_sum, 0, sizeof(row_sum));
+    for (size_t l = 0; l < 4U; l++) {
+        size_t ctx = 2U;
+        for (size_t k = 0; k < lane_len[l]; k++) {
+            ans_normalize_cdf(weights[l][ctx], nsym, cums, freqs);
+            size_t sym = 0U;
+            if (ans_decode_find_and_step(&state[l], &p_cur[l], p_end[l], cums, freqs, nsym, &sym) != 0) {
+                free(syms); free(weights); return -1;
+            }
+            syms[lane_off[l] + k] = (uint16_t)sym;
+            weights[l][ctx][sym] += 8U;
+            row_sum[l][ctx] += 8U;
+            if (row_sum[l][ctx] > 2048U) {
+                uint32_t ns = 0U;
+                for (size_t s0 = 0; s0 < nsym; s0++) {
+                    weights[l][ctx][s0] >>= 1;
+                    ns += weights[l][ctx][s0];
+                }
+                row_sum[l][ctx] = ns;
+            }
+            ctx = (sym == 0U) ? 0U : (sym == 1U ? 1U : 2U);
+        }
+        if (state[l] != ANS_L || p_cur[l] != p_end[l]) { free(syms); free(weights); return -1; }
+    }
+    free(weights);
+
+    uint8_t* bwt = (uint8_t*)malloc(bn);
+    uint32_t* pred = (uint32_t*)malloc((bn + 1U) * sizeof(uint32_t));
+    if (!bwt || !pred) { free(syms); free(bwt); free(pred); return -1; }
+
+    size_t bi = 0U;
+    size_t si = 0U;
+    uint32_t counts[256] = {0};
+    while (si < (size_t)rlen) {
+        if (syms[si] <= 1U) {
+            size_t run = 0U;
+            size_t pow2 = 1U;
+            while (si < (size_t)rlen && syms[si] <= 1U) {
+                run += (syms[si] == 0U ? 1U : 2U) * pow2;
+                pow2 <<= 1;
+                si++;
+            }
+            if (bi + run > bn) { free(syms); free(bwt); free(pred); return -1; }
+            uint8_t ch = mtf[0];
+            counts[ch] += (uint32_t)run;
+            for (size_t k = 0; k < run; k++) bwt[bi++] = ch;
+        } else {
+            size_t idx = (size_t)syms[si++] - 1U;
+            if (idx >= sym_cnt) { free(syms); free(bwt); free(pred); return -1; }
+            uint8_t ch = mtf[idx];
+            for (size_t j = idx; j > 0U; j--) mtf[j] = mtf[j - 1U];
+            mtf[0] = ch;
+            if (bi >= bn) { free(syms); free(bwt); free(pred); return -1; }
+            counts[ch]++;
+            bwt[bi++] = ch;
+        }
+    }
+    free(syms);
+    if (bi != bn) { free(bwt); free(pred); return -1; }
+
+    uint32_t start[256];
+    uint32_t cum_c = 1U;
+    for (size_t c = 0; c < 256U; c++) {
+        start[c] = cum_c;
+        cum_c += counts[c];
+    }
+    for (size_t r = 0U; r <= bn; r++) {
+        if (r == (size_t)eof_idx) continue;
+        size_t lpos = (r < (size_t)eof_idx) ? r : (r - 1U);
+        uint8_t ch = bwt[lpos];
+        pred[r] = start[ch]++;
+    }
+    uint32_t cur_row = 0U;
+    for (size_t step = 0U; step < bn; step++) {
+        size_t lpos = (cur_row < eof_idx) ? (size_t)cur_row : (size_t)(cur_row - 1U);
+        out_blk[bn - 1U - step] = bwt[lpos];
+        cur_row = pred[cur_row];
+    }
+    free(bwt);
+    free(pred);
+    return 0;
+}
+
+static int try_encode_qual_bwt(const uint8_t* quals_raw, const uint8_t* mismatch_mask, size_t len, AnsVec* out_bwt) {
+    if (len < 256U) return -1;
+    size_t n0 = 0U, n1 = 0U;
+    if (mismatch_mask) {
+        for (size_t i = 0; i < len; i++) {
+            if (mismatch_mask[i] & 1U) n1++;
+            else n0++;
+        }
+    }
+    int split = (mismatch_mask && n0 >= 16U && n1 >= 16U) ? 1 : 0;
+    if (vec_push(out_bwt, (uint8_t)ANS_MODE_RANS4_QUAL_BWT) != 0) return -1;
+    if (vec_push(out_bwt, (uint8_t)split) != 0) return -1;
+
+    if (!split) {
+        for (size_t off = 0U; off < len; off += QUAL_BWT_BLK) {
+            size_t bn = (len - off < QUAL_BWT_BLK) ? (len - off) : QUAL_BWT_BLK;
+            if (bwt_encode_block(quals_raw + off, bn, out_bwt) != 0) return -1;
+        }
+    } else {
+        uint8_t* s0 = (uint8_t*)malloc(n0);
+        uint8_t* s1 = (uint8_t*)malloc(n1);
+        if (!s0 || !s1) { free(s0); free(s1); return -1; }
+        size_t i0 = 0U, i1 = 0U;
+        for (size_t i = 0; i < len; i++) {
+            if (mismatch_mask[i] & 1U) s1[i1++] = quals_raw[i];
+            else s0[i0++] = quals_raw[i];
+        }
+        for (size_t off = 0U; off < n0; off += QUAL_BWT_BLK) {
+            size_t bn = (n0 - off < QUAL_BWT_BLK) ? (n0 - off) : QUAL_BWT_BLK;
+            if (bwt_encode_block(s0 + off, bn, out_bwt) != 0) { free(s0); free(s1); return -1; }
+        }
+        free(s0);
+        for (size_t off = 0U; off < n1; off += QUAL_BWT_BLK) {
+            size_t bn = (n1 - off < QUAL_BWT_BLK) ? (n1 - off) : QUAL_BWT_BLK;
+            if (bwt_encode_block(s1 + off, bn, out_bwt) != 0) { free(s1); return -1; }
+        }
+        free(s1);
+    }
+    return 0;
+}
+
+static int decode_qual_bwt(const uint8_t* payload, size_t payload_len, const uint8_t* mismatch_mask, size_t expected_len, uint8_t* out) {
+    if (payload_len < 2U) return -1;
+    uint8_t split = payload[1];
+    size_t pos = 2U;
+    if (!split) {
+        for (size_t off = 0U; off < expected_len; off += QUAL_BWT_BLK) {
+            size_t bn = (expected_len - off < QUAL_BWT_BLK) ? (expected_len - off) : QUAL_BWT_BLK;
+            size_t cons = 0U;
+            if (bwt_decode_block(payload + pos, payload_len - pos, &cons, out + off, bn) != 0) return -1;
+            pos += cons;
+        }
+        return (pos == payload_len) ? 0 : -1;
+    }
+    if (!mismatch_mask) return -1;
+    size_t n0 = 0U, n1 = 0U;
+    for (size_t i = 0; i < expected_len; i++) {
+        if (mismatch_mask[i] & 1U) n1++;
+        else n0++;
+    }
+    uint8_t* s0 = (uint8_t*)malloc(n0 ? n0 : 1U);
+    uint8_t* s1 = (uint8_t*)malloc(n1 ? n1 : 1U);
+    if (!s0 || !s1) { free(s0); free(s1); return -1; }
+    for (size_t off = 0U; off < n0; off += QUAL_BWT_BLK) {
+        size_t bn = (n0 - off < QUAL_BWT_BLK) ? (n0 - off) : QUAL_BWT_BLK;
+        size_t cons = 0U;
+        if (bwt_decode_block(payload + pos, payload_len - pos, &cons, s0 + off, bn) != 0) { free(s0); free(s1); return -1; }
+        pos += cons;
+    }
+    for (size_t off = 0U; off < n1; off += QUAL_BWT_BLK) {
+        size_t bn = (n1 - off < QUAL_BWT_BLK) ? (n1 - off) : QUAL_BWT_BLK;
+        size_t cons = 0U;
+        if (bwt_decode_block(payload + pos, payload_len - pos, &cons, s1 + off, bn) != 0) { free(s0); free(s1); return -1; }
+        pos += cons;
+    }
+    if (pos != payload_len) { free(s0); free(s1); return -1; }
+    size_t i0 = 0U, i1 = 0U;
+    for (size_t i = 0; i < expected_len; i++) {
+        out[i] = (mismatch_mask[i] & 1U) ? s1[i1++] : s0[i0++];
+    }
+    free(s0);
+    free(s1);
+    return 0;
+}
+
 int hgs_ans4_encode_qual(
     const uint8_t* quals_raw,
     const uint8_t* mismatch_mask,
@@ -577,7 +1079,28 @@ int hgs_ans4_encode_qual(
     size_t rans_size = 33U;
     for (size_t l = 0; l < 4U; l++) rans_size += rev[l].len;
 
-    if (err != 0 || rans_size >= len + 1U) {
+    AnsVec bwt_out = {NULL, 0, 0};
+    if (len >= 256U) {
+        if (try_encode_qual_bwt(quals_raw, mismatch_mask, len, &bwt_out) != 0) {
+            free(bwt_out.data);
+            bwt_out.data = NULL;
+            bwt_out.len = 0;
+        }
+    }
+
+    size_t raw_size = len + 1U;
+    size_t ctx_size = (err == 0 && rans_size < raw_size) ? rans_size : SIZE_MAX;
+    size_t bwt_size = (bwt_out.data != NULL && bwt_out.len < raw_size) ? bwt_out.len : SIZE_MAX;
+
+    if (bwt_size < ctx_size && bwt_size < raw_size) {
+        for (size_t l = 0; l < 4U; l++) free(rev[l].data);
+        *out_buf = bwt_out.data;
+        *out_len = bwt_out.len;
+        return 0;
+    }
+    free(bwt_out.data);
+
+    if (err != 0 || rans_size >= raw_size) {
         for (size_t l = 0; l < 4U; l++) free(rev[l].data);
         if (err != 0 || vec_push(&out, (uint8_t)ANS_MODE_RAW_QUAL) != 0 || vec_append(&out, quals_raw, len) != 0) {
             free(out.data);
@@ -635,6 +1158,15 @@ int hgs_ans4_decode_qual(
     if (mode == ANS_MODE_RAW_QUAL) {
         if (payload_len < 1U + expected_len) { free(out); return -1; }
         memcpy(out, payload + 1U, expected_len);
+        *out_buf = out;
+        *out_len = expected_len;
+        return 0;
+    }
+    if (mode == ANS_MODE_RANS4_QUAL_BWT) {
+        if (decode_qual_bwt(payload, payload_len, mismatch_mask, expected_len, out) != 0) {
+            free(out);
+            return -1;
+        }
         *out_buf = out;
         *out_len = expected_len;
         return 0;

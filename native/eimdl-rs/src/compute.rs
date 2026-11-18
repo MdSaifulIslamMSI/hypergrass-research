@@ -765,13 +765,8 @@ pub fn search_kmers(
     for (idx, u) in units.iter().enumerate() {
         let (ns, ne) = nov_ranges[idx];
         let novelty = &c.nov_super[ns..ne];
-        let has_self_edits = u.spans.iter().any(|s| s.kind == 2 && s.has_edits != 0);
-        if has_self_edits {
-            let dna = ffi::decode_mosaic(c.mosaic_slices[idx], novelty, &panel_refs)?;
-            scan_window_both_strands(&dna, 0, u.unit_index, &q_fwd, q_rc.as_deref(), &mut hits);
-            patched_or_local_spans += u.spans.len();
-            continue;
-        }
+        let has_self_edits = u.spans.iter().any(|s| s.kind >= 2 && s.has_edits != 0);
+        let mut lazy_self_dna: Option<Vec<u8>> = None;
 
         let mut snps: Vec<&HgsVariantRecord> = u.variants.iter().filter(|v| v.kind == 0).collect();
         snps.sort_by_key(|v| v.tgt_pos);
@@ -786,6 +781,10 @@ pub fn search_kmers(
             let sp_len = sp.tgt_len as usize;
             let sp_end = sp_start + sp_len;
 
+            if sp.kind >= 2 && has_self_edits && lazy_self_dna.is_none() {
+                lazy_self_dna = Some(ffi::decode_mosaic(c.mosaic_slices[idx], novelty, &panel_refs)?);
+            }
+
             // Advance SNP cursor past prior spans
             while snp_cursor < snps.len() && (snps[snp_cursor].tgt_pos as usize) < sp_start {
                 snp_cursor += 1;
@@ -796,14 +795,12 @@ pub fn search_kmers(
                 junction_buf.clear();
                 junction_buf.extend_from_slice(&prev_tail);
                 for off in 0..take_right {
-                    junction_buf.push(resolve_span_pos(
-                        sp_start + off,
-                        sp,
-                        u,
-                        &snps,
-                        novelty,
-                        &panel_refs,
-                    ));
+                    let b = if sp.kind >= 2 && let Some(ref sdna) = lazy_self_dna {
+                        sdna[sp_start + off] & 3
+                    } else {
+                        resolve_span_pos(sp_start + off, sp, u, &snps, novelty, &panel_refs)
+                    };
+                    junction_buf.push(b);
                 }
                 let jstart = sp_start - prev_tail.len();
                 let limit_start = prev_tail.len();
@@ -869,6 +866,9 @@ pub fn search_kmers(
                             hits.push(KmerHit { unit_index: u.unit_index, tgt_pos: sp.tgt_pos + off as u64, strand: 1 });
                         }
                     }
+                } else if sp.kind >= 2 && let Some(ref sdna) = lazy_self_dna {
+                    patched_or_local_spans += 1;
+                    scan_window_both_strands(&sdna[sp_start..sp_end], sp.tgt_pos, u.unit_index, &q_fwd, q_rc.as_deref(), &mut hits);
                 } else {
                     patched_or_local_spans += 1;
                     span_buf.resize(sp_len, 0);
@@ -910,14 +910,12 @@ pub fn search_kmers(
                 let take_this = sp_len.min((k - 1) - next_tail.len());
                 let start_off = sp_len - take_this;
                 for off in start_off..sp_len {
-                    next_tail.push(resolve_span_pos(
-                        sp_start + off,
-                        sp,
-                        u,
-                        &snps,
-                        novelty,
-                        &panel_refs,
-                    ));
+                    let b = if sp.kind >= 2 && let Some(ref sdna) = lazy_self_dna {
+                        sdna[sp_start + off] & 3
+                    } else {
+                        resolve_span_pos(sp_start + off, sp, u, &snps, novelty, &panel_refs)
+                    };
+                    next_tail.push(b);
                 }
                 prev_tail = next_tail;
             }

@@ -371,11 +371,15 @@ fn compressed_domain_analyze_variants_kmer_and_query() {
     seg_d[800] ^= 2;
     seg_d[803] ^= 1;
 
+    let mut seg_e = seg_a[100..700].to_vec(); // self-repeat with SNP edit
+    seg_e[250] ^= 2;
+
     let mut tgt_2bit = Vec::new();
     tgt_2bit.extend_from_slice(&seg_a);
     tgt_2bit.extend_from_slice(&ins_lit);
     tgt_2bit.extend_from_slice(&seg_c);
     tgt_2bit.extend_from_slice(&seg_d);
+    tgt_2bit.extend_from_slice(&seg_e);
     let tgt_ascii = to_ascii(&tgt_2bit);
 
     let mut tgt_fa = b">recomb_target\n".to_vec();
@@ -443,6 +447,7 @@ fn compressed_domain_analyze_variants_kmer_and_query() {
             let rep = compute::search_kmers(arc, Some(&pdir), q_str, both, 2, false).unwrap();
             let got: Vec<(u64, u8)> = rep.hits.iter().map(|h| (h.tgt_pos, h.strand)).collect();
             assert_eq!(got, expected, "K-mer mismatch for {q_str} (both={both}) on {}", arc.display());
+            assert!(rep.exact_zero_target_spans > 0, "Expected exact_zero_target_spans > 0");
         }
 
         let sliced = compute::query_slice(arc, Some(&pdir), 0, 2990, 3030, 2, false).unwrap();

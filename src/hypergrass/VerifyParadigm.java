@@ -95,7 +95,18 @@ public final class VerifyParadigm {
         byte[] qc = HgsAnsCoder.ans4EncodeQual(quals, mm, homo, 150);
         byte[] qd = HgsAnsCoder.ans4DecodeQual(qc, mm, homo, quals.length, 150);
         check(Arrays.equals(qd, quals), "ANS4 conditioned quality roundtrip mismatch");
-        check(qc.length < quals.length / 4, "Expected high Phred compression");
+        check(qc.length < quals.length / 8, "Expected high Phred BWT compression, got " + qc.length);
+
+        // Adversarial high-entropy Phred noise check (Law IV raw ceiling <= N + 1)
+        byte[] qNoise = new byte[4096];
+        byte[] rndBits = lcgDna(0xCAFEBABE1234L, 4096);
+        for (int i = 0; i < qNoise.length; i++) {
+            qNoise[i] = (byte) (33 + ((rndBits[i] * 17 + i * 29) % 45));
+        }
+        byte[] qnc = HgsAnsCoder.ans4EncodeQual(qNoise, null, null, 0);
+        byte[] qnd = HgsAnsCoder.ans4DecodeQual(qnc, null, null, qNoise.length, 0);
+        check(Arrays.equals(qnd, qNoise), "ANS4 noisy quality roundtrip mismatch");
+        check(qnc.length <= qNoise.length + 1, "Expected Law IV ceiling on noisy quality");
     }
 
     private static void verifyHgs3FastqAndFasta(Path tmp) throws IOException {
@@ -200,9 +211,12 @@ public final class VerifyParadigm {
             segD[i] ^= (byte) ((i % 96 == 0) ? 2 : 3);
         }
 
-        byte[] tgt = new byte[segA.length + insLit.length + segC.length + segD.length];
+        byte[] segE = Arrays.copyOfRange(segA, 100, 700); // self-repeat with SNP edits
+        segE[250] ^= 2;
+
+        byte[] tgt = new byte[segA.length + insLit.length + segC.length + segD.length + segE.length];
         int cur = 0;
-        for (byte[] part : new byte[][] {segA, insLit, segC, segD}) {
+        for (byte[] part : new byte[][] {segA, insLit, segC, segD, segE}) {
             System.arraycopy(part, 0, tgt, cur, part.length);
             cur += part.length;
         }
@@ -255,6 +269,7 @@ public final class VerifyParadigm {
                 }
                 KmerReport got = CompressedDomainEngine.searchKmers(arc, pdir, q, both);
                 check(got.hits().equals(expected), "Java compressed k-mer mismatch on " + q);
+                check(got.exactZeroTargetSpans() > 0, "Expected exact zero-target spans > 0");
             }
 
             String sliced = CompressedDomainEngine.querySlice(arc, pdir, 0, 2990, 3030);

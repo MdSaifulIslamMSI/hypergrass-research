@@ -5,14 +5,14 @@
 [![Release](https://img.shields.io/github/v/release/MdSaifulIslamMSI/hypergrass-research?label=Release&color=blue)](https://github.com/MdSaifulIslamMSI/hypergrass-research/releases/tag/v2.0.0)
 [![Java](https://img.shields.io/badge/Java-25%20LTS%20%7C%20JDK%2027-blue.svg)](src/hypergrass/)
 [![Native](https://img.shields.io/badge/Native-C23%20%7C%20C%2B%2B23%20%7C%20Rust%202024-orange.svg)](native/README.md)
-[![Container](https://img.shields.io/badge/Formats-.hgs2%20v2.0%20%7C%20.hgs%20v1.0-success.svg)](docs/HGS-FORMAT.md)
-[![Paper](https://img.shields.io/badge/Monograph-28%20Pages%20PDF%20%2B%20LaTeX-critical.svg)](paper/HGS2_EIMDL_Research_Paper.pdf)
+[![Container](https://img.shields.io/badge/Formats-.hgs3%20v3%20%7C%20.hgs2%20v2.0%20%7C%20.hgs%20v1.0-success.svg)](docs/HGS-FORMAT.md)
+[![Paper](https://img.shields.io/badge/Monograph-30%20Pages%20PDF%20%2B%20LaTeX-critical.svg)](paper/HGS2_EIMDL_Research_Paper.pdf)
 [![Kaggle E2E](https://img.shields.io/badge/Kaggle%20E2E-15--Codec%20Shootout%20%2B%20T4%20GPU-20BEFF.svg)](benchmarks/kaggle/README.md)
-[![Audit](https://img.shields.io/badge/Automated%20Audit-1%2C705%20%2F%201%2C705%20PASS-brightgreen.svg)](paper/audit_paper_numbers.py)
+[![Audit](https://img.shields.io/badge/Automated%20Audit-1%2C856%20%2F%201%2C856%20PASS-brightgreen.svg)](paper/audit_paper_numbers.py)
 [![License](https://img.shields.io/badge/License-Apache_2.0-green.svg)](LICENSE)
 [![CI](https://github.com/MdSaifulIslamMSI/hypergrass-research/actions/workflows/ci.yml/badge.svg)](https://github.com/MdSaifulIslamMSI/hypergrass-research/actions/workflows/ci.yml)
 
-> **About:** Complete open-source research repository for **Evolutionary Information Minimum Description Length (`EIMDL`)** and its unified zero-dependency Java 25+ (`JDK 25 LTS` / `JDK 27`) engine **`HGS2`** + wire-compatible **C23 / C++23 / Rust 2024** native engine ([`native/`](native/README.md)) (uniting Gen 1 [`HyperGraSS v1`](docs/BENCHMARKS.md) and Gen 2 [`RC-MDL v2`](prototype/rcmdl/RESULTS.md) under Formal Laws I–VII). Achieves **`#1`** across **`15/15`** bacterial pangenome shootout tracks (*E. coli*, *S. enterica*, *K. pneumoniae* across Modes S, R, and C with 100% byte-for-byte FASTA SHA-256 identity), **`89.47x`** on all 24 **`T2T-CHM13v2.0 | GRCh38`** human chromosomes (`3.156 GB` $\to$ `35.28 MB`), **`#1`** archive size on human diploid `Chr21`/`Chr22`/`Chr1`/`Chr1..4`, **`43.2x–50.77x`** Tesla T4 CUDA sketch acceleration, and strict **`-Xmx128m`** pure-JVM execution—verified across `1,705/1,705` automated numerical and architectural assertions and Kaggle E2E cloud harnesses.
+> **About:** Complete open-source research repository for **Evolutionary Information Minimum Description Length (`EIMDL`)** and its unified zero-dependency Java 25+ (`JDK 25 LTS` / `JDK 27`) engine **`HGS2`/`HGS3`** + wire-compatible **C23 / C++23 / Rust 2024** native engine ([`native/`](native/README.md)) (uniting Gen 1 [`HyperGraSS v1`](docs/BENCHMARKS.md) and Gen 2 [`RC-MDL v2`](prototype/rcmdl/RESULTS.md) under Formal Laws I–VII). Achieves **`#1`** across **`15/15`** bacterial pangenome shootout tracks (*E. coli*, *S. enterica*, *K. pneumoniae* across Modes S, R, and C with 100% byte-for-byte FASTA SHA-256 identity), **`89.47x`** on all 24 **`T2T-CHM13v2.0 | GRCh38`** human chromosomes (`3.156 GB` $\to$ `35.28 MB`), **`#1`** archive size on human diploid `Chr21`/`Chr22`/`Chr1`/`Chr1..4`, **`43.2x–50.77x`** Tesla T4 CUDA sketch acceleration, strict **`-Xmx128m`** pure-JVM execution, and Next-Gen **`.hgs3`** multi-omic FASTQ + compressed-domain zero-FASTA analytics (`172,088` human `chr21` VCFv4.2 calls in `1.60 s`)—verified across `1,856/1,856` automated numerical and architectural assertions and Kaggle E2E cloud harnesses.
 
 ---
 
@@ -20,9 +20,9 @@
 
 | Resource | Description | Path |
 |---|---|---|
-| **28-Page Research Monograph (PDF)** | Complete typeset single-column LaTeX research paper covering Generations 1, 2, and 3, Laws I–VII, OpenAI `2026` ETH architectural transfer (+ §1.1.3 OVC scope boundary), Kaggle E2E 15-codec shootout, 22 tables, 8 data plots, and 4 system/wire architectural blueprints (`0` overfull boxes) | [`paper/HGS2_EIMDL_Research_Paper.pdf`](paper/HGS2_EIMDL_Research_Paper.pdf) |
-| **Research Monograph (Markdown)** | Full GitHub-flavored Markdown edition of the 28-page monograph with embedded figures, architectural blueprints, and complete tables | [`docs/PAPER-DRAFT.md`](docs/PAPER-DRAFT.md) |
-| **LaTeX Source & Reproducible Build** | Deterministic generators (`build_latex_paper.py`, `build_markdown_paper.py`, `generate_figures.py`, `generate_architecture_diagrams.py`) & `1,705`-assertion audit (`audit_paper_numbers.py`) | [`paper/README.md`](paper/README.md) |
+| **30-Page Research Monograph (PDF)** | Complete typeset single-column LaTeX research paper covering Generations 1, 2, and 3, Laws I–VII, OpenAI `2026` ETH architectural transfer (+ §1.1.3 OVC scope boundary), Kaggle E2E 15-codec shootout, Next-Gen EIMDL v3.0 (`.hgs3`, Native engine, compressed-domain genomics), 24 tables, 9 data plots, and 4 system/wire architectural blueprints (`0` overfull boxes) | [`paper/HGS2_EIMDL_Research_Paper.pdf`](paper/HGS2_EIMDL_Research_Paper.pdf) |
+| **Research Monograph (Markdown)** | Full GitHub-flavored Markdown edition of the 30-page monograph with embedded figures, architectural blueprints, and complete tables | [`docs/PAPER-DRAFT.md`](docs/PAPER-DRAFT.md) |
+| **LaTeX Source & Reproducible Build** | Deterministic generators (`build_latex_paper.py`, `build_markdown_paper.py`, `generate_figures.py`, `generate_architecture_diagrams.py`) & `1,856`-assertion audit (`audit_paper_numbers.py`) | [`paper/README.md`](paper/README.md) |
 | **Mathematical & Biological Laws (I–VII)** | Formal specification of $V_4$ Kimura-CpG algebra, 6-state causal ORF-HMM, Two-Gear coalescent copying, 5-regime MDL, Amdahl-Memory scaling, Law VI two-adic/Pitman-Yor coding, Law VII disjoint `-Xmx128m` heap lifecycle, and `openai2026eth` §1.1.3 OVC boundary | [`docs/COMPRESSION-LAW.md`](docs/COMPRESSION-LAW.md) |
 | **Unified `HGS2` / `EIMDL` Benchmarks** | Complete Mode S, Mode R (LOO + Cluster-LOO), Mode C, Amdahl scaling, `-Xmx128m` bounded-heap, and synthetic/adversarial tables | [`docs/FUSION-BENCHMARKS.md`](docs/FUSION-BENCHMARKS.md) |
 | **Locked Independent Replication** | Independent *Salmonella enterica* (25 genomes) and *Klebsiella pneumoniae* (23 genomes) Mode C, Mode S, Mode R, and tuned `JARVIS3 -l 31` evaluation | [`docs/INDEPENDENT.md`](docs/INDEPENDENT.md) |
@@ -270,6 +270,22 @@ All 33 Java files compiled cleanly (`javac --release 21 -Xlint:all`) and passed 
 - **`gpu_v3_largescale_results.json` (`2x Tesla T4` GPUs):** Verifies **`43.2x–50.77x`** CUDA sketch acceleration, neural entropy upper bounds (`949,438 B` / `1.9019 bpb` `Chr22_4MB`; `926,939 B` / `1.8569 bpb` `COVID_4MB`), `GRCh38_chr1_8` (`1,562,097,512 B` $\to$ **`314,875,226 B`**, `4.96x` vs. `zstd-19` `384,873,207 B`), `Diploid_Chr1_to_4` (`1,791,158,556 B` $\to$ **`189,424,047 B`**, `9.46x` vs. `AGC` `213,613,422 B` & `zstd-19` `449,440,145 B`), and `1.41 Gbp` `covid_mega .seq@-Xmx512m` (`1,409,028,147 B` $\to$ **`1,657,005 B`**, `850.35x`, `508.74 MB` RSS; on raw `1.45 GB` `covid_mega.fasta`, `NAF -l 22` `1,862,725 B` and `MBGC -m2` `1,966,421 B` edge `HGS2` `2,152,306 B`).
 - **`tpu_v3_scale_results.json` (All-24 `T2T-CHM13v2.0 | GRCh38` Mode R & `13/13` Heap Matrix):** Full **`3,156,242,851 B` (`3,117,275,501 bp`) $\to$ `35,277,041 B` (`0.0894 bpb`, `89.47x`)** across all 24 human chromosomes (`1,044.69 s` enc / `136.90 s` dec; incl. `chr21` **`938,046 B`** vs. `GeCo3-ref` `8,261,548 B`, `chr22` **`1,213,472 B`** vs. `8,308,207 B`, `chr1` **`2,589,930 B`**), `13/13` bounded-heap cells (`100M@-Xmx128m` `145,974 B` .. `1000M@-Xmx512m` `1,176,101 B` .. `1000M@-Xmx16g` `1,053,431 B`), and `covid_group_22.fasta` Amdahl scaling (`467,386 B`, `56.26 s` 1T $\to$ `25.06 s` 4T). *(Diploid `Chr21`/`22`/`1` Mode C: **`8,878,088`**, **`8,859,549`**, **`50,463,121 B`** vs. `AGC` `10,737,616` / `11,003,578` / `57,748,791 B`; Kaggle TPU worker exposed Xeon CPUs running `jax 0.11.1` on `cpu:0`.)*
 
+### 4.7 Next-Gen EIMDL v3.0: Native C23/C++23/Rust Engine, `.hgs3` Multi-Omic FASTQ & Compressed-Domain Genomics
+
+![Figure 9 — Next-Gen EIMDL v3.0 Native Parity, .hgs3 Multi-Omic FASTQ Shootout & Compressed-Domain Analytics](paper/figures/fig9_nextgen_eimdl_v3_paradigm.png)
+
+Completed in [`world_shootout_v3_results.json`](benchmarks/kaggle/results/world_shootout_v3_results.json) (`29,168.35 s` / `8.1 hr`, 4 AMD EPYC 7B12 vCPUs, OpenJDK 25.0.5 LTS + native `C23/C++23/Rust 2024` `eimdl`, **`8/8`** cloud verification suites passing incl. `VerifyParadigm` in `1.083 s`, **`5/5` Java $\leftrightarrow$ Native compressed-domain parity = True**, `MFCompress` GCC link `unavailable`):
+
+| Track / Dataset | Raw (`B`) | Result & Telemetry | Key Comparison / Biological Output |
+|---|---:|---|---|
+| **Bacterial Mode C FA (Native vs. Java)** | 121.8M / 122.3M / 124.5M | *E. coli*: **`3,522,612 B`** (`846.5 MB`) vs Java `3,423,761 B`<br>*S. enterica*: **`2,453,829 B`** (`847.5 MB`) vs Java `2,417,055 B`<br>*K. pneumoniae*: **`2,605,617 B`** (`853.8 MB`) vs Java `2,536,222 B` | Beats `MBGC`, `AGC`, `NAF`, `xz` across all 3 species |
+| **Human `GRCh38` Single (`Chr21` / `Chr22` / `Chr1`)** | 47.5M / 51.7M / 253.1M | Native: **`7,857,257 B`** (`246.7 MB` vs `630.3 MB`)<br>**`7,555,256 B`** (`248.2 MB` vs `622.6 MB`)<br>**`47,511,069 B`** (`1,111.0 MB` vs `1,554.9 MB`, `9.23 s` dec) | Beats Java archive size & cuts RSS by up to `61%`; `CHM13\|GRCh38 chr21/22/1` Mode R: Java `945,989` / `1,234,617` / `2,627,685` vs Native `1,018,276` / `1,299,810` / `3,207,153 B` (`GeCo3-ref`: `8.26M` / `8.31M`) |
+| **Law IV `10 MB` Noise & `Diploid Chr21/Chr22`** | 10.0M / 93.1M / 103.6M | White Noise: **`2,500,090 B`** (`2.000072 bpb`, `91.46 MB` RSS, `0.42 s` dec)<br>`Diploid Chr21`/`Chr22` Nat: `8,846,955` / `8,808,668 B` (`485` / `491 MB` RSS) | Java `Diploid`: `8,816,171` / `8,750,956 B` (`879` / `876 MB` RSS); `100M/300M/1000M` Nat bounded: `250,538` / `773,457` / `2,016,887 B` |
+| **`.hgs3` FASTA+CDS (`E. coli` / `CHM13 chr21`)** | 4,925,526 / 45,654,375 | *E. coli*: **`58,987 B`** (`0.0958 bpb`, `83.50x`, `27,176` ORFs)<br>`Chr21`: **`1,024,592 B`** (`0.1795 bpb`, `44.56x`, `252,280` ORFs) | Zero-FASTA `analyze`/`variants`: **`31,334` SNPs** (`61.96%` wobble, `Ti/Tv=2.5794`, `33,293` VCF calls); `Chr21`: **`285,603` SNPs** + **`172,088` VCFv4.2 calls** (`1.60 s` @ `72.7 MB`, `-34.5%` RSS vs decomp) |
+| **`.hgs3` FASTQ Shootout (`100k x 150 bp`)** | 34,166,047 | **`HGS3-Java+CDS`**: **`6,056,142 B`** (`1.4180 bpb`, `qual=4,892,872`, `115,411` ORFs)<br>**`HGS3-Native+CDS`**: **`6,226,185 B`** (`1.4579 bpb`, `qual=4,890,843`) | **`-17.4%` (`-1,309,907 B`)** vs `NoPanel` (`7,536,092 B`), beats `gzip-9` (`6,895,028 B`); `libbsc` `3,697,004`, `brotli-11` `3,731,151`, `zstd-19` `4,486,652 B`; CD `analyze`/`variants`/`kmer` **`1.51x–1.75x`** faster than decomp |
+
+> **Honest v3.0 $\to$ v3.1 Engineering Delta:** `world_shootout_v3_results.json` pinpointed three concrete bottlenecks—`qual_comp_bytes = 4,890,843 B` (`78.55%` of `.hgs3` FASTQ), `exact_zero_target_spans = 0` on self-edited targets in `kmer`, and `GRCh38_chr1@-Xmx256m` pure-JVM OOM (`status=error`, while `Native bounded` completed at `47,511,069 B`). In **EIMDL v3.1**, all three are fixed in source (`ANS_MODE_RANS4_QUAL_BWT = 4` SA-IS BWT+MTF+RUNA/RUNB+4x-rANS Phred coder, lazy `kind >= 2` self-decoding in `compute.rs`/`CompressedDomainEngine.java`, and tighter `bankHeavy` + `Packed2BitSequence` novelty streaming) and verified by compilation + CI tests pending the next Kaggle full shootout.
+
 ---
 
 ## 5. Generation 1 (`HyperGraSS v1`) & Generation 2 (`RC-MDL`) Foundational Archive
@@ -380,11 +396,11 @@ hypergrass/
 │   ├── cpp_engine/                          # 64-bit >2.14 Gbp CSR syncmer index, Kimura-V4 Mosaic codec & FastCRM/Turbo novelty coder
 │   ├── eimdl-rs/                            # Rust 2024 streaming CLI/library (`Cargo.toml`, `build.rs`, `.hgs2` container, 6-channel FASTA factorizer, tests)
 │   └── README.md                            # Native build, C/C++/Rust FFI architecture & CLI guide
-├── paper/                                   # 28-Page Research Monograph, Figures & Automated Numerical Audit
-│   ├── HGS2_EIMDL_Research_Paper.pdf        # Compiled 28-page single-column PDF monograph (0 overfull boxes)
+├── paper/                                   # 30-Page Research Monograph, Figures & Automated Numerical Audit
+│   ├── HGS2_EIMDL_Research_Paper.pdf        # Compiled 30-page single-column PDF monograph (0 overfull boxes)
 │   ├── HGS2_EIMDL_Research_Paper.tex        # Generated LaTeX source
 │   ├── references.bib                       # BibTeX bibliography (incl. openai2026eth & roy2025grass)
-│   ├── figures/                             # 12 publication-grade 300 DPI figures (fig1..fig8 + arch1..arch4)
+│   ├── figures/                             # 13 publication-grade 300 DPI figures (fig1..fig9 + arch1..arch4)
 │   ├── generate_figures.py                  # Deterministic figure generator from committed JSON results
 │   ├── generate_architecture_diagrams.py    # Publication architectural & wire-format blueprint generator
 │   ├── table_builders.py                    # LaTeX table generator from committed JSON results
@@ -491,9 +507,9 @@ javac --release 25 -Xlint:all -d build_check src/hypergrass/*.java; Remove-Item 
 python benchmarks/kaggle/run_kaggle_e2e.py --target shootout
 python benchmarks/kaggle/run_kaggle_e2e.py --target all
 
-# 3. Inside Kaggle / CI only: the 7 cloud verification suites executed by run_kaggle_e2e.py:
+# 3. Inside Kaggle / CI only: the 8 cloud verification suites executed by run_kaggle_e2e.py:
 #    VerifyAllEdgeCases, VerifyDonorIndex, VerifyAnchorCodecs, VerifyArchiveAccounting,
-#    VerifyDonorCosts, VerifyCompressionLaws (171,941 assertions), VerifyFusionEngine
+#    VerifyDonorCosts, VerifyCompressionLaws (171,941 assertions), VerifyFusionEngine, VerifyParadigm
 
 # 4. Run the automated numerical audit across the research paper, Kaggle JSONs & docs
 python paper/audit_paper_numbers.py

@@ -457,6 +457,11 @@ public final class FastNoveltyCoder {
         return out.toByteArray();
     }
 
+    @FunctionalInterface
+    private interface SliceCopier {
+        void copy(int sliceIdx, int srcOff, byte[] dst, int dstOff, int take);
+    }
+
     /**
      * Bounded-memory encoder over chunked per-unit novelty slices, progressively releasing
      * {@code slices[i] = null} so large chromosomes and collections avoid allocating a second
@@ -464,6 +469,40 @@ public final class FastNoveltyCoder {
      */
     public static byte[] encodeFromSlices(
             byte[][] slices, int[] sliceLens, int totalLen, int threads, boolean boundedMem) {
+        return encodeFromSliceSource(
+                slices.length,
+                sliceLens,
+                totalLen,
+                threads,
+                boundedMem,
+                i -> slices[i] = null,
+                (i, srcOff, dst, dstOff, take) -> System.arraycopy(slices[i], srcOff, dst, dstOff, take),
+                i -> slices[i] != null);
+    }
+
+    /** Bounded-memory variant reading 2-bit {@link Packed2BitSequence} novelty slices (4x smaller live heap). */
+    public static byte[] encodeFromPackedSlices(
+            Packed2BitSequence[] slices, int[] sliceLens, int totalLen, int threads, boolean boundedMem) {
+        return encodeFromSliceSource(
+                slices.length,
+                sliceLens,
+                totalLen,
+                threads,
+                boundedMem,
+                i -> slices[i] = null,
+                (i, srcOff, dst, dstOff, take) -> slices[i].extractTwoBitInto(srcOff, take, dst, dstOff),
+                i -> slices[i] != null);
+    }
+
+    private static byte[] encodeFromSliceSource(
+            int numSlices,
+            int[] sliceLens,
+            int totalLen,
+            int threads,
+            boolean boundedMem,
+            java.util.function.IntConsumer releaseSlice,
+            SliceCopier copier,
+            java.util.function.IntPredicate hasSlice) {
         if (totalLen <= 0) {
             ByteOut empty = new ByteOut(4);
             empty.writeVarInt(0);
@@ -473,13 +512,13 @@ public final class FastNoveltyCoder {
         if (totalLen < turboCutoff) {
             byte[] flat = new byte[totalLen];
             int dst = 0;
-            for (int i = 0; i < slices.length; i++) {
+            for (int i = 0; i < numSlices; i++) {
                 int sl = sliceLens[i];
-                if (sl > 0 && slices[i] != null) {
-                    System.arraycopy(slices[i], 0, flat, dst, sl);
+                if (sl > 0 && hasSlice.test(i)) {
+                    copier.copy(i, 0, flat, dst, sl);
                     dst += sl;
                 }
-                slices[i] = null;
+                releaseSlice.accept(i);
             }
             return encode(flat, totalLen, threads, boundedMem);
         }
@@ -500,21 +539,21 @@ public final class FastNoveltyCoder {
             for (int s = 0; s < totalSegs; s++) {
                 int need = segLens[s];
                 int filled = 0;
-                while (filled < need && sliceIdx < slices.length) {
+                while (filled < need && sliceIdx < numSlices) {
                     int sl = sliceLens[sliceIdx];
                     int avail = sl - sliceOff;
                     if (avail <= 0) {
-                        slices[sliceIdx] = null;
+                        releaseSlice.accept(sliceIdx);
                         sliceIdx++;
                         sliceOff = 0;
                         continue;
                     }
                     int take = Math.min(avail, need - filled);
-                    System.arraycopy(slices[sliceIdx], sliceOff, scratch, filled, take);
+                    copier.copy(sliceIdx, sliceOff, scratch, filled, take);
                     filled += take;
                     sliceOff += take;
                     if (sliceOff >= sl) {
-                        slices[sliceIdx] = null;
+                        releaseSlice.accept(sliceIdx);
                         sliceIdx++;
                         sliceOff = 0;
                     }
@@ -535,21 +574,21 @@ public final class FastNoveltyCoder {
                         int need = segLens[baseSeg + w];
                         batchLens[w] = need;
                         int filled = 0;
-                        while (filled < need && sliceIdx < slices.length) {
+                        while (filled < need && sliceIdx < numSlices) {
                             int sl = sliceLens[sliceIdx];
                             int avail = sl - sliceOff;
                             if (avail <= 0) {
-                                slices[sliceIdx] = null;
+                                releaseSlice.accept(sliceIdx);
                                 sliceIdx++;
                                 sliceOff = 0;
                                 continue;
                             }
                             int take = Math.min(avail, need - filled);
-                            System.arraycopy(slices[sliceIdx], sliceOff, batchBufs[w], filled, take);
+                            copier.copy(sliceIdx, sliceOff, batchBufs[w], filled, take);
                             filled += take;
                             sliceOff += take;
                             if (sliceOff >= sl) {
-                                slices[sliceIdx] = null;
+                                releaseSlice.accept(sliceIdx);
                                 sliceIdx++;
                                 sliceOff = 0;
                             }

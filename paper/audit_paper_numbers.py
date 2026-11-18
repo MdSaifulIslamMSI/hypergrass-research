@@ -321,7 +321,103 @@ def main():
     require_number(tpu["amdahl_high_core_scaling"][0]["archive_bytes"], "tpu_amdahl_group22")
     require_in_readme_and_handoff(tpu["amdahl_high_core_scaling"][0]["archive_bytes"], "tpu_amdahl_group22")
 
-    # 11. Verify compiled PDF and all 12 figure pairs (8 data plots + 4 architectural blueprints) exist + are embedded in README.md
+    # 11. Verify Next-Gen EIMDL v3.0 results (benchmarks/kaggle/results/world_shootout_v3_results.json)
+    ws3 = load_json("benchmarks/kaggle/results/world_shootout_v3_results.json")
+    wn3 = find_codec(ws3["adversarial_and_bounded"]["white_noise_10mb"], "HGS2_Native_single")
+    require_number(wn3["archive_bytes"], "ws3_white_noise_native")
+    require_in_readme_and_handoff(wn3["archive_bytes"], "ws3_white_noise_native")
+
+    nat_1g = [x for x in ws3["adversarial_and_bounded"]["bounded_heap_matrix"]
+              if x.get("codec") == "HGS2_Native_collection_bounded"][-1]
+    require_number(nat_1g["archive_bytes"], "ws3_1000m_native_bounded")
+    require_in_readme_and_handoff(nat_1g["archive_bytes"], "ws3_1000m_native_bounded")
+
+    for b in ws3["bacterial_shootout"]:
+        sp = b["species"]
+        nr = find_codec(b["mode_c_fa"], "HGS2_Native_collection")
+        require_number(nr["archive_bytes"], f"ws3_{sp}_native")
+        require_in_readme_and_handoff(nr["archive_bytes"], f"ws3_{sp}_native")
+
+    for sc3 in ws3["human_shootout"]["single_chromosomes"]:
+        lbl = sc3["target"]
+        nr = find_codec(sc3["runs_fa"], "HGS2_Native_collection")
+        require_number(nr["archive_bytes"], f"ws3_{lbl}_native")
+        require_in_readme_and_handoff(nr["archive_bytes"], f"ws3_{lbl}_native")
+
+    for dp3 in ws3["human_shootout"]["diploid_mode_c"]:
+        lbl = dp3["label"]
+        nr = find_codec(dp3["runs"], "HGS2_Native_collection")
+        require_number(nr["archive_bytes"], f"ws3_{lbl}_native")
+        require_in_readme_and_handoff(nr["archive_bytes"], f"ws3_{lbl}_native")
+
+    for mr3 in ws3["human_shootout"]["cross_human_mode_r"]:
+        pr = mr3["pair"]
+        for c in ("HGS2_ref", "HGS2_Native_ref"):
+            rr = find_codec(mr3["runs"], c)
+            require_number(rr["archive_bytes"], f"ws3_{pr}_{c}")
+            require_in_readme_and_handoff(rr["archive_bytes"], f"ws3_{pr}_{c}")
+
+    pv3 = ws3["paradigm_v3_benchmarks"]
+    ec3 = pv3["compressed_domain_ecoli"]
+    require_number(ec3["hgs3_fasta_mode_r"]["raw_bytes"], "ws3_ecoli_hgs3_raw")
+    require_number(ec3["hgs3_fasta_mode_r"]["archive_bytes"], "ws3_ecoli_hgs3_bytes")
+    require_number(ec3["hgs3_fasta_mode_r"]["telemetry"]["cds_orfs"], "ws3_ecoli_cds_orfs")
+    require_number(ec3["compressed_domain"]["native"]["analyze"]["report"]["snps"], "ws3_ecoli_cd_snps")
+    require_number(ec3["compressed_domain"]["native"]["variants"]["report"]["total_variants"], "ws3_ecoli_cd_vcf")
+    for val, lbl in [
+        (ec3["hgs3_fasta_mode_r"]["archive_bytes"], "ws3_ecoli_hgs3_bytes"),
+        (ec3["hgs3_fasta_mode_r"]["telemetry"]["cds_orfs"], "ws3_ecoli_cds_orfs"),
+        (ec3["compressed_domain"]["native"]["analyze"]["report"]["snps"], "ws3_ecoli_cd_snps"),
+        (ec3["compressed_domain"]["native"]["variants"]["report"]["total_variants"], "ws3_ecoli_cd_vcf"),
+    ]:
+        require_in_readme_and_handoff(val, lbl)
+
+    fq3 = pv3["multi_omic_fastq_ecoli"]
+    require_number(fq3["dataset"]["raw_bytes"], "ws3_fastq_raw")
+    for fr in fq3["runs"]:
+        require_number(fr["archive_bytes"], f"ws3_fastq_{fr['codec']}")
+    fq_nat_run = find_codec(fq3["runs"], "HGS3-Native-FASTQ+CDS")
+    fq_jav_run = find_codec(fq3["runs"], "HGS3-Java-FASTQ+CDS")
+    fq_nop_run = find_codec(fq3["runs"], "HGS3-Native-FASTQ-NoPanel")
+    fq_bsc_run = find_codec(fq3["runs"], "libbsc")
+    require_number(fq_nat_run["telemetry"]["qual_comp_bytes"], "ws3_fastq_nat_qual")
+    require_number(fq_jav_run["telemetry"]["qual_comp_bytes"], "ws3_fastq_jav_qual")
+    require_number(fq3["compressed_domain_fastq"]["native"]["analyze"]["report"]["snps"], "ws3_fastq_cd_snps")
+    require_number(fq3["compressed_domain_fastq"]["native"]["variants"]["report"]["total_variants"], "ws3_fastq_cd_vcf")
+    for val, lbl in [
+        (fq_jav_run["archive_bytes"], "ws3_fastq_java"),
+        (fq_nat_run["archive_bytes"], "ws3_fastq_native"),
+        (fq_nop_run["archive_bytes"], "ws3_fastq_nopanel"),
+        (fq_bsc_run["archive_bytes"], "ws3_fastq_libbsc"),
+        (fq_nat_run["telemetry"]["qual_comp_bytes"], "ws3_fastq_nat_qual"),
+    ]:
+        require_in_readme_and_handoff(val, lbl)
+
+    h21 = pv3["compressed_domain_human_chr21"]
+    require_number(h21["hgs3_mode_r"]["raw_bytes"], "ws3_h21_hgs3_raw")
+    require_number(h21["hgs3_mode_r"]["archive_bytes"], "ws3_h21_hgs3_bytes")
+    require_number(h21["hgs3_mode_r"]["telemetry"]["cds_orfs"], "ws3_h21_cds_orfs")
+    h21_ana = h21["compressed_domain"]["native"]["analyze"]["report"]
+    h21_vcf = h21["compressed_domain"]["native"]["variants"]["report"]
+    for val, lbl in [
+        (h21_ana["snps"], "ws3_h21_cd_snps"),
+        (h21_ana["splices"], "ws3_h21_cd_splices"),
+        (h21_vcf["total_variants"], "ws3_h21_cd_vcf"),
+        (h21_vcf["snvs"], "ws3_h21_cd_snvs"),
+        (h21_vcf["insertions"], "ws3_h21_cd_ins"),
+        (h21_vcf["deletions"], "ws3_h21_cd_del"),
+        (h21_vcf["complex_indels"], "ws3_h21_cd_cplx"),
+    ]:
+        require_number(val, lbl)
+    for val, lbl in [
+        (h21["hgs3_mode_r"]["archive_bytes"], "ws3_h21_hgs3_bytes"),
+        (h21["hgs3_mode_r"]["telemetry"]["cds_orfs"], "ws3_h21_cds_orfs"),
+        (h21_ana["snps"], "ws3_h21_cd_snps"),
+        (h21_vcf["total_variants"], "ws3_h21_cd_vcf"),
+    ]:
+        require_in_readme_and_handoff(val, lbl)
+
+    # 12. Verify compiled PDF and all 13 figure pairs (9 data plots + 4 architectural blueprints) exist + are embedded in README.md
     if not os.path.exists(pdf_path) or os.path.getsize(pdf_path) < 100_000:
         failures.append(f"[PDF MISSING OR TOO SMALL]: {pdf_path}")
     checks += 1
@@ -334,6 +430,7 @@ def main():
         "fig6_independent_modes_pareto",
         "fig7_gen1_gen2_foundations",
         "fig8_kaggle_world_shootout_and_human",
+        "fig9_nextgen_eimdl_v3_paradigm",
         "arch1_eimdl_system_pipeline",
         "arch2_mosaic_evolutionary_codec",
         "arch3_fast_novelty_coder",

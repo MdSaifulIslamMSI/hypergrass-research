@@ -23,9 +23,11 @@ public final class HgsAnsCoder {
     private static final int ANS_MODE_RANS4_DNA = 1;
     private static final int ANS_MODE_RAW_QUAL = 2;
     private static final int ANS_MODE_RANS4_QUAL = 3;
+    private static final int ANS_MODE_RANS4_QUAL_BWT = 4;
 
     public static final int FLAG_ANS4_NOVELTY = 0x10;
     public static final int ANS4_SEG_BASES = 1_000_000;
+    private static final int QUAL_BWT_BLK = 2_000_000;
 
     private HgsAnsCoder() {}
 
@@ -94,8 +96,22 @@ public final class HgsAnsCoder {
             long x = state;
             int slot = (int) (x & (ANS_SCALE - 1));
             int sym = 0;
-            while (sym + 1 < nSyms && slot >= cums[sym + 1]) {
-                sym++;
+            if (nSyms <= 16) {
+                while (sym + 1 < nSyms && slot >= cums[sym + 1]) {
+                    sym++;
+                }
+            } else {
+                int lo = 0;
+                int hi = nSyms - 1;
+                while (lo < hi) {
+                    int mid = lo + ((hi - lo + 1) >>> 1);
+                    if (cums[mid] <= slot) {
+                        lo = mid;
+                    } else {
+                        hi = mid - 1;
+                    }
+                }
+                sym = lo;
             }
             int f = freqs[sym];
             int c = cums[sym];
@@ -620,7 +636,16 @@ public final class HgsAnsCoder {
 
         int ransSize = 33;
         for (int l = 0; l < 4; l++) ransSize += rev[l].len;
-        if (ransSize >= len + 1) {
+
+        byte[] bwtOut = len >= 256 ? tryEncodeQualBwt(qualsRaw, mismatchMask) : null;
+        int rawSize = 1 + len;
+        int ctxSize = ransSize < rawSize ? ransSize : Integer.MAX_VALUE;
+        int bwtSize = (bwtOut != null && bwtOut.length < rawSize) ? bwtOut.length : Integer.MAX_VALUE;
+
+        if (bwtSize < ctxSize && bwtSize < rawSize) {
+            return bwtOut;
+        }
+        if (ransSize >= rawSize) {
             byte[] rawOut = new byte[1 + len];
             rawOut[0] = (byte) ANS_MODE_RAW_QUAL;
             System.arraycopy(qualsRaw, 0, rawOut, 1, len);
@@ -658,6 +683,10 @@ public final class HgsAnsCoder {
                 throw new IllegalStateException("Truncated RAW_QUAL block");
             }
             System.arraycopy(payload, 1, out, 0, expectedLen);
+            return out;
+        }
+        if (mode == ANS_MODE_RANS4_QUAL_BWT) {
+            decodeQualBwt(payload, mismatchMask, expectedLen, out);
             return out;
         }
         if (mode != ANS_MODE_RANS4_QUAL || payload.length < 33) {
@@ -744,5 +773,445 @@ public final class HgsAnsCoder {
             }
         }
         return out;
+    }
+
+    // ---------------- Mode 4: Pangenome-Stratified BWT + MTF + RUNA/RUNB + 4x-rANS ----------------
+
+    private static boolean saisTget(byte[] t, int i) {
+        return ((t[i >>> 3] >>> (i & 7)) & 1) != 0;
+    }
+
+    private static void saisTset(byte[] t, int i, boolean v) {
+        if (v) t[i >>> 3] |= (byte) (1 << (i & 7));
+        else t[i >>> 3] &= (byte) ~(1 << (i & 7));
+    }
+
+    private static boolean saisIsLms(byte[] t, int i) {
+        return i > 0 && saisTget(t, i) && !saisTget(t, i - 1);
+    }
+
+    private static void saisGetBuckets(int[] s, int sOff, int[] bkt, int n, int K, boolean end) {
+        Arrays.fill(bkt, 0, K, 0);
+        for (int i = 0; i < n; i++) bkt[s[sOff + i]]++;
+        int sum = 0;
+        for (int i = 0; i < K; i++) {
+            sum += bkt[i];
+            bkt[i] = end ? sum : (sum - bkt[i]);
+        }
+    }
+
+    private static void saisInduceSaL(byte[] t, int[] sa, int saOff, int[] s, int sOff, int[] bkt, int n, int K, boolean end) {
+        saisGetBuckets(s, sOff, bkt, n, K, end);
+        for (int i = 0; i < n; i++) {
+            int j = sa[saOff + i] - 1;
+            if (j >= 0 && !saisTget(t, j)) sa[saOff + (bkt[s[sOff + j]]++)] = j;
+        }
+    }
+
+    private static void saisInduceSaS(byte[] t, int[] sa, int saOff, int[] s, int sOff, int[] bkt, int n, int K, boolean end) {
+        saisGetBuckets(s, sOff, bkt, n, K, end);
+        for (int i = n - 1; i >= 0; i--) {
+            int j = sa[saOff + i] - 1;
+            if (j >= 0 && saisTget(t, j)) sa[saOff + (--bkt[s[sOff + j]])] = j;
+        }
+    }
+
+    private static void saisCompute(int[] s, int sOff, int[] sa, int saOff, int n, int K) {
+        byte[] t = new byte[(n + 7) >>> 3];
+        int[] bkt = new int[K];
+
+        saisTset(t, n - 1, true);
+        if (n >= 2) saisTset(t, n - 2, false);
+        for (int i = n - 3; i >= 0; i--) {
+            boolean v = (s[sOff + i] < s[sOff + i + 1]) || (s[sOff + i] == s[sOff + i + 1] && saisTget(t, i + 1));
+            saisTset(t, i, v);
+        }
+
+        saisGetBuckets(s, sOff, bkt, n, K, true);
+        Arrays.fill(sa, saOff, saOff + n, -1);
+        for (int i = 1; i < n; i++) {
+            if (saisIsLms(t, i)) sa[saOff + (--bkt[s[sOff + i]])] = i;
+        }
+        saisInduceSaL(t, sa, saOff, s, sOff, bkt, n, K, false);
+        saisInduceSaS(t, sa, saOff, s, sOff, bkt, n, K, true);
+
+        int n1 = 0;
+        for (int i = 0; i < n; i++) {
+            if (saisIsLms(t, sa[saOff + i])) sa[saOff + (n1++)] = sa[saOff + i];
+        }
+        Arrays.fill(sa, saOff + n1, saOff + n, -1);
+        int name = 0;
+        int prev = -1;
+        for (int i = 0; i < n1; i++) {
+            int pos = sa[saOff + i];
+            boolean diff = false;
+            for (int d = 0; d < n; d++) {
+                if (prev == -1
+                        || s[sOff + pos + d] != s[sOff + prev + d]
+                        || saisTget(t, pos + d) != saisTget(t, prev + d)) {
+                    diff = true;
+                    break;
+                } else if (d > 0 && (saisIsLms(t, pos + d) || saisIsLms(t, prev + d))) {
+                    break;
+                }
+            }
+            if (diff) {
+                name++;
+                prev = pos;
+            }
+            sa[saOff + n1 + (pos >>> 1)] = name - 1;
+        }
+        for (int i = n - 1, j = n - 1; i >= n1; i--) {
+            if (sa[saOff + i] >= 0) sa[saOff + (j--)] = sa[saOff + i];
+        }
+
+        int s1Off = saOff + n - n1;
+        if (name < n1) {
+            saisCompute(sa, s1Off, sa, saOff, n1, name);
+        } else {
+            for (int i = 0; i < n1; i++) sa[saOff + sa[s1Off + i]] = i;
+        }
+
+        saisGetBuckets(s, sOff, bkt, n, K, true);
+        for (int i = 1, j = 0; i < n; i++) {
+            if (saisIsLms(t, i)) sa[s1Off + (j++)] = i;
+        }
+        for (int i = 0; i < n1; i++) sa[saOff + i] = sa[s1Off + sa[saOff + i]];
+        Arrays.fill(sa, saOff + n1, saOff + n, -1);
+        for (int i = n1 - 1; i >= 0; i--) {
+            int j = sa[saOff + i];
+            sa[saOff + i] = -1;
+            sa[saOff + (--bkt[s[sOff + j]])] = j;
+        }
+        saisInduceSaL(t, sa, saOff, s, sOff, bkt, n, K, false);
+        saisInduceSaS(t, sa, saOff, s, sOff, bkt, n, K, true);
+    }
+
+    private static final class Sym16Vec {
+        int[] data = new int[4096];
+        int len = 0;
+
+        void push(int v) {
+            if (len == data.length) data = Arrays.copyOf(data, data.length << 1);
+            data[len++] = v;
+        }
+
+        void flushZeroRun(int run) {
+            while (run > 0) {
+                run--;
+                push(run & 1);
+                run >>>= 1;
+            }
+        }
+    }
+
+    private static void encodeBwtBlock(byte[] src, int off, int bn, ByteOut dst) {
+        int[] s = new int[bn + 1];
+        int[] sa = new int[bn + 1];
+        byte[] bitmap = new byte[32];
+        for (int i = 0; i < bn; i++) {
+            int v = src[off + i] & 0xFF;
+            s[i] = v + 1;
+            bitmap[v >>> 3] |= (byte) (1 << (v & 7));
+        }
+        s[bn] = 0;
+        saisCompute(s, 0, sa, 0, bn + 1, 257);
+
+        int eofIdx = 0;
+        byte[] bwt = new byte[bn];
+        int bi = 0;
+        for (int i = 0; i <= bn; i++) {
+            int p = sa[i];
+            if (p == 0) eofIdx = i;
+            else bwt[bi++] = src[off + p - 1];
+        }
+
+        byte[] mtf = new byte[256];
+        int symCnt = 0;
+        for (int c = 0; c < 256; c++) {
+            if ((bitmap[c >>> 3] & (1 << (c & 7))) != 0) mtf[symCnt++] = (byte) c;
+        }
+
+        Sym16Vec syms = new Sym16Vec();
+        int zrun = 0;
+        for (int i = 0; i < bn; i++) {
+            byte b = bwt[i];
+            if (b == mtf[0]) {
+                zrun++;
+            } else {
+                syms.flushZeroRun(zrun);
+                zrun = 0;
+                int idx = 1;
+                while (idx < symCnt && mtf[idx] != b) idx++;
+                for (int j = idx; j > 0; j--) mtf[j] = mtf[j - 1];
+                mtf[0] = b;
+                syms.push(idx + 1);
+            }
+        }
+        syms.flushZeroRun(zrun);
+
+        int nsym = symCnt + 1;
+        int rlen = syms.len;
+        int baseQ = rlen >>> 2;
+        int rem = rlen & 3;
+        int[] laneLen = new int[4];
+        int[] laneOff = new int[4];
+        int cur = 0;
+        for (int l = 0; l < 4; l++) {
+            laneLen[l] = baseQ + (l < rem ? 1 : 0);
+            laneOff[l] = cur;
+            cur += laneLen[l];
+        }
+
+        int[][][] weights = new int[4][3][nsym];
+        int[][] rowSum = new int[4][3];
+        SymRecVec[] recs = new SymRecVec[4];
+        ByteRev[] rev = new ByteRev[4];
+        int[] cums = new int[nsym];
+        int[] freqs = new int[nsym];
+        for (int l = 0; l < 4; l++) {
+            recs[l] = new SymRecVec();
+            rev[l] = new ByteRev();
+            int ctx = 2;
+            for (int k = 0; k < laneLen[l]; k++) {
+                int sym = syms.data[laneOff[l] + k];
+                normalizeCdf(weights[l][ctx], nsym, cums, freqs);
+                recs[l].push(cums[sym], freqs[sym]);
+                weights[l][ctx][sym] += 8;
+                rowSum[l][ctx] += 8;
+                if (rowSum[l][ctx] > 2048) {
+                    int ns = 0;
+                    for (int s0 = 0; s0 < nsym; s0++) {
+                        weights[l][ctx][s0] >>>= 1;
+                        ns += weights[l][ctx][s0];
+                    }
+                    rowSum[l][ctx] = ns;
+                }
+                ctx = (sym == 0) ? 0 : (sym == 1 ? 1 : 2);
+            }
+        }
+
+        long[] state = {ANS_L, ANS_L, ANS_L, ANS_L};
+        for (int l = 0; l < 4; l++) {
+            SymRecVec rv = recs[l];
+            for (int i = rv.len; i > 0; i--) {
+                state[l] = encodeOne(state[l], rev[l], rv.cums[i - 1], rv.freqs[i - 1]);
+            }
+        }
+
+        writeU32LE(dst, eofIdx);
+        dst.writeBytes(bitmap, 0, 32);
+        writeU32LE(dst, rlen);
+        for (int l = 0; l < 4; l++) writeU32LE(dst, state[l]);
+        for (int l = 0; l < 4; l++) writeU32LE(dst, rev[l].len);
+        for (int l = 0; l < 4; l++) {
+            byte[] rd = rev[l].data;
+            for (int i = rev[l].len; i > 0; i--) dst.writeByte(rd[i - 1]);
+        }
+    }
+
+    private static int decodeBwtBlock(byte[] payload, int pos, byte[] out, int outOff, int bn) {
+        if (pos + 72 > payload.length) {
+            throw new IllegalStateException("Truncated ANS4 quality BWT header");
+        }
+        int eofIdx = (int) readU32LE(payload, pos);
+        if (eofIdx <= 0 || eofIdx > bn) {
+            throw new IllegalStateException("Invalid BWT EOF index: " + eofIdx);
+        }
+        int bitmapOff = pos + 4;
+        int rlen = (int) readU32LE(payload, pos + 36);
+        AnsDecCursor[] decs = new AnsDecCursor[4];
+        int p = pos + 72;
+        for (int l = 0; l < 4; l++) {
+            long st = readU32LE(payload, pos + 40 + l * 4);
+            int bl = (int) readU32LE(payload, pos + 56 + l * 4);
+            if (bl < 0 || p + bl > payload.length) {
+                throw new IllegalStateException("Corrupt ANS4 BWT stripe lengths");
+            }
+            decs[l] = new AnsDecCursor(st, p, p + bl, payload);
+            p += bl;
+        }
+
+        byte[] mtf = new byte[256];
+        int symCnt = 0;
+        for (int c = 0; c < 256; c++) {
+            if ((payload[bitmapOff + (c >>> 3)] & (1 << (c & 7))) != 0) mtf[symCnt++] = (byte) c;
+        }
+        if (symCnt == 0) {
+            throw new IllegalStateException("Empty BWT alphabet bitmap");
+        }
+        int nsym = symCnt + 1;
+
+        int[] syms = new int[rlen];
+        int baseQ = rlen >>> 2;
+        int rem = rlen & 3;
+        int[] laneLen = new int[4];
+        int[] laneOff = new int[4];
+        int cur = 0;
+        for (int l = 0; l < 4; l++) {
+            laneLen[l] = baseQ + (l < rem ? 1 : 0);
+            laneOff[l] = cur;
+            cur += laneLen[l];
+        }
+
+        int[][][] weights = new int[4][3][nsym];
+        int[][] rowSum = new int[4][3];
+        int[] cums = new int[nsym];
+        int[] freqs = new int[nsym];
+        for (int l = 0; l < 4; l++) {
+            int ctx = 2;
+            for (int k = 0; k < laneLen[l]; k++) {
+                normalizeCdf(weights[l][ctx], nsym, cums, freqs);
+                int sym = decs[l].step(cums, freqs, nsym);
+                syms[laneOff[l] + k] = sym;
+                weights[l][ctx][sym] += 8;
+                rowSum[l][ctx] += 8;
+                if (rowSum[l][ctx] > 2048) {
+                    int ns = 0;
+                    for (int s0 = 0; s0 < nsym; s0++) {
+                        weights[l][ctx][s0] >>>= 1;
+                        ns += weights[l][ctx][s0];
+                    }
+                    rowSum[l][ctx] = ns;
+                }
+                ctx = (sym == 0) ? 0 : (sym == 1 ? 1 : 2);
+            }
+            if (decs[l].state != ANS_L || decs[l].pos != decs[l].end) {
+                throw new IllegalStateException("rANS quality BWT final state mismatch on lane " + l);
+            }
+        }
+
+        byte[] bwt = new byte[bn];
+        int[] counts = new int[256];
+        int bi = 0;
+        int si = 0;
+        while (si < rlen) {
+            if (syms[si] <= 1) {
+                int run = 0;
+                int pow2 = 1;
+                while (si < rlen && syms[si] <= 1) {
+                    run += (syms[si] == 0 ? 1 : 2) * pow2;
+                    pow2 <<= 1;
+                    si++;
+                }
+                if (bi + run > bn) throw new IllegalStateException("Corrupt BWT zero run");
+                byte ch = mtf[0];
+                counts[ch & 0xFF] += run;
+                Arrays.fill(bwt, bi, bi + run, ch);
+                bi += run;
+            } else {
+                int idx = syms[si++] - 1;
+                if (idx >= symCnt) throw new IllegalStateException("Corrupt MTF index");
+                byte ch = mtf[idx];
+                for (int j = idx; j > 0; j--) mtf[j] = mtf[j - 1];
+                mtf[0] = ch;
+                if (bi >= bn) throw new IllegalStateException("Corrupt BWT length");
+                counts[ch & 0xFF]++;
+                bwt[bi++] = ch;
+            }
+        }
+        if (bi != bn) throw new IllegalStateException("BWT symbol length mismatch");
+
+        int[] start = new int[256];
+        int cumC = 1;
+        for (int c = 0; c < 256; c++) {
+            start[c] = cumC;
+            cumC += counts[c];
+        }
+        int[] pred = new int[bn + 1];
+        for (int r = 0; r <= bn; r++) {
+            if (r == eofIdx) continue;
+            int lpos = (r < eofIdx) ? r : (r - 1);
+            int ch = bwt[lpos] & 0xFF;
+            pred[r] = start[ch]++;
+        }
+        int curRow = 0;
+        for (int step = 0; step < bn; step++) {
+            int lpos = (curRow < eofIdx) ? curRow : (curRow - 1);
+            out[outOff + bn - 1 - step] = bwt[lpos];
+            curRow = pred[curRow];
+        }
+        return p;
+    }
+
+    private static byte[] tryEncodeQualBwt(byte[] qualsRaw, byte[] mismatchMask) {
+        int len = qualsRaw.length;
+        int n0 = 0;
+        int n1 = 0;
+        if (mismatchMask != null) {
+            for (int i = 0; i < len; i++) {
+                if ((mismatchMask[i] & 1) != 0) n1++;
+                else n0++;
+            }
+        }
+        boolean split = mismatchMask != null && n0 >= 16 && n1 >= 16;
+        ByteOut out = new ByteOut(Math.max(128, len / 4));
+        out.writeByte(ANS_MODE_RANS4_QUAL_BWT);
+        out.writeByte(split ? 1 : 0);
+
+        if (!split) {
+            for (int off = 0; off < len; off += QUAL_BWT_BLK) {
+                int bn = Math.min(QUAL_BWT_BLK, len - off);
+                encodeBwtBlock(qualsRaw, off, bn, out);
+            }
+        } else {
+            byte[] s0 = new byte[n0];
+            byte[] s1 = new byte[n1];
+            int i0 = 0;
+            int i1 = 0;
+            for (int i = 0; i < len; i++) {
+                if ((mismatchMask[i] & 1) != 0) s1[i1++] = qualsRaw[i];
+                else s0[i0++] = qualsRaw[i];
+            }
+            for (int off = 0; off < n0; off += QUAL_BWT_BLK) {
+                int bn = Math.min(QUAL_BWT_BLK, n0 - off);
+                encodeBwtBlock(s0, off, bn, out);
+            }
+            for (int off = 0; off < n1; off += QUAL_BWT_BLK) {
+                int bn = Math.min(QUAL_BWT_BLK, n1 - off);
+                encodeBwtBlock(s1, off, bn, out);
+            }
+        }
+        return out.toByteArray();
+    }
+
+    private static void decodeQualBwt(
+            byte[] payload, byte[] mismatchMask, int expectedLen, byte[] out) {
+        if (payload.length < 2) throw new IllegalStateException("Truncated BWT quality header");
+        boolean split = payload[1] != 0;
+        int pos = 2;
+        if (!split) {
+            for (int off = 0; off < expectedLen; off += QUAL_BWT_BLK) {
+                int bn = Math.min(QUAL_BWT_BLK, expectedLen - off);
+                pos = decodeBwtBlock(payload, pos, out, off, bn);
+            }
+            if (pos != payload.length) throw new IllegalStateException("Trailing bytes in BWT quality block");
+            return;
+        }
+        if (mismatchMask == null) {
+            throw new IllegalStateException("Split BWT quality block requires mismatchMask");
+        }
+        int n0 = 0;
+        int n1 = 0;
+        for (int i = 0; i < expectedLen; i++) {
+            if ((mismatchMask[i] & 1) != 0) n1++;
+            else n0++;
+        }
+        byte[] s0 = new byte[n0];
+        byte[] s1 = new byte[n1];
+        for (int off = 0; off < n0; off += QUAL_BWT_BLK) {
+            int bn = Math.min(QUAL_BWT_BLK, n0 - off);
+            pos = decodeBwtBlock(payload, pos, s0, off, bn);
+        }
+        for (int off = 0; off < n1; off += QUAL_BWT_BLK) {
+            int bn = Math.min(QUAL_BWT_BLK, n1 - off);
+            pos = decodeBwtBlock(payload, pos, s1, off, bn);
+        }
+        if (pos != payload.length) throw new IllegalStateException("Trailing bytes in split BWT quality block");
+        int i0 = 0;
+        int i1 = 0;
+        for (int i = 0; i < expectedLen; i++) {
+            out[i] = ((mismatchMask[i] & 1) != 0) ? s1[i1++] : s0[i0++];
+        }
     }
 }

@@ -302,7 +302,9 @@ The `.hgs3` container (magic `"HGS3"`) generalizes `.hgs2` across **multi-omic b
 3. **Lossless Pangenome-Conditioned FASTQ (`FLAG3_FASTQ = 0x10`):**
    - **Metadata Stream:** Common read-ID prefix stripping + incremental LCP deltas, uniform/mixed `CRLF`/`LF` & `+` comment flags, fixed/variable read lengths, and sparse/XOR ambiguity & soft-mask restoration (`deflate`/`zlib`).
    - **DNA Stream:** Reference/panel Mosaic (`EimdlMosaicCodec`) + 4-stripe rANS novelty (`FLAG_ANS4_NOVELTY`).
-   - **Coupled Phred Quality Stream (`ANS_MODE_RANS4_QUAL = 3`):** Hierarchical `(same, coarse[9], fine[8], nibble[16])` residual coding conditioned directly on Mosaic variant/literal `mismatch_mask`, DNA `homo_bins`, `prev_qbin`, and read cycle phase — regenerated deterministically from the DNA Mosaic tokens at zero mask signaling overhead.
+   - **Coupled Phred Quality Stream (`ANS_MODE_RANS4_QUAL = 3`, `ANS_MODE_RANS4_QUAL_BWT = 4`):**
+     - `ANS_MODE_RANS4_QUAL` (`3`): hierarchical `(same, coarse[9], fine[8], nibble[16])` residual coding conditioned on Mosaic variant/literal `mismatch_mask`, DNA `homo_bins`, `prev_qbin`, and read cycle phase — regenerated deterministically from the DNA Mosaic tokens at zero mask overhead.
+     - `ANS_MODE_RANS4_QUAL_BWT` (`4`, v3.1): pangenome-stratified (`mismatch_mask == 0` matched partition vs. `mismatch_mask == 1` variant/novelty partition at zero mask overhead) linear-time `SA-IS` Burrows-Wheeler Transform per `2,000,000`-byte block -> active-alphabet `MTF` -> bijective `RUNA`/`RUNB` zero-run collapsing -> 3-context 4-stripe interleaved Byte-rANS, strictly gated by Law IV to pick `min(raw, mode 3, mode 4)`.
 4. **Optional 6-Frame CDS Proteome Summary (`FLAG3_HAS_CDS = 0x20`):**
    - Appends `(orfCount, longestOrfAa, totalOrfAa, gcPermille, proteomeSha256[32])` for genomic/transcriptomic validation without disturbing byte-exact reconstruction.
 5. **Compressed-Domain Algebra (`HGS2` & `HGS3`):**

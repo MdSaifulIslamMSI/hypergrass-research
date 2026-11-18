@@ -1,28 +1,28 @@
 # Research Monograph Build & Automated Numerical Audit (`paper/`)
 
-This directory contains the reproducible publication pipeline for the **28-page single-column LaTeX research monograph** on the three-generation **`HyperGraSS` / `RC-MDL` / `HGS2` (`EIMDL`)** genomic compression architecture (Laws I–VII, OpenAI `2026` ETH transfer + §1.1.3 OVC scope boundary, and Kaggle E2E cloud verification).
+This directory contains the reproducible publication pipeline for the **30-page single-column LaTeX research monograph** on the three-generation **`HyperGraSS` / `RC-MDL` / `HGS2` / `HGS3` (`EIMDL`)** genomic compression architecture (Laws I–VII, OpenAI `2026` ETH transfer + §1.1.3 OVC scope boundary, Next-Gen EIMDL v3, and Kaggle E2E cloud verification).
 
 ## Contents
 
 | File | Description |
 |---|---|
-| [`HGS2_EIMDL_Research_Paper.pdf`](HGS2_EIMDL_Research_Paper.pdf) | Compiled 28-page single-column PDF monograph (`0` `Overfull \hbox` warnings, `22` tables, `12` figures) |
+| [`HGS2_EIMDL_Research_Paper.pdf`](HGS2_EIMDL_Research_Paper.pdf) | Compiled 30-page single-column PDF monograph (`0` `Overfull \hbox` warnings, `24` tables, `13` figures) |
 | [`HGS2_EIMDL_Research_Paper.tex`](HGS2_EIMDL_Research_Paper.tex) | Generated LaTeX source file (built deterministically from committed JSON evidence) |
 | [`references.bib`](references.bib) | BibTeX bibliography covering genomic compression, syncmers, Kimura/codon models, MDL, `roy2025grass`, and `openai2026eth` |
-| [`generate_figures.py`](generate_figures.py) | Generates all 8 publication-grade 300 DPI data figures (`figures/fig1_regime_overview.png` .. `fig8_kaggle_world_shootout_and_human.png`) directly from committed JSON results |
+| [`generate_figures.py`](generate_figures.py) | Generates all 9 publication-grade 300 DPI data figures (`figures/fig1_regime_overview.png` .. `fig9_nextgen_eimdl_v3_paradigm.png`) directly from committed JSON results |
 | [`generate_architecture_diagrams.py`](generate_architecture_diagrams.py) | Generates all 4 massive 300 DPI + vector PDF system/wire architectural blueprints (`arch1_eimdl_system_pipeline` .. `arch4_container_and_lineage`) |
 | [`table_builders.py`](table_builders.py) | Builds the per-genome Mode R LOO, Cluster-LOO, Mode C, Mode S, and independent benchmark LaTeX tables directly from JSON |
 | [`build_latex_paper.py`](build_latex_paper.py) | Generates `HGS2_EIMDL_Research_Paper.tex` |
 | [`build_markdown_paper.py`](build_markdown_paper.py) | Generates the full Markdown monograph [`../docs/PAPER-DRAFT.md`](../docs/PAPER-DRAFT.md) |
-| [`audit_paper_numbers.py`](audit_paper_numbers.py) | Executes **1,705 automated assertions** verifying every byte count, base count, bit-rate, and all 12 figure/blueprint embeds across `.tex`, `docs/PAPER-DRAFT.md`, `README.md`, and `HANDOFF.md` against local and Kaggle JSON reports |
-| [`figures/`](figures/) | `fig1_regime_overview` .. `fig8_kaggle_world_shootout_and_human` and `arch1_eimdl_system_pipeline` .. `arch4_container_and_lineage` (PNG + PDF vector outputs) |
+| [`audit_paper_numbers.py`](audit_paper_numbers.py) | Executes **1,856 automated assertions** verifying every byte count, base count, bit-rate, and all 13 figure/blueprint embeds across `.tex`, `docs/PAPER-DRAFT.md`, `README.md`, and `HANDOFF.md` against local and Kaggle JSON reports |
+| [`figures/`](figures/) | `fig1_regime_overview` .. `fig9_nextgen_eimdl_v3_paradigm` and `arch1_eimdl_system_pipeline` .. `arch4_container_and_lineage` (PNG + PDF vector outputs) |
 
 ## Rebuilding Everything End-to-End
 
 From the repository root (`C:\Users\mdsai\.gemini\antigravity\scratch\hypergrass`):
 
 ```powershell
-# 1. Regenerate all 8 data figures + 4 architectural blueprints (PNG + PDF)
+# 1. Regenerate all 9 data figures + 4 architectural blueprints (PNG + PDF)
 python paper/generate_figures.py
 python paper/generate_architecture_diagrams.py
 
@@ -30,7 +30,7 @@ python paper/generate_architecture_diagrams.py
 python paper/build_latex_paper.py
 python paper/build_markdown_paper.py
 
-# 3. Compile the 28-page PDF via pdflatex + bibtex
+# 3. Compile the 30-page PDF via pdflatex + bibtex
 Push-Location paper
 pdflatex -interaction=nonstopmode HGS2_EIMDL_Research_Paper.tex
 bibtex HGS2_EIMDL_Research_Paper

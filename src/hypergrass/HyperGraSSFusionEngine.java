@@ -420,8 +420,12 @@ public final class HyperGraSSFusionEngine {
             }
         }
 
-        // Encode mosaic streams across units
-        EncodedMosaic[] rankMosaics = new EncodedMosaic[numUnits];
+        // Encode mosaic streams across units cleanly, packing unit novelty immediately under bounded mode
+        byte[][] rankMosaicBytes = new byte[numUnits][];
+        byte[][] unitNovSlices = (bounded && !hgs3Mode) ? null : new byte[numUnits][];
+        Packed2BitSequence[] unitNovPacked = (bounded && !hgs3Mode) ? new Packed2BitSequence[numUnits] : null;
+        int[] unitNovLens = new int[numUnits];
+        MosaicStats[] rankStats = new MosaicStats[numUnits];
         long panelBasesTotal = 0L;
         int panelGenomeCount = 0;
         int safeStage1Threads =
@@ -434,10 +438,12 @@ public final class HyperGraSSFusionEngine {
         if (mode == MODE_SINGLE) {
             for (int u = 0; u < numUnits; u++) {
                 InputUnit iu = units.get(u);
-                rankMosaics[u] =
+                EncodedMosaic em =
                         EimdlMosaicCodec.encodeMosaic(
                                 iu.seq, null, 0, -1, null, opts.mosaicConfig, safeStage1Threads);
                 iu.seq = null;
+                storeUnitMosaic(
+                        u, em, rankMosaicBytes, unitNovSlices, unitNovPacked, unitNovLens, rankStats);
             }
             units = null;
         } else if (mode == MODE_REF) {
@@ -486,7 +492,7 @@ public final class HyperGraSSFusionEngine {
                         bestTwin = simOrder[0];
                     }
                 }
-                rankMosaics[u] =
+                EncodedMosaic em =
                         EimdlMosaicCodec.encodeMosaic(
                                 tgtSeq,
                                 panelIdx,
@@ -496,6 +502,8 @@ public final class HyperGraSSFusionEngine {
                                 opts.mosaicConfig,
                                 safeStage1Threads);
                 units.get(u).seq = null;
+                storeUnitMosaic(
+                        u, em, rankMosaicBytes, unitNovSlices, unitNovPacked, unitNovLens, rankStats);
             }
             panelIdx = null;
             loadedPanel = null;
@@ -519,7 +527,9 @@ public final class HyperGraSSFusionEngine {
             boolean ultraTight = maxMemBytes <= 205L * 1024 * 1024;
             boolean extremeTight = maxMemBytes <= 145L * 1024 * 1024;
             boolean hubBounded = hubCap < numUnits;
-            boolean bankHeavy = bankBytes * 5L > maxMemBytes * 2L;
+            boolean bankHeavy =
+                    bankBytes * 5L > maxMemBytes * 2L
+                            || (bounded && maxMemBytes <= 320L * 1024 * 1024 && bankBytes * 6L >= maxMemBytes);
             boolean memPressured = bounded || (bankBytes * 5L > maxMemBytes);
 
             int maxMosaicWorkers =
@@ -610,7 +620,7 @@ public final class HyperGraSSFusionEngine {
                                     ? mstParentRank[r]
                                     : (ancLimit > 0 ? 0 : -1);
                     if (r == 0) {
-                        rankMosaics[0] =
+                        EncodedMosaic em =
                                 EimdlMosaicCodec.encodeMosaic(
                                         targetSeq,
                                         null,
@@ -619,8 +629,10 @@ public final class HyperGraSSFusionEngine {
                                         null,
                                         opts.mosaicConfig,
                                         chunkThreads);
+                        storeUnitMosaic(
+                                r, em, rankMosaicBytes, unitNovSlices, unitNovPacked, unitNovLens, rankStats);
                     } else {
-                        rankMosaics[r] =
+                        EncodedMosaic em =
                                 EimdlMosaicCodec.encodeMosaic(
                                         targetSeq,
                                         sharedDagIdx,
@@ -629,6 +641,8 @@ public final class HyperGraSSFusionEngine {
                                         rankDonorSimilarityOrder[r],
                                         opts.mosaicConfig,
                                         chunkThreads);
+                        storeUnitMosaic(
+                                r, em, rankMosaicBytes, unitNovSlices, unitNovPacked, unitNovLens, rankStats);
                     }
                     rankDonorSimilarityOrder[r] = null;
                 }
@@ -636,7 +650,11 @@ public final class HyperGraSSFusionEngine {
                 final EimdlSyncmerIndex dagIdx = sharedDagIdx;
                 final int[] parentRanks = mstParentRank;
                 final int[][] simOrders = rankDonorSimilarityOrder;
-                final EncodedMosaic[] outMosaics = rankMosaics;
+                final byte[][] outMBytes = rankMosaicBytes;
+                final byte[][] outNovSlices = unitNovSlices;
+                final Packed2BitSequence[] outNovPacked = unitNovPacked;
+                final int[] outNovLens = unitNovLens;
+                final MosaicStats[] outStats = rankStats;
                 ForkJoinPool pool = new ForkJoinPool(workerThreads);
                 try {
                     pool.submit(
@@ -653,8 +671,9 @@ public final class HyperGraSSFusionEngine {
                                                                 Packed2BitSequence targetSeq =
                                                                         dagIdx.bank.sliceSeq(
                                                                                 dStart, dLen);
+                                                                EncodedMosaic em;
                                                                 if (r == 0) {
-                                                                    outMosaics[0] =
+                                                                    em =
                                                                             EimdlMosaicCodec
                                                                                     .encodeMosaic(
                                                                                             targetSeq,
@@ -664,7 +683,7 @@ public final class HyperGraSSFusionEngine {
                                                                                             null,
                                                                                             opts.mosaicConfig);
                                                                 } else {
-                                                                    outMosaics[r] =
+                                                                    em =
                                                                             EimdlMosaicCodec
                                                                                     .encodeMosaic(
                                                                                             targetSeq,
@@ -676,6 +695,14 @@ public final class HyperGraSSFusionEngine {
                                                                                                     r],
                                                                                             opts.mosaicConfig);
                                                                 }
+                                                                storeUnitMosaic(
+                                                                        r,
+                                                                        em,
+                                                                        outMBytes,
+                                                                        outNovSlices,
+                                                                        outNovPacked,
+                                                                        outNovLens,
+                                                                        outStats);
                                                             }))
                             .join();
                 } finally {
@@ -701,18 +728,15 @@ public final class HyperGraSSFusionEngine {
         long sumSplices = 0L;
         long sumSnps = 0L;
 
-        byte[][] unitNovSlices = new byte[numUnits][];
-        int[] unitNovLens = new int[numUnits];
         for (int r = 0; r < numUnits; r++) {
-            EncodedMosaic em = rankMosaics[r];
-            rankMosaics[r] = null; // release EncodedMosaic & mosaicBytes immediately after writing!
-            out.writeVarInt(em.mosaicBytes().length);
-            out.writeBytes(em.mosaicBytes());
-            totalNoveltyLong += em.noveltyLen();
-            unitNovSlices[r] = em.noveltyBases();
-            unitNovLens[r] = em.noveltyLen();
+            byte[] mBytes = rankMosaicBytes[r];
+            rankMosaicBytes[r] = null;
+            out.writeVarInt(mBytes.length);
+            out.writeBytes(mBytes);
+            totalNoveltyLong += unitNovLens[r];
 
-            MosaicStats st = em.stats();
+            MosaicStats st = rankStats[r];
+            rankStats[r] = null;
             totalTargetBases += st.targetBases();
             sumPanelMatch += st.panelMatchBases();
             sumSelfMatch += st.selfMatchBases();
@@ -724,7 +748,8 @@ public final class HyperGraSSFusionEngine {
             sumSplices += st.indelSplices();
             sumSnps += st.substitutions();
         }
-        rankMosaics = null;
+        rankMosaicBytes = null;
+        rankStats = null;
 
         if (totalNoveltyLong > Integer.MAX_VALUE - 64) {
             throw new IllegalStateException("Novelty superstream exceeds 2.14 Gbp");
@@ -743,12 +768,17 @@ public final class HyperGraSSFusionEngine {
                 unitNovSlices[r] = null;
             }
             noveltyComp = HgsAnsCoder.ansNoveltyEncode(combined, threads);
+        } else if (unitNovPacked != null) {
+            noveltyComp =
+                    FastNoveltyCoder.encodeFromPackedSlices(
+                            unitNovPacked, unitNovLens, totalNovelty, threads, bounded);
         } else {
             noveltyComp =
                     FastNoveltyCoder.encodeFromSlices(
                             unitNovSlices, unitNovLens, totalNovelty, threads, bounded);
         }
         unitNovSlices = null;
+        unitNovPacked = null;
         unitNovLens = null;
 
         out.writeVarInt(totalNovelty);
@@ -779,6 +809,25 @@ public final class HyperGraSSFusionEngine {
                 sumSplices,
                 sumSnps,
                 secs);
+    }
+
+    private static void storeUnitMosaic(
+            int rankIdx,
+            EncodedMosaic em,
+            byte[][] rankMosaicBytes,
+            byte[][] unitNovSlices,
+            Packed2BitSequence[] unitNovPacked,
+            int[] unitNovLens,
+            MosaicStats[] rankStats) {
+        rankMosaicBytes[rankIdx] = em.mosaicBytes();
+        rankStats[rankIdx] = em.stats();
+        int nlen = em.noveltyLen();
+        unitNovLens[rankIdx] = nlen;
+        if (unitNovPacked != null) {
+            unitNovPacked[rankIdx] = nlen > 0 ? Packed2BitSequence.fromTwoBitBytes(em.noveltyBases(), nlen) : null;
+        } else {
+            unitNovSlices[rankIdx] = em.noveltyBases();
+        }
     }
 
     // =========================================================================

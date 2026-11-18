@@ -740,26 +740,16 @@ public final class CompressedDomainEngine {
         }
 
         List<UnitInspect> units = inspectAllRanks(c, true, true);
-        for (UnitInspect ui : units) {
+        for (int uIdx = 0; uIdx < units.size(); uIdx++) {
+            UnitInspect ui = units.get(uIdx);
             boolean hasSelfEdits = false;
             for (SpanEvent sp : ui.res.spans()) {
-                if (sp.kind() == 2 && sp.hasEdits()) {
+                if (sp.kind() >= 2 && sp.hasEdits()) {
                     hasSelfEdits = true;
                     break;
                 }
             }
-            if (hasSelfEdits) {
-                byte[] dna =
-                        EimdlMosaicCodec.decodeMosaicToTwoBit(
-                                c.rankMosaics[ui.unitIndex],
-                                ui.novelty,
-                                c.refBank,
-                                c.refOffsets,
-                                c.refCount);
-                scanWindow(dna, dna.length, 0L, ui.unitIndex, qFwd, qRc, hits);
-                patchedSpans += ui.res.spans().size();
-                continue;
-            }
+            byte[] lazySelfDna = null;
 
             List<VariantRecord> snps = new ArrayList<>();
             for (VariantRecord v : ui.res.variants()) {
@@ -777,6 +767,15 @@ public final class CompressedDomainEngine {
                 int spStart = (int) sp.tgtPos();
                 int spLen = (int) sp.tgtLen();
                 int spEnd = spStart + spLen;
+                if (sp.kind() >= 2 && hasSelfEdits && lazySelfDna == null) {
+                    lazySelfDna =
+                            EimdlMosaicCodec.decodeMosaicToTwoBit(
+                                    c.rankMosaics[uIdx],
+                                    ui.novelty,
+                                    c.refBank,
+                                    c.refOffsets,
+                                    c.refCount);
+                }
                 while (snpCursor < snps.size() && snps.get(snpCursor).tgtPos() < spStart) {
                     snpCursor++;
                 }
@@ -786,14 +785,16 @@ public final class CompressedDomainEngine {
                     System.arraycopy(tail, 0, jBuf, 0, tailLen);
                     for (int off = 0; off < takeR; off++) {
                         jBuf[tailLen + off] =
-                                resolveSpanPos(
-                                        spStart + off,
-                                        sp,
-                                        ui.res.spans(),
-                                        snps,
-                                        ui.novelty,
-                                        c.refBank,
-                                        c.refOffsets);
+                                (sp.kind() >= 2 && lazySelfDna != null)
+                                        ? (byte) (lazySelfDna[spStart + off] & 3)
+                                        : resolveSpanPos(
+                                                spStart + off,
+                                                sp,
+                                                ui.res.spans(),
+                                                snps,
+                                                ui.novelty,
+                                                c.refBank,
+                                                c.refOffsets);
                     }
                     int jLen = tailLen + takeR;
                     int jStart = spStart - tailLen;
@@ -837,6 +838,11 @@ public final class CompressedDomainEngine {
                             if (mf) hits.add(new KmerHit(ui.unitIndex, spStart + off, 0));
                             if (mr) hits.add(new KmerHit(ui.unitIndex, spStart + off, 1));
                         }
+                    } else if (sp.kind() >= 2 && lazySelfDna != null) {
+                        patchedSpans++;
+                        if (spanBuf.length < spLen) spanBuf = new byte[spLen];
+                        System.arraycopy(lazySelfDna, spStart, spanBuf, 0, spLen);
+                        scanWindow(spanBuf, spLen, spStart, ui.unitIndex, qFwd, qRc, hits);
                     } else {
                         patchedSpans++;
                         if (spanBuf.length < spLen) spanBuf = new byte[spLen];
@@ -888,14 +894,16 @@ public final class CompressedDomainEngine {
                     int startOff = spLen - takeThis;
                     for (int off = startOff; off < spLen; off++) {
                         nextTail[nt++] =
-                                resolveSpanPos(
-                                        spStart + off,
-                                        sp,
-                                        ui.res.spans(),
-                                        snps,
-                                        ui.novelty,
-                                        c.refBank,
-                                        c.refOffsets);
+                                (sp.kind() >= 2 && lazySelfDna != null)
+                                        ? (byte) (lazySelfDna[spStart + off] & 3)
+                                        : resolveSpanPos(
+                                                spStart + off,
+                                                sp,
+                                                ui.res.spans(),
+                                                snps,
+                                                ui.novelty,
+                                                c.refBank,
+                                                c.refOffsets);
                     }
                     System.arraycopy(nextTail, 0, tail, 0, nt);
                     tailLen = nt;

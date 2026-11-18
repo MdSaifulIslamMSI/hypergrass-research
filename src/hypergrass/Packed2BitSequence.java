@@ -633,20 +633,25 @@ public final class Packed2BitSequence {
     /** Extracts {@code [srcPos .. srcPos + len)} into a 2-bit byte array ({@code 0..3}). */
     public byte[] extractTwoBitSlice(int srcPos, int len) {
         byte[] out = new byte[len];
+        extractTwoBitInto(srcPos, len, out, 0);
+        return out;
+    }
+
+    /** Extracts {@code [srcPos .. srcPos + len)} directly into {@code dst[dstOff .. dstOff + len)}. */
+    public void extractTwoBitInto(int srcPos, int len, byte[] dst, int dstOff) {
         int k = 0;
         while (k + 32 <= len) {
             long w = word32Forward(srcPos + k);
             for (int j = 0; j < 32; j++) {
-                out[k + j] = (byte) (w & 3L);
+                dst[dstOff + k + j] = (byte) (w & 3L);
                 w >>>= 2;
             }
             k += 32;
         }
         while (k < len) {
-            out[k] = (byte) baseAt(srcPos + k);
+            dst[dstOff + k] = (byte) baseAt(srcPos + k);
             k++;
         }
-        return out;
     }
 
     /** Unpacks directly into uppercase ASCII {@code A,C,G,T} (or {@code A,C,G,U} if {@code rna}). */

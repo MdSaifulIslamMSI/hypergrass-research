@@ -164,7 +164,7 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Run 1,693-check paper numerical audit
+      - name: Run 1,856-check paper numerical audit
         run: python3 -B paper/audit_paper_numbers.py
 
       - name: Validate CITATION.cff & shell script LF line endings
